@@ -78,6 +78,7 @@ export default defineConfig(() => {
         output: {
           manualChunks(id) {
             if (!id.includes('node_modules')) return undefined;
+            if (id.includes('/@firebase/ai/') || id.includes('/firebase/ai/')) return 'firebase-ai-sdk';
             if (id.includes('/firebase/') || id.includes('/@firebase/')) return 'firebase';
             if (id.includes('/motion/') || id.includes('/framer-motion/')) return 'motion';
             if (id.includes('/react/') || id.includes('/react-dom/')) return 'react';

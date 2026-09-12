@@ -1,5 +1,15 @@
 import { BaseQuestion, AiMistakeExplanation, QuestionType } from '../types';
 import { authenticatedFetch } from '../lib/api-client';
+import { generateFirebaseAiJson } from '../lib/firebase-ai';
+import { z } from 'zod';
+
+const aiMistakeResponseSchema = z.object({
+  empatheticIntro: z.string().min(5).max(350),
+  misconceptionTrap: z.string().min(5).max(500),
+  differenceAnalysis: z.string().min(5).max(650),
+  goldenRuleTip: z.string().min(5).max(400),
+  bilsemSuperPower: z.string().min(3).max(100),
+});
 
 class AiMistakeService {
   private cache: Map<string, AiMistakeExplanation> = new Map();
@@ -65,6 +75,39 @@ class AiMistakeService {
       }
     } catch (err) {
       console.warn('AI Mistake service API call failed, falling back to procedural analyzer:', err);
+    }
+
+    const firebaseAiExplanation = await generateFirebaseAiJson(
+      [
+        'Bir çocuğun yanlış BİLSEM cevabını yargılamadan analiz et ve kısa, somut bir geri bildirim üret.',
+        'Seçilen şıkla doğru şık arasındaki farkı açıklarken sorunun kendi açıklamasına sadık kal.',
+        `Soru verisi: ${JSON.stringify({
+          type: question.type,
+          category: question.category,
+          difficulty: question.difficulty,
+          prompt: question.prompt,
+          explanation: question.explanation,
+          options: question.options.map((option) => ({ id: option.id, label: option.label })),
+          selectedOptionId,
+          correctOptionId: question.correctOptionId,
+        })}`,
+      ].join('\n'),
+      aiMistakeResponseSchema,
+    );
+    if (firebaseAiExplanation) {
+      const result: AiMistakeExplanation = {
+        questionId: question.id,
+        selectedOptionId,
+        correctOptionId: question.correctOptionId,
+        category: question.category,
+        questionType: question.type,
+        difficulty: question.difficulty,
+        ...firebaseAiExplanation,
+        isAiGenerated: true,
+        modelUsed: 'Firebase AI Logic · Gemini 3.8 Flash',
+      };
+      this.cache.set(cacheKey, result);
+      return result;
     }
 
     // High quality procedural fallback based on question domain

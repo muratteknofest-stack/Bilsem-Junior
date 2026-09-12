@@ -10,7 +10,6 @@ import {
 } from '../types';
 import { dataService } from '../services/data-service';
 import { db } from '../lib/firebase';
-import { authenticatedFetch } from '../lib/api-client';
 import { doc, getDoc } from 'firebase/firestore';
 import { 
   LineChart, 
@@ -66,6 +65,7 @@ import { StudentSettingsModal } from './StudentSettingsModal';
 import { NotificationPreferences } from './NotificationPreferences';
 import { useAuth } from '../contexts/AuthContext';
 import { sound } from '../lib/sound';
+import { shareWeeklyReport } from '../services/weekly-report-service';
 
 interface ParentPortalViewProps {
   student?: UserProfile | null;
@@ -176,25 +176,23 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
   }, [weeklyData]);
 
   const handleSendWeeklyReport = async () => {
+    if (!weeklyData) return;
     setIsSendingReport(true);
     setReportSendStatus('idle');
     try {
-      const response = await authenticatedFetch('/api/send-weekly-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentId: currentStudent.id
-        })
-      });
-      
-      const data = await response.json();
-      if (data.success) {
+      const result = await shareWeeklyReport(
+        parentProfile?.email,
+        currentStudent,
+        weeklyData,
+        displayMasteries,
+      );
+      if (result !== 'cancelled') {
         setReportSendStatus('success');
         sound.playSuccess();
         confetti({ particleCount: 60, spread: 70, origin: { y: 0.3 } });
         setTimeout(() => setReportSendStatus('idle'), 3500);
       } else {
-        throw new Error(data.error);
+        setReportSendStatus('idle');
       }
     } catch (err) {
       console.error(err);
@@ -325,7 +323,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleSendWeeklyReport}
-              disabled={isSendingReport}
+              disabled={isSendingReport || !weeklyData}
               className={`px-4 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 text-sm shadow-sm border transition-all cursor-pointer ${
                 reportSendStatus === 'success' 
                   ? 'bg-emerald-500 text-white border-emerald-600' 
@@ -341,7 +339,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               ) : (
                 <Mail className="w-4 h-4" />
               )}
-              {isSendingReport ? 'Gönderiliyor...' : reportSendStatus === 'success' ? 'Rapor Gönderildi!' : 'Haftalık Raporu Gönder'}
+              {isSendingReport ? 'Hazırlanıyor...' : reportSendStatus === 'success' ? 'Rapor Hazır!' : 'Haftalık Raporu E-postala'}
             </motion.button>
 
             <motion.button 

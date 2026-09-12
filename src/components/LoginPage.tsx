@@ -6,7 +6,6 @@ import {
   browserSessionPersistence,
   deleteUser,
   setPersistence,
-  signInWithCustomToken,
   signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth';
@@ -16,6 +15,7 @@ import { dataService } from '../services/data-service';
 import { sound } from '../lib/sound';
 import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
+import { registerFamilyInFirebase } from '../services/family-registration-service';
 import { 
   loginSchema, 
   registerStudentSchema, 
@@ -203,33 +203,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       let verificationSent = false;
 
       if (selectedRole === 'parent') {
-        const response = await fetch('/api/auth/register-family', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            parentEmail: regParentEmail.trim(),
-            parentPassword: regPassword,
-            studentPassword: regStudentPassword,
-            parentPhone: regParentPhone.trim() || undefined,
-            studentName: regStudentName.trim(),
-            grade: regGrade,
-            examFocus: regExamFocus,
-            kvkkConsent: regKvkkConsent,
-          }),
+        await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
+        const result = await registerFamilyInFirebase({
+          parentEmail: regParentEmail.trim(),
+          parentPassword: regPassword,
+          studentPassword: regStudentPassword,
+          parentPhone: regParentPhone.trim() || undefined,
+          studentName: regStudentName.trim(),
+          grade: regGrade,
+          examFocus: regExamFocus,
         });
-        const result = await response.json();
-        if (!response.ok) {
-          throw new Error(result.error || 'Aile hesabı oluşturulamadı.');
-        }
-
-        await signInWithCustomToken(auth, result.customToken);
-        newProfile = result.parentProfile as UserProfile;
-        try {
-          await sendEmailVerification(auth.currentUser!);
-          verificationSent = true;
-        } catch {
-          verificationSent = false;
-        }
+        newProfile = result.parentProfile;
+        verificationSent = result.verificationSent;
         dataService.loginAs('parent', newProfile);
         await dataService.hydrateUserStateFromFirebase();
         loginLocally(newProfile);

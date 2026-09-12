@@ -10,8 +10,40 @@ import {
 import { dataService } from './data-service';
 import { safeStorage } from '../lib/storage';
 import { authenticatedFetch } from '../lib/api-client';
+import { generateFirebaseAiJson } from '../lib/firebase-ai';
+import { z } from 'zod';
 
 const STORAGE_KEY_AI_DAILY_PLAN = 'bilsem_ai_personalized_daily_plan';
+
+const cognitiveCategorySchema = z.enum([
+  'visual_perception', 'pattern', 'matrix', 'spatial', 'logic',
+  'attention', 'memory', 'numerical', 'verbal', 'coding',
+]);
+
+const aiDailyPlanResponseSchema = z.object({
+  greetingTitle: z.string().min(3).max(120),
+  morningCoachMessage: z.string().min(10).max(600),
+  motivationalQuote: z.string().min(5).max(240),
+  focusWeaknesses: z.array(z.object({
+    category: cognitiveCategorySchema,
+    categoryName: z.string().min(3).max(100),
+    reason: z.string().min(5).max(350),
+    currentMastery: z.number().min(0).max(100),
+  })).min(1).max(3),
+  tasks: z.array(z.object({
+    id: z.string().min(1).max(80).optional(),
+    title: z.string().min(3).max(120),
+    description: z.string().min(5).max(350),
+    category: z.union([cognitiveCategorySchema, z.enum(['mistakes', 'adaptive'])]),
+    targetCount: z.number().int().min(1).max(30),
+    rewardXP: z.number().int().min(5).max(500),
+    priority: z.enum(['high', 'medium', 'bonus']),
+    actionType: z.enum(['practice_category', 'review_mistakes', 'adaptive_session']),
+  })).min(2).max(5),
+  totalTargetQuestions: z.number().int().min(1).max(100),
+  estimatedMinutes: z.number().int().min(5).max(180),
+  dailySuperpowerTarget: z.string().min(3).max(120),
+});
 
 class AiDailyPlanService {
   private cachedPlan: AiPersonalizedDailyPlan | null = null;
@@ -176,6 +208,70 @@ class AiDailyPlanService {
       }
     } catch (err) {
       console.warn('AI Daily Plan API call failed, generating procedural pedagogical plan:', err);
+    }
+
+    const firebaseAiPlan = await generateFirebaseAiJson(
+      [
+        'Gerçek öğrenme verilerine göre bir günlük BİLSEM çalışma planı üret.',
+        'Plan kısa, uygulanabilir ve öğrencinin en zayıf alanlarına öncelik veren 2-5 görev içersin.',
+        `Öğrenci verisi: ${JSON.stringify({
+          firstName: user.name.split(' ')[0] || 'Öğrenci',
+          grade: user.grade || 1,
+          level: user.level || 1,
+          streak: user.streak || 0,
+          dailyGoalQuestions: user.dailyGoalQuestions || 10,
+          dailyGoalMinutes: user.dailyGoalMinutes || 15,
+          todayQuestionsSolved: user.todayQuestionsSolved || 0,
+          masteries: masteries.map((item) => ({
+            category: item.category,
+            categoryName: item.categoryName,
+            mastery: item.mastery,
+            accuracy: item.accuracy,
+          })),
+          unresolvedMistakes: unresolvedMistakes.map((item) => ({
+            category: item.category,
+            questionType: item.questionType,
+            difficulty: item.difficulty,
+          })),
+        })}`,
+      ].join('\n'),
+      aiDailyPlanResponseSchema,
+      7500,
+    );
+    if (firebaseAiPlan) {
+      const tasks: DailyPlanTask[] = firebaseAiPlan.tasks.map((task, index) => ({
+        id: task.id || `firebase-ai-task-${index + 1}`,
+        title: task.title,
+        description: task.description,
+        category: task.category,
+        targetCount: task.targetCount,
+        completedCount: 0,
+        rewardXP: task.rewardXP,
+        isCompleted: false,
+        priority: task.priority,
+        actionType: task.actionType,
+      }));
+      const focusWeaknesses: AiPlanWeaknessFocus[] = firebaseAiPlan.focusWeaknesses.map((focus) => ({
+        ...focus,
+        mistakeCount: unresolvedMistakes.filter((item) => item.category === focus.category).length,
+      }));
+      const plan: AiPersonalizedDailyPlan = {
+        dateKey: todayKey,
+        formattedDate,
+        generatedAtTimestamp: Date.now(),
+        greetingTitle: firebaseAiPlan.greetingTitle,
+        morningCoachMessage: firebaseAiPlan.morningCoachMessage,
+        motivationalQuote: firebaseAiPlan.motivationalQuote,
+        focusWeaknesses,
+        tasks,
+        totalTargetQuestions: firebaseAiPlan.totalTargetQuestions,
+        totalCompletedQuestions: user.todayQuestionsSolved || 0,
+        estimatedMinutes: firebaseAiPlan.estimatedMinutes,
+        dailySuperpowerTarget: firebaseAiPlan.dailySuperpowerTarget,
+        isAiGenerated: true,
+        modelUsed: 'Firebase AI Logic · Gemini 3.8 Flash',
+      };
+      return this.syncTaskProgressWithUser(plan, user);
     }
 
     // High quality procedural fallback based on student's actual weaknesses

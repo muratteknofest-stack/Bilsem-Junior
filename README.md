@@ -18,19 +18,36 @@ The Express server hosts both `/api/*` and the Vite application. AI endpoints us
 the procedural fallback when `GEMINI_API_KEY` is not configured. Weekly email
 reports require the SMTP variables.
 
+## Sites mode
+
+The static Sites deployment keeps Firebase Authentication and Firestore in the
+browser. Family registration creates the parent and linked student as two separate
+Firebase accounts without exposing an admin credential. Deploy `firestore.rules`
+before accepting registrations.
+
+AI hints first use the configured server API, then Firebase AI Logic, and finally
+the deterministic pedagogical engine. To enable Firebase AI Logic for production,
+enable it in the Firebase console and set up App Check with
+`VITE_FIREBASE_APPCHECK_SITE_KEY`. Weekly reports can be shared through the device's
+share sheet or opened as a pre-filled email without sending student data through a
+third-party mail server.
+
+If an external API service is deployed, set `VITE_API_BASE_URL` when building the
+frontend and add the Sites origin to `CORS_ALLOWED_ORIGINS` on the server.
+
 ## Authorization model
 
-- Browser clients can create only their own student profile.
-- Parent/child account pairs are created by `/api/auth/register-family` with
-  separate passwords and server-assigned custom role claims.
+- Browser clients can create only their own non-admin profile.
+- Parent/child account pairs use separate Firebase Auth sessions and passwords;
+  the rules accept a parent link only after the student profile points back to it.
 - Admin access requires an `admin` Firebase custom claim. A profile document alone
   never grants admin access.
 - User progress is stored under `users/{uid}/private/state`; linked parents have
   read-only access to their child's profile and progress.
 
-Deploy `firestore.rules` before enabling real accounts. Existing admin and parent
-accounts must receive their matching custom claims through a trusted admin script
-or the Firebase Admin SDK.
+Deploy `firestore.rules` before enabling real accounts. Existing admin accounts
+must receive their matching custom claim through a trusted admin script or the
+Firebase Admin SDK.
 
 ## Deployment
 

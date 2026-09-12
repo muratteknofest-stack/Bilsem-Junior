@@ -14,10 +14,13 @@ test('student codes contain only normalized ASCII letters and digits', () => {
   assert.equal(normalizeStudentCode('Çağrı Öztürk<script>'), 'CAGRIOZTURKS');
 });
 
-test('Firestore authorization uses token roles and denies unmatched paths', async () => {
+test('Firestore authorization protects admin access and validates family links', async () => {
   const rules = await readFile(new URL('../firestore.rules', import.meta.url), 'utf8');
   assert.match(rules, /request\.auth\.token\.role/);
   assert.doesNotMatch(rules, /documents\/users\/.*\.data\.role == 'admin'/);
+  assert.match(rules, /validInitialParentLink/);
+  assert.match(rules, /linkedParentId == userId/);
+  assert.match(rules, /request\.resource\.data\.role == 'parent'/);
   assert.match(rules, /affectedKeys\(\)\.hasOnly/);
   assert.match(rules, /match \/\{document=\*\*\}[\s\S]*allow read, write: if false/);
 });
@@ -27,4 +30,6 @@ test('login source contains no local authentication fallback or fixed password',
   assert.doesNotMatch(source, /SYSTEM_ACCOUNTS/);
   assert.doesNotMatch(source, /resilient local login/i);
   assert.doesNotMatch(source, /Standart şifre|setPassword\('123456'\)/);
+  assert.doesNotMatch(source, /\/api\/auth\/register-family/);
+  assert.match(source, /registerFamilyInFirebase/);
 });

@@ -81,6 +81,23 @@ async function startServer() {
 
   app.disable('x-powered-by');
   if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
+  const allowedOrigins = new Set(
+    (process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:5173,https://zekapark.muratteknofest.chatgpt.site')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+  );
+  app.use('/api', (req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin && allowedOrigins.has(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+      res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    }
+    if (req.method === 'OPTIONS') return res.sendStatus(origin && allowedOrigins.has(origin) ? 204 : 403);
+    next();
+  });
   app.use(helmet({
     contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
       directives: {
@@ -93,6 +110,7 @@ async function startServer() {
           "'self'",
           'https://*.googleapis.com',
           'https://*.firebaseio.com',
+          'https://firebasevertexai.googleapis.com',
           'https://identitytoolkit.googleapis.com',
           'https://securetoken.googleapis.com',
         ],
