@@ -83,7 +83,7 @@ export const AdminQuestionAnalyticsDashboard: React.FC<AdminQuestionAnalyticsDas
   const [selectedGrade, setSelectedGrade] = useState<1 | 2 | 3 | 4 | 'all'>('all');
   const [selectedCategory, setSelectedCategory] = useState<CognitiveCategory | 'all'>('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyLevel | 'all'>('all');
-  const [timeRange, setTimeRange] = useState<'7d' | '30d' | 'all'>('all');
+  const [analyticsRevision, setAnalyticsRevision] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [successRateFilter, setSuccessRateFilter] = useState<'all' | 'very_easy' | 'very_hard'>('all');
 
@@ -108,12 +108,11 @@ export const AdminQuestionAnalyticsDashboard: React.FC<AdminQuestionAnalyticsDas
       grade: selectedGrade,
       category: selectedCategory,
       difficulty: selectedDifficulty,
-      timeRange,
       searchQuery,
       successRateFilter,
     };
     return questionAnalyticsService.getAnalytics(filter);
-  }, [selectedGrade, selectedCategory, selectedDifficulty, timeRange, searchQuery, successRateFilter]);
+  }, [selectedGrade, selectedCategory, selectedDifficulty, searchQuery, successRateFilter, analyticsRevision]);
 
   const toggleExplanation = (questionId: string) => {
     sound.playClick();
@@ -147,7 +146,6 @@ export const AdminQuestionAnalyticsDashboard: React.FC<AdminQuestionAnalyticsDas
     setSelectedGrade('all');
     setSelectedCategory('all');
     setSelectedDifficulty('all');
-    setTimeRange('all');
     setSearchQuery('');
     setSuccessRateFilter('all');
     setSelectedMatrixCell(null);
@@ -217,8 +215,8 @@ export const AdminQuestionAnalyticsDashboard: React.FC<AdminQuestionAnalyticsDas
               Soru Analiz Dashboard'u
             </h2>
             <p className="text-sm text-purple-200 leading-relaxed">
-              Her soru kategorisi ve zorluk derecesi için öğrenci başarı oranlarını, çeldirici
-              yanılma desenlerini ve süre aşımı yaşanan zorlayıcı soruları anlık olarak tespit edin.
+              Yalnızca bu tarayıcıdaki öğrenci deneyimi simülatöründe gerçekten kaydedilen yanıtları,
+              çözüm sürelerini ve çeldirici seçimlerini inceleyin.
             </p>
           </div>
 
@@ -265,7 +263,7 @@ export const AdminQuestionAnalyticsDashboard: React.FC<AdminQuestionAnalyticsDas
               %{analytics.overall.overallSuccessRate}
             </div>
             <div className="flex items-center gap-1 mt-1 text-[11px] font-bold text-emerald-600">
-              <span>Hedef BİLSEM Normu: %72</span>
+              <span>İç kalite hedefi: %72</span>
             </div>
           </div>
           <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
@@ -295,7 +293,7 @@ export const AdminQuestionAnalyticsDashboard: React.FC<AdminQuestionAnalyticsDas
             </div>
           </div>
           <span className="text-[10px] text-slate-400 font-medium">
-            Öğrenciler en çok bu alanda hata yapıyor
+            Kaydedilmiş simülatör yanıtlarındaki en düşük oran
           </span>
         </div>
 
@@ -343,7 +341,7 @@ export const AdminQuestionAnalyticsDashboard: React.FC<AdminQuestionAnalyticsDas
             </div>
           </div>
           <span className="text-[10px] text-slate-400 font-medium">
-            Öğrenci soru başına düşünme hızı
+            Kaydedilmiş yanıt başına çözüm süresi
           </span>
         </div>
 
@@ -366,7 +364,7 @@ export const AdminQuestionAnalyticsDashboard: React.FC<AdminQuestionAnalyticsDas
             </div>
           </div>
           <span className="text-[10px] text-slate-400 font-medium">
-            Canlı pratik + kohort sınav verileri
+            Yerel simülatör yanıtları
           </span>
         </div>
       </div>
@@ -615,7 +613,7 @@ export const AdminQuestionAnalyticsDashboard: React.FC<AdminQuestionAnalyticsDas
                           >
                             <span className="text-xs">%{cell.successRate}</span>
                             <span className="text-[9px] opacity-80">
-                              {cell.totalAttempts > 0 ? `${cell.totalAttempts} ç` : 'Norm'}
+                              {cell.totalAttempts > 0 ? `${cell.totalAttempts} yanıt` : 'Veri yok'}
                             </span>
                           </button>
                         </td>
@@ -735,7 +733,7 @@ export const AdminQuestionAnalyticsDashboard: React.FC<AdminQuestionAnalyticsDas
           </div>
 
           <p className="text-xs text-slate-500">
-            Zorluk arttıkça öğrenci başarı oranlarındaki düşüş ve norm sapmaları:
+            Kaydedilmiş simülatör yanıtlarının zorluk düzeylerine göre iç kalite hedefiyle karşılaştırması:
           </p>
 
           <div className="space-y-3">
@@ -773,7 +771,7 @@ export const AdminQuestionAnalyticsDashboard: React.FC<AdminQuestionAnalyticsDas
                         </span>
                       ) : (
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">
-                          Normal
+                          Hedefte
                         </span>
                       )}
                     </div>
@@ -1024,6 +1022,7 @@ export const AdminQuestionAnalyticsDashboard: React.FC<AdminQuestionAnalyticsDas
         <AdminStudentPracticeSimulatorModal
           question={activeSimulatorQuestion}
           onClose={() => setActiveSimulatorQuestion(null)}
+          onAttemptRecorded={() => setAnalyticsRevision((value) => value + 1)}
         />
       )}
     </div>

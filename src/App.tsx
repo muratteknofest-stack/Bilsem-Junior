@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { useAuth } from './contexts/AuthContext';
 
 import { AnimatePresence, motion } from 'motion/react';
@@ -7,20 +7,21 @@ import { dataService } from './services/data-service';
 import { reminderService } from './services/reminder-service';
 import { Navbar } from './components/Navbar';
 import { MobileBottomNav } from './components/MobileBottomNav';
-import { LandingPage } from './components/LandingPage';
-import { StudentDashboard } from './components/StudentDashboard';
-import { PracticeSessionView } from './components/PracticeSessionView';
-import { AdaptivePracticeView } from './components/AdaptivePracticeView';
-import { ExamSessionView } from './components/ExamSessionView';
-import { MistakeNotebookView } from './components/MistakeNotebookView';
-import { AchievementsView } from './components/AchievementsView';
-import { ParentPortalView } from './components/ParentPortalView';
-import { AdminPanelView } from './components/AdminPanelView';
 import { StudyReminderInAppAlert } from './components/StudyReminderInAppAlert';
 import { StudyReminderSettingsModal } from './components/StudyReminderSettingsModal';
-import { LeaderboardView } from './components/LeaderboardView';
-import { CognitiveGlossaryView } from './components/CognitiveGlossaryView';
-import { LoginPage } from './components/LoginPage';
+
+const StudentDashboard = lazy(() => import('./components/StudentDashboard').then((m) => ({ default: m.StudentDashboard })));
+const LandingPage = lazy(() => import('./components/LandingPage').then((m) => ({ default: m.LandingPage })));
+const PracticeSessionView = lazy(() => import('./components/PracticeSessionView').then((m) => ({ default: m.PracticeSessionView })));
+const AdaptivePracticeView = lazy(() => import('./components/AdaptivePracticeView').then((m) => ({ default: m.AdaptivePracticeView })));
+const ExamSessionView = lazy(() => import('./components/ExamSessionView').then((m) => ({ default: m.ExamSessionView })));
+const MistakeNotebookView = lazy(() => import('./components/MistakeNotebookView').then((m) => ({ default: m.MistakeNotebookView })));
+const AchievementsView = lazy(() => import('./components/AchievementsView').then((m) => ({ default: m.AchievementsView })));
+const ParentPortalView = lazy(() => import('./components/ParentPortalView').then((m) => ({ default: m.ParentPortalView })));
+const AdminPanelView = lazy(() => import('./components/AdminPanelView').then((m) => ({ default: m.AdminPanelView })));
+const LeaderboardView = lazy(() => import('./components/LeaderboardView').then((m) => ({ default: m.LeaderboardView })));
+const CognitiveGlossaryView = lazy(() => import('./components/CognitiveGlossaryView').then((m) => ({ default: m.CognitiveGlossaryView })));
+const LoginPage = lazy(() => import('./components/LoginPage').then((m) => ({ default: m.LoginPage })));
 
 export default function App() {
   // Auth context
@@ -187,6 +188,7 @@ export default function App() {
 
       {/* Main View Router */}
       <main className="flex-1 w-full overflow-x-hidden">
+        <Suspense fallback={<div className="min-h-[50vh] flex items-center justify-center" role="status">Yükleniyor…</div>}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={currentRoute === 'practice' ? `practice-${selectedPracticeCategory}` : currentRoute}
@@ -212,7 +214,7 @@ export default function App() {
                 mistakes={mistakes}
                 onUserUpdate={(u) => setCurrentUser(u)}
                 onStartPractice={(category) => {
-                  setSelectedPracticeCategory(category || 'mixed');
+                  setSelectedPracticeCategory((category as CognitiveCategory | 'mixed') || 'mixed');
                   navigateTo('practice');
                 }}
                 onStartAdaptive={() => navigateTo('adaptive')}
@@ -303,6 +305,7 @@ export default function App() {
             )}
           </motion.div>
         </AnimatePresence>
+        </Suspense>
       </main>
 
       {/* Mobile Bottom Navigation Bar - Hidden during test routes for full screen test view */}

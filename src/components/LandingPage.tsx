@@ -222,7 +222,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       imageUrl:
         'https://images.unsplash.com/photo-1596495578065-6e0763fa1178?auto=format&fit=crop&w=800&q=80',
       tag: 'BİLSEM Uzamsal Boyut',
-      stat: '%94 Görselleşme Oranı',
+      stat: 'Zihinsel Döndürme Pratiği',
     },
     {
       title: 'Matris Tamamlama & Analitik Muhakeme',
@@ -232,7 +232,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       imageUrl:
         'https://images.unsplash.com/photo-1588072432836-e10032774350?auto=format&fit=crop&w=800&q=80',
       tag: 'En Kritik Bilişsel Alan',
-      stat: '10.000+ Özgün Varyasyon',
+      stat: 'Tohum Tabanlı Varyasyonlar',
     },
     {
       title: 'Görsel Dikkat & Odaklanmış Çalışma',
@@ -242,7 +242,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       imageUrl:
         'https://images.unsplash.com/photo-1485546246426-74dc88dec4d9?auto=format&fit=crop&w=800&q=80',
       tag: 'Dikkat & Bilişsel Hız',
-      stat: '1.4 sn Ortalama Reaksiyon',
+      stat: 'Süreli Odak Çalışmaları',
     },
     {
       title: 'Sayısal Muhakeme & Geometrik Sezgi',
@@ -252,35 +252,35 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       imageUrl:
         'https://images.unsplash.com/photo-1516627145497-ae6968895b74?auto=format&fit=crop&w=800&q=80',
       tag: 'Matematiksel Zeka',
-      stat: 'Tam MEB Uyumlu',
+      stat: 'Sınıf Düzeyine Göre',
     },
   ];
 
-  // Testimonials with Real Portrait Photos
+  // Clearly labelled illustrative product-use scenarios.
   const testimonials = [
     {
-      name: 'Merve Yılmaz',
-      role: '2. Sınıf Velisi • İstanbul',
+      name: 'Veli Senaryosu',
+      role: 'Örnek kullanım',
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-      badge: 'BİLSEM Genel Zihinsel Kazandı',
+      badge: 'Temsili Senaryo',
       comment:
         'Kızım tablet sınavında en çok matris ve döndürme sorularında tereddüt ediyordu. ZekaPark ile her gün 15 dakika pratik yaptı. Soruların her defasında farklı gelmesi ezberi tamamen yıktı!',
       rating: 5,
     },
     {
-      name: 'Burak Karaaslan',
-      role: 'İlkokul Zümre Başkanı & BİLSEM Danışmanı',
+      name: 'Eğitmen Senaryosu',
+      role: 'Örnek kullanım',
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
-      badge: 'Pedagojik Danışman Onaylı',
+      badge: 'Temsili Senaryo',
       comment:
         'Piyasadaki kitapların en büyük sorunu soruların bitmesi ve çocuğun cevapları ezberlemesidir. ZekaPark’ın parametrik soru motoru tam bir devrim. Öğrencilerime güvenle öneriyorum.',
       rating: 5,
     },
     {
-      name: 'Selin Aksoy',
-      role: '3. Sınıf Velisi • Ankara',
+      name: 'Takip Senaryosu',
+      role: 'Örnek kullanım',
       avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=300&q=80',
-      badge: 'Ön Değerlendirme 98 Puan',
+      badge: 'Temsili Senaryo',
       comment:
         'Hata Defteri özelliği muazzam. Çocuğumun yanlış yaptığı soru tipleri otomatik kaydediliyor ve birkaç gün sonra benzer kuralla tekrar karşısına çıkıyor. Eksik bırakmadan ilerledik.',
       rating: 5,
@@ -291,23 +291,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const faqs = [
     {
       q: 'BİLSEM 1., 2. ve 3. Sınıf Ön Değerlendirme Sınavı nasıl uygulanır?',
-      a: 'BİLSEM ön değerlendirme sınavları MEB tarafından belirlenen sınav merkezlerinde tablet bilgisayarlar üzerinden yapılır. Sorular seslendirilmez, metin içermez; tamamen görsel ve şekilsel mantık muhakemesine dayanır. ZekaPark tam da bu tablet sınav ortamını ve mekaniklerini simüle eder.',
+      a: 'BİLSEM uygulama biçimi ve kapsamı dönemsel olarak MEB tarafından duyurulur. Güncel resmi kılavuzu kontrol etmenizi öneririz. ZekaPark, resmi sınavın kendisi değil; bilişsel beceri pratiği sunan bağımsız bir çalışma aracıdır.',
     },
     {
       q: 'ZekaPark soruları diğer test kitaplarından nasıl farklıdır?',
-      a: 'Test kitapları 300-400 statik soru içerir ve çocuk cevap şıkkını ezberler. ZekaPark ise parametrik soru motoru kullanır. Her soru matematiksel bir algoritma ve tohum (seed) ile sıfırdan SVG vektör olarak çizilir. Bu sayede çocuğunuz sınırsız sayıda benzersiz soruyla pratik yapar.',
+      a: 'ZekaPark parametrik soru motoru kullanır. Sorular matematiksel kurallar ve tohum (seed) değerleriyle üretilir; bu yaklaşım aynı soru tipinde farklı varyasyonlarla pratik yapılmasını sağlar.',
     },
     {
       q: 'BİLSEM tablet sınavında yanlışlar doğruyu götürür mü?',
-      a: 'Hayır, BİLSEM ön değerlendirme tablet sınavında yanlış cevaplar doğru cevapları götürmez. Bu nedenle çocukların boş soru bırakmaması ve süre baskısı altında mantıklı eleme stratejilerini kullanması gerekir. Platformumuz zaman yönetimi ve eleme becerilerini geliştirir.',
+      a: 'Puanlama kuralları dönemsel resmi kılavuzda doğrulanmalıdır. ZekaPark sonuçları resmi sınav puanı değildir; çalışma içi performans göstergesidir.',
     },
     {
       q: 'Günde kaç dakika ve kaç soru çözmek idealdir?',
-      a: 'Pedagoglar ve BİLSEM eğitmenleri zihinsel yorgunluk oluşmaması için günde 15-20 dakika (ortalama 8-12 kaliteli soru) çalışılmasını tavsiye eder. ZekaPark günlük çalışma hedefi sistemiyle bu istikrarı oyunlaştırarak sağlar.',
+      a: 'Uygun süre çocuğun yaşına, dikkat düzeyine ve ihtiyaçlarına göre değişir. Kısa bir hedefle başlayıp yorgunluk belirtilerine göre süreyi veli veya öğretmen gözetiminde ayarlayabilirsiniz.',
     },
     {
       q: 'Veli olarak çocuğumun zayıf ve güçlü alanlarını nasıl takip ederim?',
-      a: 'Veli Portalı üzerinden 8 bilişsel kategoriye özel doğruluk yüzdelerini, soru başına geçen ortalama süreyi, Hata Defteri telafi oranlarını ve haftalık gelişim grafiklerini anlık olarak raporlayabilirsiniz.',
+      a: 'Veli Portalı, bağlı öğrenci hesabında gerçekten kaydedilen bilişsel alan ustalıklarını, çalışma hedeflerini ve haftalık soru sayılarını gösterir.',
     },
   ];
 
@@ -345,36 +345,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.2rem] font-extrabold text-slate-900 tracking-tight font-['Outfit',sans-serif] leading-[1.18]">
-              Çocuğunuzun Zekasını{' '}
+              Çocuğunuzun Bilişsel Becerilerini{' '}
               <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                Bilimsel Metotlarla
+                Düzenli Pratikle
               </span>{' '}
-              Zirveye Taşıyın
+              Destekleyin
             </h1>
 
             <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl mx-auto lg:mx-0">
-              Ezberci test kitaplarını unutun. BİLSEM tablet sınavına birebir uyumlu 18 bilişsel kategori, sınırsız parametrik soru varyasyonu ve yapay zeka destekli adaptif koçluk ile çocuğunuzun potansiyelini keşfedin.
+              10 bilişsel alana yayılan 44 parametrik soru tipi ve yapay zekâ destekli ipuçlarıyla düzenli, ölçülebilir pratik yapın. ZekaPark bağımsız bir çalışma aracıdır; resmi sınavın yerine geçmez.
             </p>
 
             {/* Live Trust Metrics Bar */}
             <div className="grid grid-cols-3 gap-2 sm:gap-4 py-2 border-y border-zinc-200/80">
               <div className="text-center lg:text-left">
                 <div className="text-xl sm:text-2xl font-black text-indigo-900 font-['Outfit',sans-serif]">
-                  %91.4
+                  44
                 </div>
-                <div className="text-[11px] sm:text-xs text-slate-500 font-medium">Sınav Aşama Başarısı</div>
+                <div className="text-[11px] sm:text-xs text-slate-500 font-medium">Parametrik Soru Tipi</div>
               </div>
               <div className="text-center lg:text-left border-x border-zinc-200/80 px-2 sm:px-4">
                 <div className="text-xl sm:text-2xl font-black text-purple-900 font-['Outfit',sans-serif]">
-                  35.000+
+                  10
                 </div>
-                <div className="text-[11px] sm:text-xs text-slate-500 font-medium">Çözülen Özgün Soru</div>
+                <div className="text-[11px] sm:text-xs text-slate-500 font-medium">Bilişsel Çalışma Alanı</div>
               </div>
               <div className="text-center lg:text-left">
                 <div className="text-xl sm:text-2xl font-black text-emerald-900 font-['Outfit',sans-serif]">
-                  4.9 / 5
+                  6
                 </div>
-                <div className="text-[11px] sm:text-xs text-slate-500 font-medium">Veli & Öğretmen Puanı</div>
+                <div className="text-[11px] sm:text-xs text-slate-500 font-medium">Zorluk Seviyesi</div>
               </div>
             </div>
 
@@ -738,7 +738,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
-      {/* 8 Core Categories Detailed Interactive Grid */}
+      {/* Featured Categories Detailed Interactive Grid */}
       <section className="py-16 px-4 sm:px-6 max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
           <div>
@@ -746,10 +746,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               Müfredat ve Soru Çeşitliliği
             </span>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2 font-['Outfit',sans-serif]">
-              Tüm Bilişsel Becerileri Kapsayan 8 Temel Kategori
+              8 Öne Çıkan Bilişsel Kategori
             </h2>
             <p className="text-slate-600 text-sm sm:text-base mt-1">
-              BİLSEM tablet sınavında karşılaşılacak soru kategorilerinin ayrıntılı dökümü.
+              Uygulamadaki 10 çalışma alanından öne çıkan kategorilerin ayrıntılı dökümü.
             </p>
           </div>
           <button
@@ -766,13 +766,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             const Icon = cat.icon;
             const isSelected = selectedCatIdx === idx;
             return (
-              <div
+              <button
+                type="button"
                 key={idx}
                 onClick={() => {
                   sound.playClick();
                   setSelectedCatIdx(idx);
                 }}
-                className={`p-5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                aria-pressed={isSelected}
+                className={`p-5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between text-left ${
                   isSelected
                     ? 'bg-white border-indigo-500   ring-2 ring-indigo-500/20'
                     : 'bg-white border-zinc-200 hover:border-indigo-300 hover:'
@@ -801,7 +803,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <span className="text-slate-400">•</span>
                   <span className="text-slate-700 font-semibold">{cat.bilsemMatch}</span>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -946,7 +948,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             Geleneksel Test Kitapları vs. ZekaPark
           </h2>
           <p className="text-slate-600 text-sm sm:text-base mt-2">
-            Neden binlerce veli ve eğitimci dijital parametrik modeli tercih ediyor?
+            Dijital parametrik modelin temel özelliklerini geleneksel çalışma biçimiyle karşılaştırın.
           </p>
         </div>
 
@@ -966,7 +968,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <td className="p-4 sm:p-5 font-bold text-slate-900">Soru Sayısı & Çeşitlilik</td>
                 <td className="p-4 sm:p-5 text-slate-500">300-400 statik soru; bitince biter</td>
                 <td className="p-4 sm:p-5 bg-indigo-50/40 font-bold text-indigo-950 border-l border-indigo-100">
-                  Sınırsız parametrik tohum; asla ezberlenemez
+                  44 soru tipinde tohum tabanlı, yeniden üretilebilir varyasyonlar
                 </td>
               </tr>
               <tr>
@@ -987,7 +989,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <td className="p-4 sm:p-5 font-bold text-slate-900">Sınav Formatı Uyumu</td>
                 <td className="p-4 sm:p-5 text-slate-500">Kağıt üzerinde kalemle işaretleme</td>
                 <td className="p-4 sm:p-5 bg-indigo-50/40 font-bold text-indigo-950 border-l border-indigo-100">
-                  MEB BİLSEM tablet arayüzüyle %100 birebir uyumlu
+                  Tablet ve dokunmatik ekran kullanımına uygun çalışma arayüzü
                 </td>
               </tr>
               <tr>
@@ -1002,18 +1004,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
-      {/* Real Testimonials with Real Portrait Photographs */}
+      {/* Illustrative product-use scenarios */}
       <section id="veli-yorumlari" className="py-16 bg-white border-y border-zinc-200 px-4 sm:px-6 scroll-mt-20">
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-12">
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-              Kullanıcı Deneyimleri
+              Örnek Kullanım Senaryoları
             </span>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2 font-['Outfit',sans-serif]">
-              Veliler ve Eğitimciler Ne Diyor?
+              Özellikler Günlük Çalışmada Nasıl Kullanılır?
             </h2>
             <p className="text-slate-600 text-sm sm:text-base mt-1">
-              BİLSEM aşamalarını başarıyla geçen öğrenci velilerimizin samimi tecrübeleri.
+              Aşağıdaki metinler gerçek kullanıcı yorumu değil, ürün akışlarını anlatan temsili senaryolardır.
             </p>
           </div>
 
@@ -1024,13 +1026,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 className="bg-slate-50 p-6 rounded-xl border border-zinc-200 flex flex-col justify-between hover: transition-all"
               >
                 <div>
-                  <div className="flex items-center gap-1 text-amber-400 mb-3">
-                    {[...Array(t.rating)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-amber-400" />
-                    ))}
-                  </div>
-                  <p className="text-xs sm:text-sm text-slate-700 leading-relaxed italic">
-                    "{t.comment}"
+                  <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
+                    {t.comment}
                   </p>
                 </div>
 
@@ -1156,4 +1153,3 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     </div>
   );
 };
-

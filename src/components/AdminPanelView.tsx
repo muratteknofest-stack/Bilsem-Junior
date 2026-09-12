@@ -55,7 +55,7 @@ import {
   DIFFICULTY_LABELS,
   ALL_COGNITIVE_CATEGORIES
 } from '../types';
-import { generateQuestionByType } from '../features/questions/generators';
+import { ALL_QUESTION_TYPES, generateQuestionByType } from '../features/questions/generators';
 import { validateQuestion } from '../features/questions/validator';
 
 // Modular Admin Components
@@ -63,24 +63,18 @@ import { AdminQuestionManager } from './admin/AdminQuestionManager';
 import { AdminQuestionStudio } from './admin/AdminQuestionStudio';
 import { AdminQuestionAnalyticsDashboard } from './admin/AdminQuestionAnalyticsDashboard';
 import { AdminCurriculumMatrix } from './admin/AdminCurriculumMatrix';
-import { AdminStudentCohort } from './admin/AdminStudentCohort';
-import { InstitutionalPanelTab } from './InstitutionalPanelTab';
 import { AdminSystemSettings } from './admin/AdminSystemSettings';
 import { AdminStressTest } from './admin/AdminStressTest';
 import { AdminDiagnosticsModal } from './admin/AdminDiagnosticsModal';
 import { AdminBulkQuestionGenerator } from './admin/AdminBulkQuestionGenerator';
-import { TeacherAnalyticsView } from './admin/TeacherAnalyticsView';
 import { CreateQuestionWizard } from './CreateQuestionWizard';
 
 type AdminTab =
   | 'dashboard'
-  | 'teacher_analytics'
   | 'questions'
   | 'bulk_generator'
   | 'studio'
   | 'analytics'
-  | 'students'
-  | 'institutional'
   | 'curriculum'
   | 'stresstest'
   | 'settings';
@@ -169,13 +163,10 @@ export const AdminPanelView: React.FC = () => {
 
   const tabs: { id: AdminTab; label: string; icon: any; badge?: string }[] = [
     { id: 'dashboard', label: 'Genel Bakış', icon: Activity },
-    { id: 'teacher_analytics', label: 'Öğretmen Analitiği & Isı Haritası', icon: GraduationCap, badge: 'Isı Haritası' },
     { id: 'questions', label: 'Soru Bankası & Yönetim', icon: FileQuestion, badge: 'Havuz' },
     { id: 'bulk_generator', label: 'Toplu Soru Motoru', icon: Zap, badge: 'Turbo' },
     { id: 'studio', label: 'Soru Tasarım Stüdyosu', icon: Cpu, badge: 'Canlı' },
     { id: 'analytics', label: 'Bilişsel Analitik', icon: BarChart4 },
-    { id: 'students', label: 'Öğrenci & Kohort', icon: Users },
-    { id: 'institutional', label: 'Kurumsal & Lisans', icon: Building },
     { id: 'curriculum', label: 'BİLSEM Müfredat Matrisi', icon: Compass },
     { id: 'stresstest', label: 'Motor Stres Testi', icon: Zap },
     { id: 'settings', label: 'Sistem Parametreleri', icon: Settings },
@@ -345,19 +336,6 @@ export const AdminPanelView: React.FC = () => {
               <span>Tanı</span>
             </button>
 
-            {/* Öğretmen Analitiği Quick Button */}
-            <button 
-              onClick={() => {
-                sound.playClick();
-                setActiveTab('teacher_analytics');
-              }}
-              title="Öğretmen Analitiği ve Sınıf Bilişsel Isı Haritası"
-              className="hidden lg:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-indigo-300 text-xs font-bold border border-indigo-500/30 transition-all cursor-pointer"
-            >
-              <GraduationCap className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Öğretmen Isı Haritası</span>
-            </button>
-
             {/* Toplu Soru Motoru Quick Button */}
             <button 
               onClick={() => {
@@ -425,14 +403,6 @@ export const AdminPanelView: React.FC = () => {
                 />
               )}
 
-              {/* TAB: TEACHER ANALYTICS & CLASS HEATMAP */}
-              {activeTab === 'teacher_analytics' && (
-                <TeacherAnalyticsView
-                  onInspectInStudio={handleInspectInStudio}
-                  onNavigateToBulkGenerator={() => setActiveTab('bulk_generator')}
-                />
-              )}
-
               {/* TAB 2: QUESTIONS MANAGER & STUDIO */}
               {activeTab === 'questions' && (
                 <AdminQuestionManager
@@ -478,16 +448,6 @@ export const AdminPanelView: React.FC = () => {
                 <AdminQuestionAnalyticsDashboard
                   onNavigateToQuestionManager={() => setActiveTab('questions')}
                 />
-              )}
-
-              {/* TAB 5: STUDENT COHORT */}
-              {activeTab === 'students' && (
-                <AdminStudentCohort onSyncNeeded={() => showToast('Öğrenci verileri senkronize edildi.')} />
-              )}
-
-              {/* TAB 6: INSTITUTIONAL & LICENSING */}
-              {activeTab === 'institutional' && (
-                <InstitutionalPanelTab />
               )}
 
               {/* TAB 7: CURRICULUM MATRIX */}
@@ -598,25 +558,19 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-extrabold uppercase tracking-wider bg-indigo-500/20 text-indigo-400 px-2.5 py-0.5 rounded-full border border-indigo-500/30">
-                BİLSEM Soru Motoru v2.6
+                ZekaPark Soru Motoru v1.0
               </span>
-              <span className="text-xs text-slate-400 font-medium">8 Bilişsel Boyut • CHC Uyumlu</span>
+              <span className="text-xs text-slate-400 font-medium">10 Bilişsel Çalışma Alanı</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-white font-['Outfit',sans-serif] mt-2 tracking-tight">
               Sistem Durumu & Soru Havuzu İzleme
             </h2>
             <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl leading-relaxed">
-              Algoritmik soru üreteçleri, yapay zeka zorluk adaptasyonu ve kurumsal öğrenci kohortu gerçek zamanlı olarak çalışıyor.
+              Soru üreteçlerini, yerel soru havuzunu ve tanı araçlarını tek noktadan yönetin.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => onNavigateToTab('teacher_analytics')}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-black shadow-md shadow-indigo-600/30 transition-all cursor-pointer flex items-center gap-2"
-            >
-              <GraduationCap className="w-4 h-4" /> Öğretmen Isı Haritası
-            </button>
             <button
               onClick={() => onNavigateToTab('bulk_generator')}
               className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black shadow-md shadow-amber-500/20 transition-all cursor-pointer flex items-center gap-2"
@@ -676,17 +630,17 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
           </div>
         </motion.div>
 
-        {/* Metric 2: Active Students */}
+        {/* Metric 2: Generator Types */}
         <motion.div 
           whileHover={{ y: -4 }}
-          onClick={() => onNavigateToTab('students')}
+          onClick={() => onNavigateToTab('studio')}
           className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800/80 shadow-sm cursor-pointer group transition-all hover:border-emerald-500/50"
         >
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Kayıtlı Öğrenciler</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Soru Üreteçleri</p>
               <h3 className="text-3xl font-black text-white font-['Outfit',sans-serif] mt-1.5">
-                1,248
+                {ALL_QUESTION_TYPES.length}
               </h3>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30 group-hover:scale-110 transition-transform">
@@ -695,14 +649,12 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
-            <span className="text-emerald-400 font-bold flex items-center gap-1">
-              <TrendingUp className="w-3.5 h-3.5" /> +14% Bu Hafta
-            </span>
-            <span className="text-slate-400">892 Aktif</span>
+            <span className="text-emerald-400 font-bold">Parametrik</span>
+            <span className="text-slate-400">Kayıtlı Tip</span>
           </div>
         </motion.div>
 
-        {/* Metric 3: Solved Questions */}
+        {/* Metric 3: Cognitive Categories */}
         <motion.div 
           whileHover={{ y: -4 }}
           onClick={() => onNavigateToTab('analytics')}
@@ -710,9 +662,9 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
         >
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Bugün Çözülen</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Bilişsel Alanlar</p>
               <h3 className="text-3xl font-black text-white font-['Outfit',sans-serif] mt-1.5">
-                16.4K
+                {ALL_COGNITIVE_CATEGORIES.length}
               </h3>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30 group-hover:scale-110 transition-transform">
@@ -721,10 +673,8 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
-            <span className="text-amber-400 font-bold flex items-center gap-1">
-              <TrendingUp className="w-3.5 h-3.5" /> %68 Ortalama
-            </span>
-            <span className="text-slate-400">Doğruluk</span>
+            <span className="text-amber-400 font-bold">Kategori Haritası</span>
+            <span className="text-slate-400">Kapsam</span>
           </div>
         </motion.div>
 
@@ -738,7 +688,7 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
             <div>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Motor Doğrulaması</p>
               <h3 className="text-3xl font-black text-emerald-400 font-['Outfit',sans-serif] mt-1.5">
-                %100
+                Hazır
               </h3>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-teal-500/20 text-teal-400 flex items-center justify-center border border-teal-500/30 group-hover:scale-110 transition-transform">
@@ -747,23 +697,23 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
-            <span className="text-slate-400">Bozuk Soru:</span>
-            <span className="text-emerald-400 font-bold">0 Kusursuz</span>
+            <span className="text-slate-400">Sonuç için:</span>
+            <span className="text-emerald-400 font-bold">Tanıyı Çalıştır</span>
           </div>
         </motion.div>
 
       </div>
 
-      {/* 8 Cognitive Categories Pool Matrix */}
+      {/* Cognitive Categories Pool Matrix */}
       <div className="p-6 md:p-8 rounded-3xl bg-slate-900/90 border border-slate-800/80 shadow-sm space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h3 className="text-lg font-black text-white font-['Outfit',sans-serif] flex items-center gap-2">
               <BrainCircuit className="w-5 h-5 text-indigo-400" />
-              8 Bilişsel Zeka Alanı Dağılımı
+              10 Bilişsel Çalışma Alanı Dağılımı
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Her kategorideki algoritmik soru stoku ve BİLSEM hedef oranları
+              Her kategoride yerel soru bankasına kaydedilmiş soru sayısı
             </p>
           </div>
 
@@ -830,19 +780,19 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
           <div className="flex items-center justify-between">
             <h3 className="text-base font-bold text-white font-['Outfit',sans-serif] flex items-center gap-2">
               <Activity className="w-4 h-4 text-indigo-400" />
-              Canlı Sistem & Denetim Günlüğü
+              Sistem Bilgileri
             </h3>
             <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2.5 py-0.5 rounded-full">
-              Gerçek Zamanlı
+              Bu Oturum
             </span>
           </div>
 
           <div className="space-y-3">
             {[
-              { text: "Algoritmik soru motoru 54 soru tipini başarıyla doğruladı.", time: "2 dk önce", badge: "Doğrulama", color: "text-emerald-400" },
-              { text: "Demir Yılmaz 'Görsel Örüntü Seviye 3' testini tamamladı (%92).", time: "14 dk önce", badge: "Öğrenci", color: "text-indigo-400" },
-              { text: "3. Sınıf BİLSEM Süreli Deneme Sınav havuzu güncellendi.", time: "45 dk önce", badge: "Havuz", color: "text-amber-400" },
-              { text: "Raven Matris üreteci bellek gecikmesi < 3.8ms olarak ölçüldü.", time: "1 saat önce", badge: "Performans", color: "text-teal-400" },
+              { text: `${ALL_QUESTION_TYPES.length} parametrik soru tipi yüklendi.`, time: "Bu oturum", badge: "Üreteç", color: "text-emerald-400" },
+              { text: `${questionsPool.length} soru yerel soru bankasında kayıtlı.`, time: "Bu oturum", badge: "Havuz", color: "text-indigo-400" },
+              { text: `${ALL_COGNITIVE_CATEGORIES.length} bilişsel çalışma alanı yapılandırıldı.`, time: "Bu oturum", badge: "Kapsam", color: "text-amber-400" },
+              { text: "Ayrıntılı sonuçlar için motor tanı veya stres testi çalıştırılabilir.", time: "İsteğe bağlı", badge: "Tanı", color: "text-teal-400" },
             ].map((act, i) => (
               <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-slate-800/40 border border-slate-700/40 hover:bg-slate-800/70 transition-colors">
                 <div className="flex items-center gap-3">
@@ -868,20 +818,6 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
           </h3>
 
           <div className="space-y-2.5">
-            <button
-              onClick={() => onNavigateToTab('teacher_analytics')}
-              className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-gradient-to-r from-indigo-600/15 via-purple-600/15 to-indigo-600/15 hover:from-indigo-600/25 hover:to-purple-600/25 border border-indigo-500/30 text-indigo-300 text-xs font-bold transition-all cursor-pointer group shadow-sm"
-            >
-              <div className="flex items-center gap-2.5">
-                <GraduationCap className="w-4 h-4 text-indigo-400" />
-                <span>Öğretmen Analitiği & Isı Haritası</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Yeni</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform text-indigo-400" />
-              </div>
-            </button>
-
             <button
               onClick={() => onNavigateToTab('bulk_generator')}
               className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-indigo-600/15 to-purple-600/15 hover:from-amber-500/20 hover:to-indigo-600/25 border border-amber-500/30 text-amber-300 text-xs font-bold transition-all cursor-pointer group shadow-sm shadow-amber-500/10"

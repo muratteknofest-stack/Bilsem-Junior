@@ -21,7 +21,6 @@ import {
   WeekComparisonSummary,
   PastWeekTrendItem,
 } from '../types';
-import { generateQuestionByType } from '../features/questions/generators';
 import { reminderService } from './reminder-service';
 import { safeStorage } from '../lib/storage';
 
@@ -77,68 +76,40 @@ const STORAGE_KEYS = {
   MISSIONS: 'yapyap_missions',
   EXAM_RESULTS: 'yapyap_exam_results',
   ACTIVE_EXAM: 'yapyap_active_exam',
-  LEADERBOARD_CLAPS: 'yapyap_leaderboard_claps',
   WEEKLY_QUESTIONS: 'yapyap_weekly_questions_v1',
+  WEEKLY_CATEGORIES: 'bilsem_weekly_category_challenges_v1',
 };
+
+const USER_PROGRESS_KEYS = [
+  STORAGE_KEYS.MASTERY,
+  STORAGE_KEYS.MISTAKES,
+  STORAGE_KEYS.ACHIEVEMENTS,
+  STORAGE_KEYS.MISSIONS,
+  STORAGE_KEYS.EXAM_RESULTS,
+  STORAGE_KEYS.ACTIVE_EXAM,
+  STORAGE_KEYS.WEEKLY_QUESTIONS,
+  STORAGE_KEYS.WEEKLY_CATEGORIES,
+] as const;
+
+const createEmptyMasteries = (): SkillMastery[] =>
+  INITIAL_SKILL_MASTERIES.map((item) => ({
+    ...item,
+    mastery: 0,
+    attemptCount: 0,
+    accuracy: 0,
+    recentTrend: 'neutral',
+  }));
+
+const createLockedAchievements = (): Achievement[] =>
+  INITIAL_ACHIEVEMENTS.map((item) => ({
+    ...item,
+    unlocked: false,
+    unlockedAt: undefined,
+    progress: 0,
+    rewardClaimed: false,
+  }));
 
 // System Role Accounts
-export const SYSTEM_ACCOUNTS: Record<UserRole, UserProfile> = {
-  student: {
-    id: 'student-deniz-kaya',
-    name: 'Deniz Kaya',
-    role: 'student',
-    grade: 3,
-    avatar: '🦊',
-    level: 4,
-    xp: 720,
-    streak: 5,
-    longestStreak: 7,
-    todayPracticed: false,
-    streakFreezeCount: 1,
-    claimedStreakDays: [3],
-    weeklyStreakHistory: [true, true, true, true, false, false, false],
-    lastActiveDate: new Date().toISOString().split('T')[0],
-    dailyGoalMinutes: 15,
-    todayMinutesSpent: 8,
-    dailyGoalQuestions: 10,
-    todayQuestionsSolved: 7,
-    dailyGoalSessions: 2,
-    todaySessionsCompleted: 1,
-    soundEnabled: true,
-    studentCode: 'DENIZ2026',
-    totalQuestionsSolved: 24,
-    resolvedMistakesCount: 1,
-    featuredBadgeIds: ['streak_3', 'first_step', 'questions_10'],
-  },
-  parent: {
-    id: 'parent-zeynep-kaya',
-    name: 'Zeynep Kaya',
-    role: 'parent',
-    avatar: '👩‍🏫',
-    level: 1,
-    xp: 0,
-    streak: 5,
-    lastActiveDate: new Date().toISOString().split('T')[0],
-    dailyGoalMinutes: 0,
-    todayMinutesSpent: 0,
-    soundEnabled: true,
-  },
-  admin: {
-    id: 'admin-murat-hoca',
-    name: 'Murat Hoca (Admin)',
-    role: 'admin',
-    avatar: '👨‍💻',
-    level: 10,
-    xp: 9999,
-    streak: 30,
-    lastActiveDate: new Date().toISOString().split('T')[0],
-    dailyGoalMinutes: 0,
-    todayMinutesSpent: 0,
-    soundEnabled: true,
-  },
-};
-
-export const DEMO_PERSONAS = SYSTEM_ACCOUNTS;
 
 export const INITIAL_SKILL_MASTERIES: SkillMastery[] = [
   { category: 'pattern', categoryName: 'Örüntü ve Dizi', mastery: 72, attemptCount: 45, accuracy: 78, recentTrend: 'up' },
@@ -149,6 +120,8 @@ export const INITIAL_SKILL_MASTERIES: SkillMastery[] = [
   { category: 'memory', categoryName: 'Görsel Bellek', mastery: 76, attemptCount: 28, accuracy: 82, recentTrend: 'up' },
   { category: 'visual_perception', categoryName: 'Görsel Algı', mastery: 78, attemptCount: 42, accuracy: 84, recentTrend: 'up' },
   { category: 'numerical', categoryName: 'Sayısal Muhakeme', mastery: 65, attemptCount: 25, accuracy: 68, recentTrend: 'neutral' },
+  { category: 'verbal', categoryName: 'Sözel Mantık ve Analoji', mastery: 0, attemptCount: 0, accuracy: 0, recentTrend: 'neutral' },
+  { category: 'coding', categoryName: 'Algoritma ve Kodlama', mastery: 0, attemptCount: 0, accuracy: 0, recentTrend: 'neutral' },
 ];
 
 export const INITIAL_ACHIEVEMENTS: Achievement[] = [
@@ -611,7 +584,134 @@ export const INITIAL_MISTAKES: MistakeItem[] = [
   },
 ];
 
-class LocalDemoDataService {
+class ZekaParkDataService {
+  private persistTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private clearUserProgress() {
+    USER_PROGRESS_KEYS.forEach((key) => safeStorage.removeItem(key));
+  }
+
+  private scheduleProgressPersist() {
+    if (!auth.currentUser) return;
+    if (this.persistTimer) clearTimeout(this.persistTimer);
+    this.persistTimer = setTimeout(() => {
+      void this.persistUserStateToFirebase().catch((error) => {
+        console.error('Kullanıcı ilerlemesi senkronize edilemedi.', error);
+      });
+    }, 400);
+  }
+
+  private setProgressItem(key: (typeof USER_PROGRESS_KEYS)[number], value: string) {
+    safeStorage.setItem(key, value);
+    this.scheduleProgressPersist();
+  }
+
+  private removeProgressItem(key: (typeof USER_PROGRESS_KEYS)[number]) {
+    safeStorage.removeItem(key);
+    this.scheduleProgressPersist();
+  }
+
+  private async persistUserStateToFirebase() {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+
+    const values = Object.fromEntries(
+      USER_PROGRESS_KEYS.map((key) => [key, safeStorage.getItem(key)]).filter(([, value]) => value !== null),
+    );
+    await setDoc(
+      doc(db, 'users', currentUser.uid, 'private', 'state'),
+      { values, updatedAt: serverTimestamp() },
+      { merge: true },
+    );
+  }
+
+  private markPracticeForToday(user: UserProfile, minutesSpent: number): boolean {
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const previousDate = user.lastActiveDate?.slice(0, 10) || '';
+    const isNewCalendarDay = previousDate !== today;
+
+    if (isNewCalendarDay) {
+      user.todayMinutesSpent = 0;
+      user.todayQuestionsSolved = 0;
+      user.todaySessionsCompleted = 0;
+      user.todayPracticed = false;
+    }
+
+    let streakIncreased = false;
+    if (!user.todayPracticed) {
+      const previousTime = previousDate ? new Date(`${previousDate}T00:00:00`).getTime() : Number.NaN;
+      const todayTime = new Date(`${today}T00:00:00`).getTime();
+      const dayGap = Number.isFinite(previousTime) ? Math.round((todayTime - previousTime) / 86_400_000) : Number.NaN;
+
+      if (!previousDate || user.streak <= 0) {
+        user.streak = 1;
+      } else if (dayGap === 1) {
+        user.streak += 1;
+      } else if (dayGap === 2 && (user.streakFreezeCount || 0) > 0) {
+        user.streakFreezeCount = (user.streakFreezeCount || 0) - 1;
+        user.streak += 1;
+      } else if (dayGap > 1) {
+        user.streak = 1;
+      } else if (previousDate === today && user.streak <= 0) {
+        user.streak = 1;
+      }
+      streakIncreased = true;
+    }
+
+    user.todayPracticed = true;
+    user.todayMinutesSpent = (user.todayMinutesSpent || 0) + Math.max(0, minutesSpent);
+    user.lastActiveDate = now.toISOString();
+    user.longestStreak = Math.max(user.longestStreak || 0, user.streak || 0);
+    const dayIndex = (now.getDay() + 6) % 7;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - dayIndex);
+    monday.setHours(0, 0, 0, 0);
+    const previousWasBeforeThisWeek = previousDate
+      ? new Date(`${previousDate}T00:00:00`).getTime() < monday.getTime()
+      : true;
+    const history = previousWasBeforeThisWeek
+      ? [false, false, false, false, false, false, false]
+      : [...(user.weeklyStreakHistory || [false, false, false, false, false, false, false])];
+    history[dayIndex] = true;
+    user.weeklyStreakHistory = history;
+    return streakIncreased;
+  }
+
+  async hydrateUserStateFromFirebase(): Promise<void> {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+
+    const snapshot = await getDoc(doc(db, 'users', currentUser.uid, 'private', 'state'));
+    this.clearUserProgress();
+    const values = snapshot.data()?.values;
+    if (values && typeof values === 'object') {
+      USER_PROGRESS_KEYS.forEach((key) => {
+        const value = (values as Record<string, unknown>)[key];
+        if (typeof value === 'string') safeStorage.setItem(key, value);
+      });
+    }
+  }
+
+  async loadRemoteProgressForUser(userId: string): Promise<{
+    masteries: SkillMastery[];
+    weeklyQuestions: unknown | null;
+    examResults: ExamResult[];
+  }> {
+    const snapshot = await getDoc(doc(db, 'users', userId, 'private', 'state'));
+    const values = (snapshot.data()?.values || {}) as Record<string, unknown>;
+    const parse = <T>(key: string, fallback: T): T => {
+      const raw = values[key];
+      if (typeof raw !== 'string') return fallback;
+      try { return JSON.parse(raw) as T; } catch { return fallback; }
+    };
+    return {
+      masteries: parse(STORAGE_KEYS.MASTERY, createEmptyMasteries()),
+      weeklyQuestions: parse<unknown | null>(STORAGE_KEYS.WEEKLY_QUESTIONS, null),
+      examResults: parse(STORAGE_KEYS.EXAM_RESULTS, []),
+    };
+  }
+
   // Hybrid Firebase Sync
   syncUserFromFirebase(profile: UserProfile | null) {
     if (profile) {
@@ -628,7 +728,10 @@ class LocalDemoDataService {
     if (!auth.currentUser) return;
     try {
       const ref = doc(db, 'users', auth.currentUser.uid);
-      await updateDoc(ref, { ...updates, updatedAt: Date.now() });
+      const definedUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([, value]) => value !== undefined),
+      );
+      await updateDoc(ref, { ...definedUpdates, updatedAt: Date.now() });
     } catch (e) {
       console.error('Failed to update firebase', e);
     }
@@ -639,35 +742,62 @@ class LocalDemoDataService {
     const raw = safeStorage.getItem(STORAGE_KEYS.CURRENT_USER);
     if (raw) {
       try {
-        let parsed = JSON.parse(raw); if (!parsed || typeof parsed !== "object") parsed = { ...SYSTEM_ACCOUNTS.student };
-        if (!parsed.claimedStreakDays) parsed.claimedStreakDays = [3];
-        if (parsed.streakFreezeCount === undefined) parsed.streakFreezeCount = 1;
-        if (parsed.longestStreak === undefined) parsed.longestStreak = Math.max(parsed.streak || 5, 7);
-        if (parsed.totalQuestionsSolved === undefined) parsed.totalQuestionsSolved = 24;
-        if (parsed.resolvedMistakesCount === undefined) parsed.resolvedMistakesCount = 1;
+        let parsed = JSON.parse(raw); if (!parsed || typeof parsed !== "object") throw new Error('Invalid profile');
+        if (!parsed.claimedStreakDays) parsed.claimedStreakDays = [];
+        if (parsed.streakFreezeCount === undefined) parsed.streakFreezeCount = 0;
+        if (parsed.longestStreak === undefined) parsed.longestStreak = parsed.streak || 0;
+        if (parsed.totalQuestionsSolved === undefined) parsed.totalQuestionsSolved = 0;
+        if (parsed.resolvedMistakesCount === undefined) parsed.resolvedMistakesCount = 0;
         if (parsed.dailyGoalQuestions === undefined) parsed.dailyGoalQuestions = 10;
-        if (parsed.todayQuestionsSolved === undefined) parsed.todayQuestionsSolved = 7;
+        if (parsed.todayQuestionsSolved === undefined) parsed.todayQuestionsSolved = 0;
         if (parsed.dailyGoalSessions === undefined) parsed.dailyGoalSessions = 2;
-        if (parsed.todaySessionsCompleted === undefined) parsed.todaySessionsCompleted = 1;
-        if (!parsed.weeklyStreakHistory) parsed.weeklyStreakHistory = [true, true, true, true, parsed.todayPracticed || false, false, false];
+        if (parsed.todaySessionsCompleted === undefined) parsed.todaySessionsCompleted = 0;
+        if (!parsed.weeklyStreakHistory) parsed.weeklyStreakHistory = [false, false, false, false, false, false, false];
         return parsed;
       } catch {}
     }
-    const defaultUser = DEMO_PERSONAS.student;
-    this.setCurrentUser(defaultUser);
-    return defaultUser;
+    return {
+      id: 'guest', name: 'Misafir', role: 'student', avatar: '🦊', grade: 1,
+      level: 1, xp: 0, streak: 0, lastActiveDate: '', dailyGoalMinutes: 15,
+      todayMinutesSpent: 0, soundEnabled: true, totalQuestionsSolved: 0,
+      todayQuestionsSolved: 0, dailyGoalQuestions: 10, dailyGoalSessions: 2,
+      todaySessionsCompleted: 0,
+    };
   }
 
   setCurrentUser(user: UserProfile) {
     safeStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+    const {
+      avatar, level, xp, streak, longestStreak, lastActiveDate, todayPracticed,
+      streakFreezeCount, claimedStreakDays, weeklyStreakHistory, dailyGoalMinutes,
+      todayMinutesSpent, dailyGoalQuestions, todayQuestionsSolved, dailyGoalSessions,
+      todaySessionsCompleted, soundEnabled, totalQuestionsSolved, resolvedMistakesCount,
+      featuredBadgeIds, reminderConfig,
+    } = user;
+    void this._updateFirebaseProfile({
+      avatar, level, xp, streak, longestStreak, lastActiveDate, todayPracticed,
+      streakFreezeCount, claimedStreakDays, weeklyStreakHistory, dailyGoalMinutes,
+      todayMinutesSpent, dailyGoalQuestions, todayQuestionsSolved, dailyGoalSessions,
+      todaySessionsCompleted, soundEnabled, totalQuestionsSolved, resolvedMistakesCount,
+      featuredBadgeIds, reminderConfig,
+    });
   }
 
   isAuthenticated(): boolean {
-    return safeStorage.getItem(STORAGE_KEYS.AUTH_SESSION) === 'true';
+    return auth.currentUser !== null && safeStorage.getItem(STORAGE_KEYS.AUTH_SESSION) === 'true';
   }
 
   loginAs(role: UserRole, customUser?: UserProfile): UserProfile {
-    const user = customUser || SYSTEM_ACCOUNTS[role];
+    if (!customUser || customUser.role !== role || customUser.id !== auth.currentUser?.uid) {
+      throw new Error('Kimliği doğrulanmamış yerel oturum engellendi.');
+    }
+    const previous = safeStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+    if (previous) {
+      try {
+        if ((JSON.parse(previous) as UserProfile).id !== customUser.id) this.clearUserProgress();
+      } catch { this.clearUserProgress(); }
+    }
+    const user = customUser;
     safeStorage.setItem(STORAGE_KEYS.AUTH_SESSION, 'true');
     this.setCurrentUser(user);
     return user;
@@ -675,12 +805,8 @@ class LocalDemoDataService {
 
   logout(): void {
     safeStorage.removeItem(STORAGE_KEYS.AUTH_SESSION);
-  }
-
-  switchPersona(role: UserRole): UserProfile {
-    const user = SYSTEM_ACCOUNTS[role];
-    this.setCurrentUser(user);
-    return user;
+    safeStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    this.clearUserProgress();
   }
 
   // Daily Streak Counter & Rewards Methods
@@ -690,21 +816,8 @@ class LocalDemoDataService {
 
   recordPracticeSession(minutesSpent = 2): { user: UserProfile; streakIncreased: boolean } {
     const user = this.getCurrentUser();
-    user.todayMinutesSpent = (user.todayMinutesSpent || 0) + minutesSpent;
-    user.todayPracticed = true;
-    user.lastActiveDate = new Date().toISOString();
-    
-    let streakIncreased = false;
-    // Streak logic...
-    // In a real app we'd compare dates properly
-    
-    // Trigger firebase update
-    this._updateFirebaseProfile({ 
-      todayMinutesSpent: user.todayMinutesSpent,
-      todayPracticed: true,
-      lastActiveDate: user.lastActiveDate
-    });
-    
+    const streakIncreased = this.markPracticeForToday(user, minutesSpent);
+    user.todaySessionsCompleted = (user.todaySessionsCompleted || 0) + 1;
     this.setCurrentUser(user);
     return { user, streakIncreased };
   }
@@ -752,37 +865,17 @@ class LocalDemoDataService {
     return { success: true, user };
   }
 
-  advanceStreakForTesting(): UserProfile {
-    const user = this.getCurrentUser();
-    user.streak = (user.streak || 0) + 1;
-    user.longestStreak = Math.max(user.longestStreak || 0, user.streak);
-    user.todayPracticed = true;
-    user.todayMinutesSpent = (user.todayMinutesSpent || 0) + 5;
-
-    const now = new Date();
-    const dayIndex = (now.getDay() + 6) % 7;
-    const history = [...(user.weeklyStreakHistory || [true, true, true, true, false, false, false])];
-    history[dayIndex] = true;
-    user.weeklyStreakHistory = history;
-
-    if (user.streak >= 3) {
-      this.unlockAchievement('streak_3');
-    }
-
-    this.setCurrentUser(user);
-    return user;
-  }
-
   // 2. Skill Mastery
   getSkillMasteries(): SkillMastery[] {
     const raw = safeStorage.getItem(STORAGE_KEYS.MASTERY);
     if (raw) {
       try {
-        let parsed = JSON.parse(raw); return Array.isArray(parsed) ? parsed : INITIAL_SKILL_MASTERIES;
+        let parsed = JSON.parse(raw); return Array.isArray(parsed) ? parsed : createEmptyMasteries();
       } catch {}
     }
-    safeStorage.setItem(STORAGE_KEYS.MASTERY, JSON.stringify(INITIAL_SKILL_MASTERIES));
-    return INITIAL_SKILL_MASTERIES;
+    const initial = createEmptyMasteries();
+    this.setProgressItem(STORAGE_KEYS.MASTERY, JSON.stringify(initial));
+    return initial;
   }
 
   updateSkillMastery(category: CognitiveCategory, isCorrect: boolean, difficulty: DifficultyLevel) {
@@ -795,14 +888,12 @@ class LocalDemoDataService {
       item.mastery = Math.min(100, Math.max(10, item.mastery + delta));
       item.recentTrend = isCorrect ? 'up' : 'down';
       masteries[idx] = item;
-      safeStorage.setItem(STORAGE_KEYS.MASTERY, JSON.stringify(masteries));
+      this.setProgressItem(STORAGE_KEYS.MASTERY, JSON.stringify(masteries));
     }
-    // Automatically advance weekly challenge in this category
-    this.updateWeeklyCategoryProgress(category, 1);
   }
 
   updateWeeklyCategoryProgress(category: CognitiveCategory, count: number = 1) {
-    const raw = safeStorage.getItem('bilsem_weekly_category_challenges_v1');
+    const raw = safeStorage.getItem(STORAGE_KEYS.WEEKLY_CATEGORIES);
     if (!raw) return;
     try {
       const state = JSON.parse(raw);
@@ -816,7 +907,7 @@ class LocalDemoDataService {
         if (state.grandChallenge) {
           state.grandChallenge.isCompleted = state.completedChallengesCount >= (state.grandChallenge.requiredCategoriesCount || 6);
         }
-        safeStorage.setItem('bilsem_weekly_category_challenges_v1', JSON.stringify(state));
+        this.setProgressItem(STORAGE_KEYS.WEEKLY_CATEGORIES, JSON.stringify(state));
       }
     } catch {}
   }
@@ -838,41 +929,18 @@ class LocalDemoDataService {
     const raw = safeStorage.getItem(STORAGE_KEYS.MISTAKES);
     if (raw) {
       try {
-        let parsed = JSON.parse(raw); const stored: MistakeItem[] = Array.isArray(parsed) ? parsed : [];
-        let changed = false;
-
-        // If user only had 2 items or fewer, merge new initial sample mistakes so analytics is rich
-        if (stored.length < 3) {
-          INITIAL_MISTAKES.forEach((initM) => {
-            if (!stored.some((s) => s.id === initM.id || s.questionSeed === initM.questionSeed)) {
-              stored.push(initM);
-              changed = true;
-            }
-          });
-        }
-
-        stored.forEach((item) => {
-          if (!item.category) {
-            const found = INITIAL_MISTAKES.find((m) => m.id === item.id);
-            item.category = found?.category || 'spatial';
-            changed = true;
-          }
-        });
-
-        if (changed) {
-          safeStorage.setItem(STORAGE_KEYS.MISTAKES, JSON.stringify(stored));
-        }
-        return stored;
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
       } catch {}
     }
-    safeStorage.setItem(STORAGE_KEYS.MISTAKES, JSON.stringify(INITIAL_MISTAKES));
-    return INITIAL_MISTAKES;
+    this.setProgressItem(STORAGE_KEYS.MISTAKES, JSON.stringify([]));
+    return [];
   }
 
   addMistake(question: BaseQuestion) {
     const mistakes = this.getMistakes();
-    // Avoid duplicates for same seed
-    if (mistakes.some((m) => m.questionSeed === question.seed)) return;
+    // The type/version/difficulty/seed combination uniquely identifies a question.
+    if (mistakes.some((m) => m.questionId === question.id)) return;
 
     const item: MistakeItem = {
       id: `mistake-${Date.now()}`,
@@ -888,7 +956,7 @@ class LocalDemoDataService {
       cachedQuestion: question,
     };
     mistakes.unshift(item);
-    safeStorage.setItem(STORAGE_KEYS.MISTAKES, JSON.stringify(mistakes));
+    this.setProgressItem(STORAGE_KEYS.MISTAKES, JSON.stringify(mistakes));
   }
 
   resolveMistake(mistakeId: string): {
@@ -903,7 +971,7 @@ class LocalDemoDataService {
     if (idx !== -1) {
       mistakes[idx].resolved = true;
       mistakes[idx].resolvedAt = new Date().toLocaleDateString('tr-TR');
-      safeStorage.setItem(STORAGE_KEYS.MISTAKES, JSON.stringify(mistakes));
+      this.setProgressItem(STORAGE_KEYS.MISTAKES, JSON.stringify(mistakes));
 
       const user = this.getCurrentUser();
       user.resolvedMistakesCount = (user.resolvedMistakesCount || 0) + 1;
@@ -924,7 +992,7 @@ class LocalDemoDataService {
           if (item5.rewardXP) this.addXP(item5.rewardXP);
           newlyUnlocked.push(item5);
         }
-        safeStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(achievements));
+        this.setProgressItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(achievements));
       }
 
       // Trigger achievement: Tertemiz Defter (if 0 unresolved mistakes remain)
@@ -949,7 +1017,7 @@ class LocalDemoDataService {
       m.resolved = true;
       m.resolvedAt = new Date().toLocaleDateString('tr-TR');
     });
-    safeStorage.setItem(STORAGE_KEYS.MISTAKES, JSON.stringify(mistakes));
+    this.setProgressItem(STORAGE_KEYS.MISTAKES, JSON.stringify(mistakes));
 
     const newlyUnlocked: Achievement[] = [];
     const a1 = this.unlockAchievement('clean_notebook');
@@ -967,6 +1035,7 @@ class LocalDemoDataService {
     totalSolved: number;
   } {
     const user = this.getCurrentUser();
+    this.markPracticeForToday(user, 0);
     user.totalQuestionsSolved = (user.totalQuestionsSolved || 0) + 1;
     user.todayQuestionsSolved = (user.todayQuestionsSolved || 0) + 1;
     this.setCurrentUser(user);
@@ -988,6 +1057,7 @@ class LocalDemoDataService {
           item.unlockedAt = new Date().toISOString().split('T')[0];
           if (item.rewardXP) {
             this.addXP(item.rewardXP);
+            item.rewardClaimed = true;
           }
           newlyUnlocked.push(item);
         }
@@ -1000,7 +1070,7 @@ class LocalDemoDataService {
     checkMilestone('questions_50', 50);
     checkMilestone('questions_100', 100);
 
-    safeStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(achievements));
+    this.setProgressItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(achievements));
 
     // Update real-time weekly solved questions chart storage
     this.incrementWeeklyQuestionCount();
@@ -1013,9 +1083,9 @@ class LocalDemoDataService {
   }
 
   // Weekly Question Progress & Comparison Engine
-  getWeeklyQuestionProgressData(passedUser?: UserProfile): WeeklyQuestionProgressData {
+  getWeeklyQuestionProgressData(passedUser?: UserProfile, remoteData?: unknown): WeeklyQuestionProgressData {
     const user = passedUser || this.getCurrentUser();
-    const raw = safeStorage.getItem(STORAGE_KEYS.WEEKLY_QUESTIONS);
+    const raw = remoteData ? JSON.stringify(remoteData) : safeStorage.getItem(STORAGE_KEYS.WEEKLY_QUESTIONS);
     
     const now = new Date();
     const todayIdx = (now.getDay() + 6) % 7; // 0: Mon ... 6: Sun
@@ -1024,6 +1094,7 @@ class LocalDemoDataService {
       thisWeekDays: number[];
       lastWeekDays: number[];
       pastWeeks: number[];
+      weekStart?: string;
     };
 
     if (raw) {
@@ -1037,7 +1108,13 @@ class LocalDemoDataService {
       }
     } else {
       data = this.getDefaultWeeklyQuestionsData(user, todayIdx);
-      safeStorage.setItem(STORAGE_KEYS.WEEKLY_QUESTIONS, JSON.stringify(data));
+      this.setProgressItem(STORAGE_KEYS.WEEKLY_QUESTIONS, JSON.stringify(data));
+    }
+
+    const rolledData = this.rollWeeklyQuestionData(data);
+    if (rolledData !== data) {
+      data = rolledData;
+      if (!remoteData) this.setProgressItem(STORAGE_KEYS.WEEKLY_QUESTIONS, JSON.stringify(data));
     }
 
     const DAY_CONFIG = [
@@ -1088,7 +1165,7 @@ class LocalDemoDataService {
         weekLabel: '3 Hafta Önce',
         shortLabel: '1. Hafta',
         dateRange: '3 Hafta Önce',
-        totalQuestions: data.pastWeeks?.[0] ?? 24,
+        totalQuestions: data.pastWeeks?.[0] ?? 0,
         targetGoal: 45,
         isCurrentWeek: false,
       },
@@ -1097,7 +1174,7 @@ class LocalDemoDataService {
         weekLabel: '2 Hafta Önce',
         shortLabel: '2. Hafta',
         dateRange: '2 Hafta Önce',
-        totalQuestions: data.pastWeeks?.[1] ?? 32,
+        totalQuestions: data.pastWeeks?.[1] ?? 0,
         targetGoal: 45,
         isCurrentWeek: false,
       },
@@ -1141,21 +1218,47 @@ class LocalDemoDataService {
 
   private getDefaultWeeklyQuestionsData(user: UserProfile, todayIdx: number) {
     const thisWeek = [0, 0, 0, 0, 0, 0, 0];
-    const lastWeek = [6, 7, 5, 8, 5, 3, 2]; // total = 36
-
-    // Realistic progressive seeds up to today
-    const seeds = [7, 9, 6, 11, 8, 4, 3];
-    for (let i = 0; i <= todayIdx; i++) {
-      thisWeek[i] = seeds[i] || 5;
-    }
-    if (user.todayPracticed) {
-      thisWeek[todayIdx] = Math.max(thisWeek[todayIdx], 10);
-    }
+    const lastWeek = [0, 0, 0, 0, 0, 0, 0];
+    if (user.todayPracticed) thisWeek[todayIdx] = user.todayQuestionsSolved || 0;
 
     return {
       thisWeekDays: thisWeek,
       lastWeekDays: lastWeek,
-      pastWeeks: [22, 28],
+      pastWeeks: [0, 0],
+      weekStart: this.getWeekStartKey(),
+    };
+  }
+
+  private getWeekStartKey(date = new Date()): string {
+    const monday = new Date(date);
+    const dayIndex = (monday.getDay() + 6) % 7;
+    monday.setDate(monday.getDate() - dayIndex);
+    return `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+  }
+
+  private rollWeeklyQuestionData(data: any) {
+    const currentWeekStart = this.getWeekStartKey();
+    if (data.weekStart === currentWeekStart) return data;
+
+    const priorWeekStart = typeof data.weekStart === 'string'
+      ? new Date(`${data.weekStart}T00:00:00`).getTime()
+      : Number.NaN;
+    const currentWeekTime = new Date(`${currentWeekStart}T00:00:00`).getTime();
+    const isImmediatelyPreviousWeek = Number.isFinite(priorWeekStart)
+      && Math.round((currentWeekTime - priorWeekStart) / 86_400_000) === 7;
+    const completedWeekTotal = Array.isArray(data.thisWeekDays)
+      ? data.thisWeekDays.reduce((sum: number, count: unknown) => sum + (Number(count) || 0), 0)
+      : 0;
+
+    return {
+      thisWeekDays: [0, 0, 0, 0, 0, 0, 0],
+      lastWeekDays: isImmediatelyPreviousWeek && Array.isArray(data.thisWeekDays)
+        ? [...data.thisWeekDays]
+        : [0, 0, 0, 0, 0, 0, 0],
+      pastWeeks: isImmediatelyPreviousWeek
+        ? [data.pastWeeks?.[1] || 0, completedWeekTotal]
+        : [0, 0],
+      weekStart: currentWeekStart,
     };
   }
 
@@ -1177,8 +1280,9 @@ class LocalDemoDataService {
       if (!Array.isArray(data.thisWeekDays) || data.thisWeekDays.length !== 7) {
         data.thisWeekDays = [0, 0, 0, 0, 0, 0, 0];
       }
+      data = this.rollWeeklyQuestionData(data);
       data.thisWeekDays[todayIdx] = (data.thisWeekDays[todayIdx] || 0) + 1;
-      safeStorage.setItem(STORAGE_KEYS.WEEKLY_QUESTIONS, JSON.stringify(data));
+      this.setProgressItem(STORAGE_KEYS.WEEKLY_QUESTIONS, JSON.stringify(data));
     } catch {}
   }
 
@@ -1232,13 +1336,14 @@ class LocalDemoDataService {
           }
         });
         if (changed) {
-          safeStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(stored));
+          this.setProgressItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(stored));
         }
         return stored;
       } catch {}
     }
-    safeStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(INITIAL_ACHIEVEMENTS));
-    return INITIAL_ACHIEVEMENTS;
+    const initial = createLockedAchievements();
+    this.setProgressItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(initial));
+    return initial;
   }
 
   unlockAchievement(id: string): Achievement | null {
@@ -1252,7 +1357,7 @@ class LocalDemoDataService {
         items[idx].rewardClaimed = true;
         this.addXP(items[idx].rewardXP);
       }
-      safeStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(items));
+      this.setProgressItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(items));
       return items[idx];
     }
     return null;
@@ -1265,7 +1370,7 @@ class LocalDemoDataService {
       items[idx].rewardClaimed = true;
       const xp = items[idx].rewardXP || 50;
       this.addXP(xp);
-      safeStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(items));
+      this.setProgressItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(items));
       return { success: true, xpAwarded: xp, achievement: items[idx], user: this.getCurrentUser() };
     }
     return { success: false, xpAwarded: 0, achievement: items[idx] || null, user: this.getCurrentUser() };
@@ -1401,7 +1506,7 @@ class LocalDemoDataService {
     }
 
     if (changed) {
-      localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(achievements));
+      this.setProgressItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(achievements));
     }
     return achievements;
   }
@@ -1420,7 +1525,7 @@ class LocalDemoDataService {
       date: new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }),
       targetQuestions: user.dailyGoalQuestions || 10,
       estimatedMinutes: user.dailyGoalMinutes || 15,
-      completedQuestions: user.todayQuestionsSolved ?? 7,
+      completedQuestions: user.todayQuestionsSolved ?? 0,
       targetCategories: [
         { category: weak1, count: 4 },
         { category: weak2, count: 3 },
@@ -1438,27 +1543,6 @@ class LocalDemoDataService {
     return user;
   }
 
-  incrementTodayQuestions(count: number = 1): UserProfile {
-    const user = this.getCurrentUser();
-    user.todayQuestionsSolved = (user.todayQuestionsSolved || 0) + count;
-    user.totalQuestionsSolved = (user.totalQuestionsSolved || 0) + count;
-    this.setCurrentUser(user);
-    this.incrementWeeklyQuestionCount();
-    return user;
-  }
-
-  incrementTodaySessions(count: number = 1): UserProfile {
-    const user = this.getCurrentUser();
-    user.todaySessionsCompleted = (user.todaySessionsCompleted || 0) + count;
-    user.todayMinutesSpent = (user.todayMinutesSpent || 0) + 5 * count;
-    if (!user.todayPracticed) {
-      user.todayPracticed = true;
-      user.streak = (user.streak || 0) + 1;
-    }
-    this.setCurrentUser(user);
-    return user;
-  }
-
   // 7. Exam Results History
   getExamResults(): ExamResult[] {
     const raw = safeStorage.getItem(STORAGE_KEYS.EXAM_RESULTS);
@@ -1467,39 +1551,14 @@ class LocalDemoDataService {
         return JSON.parse(raw);
       } catch {}
     }
-    const sampleResults: ExamResult[] = [
-      {
-        examId: 'exam-1',
-        title: 'BİLSEM Genel Deneme Sınavı 1',
-        date: '3 gün önce',
-        totalQuestions: 15,
-        correctAnswers: 12,
-        wrongAnswers: 3,
-        blankAnswers: 0,
-        scorePercentage: 80,
-        totalTimeSeconds: 620,
-        categoryBreakdown: {
-          visual_perception: { total: 3, correct: 3 },
-          pattern: { total: 3, correct: 2 },
-          matrix: { total: 3, correct: 2 },
-          spatial: { total: 2, correct: 1 },
-          logic: { total: 2, correct: 2 },
-          attention: { total: 1, correct: 1 },
-          memory: { total: 1, correct: 1 },
-          numerical: { total: 0, correct: 0 },
-      verbal: { total: 0, correct: 0 },
-      coding: { total: 0, correct: 0 },
-        },
-      },
-    ];
-    safeStorage.setItem(STORAGE_KEYS.EXAM_RESULTS, JSON.stringify(sampleResults));
-    return sampleResults;
+    this.setProgressItem(STORAGE_KEYS.EXAM_RESULTS, JSON.stringify([]));
+    return [];
   }
 
   saveExamResult(result: ExamResult) {
     const list = this.getExamResults();
     list.unshift(result);
-    safeStorage.setItem(STORAGE_KEYS.EXAM_RESULTS, JSON.stringify(list));
+    this.setProgressItem(STORAGE_KEYS.EXAM_RESULTS, JSON.stringify(list));
     this.unlockAchievement('exam_finisher');
   }
 
@@ -1515,11 +1574,11 @@ class LocalDemoDataService {
   }
 
   saveActiveExam(state: any) {
-    safeStorage.setItem(STORAGE_KEYS.ACTIVE_EXAM, JSON.stringify(state));
+    this.setProgressItem(STORAGE_KEYS.ACTIVE_EXAM, JSON.stringify(state));
   }
 
   clearActiveExam() {
-    safeStorage.removeItem(STORAGE_KEYS.ACTIVE_EXAM);
+    this.removeProgressItem(STORAGE_KEYS.ACTIVE_EXAM);
   }
 
   // Study Reminder Configuration
@@ -1535,275 +1594,33 @@ class LocalDemoDataService {
   getLeaderboard(period: LeaderboardPeriod = 'daily', gradeFilter: number | 'all' = 'all'): LeaderboardEntry[] {
     const user = this.getCurrentUser();
 
-    // Read stored claps
-    let clapsMap: Record<string, number> = {};
-    try {
-      const rawClaps = safeStorage.getItem(STORAGE_KEYS.LEADERBOARD_CLAPS);
-      if (rawClaps) { const p = JSON.parse(rawClaps); clapsMap = p && typeof p === "object" ? p : {}; }
-    } catch {}
+    // A public multi-user ranking requires a server-maintained, anonymized aggregate.
+    // Until that backend exists, only authenticated first-party progress is shown.
+    if (gradeFilter !== 'all' && user.grade !== gradeFilter) return [];
+    return [{
+      id: user.id,
+      rank: 1,
+      anonymousAlias: `${user.name} (Sen)`,
+      avatar: user.avatar || '🦊',
+      grade: user.grade ?? 1,
+      isCurrentUser: true,
+      xpEarned: period === 'daily' ? 0 : user.xp,
+      questionsSolved: period === 'daily' ? (user.todayQuestionsSolved || 0) : (user.totalQuestionsSolved || 0),
+      minutesSpent: user.todayMinutesSpent || 0,
+      streak: user.streak || 0,
+      accuracy: 0,
+      clapsCount: 0,
+    }];
 
-    // Mock anonymized peer participants (compliant with COPPA & KVKK)
-    const baseDailyPeers = [
-      {
-        id: 'peer-eagle',
-        anonymousAlias: 'Cesur Kartal 🦅',
-        avatar: '🦅',
-        grade: 3,
-        xpEarned: 185,
-        questionsSolved: 28,
-        minutesSpent: 24,
-        streak: 7,
-        accuracy: 92,
-        baseClaps: 14,
-        specialBadge: 'Günün Lideri',
-      },
-      {
-        id: 'peer-owl',
-        anonymousAlias: 'Bilge Baykuş 🦉',
-        avatar: '🦉',
-        grade: 3,
-        xpEarned: 155,
-        questionsSolved: 24,
-        minutesSpent: 20,
-        streak: 12,
-        accuracy: 89,
-        baseClaps: 9,
-        specialBadge: 'Odak Ustası',
-      },
-      {
-        id: 'peer-tiger',
-        anonymousAlias: 'Hızlı Kaplan 🐯',
-        avatar: '🐯',
-        grade: 2,
-        xpEarned: 135,
-        questionsSolved: 20,
-        minutesSpent: 16,
-        streak: 4,
-        accuracy: 85,
-        baseClaps: 11,
-      },
-      {
-        id: 'peer-dolphin',
-        anonymousAlias: 'Parlak Yunus 🐬',
-        avatar: '🐬',
-        grade: 3,
-        xpEarned: 95,
-        questionsSolved: 14,
-        minutesSpent: 11,
-        streak: 3,
-        accuracy: 86,
-        baseClaps: 6,
-      },
-      {
-        id: 'peer-astronaut',
-        anonymousAlias: 'Yıldız Kaşifi ⭐',
-        avatar: '🚀',
-        grade: 4,
-        xpEarned: 90,
-        questionsSolved: 12,
-        minutesSpent: 10,
-        streak: 6,
-        accuracy: 88,
-        baseClaps: 8,
-      },
-      {
-        id: 'peer-beaver',
-        anonymousAlias: 'Zeki Kunduz 🦫',
-        avatar: '🦫',
-        grade: 2,
-        xpEarned: 75,
-        questionsSolved: 10,
-        minutesSpent: 9,
-        streak: 2,
-        accuracy: 80,
-        baseClaps: 4,
-      },
-      {
-        id: 'peer-pawn',
-        anonymousAlias: 'Gezgin Piyon ♟️',
-        avatar: '♟️',
-        grade: 3,
-        xpEarned: 60,
-        questionsSolved: 8,
-        minutesSpent: 7,
-        streak: 1,
-        accuracy: 75,
-        baseClaps: 2,
-      },
-      {
-        id: 'peer-bear',
-        anonymousAlias: 'Kutup Ayısı 🐻‍❄️',
-        avatar: '🐻‍❄️',
-        grade: 4,
-        xpEarned: 45,
-        questionsSolved: 6,
-        minutesSpent: 5,
-        streak: 2,
-        accuracy: 83,
-        baseClaps: 1,
-      },
-    ];
-
-    const baseWeeklyPeers = [
-      {
-        id: 'peer-owl',
-        anonymousAlias: 'Bilge Baykuş 🦉',
-        avatar: '🦉',
-        grade: 3,
-        xpEarned: 940,
-        questionsSolved: 145,
-        minutesSpent: 115,
-        streak: 12,
-        accuracy: 91,
-        baseClaps: 28,
-        specialBadge: 'Haftanın Yıldızı',
-      },
-      {
-        id: 'peer-eagle',
-        anonymousAlias: 'Cesur Kartal 🦅',
-        avatar: '🦅',
-        grade: 3,
-        xpEarned: 870,
-        questionsSolved: 132,
-        minutesSpent: 102,
-        streak: 7,
-        accuracy: 90,
-        baseClaps: 22,
-        specialBadge: 'Maraton Şampiyonu',
-      },
-      {
-        id: 'peer-astronaut',
-        anonymousAlias: 'Yıldız Kaşifi ⭐',
-        avatar: '🚀',
-        grade: 4,
-        xpEarned: 680,
-        questionsSolved: 104,
-        minutesSpent: 82,
-        streak: 6,
-        accuracy: 87,
-        baseClaps: 16,
-      },
-      {
-        id: 'peer-tiger',
-        anonymousAlias: 'Hızlı Kaplan 🐯',
-        avatar: '🐯',
-        grade: 2,
-        xpEarned: 640,
-        questionsSolved: 98,
-        minutesSpent: 76,
-        streak: 4,
-        accuracy: 84,
-        baseClaps: 19,
-      },
-      {
-        id: 'peer-dolphin',
-        anonymousAlias: 'Parlak Yunus 🐬',
-        avatar: '🐬',
-        grade: 3,
-        xpEarned: 520,
-        questionsSolved: 80,
-        minutesSpent: 64,
-        streak: 3,
-        accuracy: 85,
-        baseClaps: 12,
-      },
-      {
-        id: 'peer-beaver',
-        anonymousAlias: 'Zeki Kunduz 🦫',
-        avatar: '🦫',
-        grade: 2,
-        xpEarned: 410,
-        questionsSolved: 62,
-        minutesSpent: 50,
-        streak: 2,
-        accuracy: 79,
-        baseClaps: 7,
-      },
-    ];
-
-    // Current user's dynamic entry
-    let currentUserEntry: Omit<LeaderboardEntry, 'rank'>;
-    if (period === 'daily') {
-      const userTodayXp = Math.max(115, user.todayMinutesSpent * 14 + (user.totalQuestionsSolved || 15) * 2);
-      currentUserEntry = {
-        id: user.id,
-        anonymousAlias: `${user.name} (Sen) 🦊`,
-        avatar: user.avatar || '🦊',
-        grade: user.grade,
-        isCurrentUser: true,
-        xpEarned: userTodayXp,
-        questionsSolved: user.totalQuestionsSolved || 16,
-        minutesSpent: user.todayMinutesSpent,
-        streak: user.streak,
-        accuracy: 88,
-        clapsCount: clapsMap[user.id] || 15,
-        specialBadge: 'Azimli BİLSEMci',
-      };
-    } else {
-      currentUserEntry = {
-        id: user.id,
-        anonymousAlias: `${user.name} (Sen) 🦊`,
-        avatar: user.avatar || '🦊',
-        grade: user.grade,
-        isCurrentUser: true,
-        xpEarned: user.xp, // 720 XP
-        questionsSolved: (user.totalQuestionsSolved || 24) * 4,
-        minutesSpent: user.todayMinutesSpent * 6 + 45,
-        streak: user.streak,
-        accuracy: 87,
-        clapsCount: clapsMap[user.id] || 34,
-        specialBadge: 'İstikrar Ustası',
-      };
-    }
-
-    const peers = period === 'daily' ? baseDailyPeers : baseWeeklyPeers;
-    // Canlı (gerçek zamanlı) hissi vermek için dakikaya bağlı dinamik XP artışı:
-    const liveTimeBoost = Math.floor(Date.now() / 60000) % 60; // 0-59
-
-    const allEntries: Omit<LeaderboardEntry, 'rank'>[] = [
-      currentUserEntry,
-      ...peers.map((p) => ({
-        id: p.id,
-        anonymousAlias: p.anonymousAlias,
-        avatar: p.avatar,
-        grade: p.grade,
-        isCurrentUser: false,
-        xpEarned: p.xpEarned + (liveTimeBoost * (p.id.length % 4)),
-        questionsSolved: p.questionsSolved,
-        minutesSpent: p.minutesSpent,
-        streak: p.streak,
-        accuracy: p.accuracy,
-        clapsCount: (p.baseClaps || 0) + (clapsMap[p.id] || 0),
-        specialBadge: p.specialBadge,
-      })),
-    ];
-
-    // Filter by grade if selected
-    const filtered = gradeFilter === 'all'
-      ? allEntries
-      : allEntries.filter((e) => e.grade === gradeFilter);
-
-    // Sort by xpEarned descending
-    filtered.sort((a, b) => b.xpEarned - a.xpEarned);
-
-    // Assign 1-indexed ranks
-    return filtered.map((entry, index) => ({
-      ...entry,
-      rank: index + 1,
-    }));
   }
 
-  clapForUser(entryId: string): number {
-    let clapsMap: Record<string, number> = {};
-    try {
-      const raw = safeStorage.getItem(STORAGE_KEYS.LEADERBOARD_CLAPS);
-      if (raw) clapsMap = JSON.parse(raw);
-    } catch {}
-
-    clapsMap[entryId] = (clapsMap[entryId] || 0) + 1;
-    safeStorage.setItem(STORAGE_KEYS.LEADERBOARD_CLAPS, JSON.stringify(clapsMap));
-    return clapsMap[entryId];
+  upsertAchievement(achievement: Achievement): void {
+    const achievements = this.getAchievements();
+    const existingIndex = achievements.findIndex((item) => item.id === achievement.id);
+    if (existingIndex >= 0) achievements[existingIndex] = { ...achievements[existingIndex], ...achievement };
+    else achievements.unshift(achievement);
+    this.setProgressItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(achievements));
   }
 }
 
-export const dataService = new LocalDemoDataService();
+export const dataService = new ZekaParkDataService();

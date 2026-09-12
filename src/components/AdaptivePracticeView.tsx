@@ -103,7 +103,7 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
     if (!selectedOptionId || isSubmitted) return;
     const isCorrect = selectedOptionId === currentQuestion.correctOptionId;
     setIsSubmitted(true);
-    dataService.recordQuestionSolved(isCorrect);
+    dataService.recordQuestionSolved(isCorrect, currentQuestion.category);
 
     if (isCorrect) {
       const nextConsecutive = consecutiveCorrect + 1;
@@ -143,8 +143,6 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
 
       setEarnedXP((prev) => prev + totalXP);
       dataService.addXP(totalXP);
-      dataService.recordPracticeSession(1);
-      dataService.recordQuestionSolved(true, currentQuestion.category);
       dataService.updateSkillMastery(currentQuestion.category, true, currentDifficulty);
 
       // Adapt difficulty up if 2 correct in a row

@@ -58,10 +58,10 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
   const [quickErrorFeedback, setQuickErrorFeedback] = useState<string | null>(null);
 
   const streak = user.streak || 0;
-  const longestStreak = user.longestStreak || Math.max(streak, 7);
-  const streakFreezeCount = user.streakFreezeCount ?? 1;
+  const longestStreak = user.longestStreak || streak;
+  const streakFreezeCount = user.streakFreezeCount ?? 0;
   const todayPracticed = !!user.todayPracticed;
-  const claimedDays = user.claimedStreakDays || [3];
+  const claimedDays = user.claimedStreakDays || [];
 
   // XP multiplier based on streak length
   const streakMultiplier =
@@ -72,15 +72,7 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
   const currentDayOfWeek = (now.getDay() + 6) % 7; // Monday = 0, Sunday = 6
 
   // Weekly streak history (7 booleans)
-  const weeklyHistory = user.weeklyStreakHistory || [
-    true,
-    true,
-    true,
-    true,
-    todayPracticed,
-    false,
-    false,
-  ];
+  const weeklyHistory = user.weeklyStreakHistory || [false, false, false, false, false, false, false];
 
   // Check how many milestones can be claimed right now
   const claimableMilestones = STREAK_MILESTONES.filter(
@@ -111,18 +103,6 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
       onUserUpdate(result.user);
     }
     setClaimingDay(null);
-  };
-
-  // Quick simulate / test day practice
-  const handleSimulatePractice = () => {
-    sound.playSuccess();
-    try {
-      confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
-    } catch {}
-    const updated = dataService.advanceStreakForTesting();
-    setClaimFeedback('Harika! Günlük pratik simüle edildi, serin yükseldi!');
-    setTimeout(() => setClaimFeedback(null), 3500);
-    onUserUpdate(updated);
   };
 
   const handleStartQuickChallenge = () => {
@@ -452,16 +432,6 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
               <span>1 Hızlı Soruyla Koru</span>
             </button>
           )}
-
-          {/* Quick Simulate Button for Testing/Demonstrating Streak Progression */}
-          <button
-            onClick={handleSimulatePractice}
-            title="Seriyi 1 gün ilerlet ve pratik yapılmış say (Demo/Test)"
-            className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span className="hidden xs:inline">Test:</span> Seriyi İlerlet
-          </button>
 
           {/* Primary Action Button */}
           <button

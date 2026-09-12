@@ -1,4 +1,5 @@
 import { BaseQuestion, AiMistakeExplanation, QuestionType } from '../types';
+import { authenticatedFetch } from '../lib/api-client';
 
 class AiMistakeService {
   private cache: Map<string, AiMistakeExplanation> = new Map();
@@ -20,7 +21,7 @@ class AiMistakeService {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-      const response = await fetch('/api/ai-explain-mistake', {
+      const response = await authenticatedFetch('/api/ai-explain-mistake', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,

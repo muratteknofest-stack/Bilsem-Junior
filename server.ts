@@ -4,14 +4,254 @@ import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
+import helmet from 'helmet';
+import { rateLimit } from 'express-rate-limit';
+import { randomInt } from 'node:crypto';
+import { z } from 'zod';
+import {
+  escapeHtml,
+  getAdminAuth,
+  getAdminDb,
+  normalizeStudentCode,
+  requireFirebaseAuth,
+  requireRole,
+  type AuthenticatedRequest,
+} from './server/security';
 
 dotenv.config();
 
+const questionOptionSchema = z.object({
+  id: z.string().min(1).max(32),
+  label: z.string().max(500).default(''),
+}).passthrough();
+
+const explanationSchema = z.object({
+  summary: z.string().max(4000).optional().default(''),
+  ruleTitle: z.string().max(500).optional().default(''),
+  steps: z.array(z.string().max(1000)).max(12).optional().default([]),
+}).passthrough().optional();
+
+const questionRequestSchema = z.object({
+  questionId: z.string().min(1).max(160),
+  questionType: z.string().min(1).max(80),
+  category: z.string().min(1).max(80),
+  difficulty: z.number().int().min(1).max(6),
+  prompt: z.string().min(1).max(4000),
+  secondaryPrompt: z.string().max(2000).optional(),
+  explanation: explanationSchema,
+  options: z.array(questionOptionSchema).min(2).max(8),
+  correctOptionId: z.string().min(1).max(32),
+});
+
+const hintRequestSchema = questionRequestSchema.extend({
+  stepRequested: z.number().int().min(1).max(3).optional().default(1),
+});
+const mistakeRequestSchema = questionRequestSchema.extend({
+  selectedOptionId: z.string().min(1).max(32),
+});
+const stepExplanationRequestSchema = mistakeRequestSchema.extend({
+  isCorrect: z.boolean(),
+});
+const dailyPlanRequestSchema = z.object({
+  studentName: z.string().trim().min(1).max(50).default('Öğrenci'),
+  grade: z.number().int().min(1).max(4).default(3),
+  level: z.number().int().min(1).max(1000).default(1),
+  streak: z.number().int().min(0).max(3660).default(0),
+  dailyGoalQuestions: z.number().int().min(1).max(200).default(10),
+  dailyGoalMinutes: z.number().int().min(1).max(180).default(15),
+  todayQuestionsSolved: z.number().int().min(0).max(1000).default(0),
+  unresolvedMistakes: z.array(z.object({
+    category: z.string().max(80),
+    questionType: z.string().max(80),
+    difficulty: z.number().int().min(1).max(6),
+    prompt: z.string().max(1000),
+  }).passthrough()).max(50).default([]),
+  masteries: z.array(z.object({
+    category: z.string().max(80),
+    categoryName: z.string().max(120),
+    mastery: z.number().min(0).max(100),
+    accuracy: z.number().min(0).max(100),
+    recentTrend: z.string().max(20),
+  }).passthrough()).max(20).default([]),
+});
+
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
-  app.use(express.json({ limit: '10mb' }));
+  app.disable('x-powered-by');
+  if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
+  app.use(helmet({
+    contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https://images.unsplash.com'],
+        connectSrc: [
+          "'self'",
+          'https://*.googleapis.com',
+          'https://*.firebaseio.com',
+          'https://identitytoolkit.googleapis.com',
+          'https://securetoken.googleapis.com',
+        ],
+      },
+    } : false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }));
+  app.use(express.json({ limit: '256kb' }));
+
+  const authLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 8,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'Çok fazla kayıt denemesi yapıldı. Lütfen daha sonra tekrar deneyin.' },
+  });
+  const aiLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    limit: 30,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'Yapay zekâ istek sınırına ulaşıldı. Lütfen kısa süre sonra tekrar deneyin.' },
+  });
+  const reportLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 5,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'Saatlik rapor gönderim sınırına ulaşıldı.' },
+  });
+
+  const strongPassword = z.string().min(8).max(128).regex(/^(?=.*[A-Za-z])(?=.*\d)/, {
+    message: 'Şifre en az bir harf ve bir rakam içermelidir.',
+  });
+  const familyRegistrationSchema = z.object({
+    parentEmail: z.string().email().max(254),
+    parentPassword: strongPassword,
+    parentPhone: z.string().max(24).optional().default(''),
+    studentName: z.string().trim().min(2).max(50),
+    studentPassword: strongPassword,
+    grade: z.number().int().min(1).max(4),
+    examFocus: z.string().trim().min(2).max(80),
+    kvkkConsent: z.literal(true),
+  }).refine((value) => value.parentPassword !== value.studentPassword, {
+    path: ['studentPassword'],
+    message: 'Öğrenci şifresi veli şifresinden farklı olmalıdır.',
+  });
+
+  app.post('/api/auth/register-family', authLimiter, async (req, res) => {
+    const parsed = familyRegistrationSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Kayıt bilgileri geçersiz.' });
+    }
+
+    const createdUserIds: string[] = [];
+    let adminAuth: ReturnType<typeof getAdminAuth> | null = null;
+    try {
+      adminAuth = getAdminAuth();
+      const adminDb = getAdminDb();
+      const input = parsed.data;
+      const parentRecord = await adminAuth.createUser({
+        email: input.parentEmail.toLowerCase(),
+        password: input.parentPassword,
+        emailVerified: false,
+        displayName: input.parentEmail.split('@')[0],
+      });
+      createdUserIds.push(parentRecord.uid);
+
+      let studentCode = '';
+      let studentEmail = '';
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        studentCode = `${normalizeStudentCode(input.studentName)}${randomInt(1000, 10000)}`;
+        studentEmail = `${studentCode.toLowerCase()}@zekapark.com`;
+        try {
+          await adminAuth.getUserByEmail(studentEmail);
+        } catch (error: any) {
+          if (error?.code === 'auth/user-not-found') break;
+          throw error;
+        }
+      }
+
+      const studentRecord = await adminAuth.createUser({
+        email: studentEmail,
+        password: input.studentPassword,
+        emailVerified: true,
+        displayName: input.studentName,
+      });
+      createdUserIds.push(studentRecord.uid);
+
+      await Promise.all([
+        adminAuth.setCustomUserClaims(parentRecord.uid, { role: 'parent' }),
+        adminAuth.setCustomUserClaims(studentRecord.uid, { role: 'student' }),
+      ]);
+
+      const now = Date.now();
+      const parentProfile = {
+        id: parentRecord.uid,
+        email: input.parentEmail.toLowerCase(),
+        name: input.parentEmail.split('@')[0],
+        role: 'parent',
+        avatar: '👨‍👩‍👧',
+        level: 1,
+        xp: 0,
+        streak: 0,
+        lastActiveDate: new Date(now).toISOString(),
+        dailyGoalMinutes: 0,
+        todayMinutesSpent: 0,
+        soundEnabled: true,
+        parentPhone: input.parentPhone,
+        linkedStudentIds: [studentRecord.uid],
+        createdAt: now,
+        updatedAt: now,
+      };
+      const studentProfile = {
+        id: studentRecord.uid,
+        email: studentEmail,
+        name: input.studentName,
+        role: 'student',
+        studentCode,
+        grade: input.grade,
+        examFocus: input.examFocus,
+        avatar: '🦊',
+        level: 1,
+        xp: 0,
+        streak: 0,
+        lastActiveDate: new Date(now).toISOString(),
+        dailyGoalMinutes: 15,
+        todayMinutesSpent: 0,
+        soundEnabled: true,
+        linkedParentId: parentRecord.uid,
+        createdAt: now,
+        updatedAt: now,
+        totalPoints: 0,
+        totalQuestionsSolved: 0,
+        resolvedMistakesCount: 0,
+      };
+
+      const batch = adminDb.batch();
+      batch.create(adminDb.doc(`users/${parentRecord.uid}`), parentProfile);
+      batch.create(adminDb.doc(`users/${studentRecord.uid}`), studentProfile);
+      await batch.commit();
+
+      const customToken = await adminAuth.createCustomToken(parentRecord.uid);
+      return res.status(201).json({
+        customToken,
+        parentProfile,
+        student: { id: studentRecord.uid, code: studentCode, email: studentEmail },
+      });
+    } catch (error: any) {
+      if (adminAuth) {
+        await Promise.all(createdUserIds.map((uid) => adminAuth?.deleteUser(uid).catch(() => undefined)));
+      }
+      if (error?.code === 'auth/email-already-exists') {
+        return res.status(409).json({ error: 'Bu veli e-posta adresi zaten kullanımda.' });
+      }
+      console.error('Family registration failed:', error?.code || error?.message || error);
+      return res.status(500).json({ error: 'Aile hesabı oluşturulamadı. Lütfen tekrar deneyin.' });
+    }
+  });
 
   // Lazy initialize Gemini client
   let aiClient: GoogleGenAI | null = null;
@@ -25,13 +265,49 @@ async function startServer() {
   }
 
   // Weekly Report Email Endpoint
-  app.post('/api/send-weekly-report', async (req, res) => {
+  const reportSchema = z.object({
+    studentId: z.string().min(1).max(128),
+  }).strict();
+
+  app.post('/api/send-weekly-report', reportLimiter, requireFirebaseAuth, requireRole('parent'), async (req: AuthenticatedRequest, res) => {
     try {
-      const { parentEmail, studentName, weeklyData } = req.body;
-      
-      if (!parentEmail) {
-        return res.status(400).json({ error: 'Parent email is required' });
+      const parsed = reportSchema.safeParse(req.body);
+      if (!parsed.success || !req.authUser) {
+        return res.status(400).json({ error: parsed.success ? 'Oturum doğrulanamadı.' : 'Rapor bilgileri geçersiz.' });
       }
+
+      const { studentId } = parsed.data;
+      const adminDb = getAdminDb();
+      const [parentSnap, studentSnap, stateSnap] = await Promise.all([
+        adminDb.doc(`users/${req.authUser.uid}`).get(),
+        adminDb.doc(`users/${studentId}`).get(),
+        adminDb.doc(`users/${studentId}/private/state`).get(),
+      ]);
+      const parent = parentSnap.data();
+      const student = studentSnap.data();
+      if (!parent || !student || !Array.isArray(parent.linkedStudentIds) || !parent.linkedStudentIds.includes(studentId)) {
+        return res.status(403).json({ error: 'Öğrenci bu veli hesabına bağlı değil.' });
+      }
+      const parentEmail = String(req.authUser.email || parent.email || '');
+      if (!parentEmail) return res.status(400).json({ error: 'Veli e-posta adresi bulunamadı.' });
+      const studentName = escapeHtml(student.name || 'Öğrenci');
+      const persistedValues = (stateSnap.data()?.values || {}) as Record<string, unknown>;
+      const parsePersisted = <T>(key: string, fallback: T): T => {
+        const raw = persistedValues[key];
+        if (typeof raw !== 'string') return fallback;
+        try { return JSON.parse(raw) as T; } catch { return fallback; }
+      };
+      const weekly = parsePersisted<{ thisWeekDays?: number[] }>('yapyap_weekly_questions_v1', {});
+      const masteries = parsePersisted<Array<{ attemptCount?: number; accuracy?: number }>>('yapyap_mastery', []);
+      const attempted = masteries.filter((item) => (item.attemptCount || 0) > 0);
+      const weeklyData = {
+        totalMinutes: Number(student.todayMinutesSpent || 0),
+        totalQuestions: (weekly.thisWeekDays || []).reduce((sum, count) => sum + Number(count || 0), 0),
+        accuracy: attempted.length
+          ? Math.round(attempted.reduce((sum, item) => sum + Number(item.accuracy || 0), 0) / attempted.length)
+          : 0,
+        streak: Number(student.streak || 0),
+      };
 
       // HTML Email Template
       const emailHtml = `
@@ -46,20 +322,20 @@ async function startServer() {
             <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin: 24px 0;">
               <ul style="list-style-type: none; padding: 0; margin: 0;">
                 <li style="margin-bottom: 12px; font-size: 15px; display: flex; justify-content: space-between;">
-                  <span style="color: #64748b;">⏱️ Haftalık Çalışma Süresi:</span>
-                  <strong style="color: #0f172a;">${weeklyData?.totalMinutes || 0} dakika</strong>
+                  <span style="color: #64748b;">⏱️ Bugünkü Kayıtlı Çalışma Süresi:</span>
+                  <strong style="color: #0f172a;">${weeklyData.totalMinutes} dakika</strong>
                 </li>
                 <li style="margin-bottom: 12px; font-size: 15px; display: flex; justify-content: space-between;">
-                  <span style="color: #64748b;">🎯 Çözülen Toplam Soru:</span>
-                  <strong style="color: #0f172a;">${weeklyData?.totalQuestions || 0} soru</strong>
+                  <span style="color: #64748b;">🎯 Bu Hafta Çözülen Soru:</span>
+                  <strong style="color: #0f172a;">${weeklyData.totalQuestions} soru</strong>
                 </li>
                 <li style="margin-bottom: 12px; font-size: 15px; display: flex; justify-content: space-between;">
                   <span style="color: #64748b;">✅ Doğru Oranı:</span>
-                  <strong style="color: #10b981;">%${weeklyData?.accuracy || 0}</strong>
+                  <strong style="color: #10b981;">%${weeklyData.accuracy}</strong>
                 </li>
                 <li style="font-size: 15px; display: flex; justify-content: space-between;">
                   <span style="color: #64748b;">🔥 Güncel Öğrenme Serisi:</span>
-                  <strong style="color: #f59e0b;">${weeklyData?.streak || 0} gün</strong>
+                  <strong style="color: #f59e0b;">${weeklyData.streak} gün</strong>
                 </li>
               </ul>
             </div>
@@ -67,20 +343,14 @@ async function startServer() {
             <p style="font-size: 15px; color: #475569; line-height: 1.5;">Gelişim eğrisini incelemek ve yapay zeka destekli detaylı analizlere ulaşmak için Veli Portalı'nı ziyaret edebilirsiniz.</p>
             
             <div style="text-align: center; margin-top: 32px;">
-              <a href="#" style="background-color: #4f46e5; color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold; display: inline-block;">Portala Giriş Yap</a>
+              <a href="${escapeHtml(process.env.APP_BASE_URL || 'https://zekapark.com')}" style="background-color: #4f46e5; color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold; display: inline-block;">Portala Giriş Yap</a>
             </div>
           </div>
         </div>
       `;
 
       if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-        console.log('Simulating weekly report email to:', parentEmail);
-        return res.json({ 
-          success: true, 
-          simulated: true, 
-          message: 'E-posta simüle edildi (SMTP ayarları eksik).',
-          preview: emailHtml
-        });
+        return res.status(503).json({ error: 'E-posta servisi henüz yapılandırılmamış.' });
       }
 
       const transporter = nodemailer.createTransport({
@@ -94,7 +364,7 @@ async function startServer() {
       });
 
       await transporter.sendMail({
-        from: '"ZekaPark Gelişim" <noreply@zekapark.com>',
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
         to: parentEmail,
         subject: `${studentName} - Haftalık ZekaPark Gelişim Özeti`,
         html: emailHtml,
@@ -103,7 +373,7 @@ async function startServer() {
       res.json({ success: true, message: 'Haftalık özet başarıyla gönderildi.' });
     } catch (error: any) {
       console.error('Email sending error:', error);
-      res.status(500).json({ error: error.message || 'E-posta gönderilemedi' });
+      res.status(500).json({ error: 'E-posta gönderilemedi.' });
     }
   });
 
@@ -111,14 +381,18 @@ async function startServer() {
   app.get('/api/health', (req, res) => {
     res.json({
       status: 'ok',
-      hasApiKey: Boolean(process.env.GEMINI_API_KEY),
+      version: '1.0.0',
       timestamp: Date.now(),
     });
   });
 
   // AI Step-by-Step Question Hint Endpoint
-  app.post('/api/ai-hint', async (req, res) => {
+  app.post('/api/ai-hint', aiLimiter, requireFirebaseAuth, async (req, res) => {
     try {
+      const validation = hintRequestSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: 'İpucu isteği geçersiz.' });
+      }
       const {
         questionId,
         questionType,
@@ -130,7 +404,7 @@ async function startServer() {
         options,
         correctOptionId,
         stepRequested = 1,
-      } = req.body;
+      } = validation.data;
 
       const ai = getGeminiClient();
 
@@ -227,14 +501,18 @@ Soru Bilgileri:
       // Fail gracefully so frontend uses fallback
       return res.status(200).json({
         fallback: true,
-        error: err?.message || 'AI service error',
+        error: 'AI service unavailable',
       });
     }
   });
 
   // AI Mistake Explanation ('Neden Yanlış?') Endpoint
-  app.post('/api/ai-explain-mistake', async (req, res) => {
+  app.post('/api/ai-explain-mistake', aiLimiter, requireFirebaseAuth, async (req, res) => {
     try {
+      const validation = mistakeRequestSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: 'Hata açıklama isteği geçersiz.' });
+      }
       const {
         questionId,
         questionType,
@@ -246,7 +524,7 @@ Soru Bilgileri:
         options,
         selectedOptionId,
         correctOptionId,
-      } = req.body;
+      } = validation.data;
 
       const ai = getGeminiClient();
 
@@ -350,14 +628,18 @@ Soru Bilgileri:
       console.log('AI fallback triggered: AI mistake explanation unavailable');
       return res.status(200).json({
         fallback: true,
-        error: err?.message || 'AI service error',
+        error: 'AI service unavailable',
       });
     }
   });
 
   // AI Step-by-Step Question Explanation Endpoint (Accordion Flow)
-  app.post('/api/ai-step-explanation', async (req, res) => {
+  app.post('/api/ai-step-explanation', aiLimiter, requireFirebaseAuth, async (req, res) => {
     try {
+      const validation = stepExplanationRequestSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: 'Çözüm açıklaması isteği geçersiz.' });
+      }
       const {
         questionId,
         questionType,
@@ -370,7 +652,7 @@ Soru Bilgileri:
         selectedOptionId,
         correctOptionId,
         isCorrect,
-      } = req.body;
+      } = validation.data;
 
       const ai = getGeminiClient();
 
@@ -478,14 +760,18 @@ GÖREVİN: Çocuğun zihninde soru çözümünü netleştirecek 4 KADEMELİ ADIM
       console.log('AI fallback triggered: AI step explanation unavailable');
       return res.status(200).json({
         fallback: true,
-        error: err?.message || 'AI service error',
+        error: 'AI service unavailable',
       });
     }
   });
 
   // AI Personalized Daily Study Plan Endpoint ("Bugünün Çalışma Planı")
-  app.post('/api/ai-daily-plan', async (req, res) => {
+  app.post('/api/ai-daily-plan', aiLimiter, requireFirebaseAuth, async (req, res) => {
     try {
+      const validation = dailyPlanRequestSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: 'Çalışma planı isteği geçersiz.' });
+      }
       const {
         studentName = 'Öğrenci',
         grade = 3,
@@ -496,7 +782,7 @@ GÖREVİN: Çocuğun zihninde soru çözümünü netleştirecek 4 KADEMELİ ADIM
         todayQuestionsSolved = 0,
         unresolvedMistakes = [],
         masteries = [],
-      } = req.body;
+      } = validation.data;
 
       const ai = getGeminiClient();
 
@@ -679,7 +965,7 @@ Plan Şunları İçermelidir:
       console.log('AI fallback triggered: AI daily plan unavailable');
       return res.status(200).json({
         fallback: true,
-        error: err?.message || 'AI plan service error',
+        error: 'AI plan service unavailable',
       });
     }
   });
@@ -694,7 +980,10 @@ Plan Şunları İçermelidir:
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.use('/api', (_req, res) => {
+      res.status(404).json({ error: 'API uç noktası bulunamadı.' });
+    });
+    app.use((_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

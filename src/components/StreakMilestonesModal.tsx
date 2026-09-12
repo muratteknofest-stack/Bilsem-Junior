@@ -38,7 +38,7 @@ export const StreakMilestonesModal: React.FC<StreakMilestonesModalProps> = ({
   const streak = user.streak || 0;
   const longestStreak = user.longestStreak || Math.max(streak, 7);
   const claimedDays = user.claimedStreakDays || [3];
-  const streakFreezeCount = user.streakFreezeCount ?? 1;
+  const streakFreezeCount = user.streakFreezeCount ?? 0;
 
   const handleClaim = (milestone: StreakMilestone) => {
     sound.playLevelUp();

@@ -1,4 +1,5 @@
 import { BaseQuestion, QuestionAiHint, AiHintStep, QuestionType } from '../types';
+import { authenticatedFetch } from '../lib/api-client';
 
 class AiHintService {
   private cache: Map<string, QuestionAiHint> = new Map();
@@ -26,7 +27,7 @@ class AiHintService {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout for fast UI fallback
 
-      const response = await fetch('/api/ai-hint', {
+      const response = await authenticatedFetch('/api/ai-hint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,

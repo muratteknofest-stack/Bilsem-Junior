@@ -4,6 +4,7 @@ import { QuestionRenderer } from '../../features/questions/renderers/QuestionRen
 import { OptionRenderer } from '../../features/questions/renderers/OptionRenderer';
 import { VisualExplanationOverlay } from '../../features/questions/renderers/VisualExplanationOverlay';
 import { sound } from '../../lib/sound';
+import { questionAnalyticsService } from '../../services/question-analytics-service';
 import {
   X,
   Play,
@@ -19,11 +20,12 @@ import {
 interface AdminStudentPracticeSimulatorModalProps {
   question: BaseQuestion;
   onClose: () => void;
+  onAttemptRecorded?: () => void;
 }
 
 export const AdminStudentPracticeSimulatorModal: React.FC<
   AdminStudentPracticeSimulatorModalProps
-> = ({ question, onClose }) => {
+> = ({ question, onClose, onAttemptRecorded }) => {
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
@@ -53,6 +55,14 @@ export const AdminStudentPracticeSimulatorModal: React.FC<
     setIsTimerRunning(false);
 
     const isCorrect = option.id === question.correctOptionId;
+    const targetSeconds = question.estimatedSeconds || 40;
+    questionAnalyticsService.recordAttempt(
+      question.id,
+      isCorrect,
+      option.id,
+      Math.max(1, targetSeconds - timerSeconds),
+    );
+    onAttemptRecorded?.();
     if (isCorrect) {
       sound.playSuccess();
     } else {

@@ -167,7 +167,7 @@ export const FooterInfoModal: React.FC<FooterInfoModalProps> = ({
                   <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
                   <span>Önemli Hatırlatma:</span>
                 </div>
-                <span>BİLSEM sınavında yanlışlar doğruyu götürmez. Öğrencinin boş soru bırakmaması, süresini dengeli kullanması ve her soruda dikkatini canlı tutması tavsiye edilir. ZekaPark'ın kronometreli deneme sınavları tam olarak bu sınav kondisyonunu kazandırmak için tasarlanmıştır.</span>
+                <span>Resmî sınavın güncel puanlama ve uygulama kuralları her dönem MEB kılavuzundan kontrol edilmelidir. ZekaPark'ın kronometreli denemeleri yalnızca süre yönetimi pratiği için tasarlanmıştır.</span>
               </div>
             </div>
           )}
@@ -423,7 +423,7 @@ export const FooterInfoModal: React.FC<FooterInfoModalProps> = ({
                 <div className="p-4 rounded-xl bg-slate-50 border border-zinc-200">
                   <h4 className="font-bold text-slate-900 mb-1">3. Tablet ve Dokunmatik Ekran Deneyimi</h4>
                   <p>
-                    Ön değerlendirme sınavı tablet üzerinden yapıldığı için çocuğun ekrandaki şıkları kaydırma, tıklama ve onaylama reflekslerinin oturmuş olması gereklidir. ZekaPark arayüzü tablet ekran ergonomisiyle birebir uyumludur.
+                    Resmî uygulamalarda tablet kullanılabildiğinden, ekrandaki seçeneklere dokunma ve onaylama pratiği yararlı olabilir. ZekaPark tablet kullanımını destekler; resmî sınav arayüzünün birebir kopyası değildir.
                   </p>
                 </div>
 

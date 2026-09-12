@@ -12,14 +12,12 @@ import {
   Shield,
   Clock,
   CheckCircle2,
-  ThumbsUp,
   ArrowRight,
   TrendingUp,
   Award,
   Star,
   Users,
 } from 'lucide-react';
-import confetti from 'canvas-confetti';
 
 interface LeaderboardViewProps {
   currentUser?: UserProfile | null;
@@ -35,7 +33,6 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
   const [period, setPeriod] = useState<LeaderboardPeriod>('daily');
   const [gradeFilter, setGradeFilter] = useState<number | 'all'>('all');
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
-  const [clappedIds, setClappedIds] = useState<Set<string>>(new Set());
 
   const refreshLeaderboard = () => {
     const list = dataService.getLeaderboard(period, gradeFilter);
@@ -44,13 +41,6 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
   useEffect(() => {
     refreshLeaderboard();
-    
-    // Gerçek zamanlı hissi vermek için her 5 saniyede bir panoyu güncelle
-    const interval = setInterval(() => {
-      refreshLeaderboard();
-    }, 5000);
-    
-    return () => clearInterval(interval);
   }, [period, gradeFilter]);
 
   const handlePeriodChange = (newPeriod: LeaderboardPeriod) => {
@@ -63,41 +53,10 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
     setGradeFilter(filter);
   };
 
-  const handleClap = (e: React.MouseEvent, entryId: string) => {
-    e.stopPropagation();
-    sound.playSuccess();
-    dataService.clapForUser(entryId);
-
-    setClappedIds((prev) => new Set([...prev, entryId]));
-    refreshLeaderboard();
-
-    // Trigger celebratory small confetti burst
-    const rect = (e.target as HTMLElement).getBoundingClientRect();
-    const x = (rect.left + rect.width / 2) / window.innerWidth;
-    const y = (rect.top + rect.height / 2) / window.innerHeight;
-
-    confetti({
-      particleCount: 25,
-      spread: 45,
-      origin: { x, y },
-      colors: ['#6366f1', '#f59e0b', '#10b981', '#ec4899'],
-      disableForReducedMotion: true,
-    });
-  };
-
   // Identify current user's entry in current filtered list
   const userEntry = entries.find((e) => e.isCurrentUser);
   const top3 = entries.slice(0, 3);
   const remainingEntries = entries.slice(3);
-
-  // Position gap calculation for user to climb
-  let gapToAhead: number | null = null;
-  if (userEntry && userEntry.rank > 1) {
-    const entryAhead = entries[userEntry.rank - 2];
-    if (entryAhead) {
-      gapToAhead = entryAhead.xpEarned - userEntry.xpEarned;
-    }
-  }
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 py-8 pb-28 space-y-6">
@@ -112,18 +71,18 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
             <div className="flex items-center gap-2">
               <span className="px-3 py-1 rounded-full bg-amber-400/20 border border-amber-400/30 text-amber-300 font-extrabold text-xs flex items-center gap-1.5">
                 <Crown className="w-3.5 h-3.5" />
-                BİLSEM Yıldızlar Ligi
+                Kişisel Çalışma Özeti
               </span>
               <span className="px-2.5 py-0.5 rounded-full bg-white/10 text-indigo-200 text-xs font-semibold">
-                Canlı Sıralama
+                Doğrulanmış Veriler
               </span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold font-['Outfit',sans-serif] tracking-tight">
-              {period === 'daily' ? '⚡ Günün En İyileri' : '📅 Haftanın Çalışkanları'}
+              {period === 'daily' ? '⚡ Bugünkü İlerlemem' : '📅 Toplam İlerlemem'}
             </h1>
             <p className="text-xs sm:text-sm text-indigo-200 max-w-xl">
-              Akranlarınla zeka soruları çözerek yarış, günlük serini koru ve BİLSEM liginde üst sıralara tırman!
+              Yalnızca kendi hesabında gerçekten kaydedilmiş çalışma verilerini gör.
             </p>
           </div>
 
@@ -132,10 +91,10 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
             <Shield className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
             <div>
               <strong className="block text-white font-bold text-[11px] uppercase tracking-wider">
-                Anonim ve Güvenli
+                Gizlilik Odaklı
               </strong>
               <p className="text-[11px] text-indigo-200 leading-tight mt-0.5">
-                Öğrenci gizliliği için tüm isimler eğlenceli ve korumalı takma adlarla gösterilir.
+                Çok kullanıcılı anonim sıralama sunucu tarafında doğrulanana kadar akran verisi gösterilmez.
               </p>
             </div>
           </div>
@@ -195,7 +154,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
         <div className="relative overflow-hidden bg-gradient-to-r from-amber-50 via-orange-50 to-indigo-50 border-2 border-amber-300 rounded-xl p-4 sm:p-5  flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center text-xl font-bold   shrink-0">
-              #{userEntry.rank}
+                  {userEntry.avatar}
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -203,16 +162,11 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                   {userEntry.anonymousAlias}
                 </span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200/70 text-amber-950">
-                  Senin Sıran
+                  Kişisel Verin
                 </span>
               </div>
               <p className="text-xs text-slate-600 mt-0.5">
-                Şu an <strong>{userEntry.xpEarned} XP</strong> ile <strong>{userEntry.rank}. sıradasın</strong>.
-                {gapToAhead !== null && gapToAhead > 0 && (
-                  <span className="text-indigo-700 font-bold ml-1">
-                    (Bir üst sıraya geçmek için yalnızca {gapToAhead + 5} XP kaldı!)
-                  </span>
-                )}
+                Bu görünümde <strong>{userEntry.xpEarned} XP</strong> ve doğrulanmış çalışma ölçümlerin yer alıyor.
               </p>
             </div>
           </div>
@@ -334,10 +288,10 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
         <div className="p-5 border-b border-zinc-200 flex items-center justify-between">
           <h3 className="font-extrabold text-base text-slate-900 font-['Outfit',sans-serif] flex items-center gap-2">
             <Trophy className="w-4 h-4 text-amber-500" />
-            <span>Tüm Sıralama Listesi</span>
+            <span>Kişisel İlerleme Tablosu</span>
           </h3>
           <span className="text-xs text-slate-500 font-medium">
-            Toplam {entries.length} Öğrenci Yarışıyor
+            Sunucu taraflı anonim sıralama etkinleştirildiğinde çoklu kullanıcı sonuçları burada gösterilir.
           </span>
         </div>
 
@@ -345,19 +299,16 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
           <table className="w-full text-left text-xs sm:text-sm">
             <thead>
               <tr className="border-b border-zinc-200 bg-slate-50/70 text-slate-500 uppercase text-[10px] font-extrabold tracking-wider">
-                <th className="py-3 px-4 w-16 text-center">Sıra</th>
-                <th className="py-3 px-4">Öğrenci (Anonim)</th>
+                <th className="py-3 px-4">Öğrenci</th>
                 <th className="py-3 px-4 text-center">Sınıf</th>
                 <th className="py-3 px-4 text-center">Çözülen Soru</th>
                 <th className="py-3 px-4 text-center">Çalışma Süresi</th>
                 <th className="py-3 px-4 text-center">Seri</th>
                 <th className="py-3 px-4 text-right">Kazanılan XP</th>
-                <th className="py-3 px-4 text-center w-24">Alkışla</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {entries.map((entry) => {
-                const isClapped = clappedIds.has(entry.id);
                 return (
                   <tr
                     key={entry.id}
@@ -367,28 +318,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                         : 'hover:bg-slate-50/80'
                     }`}
                   >
-                    {/* Rank */}
-                    <td className="py-3.5 px-4 text-center">
-                      {entry.rank === 1 ? (
-                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-400 text-amber-950 font-black text-xs ">
-                          🥇
-                        </span>
-                      ) : entry.rank === 2 ? (
-                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-300 text-slate-800 font-black text-xs ">
-                          🥈
-                        </span>
-                      ) : entry.rank === 3 ? (
-                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-700 text-white font-black text-xs ">
-                          🥉
-                        </span>
-                      ) : (
-                        <span className="font-mono font-bold text-slate-500 text-xs">
-                          #{entry.rank}
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Anonymous Name & Avatar */}
+                    {/* Name & Avatar */}
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-lg shrink-0">
@@ -444,21 +374,6 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                       </span>
                     </td>
 
-                    {/* Clap Button */}
-                    <td className="py-3.5 px-4 text-center">
-                      <button
-                        onClick={(e) => handleClap(e, entry.id)}
-                        title="Tebrik Et ve Alkışla!"
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-90 ${
-                          isClapped
-                            ? 'bg-rose-100 text-rose-700 '
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                        }`}
-                      >
-                        <span>👏</span>
-                        <span className="font-mono text-[11px]">{entry.clapsCount}</span>
-                      </button>
-                    </td>
                   </tr>
                 );
               })}

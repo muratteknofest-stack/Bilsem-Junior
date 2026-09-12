@@ -55,7 +55,7 @@ export const BadgesSection: React.FC<BadgesSectionProps> = ({
   }, [user.totalQuestionsSolved, user.resolvedMistakesCount, mistakes]);
 
   const unresolvedCount = mistakes.filter((m) => !m.resolved).length;
-  const totalQuestions = user.totalQuestionsSolved ?? 24;
+  const totalQuestions = user.totalQuestionsSolved ?? 0;
 
   // Question and mistake specific badges
   const questionBadgeIds = ['first_step', 'questions_10', 'questions_25', 'questions_50', 'questions_100'];
@@ -91,36 +91,6 @@ export const BadgesSection: React.FC<BadgesSectionProps> = ({
       });
     } catch {}
     setTimeout(() => setToastMessage(null), 4000);
-  };
-
-  // Quick Action: Simulate 1 Question Solved to advance badges immediately
-  const handleQuickSolveQuestion = () => {
-    sound.playSuccess();
-    const result = dataService.recordQuestionSolved(true);
-    onUserUpdate(result.user);
-    setAchievements(dataService.getAchievements());
-
-    if (result.newlyUnlocked.length > 0) {
-      const names = result.newlyUnlocked.map((a) => `"${a.title}"`).join(', ');
-      showCelebrationToast(`🎉 Tebrikler! ${names} rozetini kazandın!`);
-    } else {
-      showCelebrationToast(`Harika! +1 soru kaydedildi. Toplam: ${result.totalSolved} soru.`);
-    }
-  };
-
-  // Quick Action: Clear/Empty Mistakes Notebook to unlock 'clean_notebook'
-  const handleClearNotebook = () => {
-    sound.playSuccess();
-    const result = dataService.clearAllMistakes();
-    onUserUpdate(result.user);
-    setAchievements(dataService.getAchievements());
-
-    if (result.newlyUnlocked.length > 0) {
-      const names = result.newlyUnlocked.map((a) => `"${a.title}"`).join(', ');
-      showCelebrationToast(`✨ Harika! Hata defteri boşaltıldı ve ${names} rozetini kazandın!`);
-    } else {
-      showCelebrationToast('✨ Hata defterindeki tüm sorular çözüldü olarak işaretlendi!');
-    }
   };
 
   const getBadgeVisual = (item: Achievement) => {
@@ -281,11 +251,11 @@ export const BadgesSection: React.FC<BadgesSectionProps> = ({
             </div>
 
             <button
-              onClick={handleQuickSolveQuestion}
+              onClick={onStartPractice}
               className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold  transition-all cursor-pointer shrink-0 active:scale-95 flex items-center gap-1"
-              title="1 soru çözerek rozet ilerlemesi kaydet"
+              title="Soru çözme ekranını aç"
             >
-              <span>+1 Soru Çöz</span>
+              <span>Soru Çöz</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -322,12 +292,12 @@ export const BadgesSection: React.FC<BadgesSectionProps> = ({
 
             <div className="flex items-center gap-1.5 shrink-0">
               <button
-                onClick={handleClearNotebook}
+                onClick={onOpenMistakes}
                 className="px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-extrabold  transition-all cursor-pointer active:scale-95 flex items-center gap-1"
-                title="Hataları temizle ve rozeti anında kazan"
+                title="Hata defterini aç"
               >
-                <span>Defteri Boşalt</span>
-                <Sparkles className="w-3.5 h-3.5" />
+                <span>Hataları Çöz</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -596,12 +566,12 @@ export const BadgesSection: React.FC<BadgesSectionProps> = ({
                 <button
                   onClick={() => {
                     setSelectedBadge(null);
-                    handleClearNotebook();
+                    onOpenMistakes();
                   }}
                   className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs   transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  <span>Defteri Boşalt ve Rozeti Al</span>
-                  <Sparkles className="w-4 h-4" />
+                  <span>Hataları Çözmeye Git</span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               ) : (
                 <button

@@ -1,47 +1,53 @@
-# Educational App Platform
+# ZekaPark
 
-A production-ready EdTech application built with React, TypeScript, Vite, and Firebase.
+ZekaPark is a React, TypeScript, Express and Firebase learning application with
+procedurally generated cognitive-skill questions.
 
-## Setup Instructions
+## Local setup
 
-1. **Create a Firebase Project**: Go to the Firebase Console and create a new project.
-2. **Enable Services**:
-   - Authentication (Email/Password)
-   - Cloud Firestore
-3. **Environment Variables**:
-   Create a `.env.local` file based on `.env.example`:
-   \`\`\`
-   VITE_FIREBASE_API_KEY=your_api_key
-   VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
-   VITE_FIREBASE_PROJECT_ID=your_project_id
-   VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-   VITE_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
-   VITE_FIREBASE_APP_ID=your_app_id
-   \`\`\`
-4. **Install Dependencies**:
-   \`\`\`
-   npm install
-   \`\`\`
-5. **Run Locally**:
-   \`\`\`
-   npm run dev
-   \`\`\`
+Prerequisites: Node.js 22+, a Firebase project with Email/Password Authentication
+and Cloud Firestore enabled, and Application Default Credentials for server-side
+Firebase Admin operations.
+
+1. Copy `.env.example` to `.env.local` and fill in the values.
+2. Install the locked dependencies with `npm ci`.
+3. Run `npm run dev`.
+4. Before a release, run `npm run check`.
+
+The Express server hosts both `/api/*` and the Vite application. AI endpoints use
+the procedural fallback when `GEMINI_API_KEY` is not configured. Weekly email
+reports require the SMTP variables.
+
+## Authorization model
+
+- Browser clients can create only their own student profile.
+- Parent/child account pairs are created by `/api/auth/register-family` with
+  separate passwords and server-assigned custom role claims.
+- Admin access requires an `admin` Firebase custom claim. A profile document alone
+  never grants admin access.
+- User progress is stored under `users/{uid}/private/state`; linked parents have
+  read-only access to their child's profile and progress.
+
+Deploy `firestore.rules` before enabling real accounts. Existing admin and parent
+accounts must receive their matching custom claims through a trusted admin script
+or the Firebase Admin SDK.
 
 ## Deployment
 
-To deploy to Firebase Hosting:
+Build and deploy the API container to Cloud Run, granting the service account
+Firebase access and supplying server-only secrets there:
 
-1. Install Firebase CLI: `npm install -g firebase-tools`
-2. Login: `firebase login`
-3. Initialize (if not done): `firebase init`
-4. Deploy rules and hosting:
-   \`\`\`
-   npm run build
-   firebase deploy
-   \`\`\`
+```sh
+gcloud run deploy zekapark-api --source . --region europe-west1 --allow-unauthenticated
+```
 
-## Features
-- Real-time data sync with Firestore
-- Role-based Access Control (Student, Parent, Admin)
-- Secure Authentication
-- Cloud-persisted XP, Points, and Streaks
+The service itself is public so the app can reach it, while protected endpoints
+verify Firebase ID tokens. Then deploy the static site and Firestore rules:
+
+```sh
+npm run check
+firebase deploy --only firestore:rules,hosting
+```
+
+`firebase.json` routes `/api/**` to the `zekapark-api` Cloud Run service and all
+remaining routes to the single-page application.

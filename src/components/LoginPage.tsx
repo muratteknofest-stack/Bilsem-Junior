@@ -1,9 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { auth, db } from '../lib/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import {
+  createUserWithEmailAndPassword,
+  browserLocalPersistence,
+  browserSessionPersistence,
+  deleteUser,
+  setPersistence,
+  signInWithCustomToken,
+  signInWithEmailAndPassword,
+  signOut,
+} from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { UserRole, UserProfile } from '../types';
-import { SYSTEM_ACCOUNTS, dataService } from '../services/data-service';
+import { dataService } from '../services/data-service';
 import { sound } from '../lib/sound';
 import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
@@ -56,7 +65,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [regParentEmail, setRegParentEmail] = useState('');
   const [regParentPhone, setRegParentPhone] = useState('');
   const [regPassword, setRegPassword] = useState('');
+  const [regStudentPassword, setRegStudentPassword] = useState('');
   const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showRegStudentPassword, setShowRegStudentPassword] = useState(false);
   const [regKvkkConsent, setRegKvkkConsent] = useState(false);
 
   // Password strength
@@ -98,83 +109,29 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         loginEmail = `${loginEmail.toLowerCase()}@zekapark.com`;
       }
 
-      // Check if user is trying a known demo/system account
-      const isPresetDemo =
-        loginEmail === 'deniz@zekapark.com' ||
-        loginEmail === 'veli@zekapark.com' ||
-        loginEmail === 'admin@zekapark.com';
+      await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
+      const credential = await signInWithEmailAndPassword(auth, loginEmail, password);
+      const profileSnapshot = await getDoc(doc(db, 'users', credential.user.uid));
 
-      let loggedInProfile: UserProfile | undefined;
-
-      try {
-        // Attempt Firebase login
-        const cred = await signInWithEmailAndPassword(auth, loginEmail, password);
-        try {
-          const userDocRef = doc(db, 'users', cred.user.uid);
-          const snap = await getDoc(userDocRef);
-          if (snap.exists()) {
-            loggedInProfile = snap.data() as UserProfile;
-          }
-        } catch {
-          // Firestore read error handled silently
-        }
-      } catch (authErr: any) {
-        const isNetworkOrDisabled =
-          authErr.code === 'auth/network-request-failed' ||
-          authErr.code === 'auth/operation-not-allowed' ||
-          authErr.message?.includes('network-request-failed') ||
-          authErr.message?.includes('operation-not-allowed');
-
-        if (isPresetDemo || isNetworkOrDisabled) {
-          // Resilient fallback for preset demo accounts or when Firebase Auth network is unavailable
-          console.warn('Notice: Firebase Auth unavailable or demo account used. Using resilient local login:', authErr.code || authErr.message);
-          const baseProfile = SYSTEM_ACCOUNTS[selectedRole] || SYSTEM_ACCOUNTS.student;
-          loggedInProfile = {
-            ...baseProfile,
-            email: loginEmail,
-            updatedAt: Date.now(),
-          };
-        } else if (authErr.code === 'auth/user-not-found' || authErr.code === 'auth/invalid-credential') {
-          if (isPresetDemo) {
-            try {
-              const newCred = await createUserWithEmailAndPassword(auth, loginEmail, password);
-              const templateProfile = SYSTEM_ACCOUNTS[selectedRole] || SYSTEM_ACCOUNTS.student;
-              const seededProfile: UserProfile = {
-                ...templateProfile,
-                id: newCred.user.uid,
-                email: loginEmail,
-                updatedAt: Date.now(),
-              };
-              try {
-                await setDoc(doc(db, 'users', newCred.user.uid), seededProfile, { merge: true });
-              } catch {}
-              loggedInProfile = seededProfile;
-            } catch (createErr) {
-              console.warn('Notice: Demo auto-provision fallback to local state:', createErr);
-              const baseProfile = SYSTEM_ACCOUNTS[selectedRole] || SYSTEM_ACCOUNTS.student;
-              loggedInProfile = { ...baseProfile, email: loginEmail, updatedAt: Date.now() };
-            }
-          } else {
-            throw authErr;
-          }
-        } else {
-          throw authErr;
-        }
+      if (!profileSnapshot.exists()) {
+        await signOut(auth);
+        throw new Error('PROFILE_NOT_FOUND');
       }
 
-      if (!loggedInProfile) {
-        const baseProfile = SYSTEM_ACCOUNTS[selectedRole] || SYSTEM_ACCOUNTS.student;
-        loggedInProfile = { ...baseProfile, email: loginEmail, updatedAt: Date.now() };
+      const loggedInProfile = profileSnapshot.data() as UserProfile;
+      if (loggedInProfile.id !== credential.user.uid || loggedInProfile.role !== selectedRole) {
+        await signOut(auth);
+        throw new Error('ROLE_MISMATCH');
       }
 
-      // Establish authenticated session in dataService and AuthContext
-      dataService.loginAs(selectedRole, loggedInProfile);
+      dataService.loginAs(loggedInProfile.role, loggedInProfile);
+      await dataService.hydrateUserStateFromFirebase();
       loginLocally(loggedInProfile);
       sound.playSuccess();
       setSuccessToast('Giriş başarılı! Yönlendiriliyorsunuz...');
       
       setTimeout(() => {
-        onLoginSuccess(selectedRole, loggedInProfile);
+        onLoginSuccess(loggedInProfile.role, loggedInProfile);
       }, 500);
       
     } catch (error: any) {
@@ -190,7 +147,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       } else if (error.code === 'auth/too-many-requests') {
          errMsg = 'Çok fazla başarısız deneme yapıldı. Lütfen biraz sonra tekrar deneyin.';
       } else if (error.code === 'auth/network-request-failed' || error.message?.includes('network-request-failed')) {
-         errMsg = 'Ağ bağlantısı kurulamadı. "Hızlı Giriş" düğmelerini kullanarak hemen bağlanabilirsiniz.';
+         errMsg = 'Ağ bağlantısı kurulamadı. Lütfen bağlantınızı kontrol edip tekrar deneyin.';
+      } else if (error.message === 'PROFILE_NOT_FOUND') {
+         errMsg = 'Bu hesaba ait kullanıcı profili bulunamadı. Lütfen destek ekibiyle iletişime geçin.';
+      } else if (error.message === 'ROLE_MISMATCH') {
+         errMsg = 'Seçtiğiniz rol bu hesapla eşleşmiyor.';
       }
       setErrorMessage(errMsg);
     } finally {
@@ -223,6 +184,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         grade: regGrade,
         examFocus: regExamFocus,
         password: regPassword,
+        studentPassword: regStudentPassword,
         kvkkConsent: regKvkkConsent,
       });
     }
@@ -241,146 +203,90 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       let verificationSent = false;
 
       if (selectedRole === 'parent') {
-        const parentEmail = regParentEmail.trim();
-        const parentPass = regPassword;
-        
-        // 1. Generate Student Code and Email
-        const baseName = regStudentName.trim().replace(/\s+/g, '').toLowerCase();
-        // Generate random 4 digit code
-        const studentCode = `${baseName.toUpperCase()}${Math.floor(1000 + Math.random() * 9000)}`;
-        const studentEmail = `${studentCode.toLowerCase()}@zekapark.com`;
-        
-        let studentUid = `student_${Date.now()}`;
-        let parentUid = `parent_${Date.now()}`;
-
-        // Attempt student creation in Firebase Auth
-        try {
-          const studentCred = await createUserWithEmailAndPassword(auth, studentEmail, parentPass);
-          studentUid = studentCred.user.uid;
-        } catch (authErr: any) {
-          console.warn('Notice: Student Firebase Auth create skipped (using local-first):', authErr.code || authErr.message);
-        }
-        
-        const studentProfile: UserProfile = {
-          id: studentUid,
-          email: studentEmail,
-          name: regStudentName.trim(),
-          role: 'student',
-          studentCode: studentCode,
-          grade: regGrade,
-          avatar: '🦊',
-          level: 1,
-          xp: 100,
-          streak: 1,
-          lastActiveDate: new Date().toISOString(),
-          dailyGoalMinutes: 15,
-          todayMinutesSpent: 0,
-          soundEnabled: true,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          totalPoints: 100,
-          claimedStreakDays: [1],
-          totalQuestionsSolved: 0,
-          resolvedMistakesCount: 0,
-        };
-        try {
-          await setDoc(doc(db, 'users', studentUid), studentProfile);
-        } catch {}
-
-        // Attempt parent creation in Firebase Auth
-        try {
-          const parentCred = await createUserWithEmailAndPassword(auth, parentEmail, parentPass);
-          parentUid = parentCred.user.uid;
-          if (parentEmail.includes('@') && !parentEmail.includes('@zekapark.com')) {
-            try {
-              await sendEmailVerification(parentCred.user);
-              verificationSent = true;
-            } catch (verifyErr) {
-              console.warn('Notice: Verification email notice:', verifyErr);
-            }
-          }
-        } catch (authErr: any) {
-          console.warn('Notice: Parent Firebase Auth create skipped (using local-first):', authErr.code || authErr.message);
+        const response = await fetch('/api/auth/register-family', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            parentEmail: regParentEmail.trim(),
+            parentPassword: regPassword,
+            studentPassword: regStudentPassword,
+            parentPhone: regParentPhone.trim() || undefined,
+            studentName: regStudentName.trim(),
+            grade: regGrade,
+            examFocus: regExamFocus,
+            kvkkConsent: regKvkkConsent,
+          }),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || 'Aile hesabı oluşturulamadı.');
         }
 
-        newProfile = {
-          id: parentUid,
-          email: parentEmail,
-          name: parentEmail.split('@')[0],
-          role: 'parent',
-          avatar: '👨‍👩‍👧',
-          level: 1,
-          xp: 0,
-          streak: 1,
-          lastActiveDate: new Date().toISOString(),
-          dailyGoalMinutes: 0,
-          todayMinutesSpent: 0,
-          soundEnabled: true,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          linkedStudentIds: [studentUid]
-        };
+        await signInWithCustomToken(auth, result.customToken);
+        newProfile = result.parentProfile as UserProfile;
         try {
-          await setDoc(doc(db, 'users', parentUid), newProfile);
-          await setDoc(doc(db, 'users', studentUid), { linkedParentId: parentUid }, { merge: true });
-        } catch {}
-
+          await sendEmailVerification(auth.currentUser!);
+          verificationSent = true;
+        } catch {
+          verificationSent = false;
+        }
         dataService.loginAs('parent', newProfile);
+        await dataService.hydrateUserStateFromFirebase();
         loginLocally(newProfile);
+        setSuccessToast(
+          `Kayıt tamamlandı. Öğrenci kodu: ${result.student.code}. Öğrenci, belirlediğiniz ayrı şifreyle giriş yapabilir.`,
+        );
       } else {
-        const email = regParentEmail.trim() || `${regStudentName.replace(/\s+/g, '').toLowerCase()}@ogrenci.com`;
+        const generatedCode = `${regStudentName.replace(/\s+/g, '').toUpperCase()}${Date.now().toString().slice(-4)}`;
+        const email = regParentEmail.trim() || `${generatedCode.toLowerCase()}@zekapark.com`;
         const pass = regPassword;
-        let uid = `student_${Date.now()}`;
-        
-        try {
-          const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-          uid = userCredential.user.uid;
-          if (email.includes('@') && !email.includes('@ogrenci.com') && !email.includes('@zekapark.com')) {
-            try {
-              await sendEmailVerification(userCredential.user);
-              verificationSent = true;
-            } catch (verifyErr) {
-              console.warn('Notice: Verification email notice:', verifyErr);
-            }
-          }
-        } catch (authErr: any) {
-          console.warn('Notice: Student Firebase Auth create skipped (using local-first):', authErr.code || authErr.message);
-        }
+        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
         
         newProfile = {
-          id: uid,
+          id: userCredential.user.uid,
           email: email,
           name: regStudentName.trim(),
           role: 'student',
+          studentCode: generatedCode,
           grade: regGrade,
           avatar: '🦊',
           level: 1,
-          xp: 100,
-          streak: 1,
+          xp: 0,
+          streak: 0,
           lastActiveDate: new Date().toISOString(),
           dailyGoalMinutes: 15,
           todayMinutesSpent: 0,
           soundEnabled: true,
           createdAt: Date.now(),
           updatedAt: Date.now(),
-          totalPoints: 100,
-          claimedStreakDays: [1],
+          totalPoints: 0,
+          claimedStreakDays: [],
           totalQuestionsSolved: 0,
           resolvedMistakesCount: 0,
         };
         
         try {
-          await setDoc(doc(db, 'users', uid), newProfile);
-        } catch {}
+          await setDoc(doc(db, 'users', userCredential.user.uid), newProfile);
+        } catch (profileError) {
+          await deleteUser(userCredential.user);
+          throw profileError;
+        }
+        if (!email.endsWith('@zekapark.com')) {
+          await sendEmailVerification(userCredential.user);
+          verificationSent = true;
+        }
         dataService.loginAs('student', newProfile);
+        await dataService.hydrateUserStateFromFirebase();
         loginLocally(newProfile);
       }
 
       sound.playSuccess();
-      if (verificationSent) {
+      if (selectedRole === 'parent') {
+        // The student code message above is more useful than the generic toast.
+      } else if (verificationSent) {
         setSuccessToast('Kayıt başarılı! Onay maili gönderildi. Lütfen e-postanızı kontrol edin.');
       } else {
-        setSuccessToast('Kayıt başarılı! +100 Hoş Geldin XP kazandınız.');
+        setSuccessToast('Kayıt başarılı! Hesabınız hazır.');
       }
       
       setTimeout(() => {
@@ -392,11 +298,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       console.warn('Registration notice (handled):', error.code || error.message);
       let errMsg = 'Kayıt olurken bir hata oluştu.';
       if (error.code === 'auth/email-already-in-use') errMsg = 'Bu e-posta adresi zaten kullanımda.';
-      if (error.code === 'auth/weak-password') errMsg = 'Şifre çok zayıf. En az 6 karakter olmalıdır.';
+      if (error.code === 'auth/weak-password') errMsg = 'Şifre çok zayıf. En az 8 karakter, bir harf ve bir rakam kullanın.';
       if (error.code === 'auth/invalid-email') errMsg = 'Geçersiz e-posta formatı.';
       if (error.code === 'auth/network-request-failed' || error.message?.includes('network-request-failed')) {
         errMsg = 'Ağ bağlantısı kurulamadı. Lütfen tekrar deneyin.';
       }
+      if (error.message && !error.message.startsWith('Firebase:')) errMsg = error.message;
       setErrorMessage(errMsg);
     } finally {
       setIsSubmitting(false);
@@ -425,16 +332,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       setForgotSubmitted(true);
       setSuccessToast('Eğer e-posta adresi kayıtlıysa, sıfırlama bağlantısı gönderildi.');
     } catch (err: any) {
-      if (err.code === 'auth/network-request-failed' || err.message?.includes('network-request-failed')) {
-        sound.playSuccess();
-        setForgotSubmitted(true);
-        setSuccessToast('Sıfırlama talebiniz yerel olarak kaydedildi.');
-        return;
-      }
       sound.playError();
       let errMsg = 'Şifre sıfırlama e-postası gönderilemedi.';
       if (err.code === 'auth/user-not-found') errMsg = 'Bu e-posta adresiyle kayıtlı bir hesap bulunamadı.';
       if (err.code === 'auth/invalid-email') errMsg = 'Geçersiz e-posta formatı.';
+      if (err.code === 'auth/network-request-failed') errMsg = 'Ağ bağlantısı kurulamadı. Lütfen tekrar deneyin.';
       setForgotError(errMsg);
     }
   };
@@ -619,46 +521,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   </div>
                 </div>
 
-                {/* Role Specific Info & Fast Credentials Autofill */}
-                <div className="mb-4 p-3 rounded-xl bg-slate-50 border border-zinc-200/80 flex items-center justify-between gap-2">
-                  <div className="text-xs font-medium text-slate-700">
-                    {selectedRole === 'student' && (
-                      <span>Kayıtlı Öğrenci: <strong className="text-indigo-700 font-bold">deniz@zekapark.com</strong></span>
-                    )}
-                    {selectedRole === 'parent' && (
-                      <span>Kayıtlı Veli: <strong className="text-emerald-700 font-bold">veli@zekapark.com</strong></span>
-                    )}
-                    {selectedRole === 'admin' && (
-                      <span>Yönetici: <strong className="text-purple-700 font-bold">admin@zekapark.com</strong></span>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      sound.playClick();
-                      if (selectedRole === 'student') {
-                        setIdentifier('deniz@zekapark.com');
-                        setPassword('123456');
-                      } else if (selectedRole === 'parent') {
-                        setIdentifier('veli@zekapark.com');
-                        setPassword('123456');
-                      } else {
-                        setIdentifier('admin@zekapark.com');
-                        setPassword('123456');
-                      }
-                      setErrorMessage(null);
-                    }}
-                    className="text-xs font-extrabold text-indigo-600 hover:text-indigo-800 bg-white hover:bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer shrink-0"
-                  >
-                    Bilgileri Doldur
-                  </button>
-                </div>
-
                 {/* Login Form */}
                 <form onSubmit={handleLoginSubmit} className="space-y-4" noValidate>
                   {/* Identifier Input */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    <label htmlFor="login-identifier" className="block text-xs font-bold text-slate-700 mb-1.5">
                       {selectedRole === 'student'
                         ? 'Öğrenci Kodu, Kullanıcı Adı veya E-posta'
                         : selectedRole === 'parent'
@@ -674,6 +541,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         )}
                       </div>
                       <input
+                        id="login-identifier"
                         type={selectedRole === 'student' ? 'text' : 'email'}
                         value={identifier}
                         onChange={(e) => {
@@ -707,7 +575,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   {/* Password Input */}
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-bold text-slate-700">
+                      <label htmlFor="login-password" className="block text-xs font-bold text-slate-700">
                         Şifre
                       </label>
                       <button
@@ -727,6 +595,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         <Lock className="w-4 h-4" />
                       </div>
                       <input
+                        id="login-password"
                         type={showPassword ? 'text' : 'password'}
                         value={password}
                         onChange={(e) => {
@@ -744,6 +613,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       />
                       <button
                         type="button"
+                        aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
                       >
@@ -762,7 +632,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     )}
                   </div>
 
-                  {/* Remember Me & Auto fill helper */}
+                  {/* Remember Me */}
                   <div className="flex items-center justify-between pt-1">
                     <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-600 select-none">
                       <input
@@ -774,9 +644,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       <span>Beni bu cihazda hatırla</span>
                     </label>
 
-                    <span className="text-[11px] text-slate-400">
-                      Standart şifre: 123456
-                    </span>
                   </div>
 
                   {/* Submit Button */}
@@ -952,8 +819,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   {/* Password with Strength Indicator */}
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-bold text-slate-700">
-                        Şifre Belirleyin (En az 6 karakter)
+                      <label htmlFor="register-password" className="block text-xs font-bold text-slate-700">
+                        {selectedRole === 'parent' ? 'Veli Şifresi' : 'Şifre'} (En az 8 karakter)
                       </label>
                       {regPassword && (
                         <span className={`text-[11px] font-bold ${
@@ -969,6 +836,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     </div>
                     <div className="relative">
                       <input
+                        id="register-password"
                         type={showRegPassword ? 'text' : 'password'}
                         value={regPassword}
                         onChange={(e) => {
@@ -986,6 +854,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       />
                       <button
                         type="button"
+                        aria-label={showRegPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
                         onClick={() => setShowRegPassword(!showRegPassword)}
                         className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
                       >
@@ -1021,7 +890,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                             passwordStrength.hasMinLength ? 'text-emerald-700' : 'text-slate-400'
                           }`}>
                             <Check className={`w-3 h-3 ${passwordStrength.hasMinLength ? 'text-emerald-600' : 'text-slate-300'}`} />
-                            En az 6 karakter
+                            En az 8 karakter
                           </span>
                           <span className={`flex items-center gap-1 font-semibold ${
                             passwordStrength.hasLetter ? 'text-emerald-700' : 'text-slate-400'
@@ -1046,6 +915,48 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       </p>
                     )}
                   </div>
+
+                  {selectedRole === 'parent' && (
+                    <div>
+                      <label htmlFor="student-password" className="block text-xs font-bold text-slate-700 mb-1">
+                        Öğrenci Şifresi (veli şifresinden farklı)
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="student-password"
+                          type={showRegStudentPassword ? 'text' : 'password'}
+                          value={regStudentPassword}
+                          onChange={(e) => {
+                            setRegStudentPassword(e.target.value);
+                            if (fieldErrors.studentPassword) {
+                              setFieldErrors((prev) => ({ ...prev, studentPassword: '' }));
+                            }
+                          }}
+                          autoComplete="new-password"
+                          placeholder="••••••••"
+                          className={`w-full pl-3.5 pr-10 py-2 rounded-xl border text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 ${
+                            fieldErrors.studentPassword
+                              ? 'border-rose-400 bg-rose-50/20 focus:ring-rose-500'
+                              : 'border-slate-300 focus:ring-indigo-500'
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          aria-label={showRegStudentPassword ? 'Öğrenci şifresini gizle' : 'Öğrenci şifresini göster'}
+                          onClick={() => setShowRegStudentPassword(!showRegStudentPassword)}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          {showRegStudentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      {fieldErrors.studentPassword && (
+                        <p className="mt-1 text-[11px] text-rose-600 font-bold flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3 shrink-0" />
+                          <span>{fieldErrors.studentPassword}</span>
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {/* KVKK and Terms Checkbox */}
                   <div>
@@ -1085,7 +996,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     ) : (
                       <>
                         <Sparkles className="w-4 h-4" />
-                        <span>Ücretsiz Başla (+100 Hoş Geldin XP)</span>
+                        <span>Ücretsiz Başla</span>
                       </>
                     )}
                   </button>
@@ -1098,7 +1009,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           <div className="pt-6 mt-6 border-t border-zinc-200 flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-500">
             <div className="flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>MEB BİLSEM Tablet Standartlarına Uyumlu</span>
+              <span>Çocuk odaklı, reklamsız öğrenme deneyimi</span>
             </div>
             <div className="flex items-center gap-3 font-semibold">
               <span className="text-slate-400">•</span>
@@ -1127,7 +1038,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           <div className="relative z-10 space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-indigo-200">
               <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-              <span>BİLSEM Hazırlığında #1 Dijital Platform</span>
+              <span>Parametrik bilişsel beceri çalışmaları</span>
             </div>
 
             <div>
@@ -1147,10 +1058,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 </div>
                 <div>
                   <div className="text-xs font-extrabold font-['Outfit',sans-serif]">
-                    Sınırsız Parametrik Tohum
+                    Tekrarlanabilir Parametrik Tohumlar
                   </div>
                   <div className="text-[11px] text-indigo-200">
-                    Aynı soru kalıbı tekrar etmez, her açılışta taze zeka varyasyonu üretilir.
+                    Aynı soru tipi, farklı tohumlarla yeni ve yeniden üretilebilir varyasyonlar oluşturur.
                   </div>
                 </div>
               </div>
@@ -1185,23 +1096,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </div>
           </div>
 
-          {/* Bottom Verified Quote Card */}
+          {/* Product scope note */}
           <div className="relative z-10 pt-6 mt-6 border-t border-white/15">
-            <p className="text-xs text-indigo-100 italic leading-relaxed">
-              "Kızım tablet sınavında en çok matris ve döndürme sorularında tereddüt ediyordu. ZekaPark'ın günlük 15 dakikalık serileri sayesinde sınavı ilk 100'de tamamladı!"
+            <p className="text-xs text-indigo-100 leading-relaxed">
+              ZekaPark bağımsız bir bilişsel beceri çalışma aracıdır. Resmî sınav sonucu veya başarı garantisi sunmaz.
             </p>
-            <div className="flex items-center gap-3 mt-3">
-              <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"
-                alt="Merve Yılmaz"
-                referrerPolicy="no-referrer"
-                className="w-8 h-8 rounded-full object-cover border border-white/30"
-              />
-              <div>
-                <div className="text-xs font-extrabold text-white">Merve Yılmaz</div>
-                <div className="text-[10px] text-indigo-300">2. Sınıf Velisi • BİLSEM 2025 Kazananı</div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

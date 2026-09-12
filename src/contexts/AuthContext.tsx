@@ -6,7 +6,7 @@ import {
   sendEmailVerification as firebaseSendEmailVerification,
   sendPasswordResetEmail as firebaseSendPasswordResetEmail
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { UserProfile, UserRole } from '../types';
 import { dataService } from '../services/data-service';
@@ -75,32 +75,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const userDocRef = doc(db, 'users', user.uid);
           
           try {
-            // Check if document exists, if not initialize fallback
+            // Accounts without an application profile are not silently provisioned.
             const docSnap = await getDoc(userDocRef);
             if (!docSnap.exists()) {
-              const fallbackProfile: UserProfile = {
-                id: user.uid,
-                email: user.email || '',
-                name: user.displayName || user.email?.split('@')[0] || 'Kullanıcı',
-                role: 'student' as UserRole,
-                grade: 2,
-                avatar: '🦊',
-                level: 1,
-                xp: 0,
-                streak: 1,
-                lastActiveDate: new Date().toISOString(),
-                dailyGoalMinutes: 15,
-                todayMinutesSpent: 0,
-                soundEnabled: true,
-                createdAt: Date.now(),
-                updatedAt: Date.now(),
-                totalPoints: 0,
-              };
-              await setDoc(userDocRef, fallbackProfile, { merge: true });
-              if (isMounted) {
-                setUserProfile(fallbackProfile);
-                dataService.syncUserFromFirebase(fallbackProfile);
-              }
+              if (isMounted) setUserProfile(null);
+            } else {
+              const profile = docSnap.data() as UserProfile;
+              dataService.loginAs(profile.role, profile);
+              await dataService.hydrateUserStateFromFirebase();
+              if (isMounted) setUserProfile(profile);
             }
           } catch (err) {
             console.warn('Notice: Firestore user document fetch skipped:', err);
@@ -125,13 +108,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           updateDoc(userDocRef, { lastLoginAt: Date.now() }).catch(() => {});
           if (isMounted) setLoading(false);
         } else {
-          // If user signed out of Firebase, check if active local session is running
-          if (dataService.isAuthenticated()) {
-            const local = dataService.getCurrentUser();
-            if (isMounted) setUserProfile(local);
-          } else {
-            if (isMounted) setUserProfile(null);
-          }
+          dataService.logout();
+          if (isMounted) setUserProfile(null);
           if (isMounted) setLoading(false);
         }
       },
@@ -172,9 +150,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error(firstMessage);
     }
 
-    // Always update locally first
+    const validatedData = parseResult.data;
+
+    // Update only fields accepted by the profile schema.
     if (userProfile) {
-      const updated = { ...userProfile, ...data, updatedAt: Date.now() };
+      const updated = { ...userProfile, ...validatedData, updatedAt: Date.now() };
       setUserProfile(updated);
       dataService.setCurrentUser(updated);
     }
@@ -182,7 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (currentUser) {
       try {
         const userDocRef = doc(db, 'users', currentUser.uid);
-        const updatedData = { ...data, updatedAt: Date.now() };
+        const updatedData = { ...validatedData, updatedAt: Date.now() };
         await updateDoc(userDocRef, updatedData);
       } catch (error) {
         console.warn("Notice: Firestore profile update skipped:", error);
@@ -191,22 +171,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const sendEmailVerification = async (user: User) => {
-    try {
-      await firebaseSendEmailVerification(user);
-    } catch (error) {
-      console.warn("Notice: Verification email skipped:", error);
-    }
+    await firebaseSendEmailVerification(user);
   };
 
   const sendPasswordResetEmail = async (email: string) => {
-    try {
-      await firebaseSendPasswordResetEmail(auth, email);
-    } catch (error: any) {
-      console.warn("Notice: Password reset email skipped:", error);
-      if (error.code !== 'auth/network-request-failed') {
-        throw error;
-      }
-    }
+    await firebaseSendPasswordResetEmail(auth, email);
   };
 
   return (

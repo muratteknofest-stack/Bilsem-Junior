@@ -12,6 +12,8 @@
     "skipLibCheck": true,
     "moduleResolution": "bundler",
     "isolatedModules": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
     "moduleDetection": "force",
     "allowJs": true,
     "resolveJsonModule": true,

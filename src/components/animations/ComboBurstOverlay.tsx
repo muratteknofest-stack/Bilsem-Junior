@@ -96,7 +96,7 @@ export const ComboBurstOverlay: React.FC<ComboBurstOverlayProps> = ({
               transition={{ repeat: Infinity, duration: 0.9, ease: 'easeInOut' }}
               className="w-20 h-20 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center  border border-white/40"
             >
-              {React.cloneElement(tier.icon as React.ReactElement, {
+              {React.cloneElement(tier.icon as React.ReactElement<{ className?: string }>, {
                 className: 'w-12 h-12 text-white fill-white/80',
               })}
             </motion.div>

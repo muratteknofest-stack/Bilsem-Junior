@@ -84,7 +84,7 @@ export class WeeklyChallengesService {
         description: 'Sayısal ve geometrik dizi kurallarını keşfederek 8 örüntü sorusu tamamla.',
         pedagogicalObjective: 'Görsel tekrar kalıplarını, artış-azalış kuralını ve ardışık ilişkileri sezgisel kavrama.',
         targetQuestions: 8,
-        initialCompleted: 5,
+        initialCompleted: 0,
         bonusXP: 120,
         badge: {
           id: `badge-${weekId}-pattern`,
@@ -104,7 +104,7 @@ export class WeeklyChallengesService {
         description: '2x2 ve 3x3 mantık matrislerinde satır-sütun kurallarını çözerek 8 soru tamamla.',
         pedagogicalObjective: 'Raven İleri Progresif Matris formatında çok yönlü analitik kural türetme.',
         targetQuestions: 8,
-        initialCompleted: 6,
+        initialCompleted: 0,
         bonusXP: 150,
         badge: {
           id: `badge-${weekId}-matrix`,
@@ -124,7 +124,7 @@ export class WeeklyChallengesService {
         description: 'Şekil döndürme, küp açılımı ve ayna simetrisinde 6 uzamsal soru tamamla.',
         pedagogicalObjective: 'Zihinde 3 boyutlu nesne canlandırma, perspektif ve zihinsel rotasyon kapasitesi.',
         targetQuestions: 6,
-        initialCompleted: 3,
+        initialCompleted: 0,
         bonusXP: 140,
         badge: {
           id: `badge-${weekId}-spatial`,
@@ -144,7 +144,7 @@ export class WeeklyChallengesService {
         description: 'Görsel çeldiricilere takılmadan dikkat ve odaklanma alanında 10 soru tamamla.',
         pedagogicalObjective: 'Seçici görsel dikkat, sınav ortamında çeldiricilere karşı odaklanma kalkanı.',
         targetQuestions: 10,
-        initialCompleted: 8,
+        initialCompleted: 0,
         bonusXP: 160,
         badge: {
           id: `badge-${weekId}-attention`,
@@ -164,7 +164,7 @@ export class WeeklyChallengesService {
         description: 'Terazi dengesi, işlem makineleri ve mantık çıkarımı alanlarında 7 soru tamamla.',
         pedagogicalObjective: 'Tümdengelim, mantıksal nedensellik ve değişkenler arası denge kurma.',
         targetQuestions: 7,
-        initialCompleted: 4,
+        initialCompleted: 0,
         bonusXP: 130,
         badge: {
           id: `badge-${weekId}-logic`,
@@ -184,7 +184,7 @@ export class WeeklyChallengesService {
         description: 'Kısa süreli bellek ve sembol hatırlama alanlarında 6 soru tamamla.',
         pedagogicalObjective: 'Çalışma belleği (working memory) derinliği ve görsel kodlama çevikliği.',
         targetQuestions: 6,
-        initialCompleted: 2,
+        initialCompleted: 0,
         bonusXP: 120,
         badge: {
           id: `badge-${weekId}-memory`,
@@ -204,7 +204,7 @@ export class WeeklyChallengesService {
         description: 'Farklı olanı bulma, parça tamamlama ve gölge eşleştirmede 8 soru çöz.',
         pedagogicalObjective: 'Gestalt ilkelerine göre görsel sentez, silüet tanıma ve eksik parça tamamlama.',
         targetQuestions: 8,
-        initialCompleted: 6,
+        initialCompleted: 0,
         bonusXP: 110,
         badge: {
           id: `badge-${weekId}-visual_perception`,
@@ -224,7 +224,7 @@ export class WeeklyChallengesService {
         description: 'Sayı piramitleri, şekil denklemleri ve mantıksal işlem kurgularında 6 soru tamamla.',
         pedagogicalObjective: 'Aritmetik sezgi, sayısal örüntü mantığı ve sembolik denklem kurgulama.',
         targetQuestions: 6,
-        initialCompleted: 3,
+        initialCompleted: 0,
         bonusXP: 130,
         badge: {
           id: `badge-${weekId}-numerical`,
@@ -314,7 +314,7 @@ export class WeeklyChallengesService {
           isCompleted: completedChallengesCount >= 6,
           rewardClaimed: false,
         },
-        weeklyStreakWeeks: 3,
+        weeklyStreakWeeks: 0,
       };
 
       safeStorage.setItem(STORAGE_KEY_CHALLENGES, JSON.stringify(state));
@@ -499,72 +499,10 @@ export class WeeklyChallengesService {
   }
 
   /**
-   * Quick simulator: Advance 1 question in a challenge directly from the UI for instant testing
-   */
-  simulateSolveQuestion(challengeId: string): {
-    state: WeeklyChallengesState;
-    newlyCompleted: boolean;
-    challenge: WeeklyCategoryChallenge;
-  } {
-    const state = this.getWeeklyChallenges();
-    const challenge = state.challenges.find((c) => c.id === challengeId);
-
-    if (!challenge) {
-      throw new Error(`Challenge not found: ${challengeId}`);
-    }
-
-    const prevCompleted = challenge.isCompleted;
-    challenge.completedQuestions = Math.min(challenge.targetQuestions, challenge.completedQuestions + 1);
-    challenge.isCompleted = challenge.completedQuestions >= challenge.targetQuestions;
-
-    this.saveState(state);
-
-    // Also update student total solved questions and category mastery
-    dataService.recordQuestionSolved(true);
-    dataService.updateSkillMastery(challenge.category, true, 3);
-
-    return {
-      state,
-      newlyCompleted: !prevCompleted && challenge.isCompleted,
-      challenge,
-    };
-  }
-
-  /**
-   * Quick simulator: Complete an entire challenge instantly
-   */
-  instantCompleteChallenge(challengeId: string): {
-    state: WeeklyChallengesState;
-    challenge: WeeklyCategoryChallenge;
-  } {
-    const state = this.getWeeklyChallenges();
-    const challenge = state.challenges.find((c) => c.id === challengeId);
-
-    if (!challenge) {
-      throw new Error(`Challenge not found: ${challengeId}`);
-    }
-
-    challenge.completedQuestions = challenge.targetQuestions;
-    challenge.isCompleted = true;
-
-    this.saveState(state);
-    return { state, challenge };
-  }
-
-  /**
    * Syncs weekly badges into dataService achievements array so other badge views see them
    */
   private syncBadgeToAchievements(badge: Achievement) {
-    const achievements = dataService.getAchievements();
-    const existingIndex = achievements.findIndex((a) => a.id === badge.id);
-
-    if (existingIndex !== -1) {
-      achievements[existingIndex] = { ...achievements[existingIndex], ...badge };
-    } else {
-      achievements.unshift(badge);
-    }
-
-    safeStorage.setItem('bilsem_achievements', JSON.stringify(achievements));
+    dataService.upsertAchievement(badge);
   }
 }
 

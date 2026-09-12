@@ -154,7 +154,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const [copiedStudentCode, setCopiedStudentCode] = useState(false);
   const [cheeredUser, setCheeredUser] = useState<string | null>(null);
 
-  const studentCodeDisplay = activeUser.studentCode || (activeUser.name ? `${activeUser.name.replace(/\s+/g, '').toUpperCase()}2026` : 'DEMIR2026');
+  const studentCodeDisplay = activeUser.studentCode || '';
 
   const handleCopyStudentCode = () => {
     if (studentCodeDisplay) {
@@ -188,7 +188,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
   const weeklyLeaderboard = useMemo(() => 
     dataService.getLeaderboard('weekly'),
-  []);
+  [activeUser]);
 
   const safeMasteries = useMemo(() => {
     const list = (masteries && masteries.length > 0 
@@ -204,7 +204,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   }, [safeMasteries]);
 
   // Next level XP calculations
-  const nextLvlXp = activeUser.nextLevelXp || (activeUser.level * 250);
+  const nextLvlXp = activeUser.level * 250;
   const currentXp = activeUser.xp || 0;
   const progressPct = Math.min(100, Math.round((currentXp / nextLvlXp) * 100));
   const remainingXp = Math.max(0, nextLvlXp - currentXp);
@@ -306,7 +306,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     {greeting.text}, {activeUser.name?.split(' ')[0] || 'Zeka Şampiyonu'} {greeting.emoji}
                   </h1>
                   <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-800/50">
-                    <Sparkles className="w-3 h-3" /> {activeUser.title || 'BİLSEM Kaşifi'}
+                    <Sparkles className="w-3 h-3" /> Seviye {activeUser.level || 1}
                   </span>
                 </div>
 
@@ -400,10 +400,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 </div>
                 <div>
                   <div className="text-xl font-black text-indigo-950 dark:text-indigo-400 leading-tight">
-                    #{activeUser.rank || 1}
+                    {activeUser.xp || 0} XP
                   </div>
                   <div className="text-xs font-semibold text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
-                    Liderlikte <ChevronRight className="w-3 h-3" />
+                    İlerleme Özeti <ChevronRight className="w-3 h-3" />
                   </div>
                 </div>
               </motion.button>
@@ -969,6 +969,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
             <DailyStreakCard 
               user={activeUser} 
               onUserUpdate={onUserUpdate} 
+              onStartPractice={() => onStartPractice('mixed')}
+              onOpenDetailsModal={() => onNavigate('achievements')}
             />
 
             {/* Weekly Challenges Banner Card */}
@@ -1002,11 +1004,11 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 <div className="flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-amber-500" />
                   <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 font-['Outfit',sans-serif]">
-                    Haftalık Liderlik
+                    Kişisel Haftalık Özet
                   </h3>
                 </div>
                 <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-1 rounded-full border border-indigo-200/50 dark:border-indigo-800/40">
-                  Canlı Sıralama
+                  Doğrulanmış Veri
                 </span>
               </div>
 
@@ -1019,7 +1021,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
               <div className="space-y-2">
                 {weeklyLeaderboard.slice(0, 5).map((lb: any, idx: number) => {
-                  const isMe = lb.isMe || lb.name === activeUser.name;
+                  const isMe = lb.isCurrentUser;
                   const rank = lb.rank || idx + 1;
                   
                   return (
@@ -1040,17 +1042,17 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         <span className="text-xl shrink-0">{lb.avatar || '⭐'}</span>
                         <div className="min-w-0 truncate">
                           <p className={`text-xs truncate ${isMe ? 'font-bold text-indigo-950 dark:text-indigo-200' : 'font-semibold text-zinc-800 dark:text-zinc-300'}`}>
-                            {lb.name} {isMe && '(Sen)'}
+                            {lb.anonymousAlias}
                           </p>
                           <p className="text-[10px] text-zinc-400 font-medium">
-                            {lb.score || lb.xp || 0} XP
+                            {lb.xpEarned || 0} XP
                           </p>
                         </div>
                       </div>
 
                       {!isMe && (
                         <button
-                          onClick={() => handleCheerPeer(lb.id || idx.toString(), lb.name)}
+                          onClick={() => handleCheerPeer(lb.id || idx.toString(), lb.anonymousAlias)}
                           title="Tebrik Et / Alkışla"
                           className="px-2 py-1 bg-white dark:bg-zinc-800 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-zinc-500 hover:text-amber-500 rounded-lg text-xs font-bold border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer shrink-0"
                         >
@@ -1071,7 +1073,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 }}
                 className="w-full mt-4 py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
-                Tüm Sıralamayı Gör
+                Ayrıntılı Özeti Gör
                 <ArrowRight className="w-3.5 h-3.5" />
               </motion.button>
             </article>

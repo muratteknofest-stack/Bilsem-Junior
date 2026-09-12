@@ -53,14 +53,12 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
   });
 
   const [missions, setMissions] = useState<DailyMission[]>([
-    { id: 'm1', title: 'Bugün 5 soru çöz', rewardXP: 30, current: 3, target: 5, completed: false },
-    { id: 'm2', title: 'Matris kategorisinde 2 soru tamamla', rewardXP: 40, current: 2, target: 2, completed: true },
-    { id: 'm3', title: 'Hata Defterinden 1 soruyu tekrar dene', rewardXP: 50, current: 1, target: 1, completed: true },
+    { id: 'm1', title: 'Bugün 5 soru çöz', rewardXP: 30, current: 0, target: 5, completed: false },
+    { id: 'm2', title: 'Matris kategorisinde 2 soru tamamla', rewardXP: 40, current: 0, target: 2, completed: false },
+    { id: 'm3', title: 'Hata Defterinden 1 soruyu tekrar dene', rewardXP: 50, current: 0, target: 1, completed: false },
   ]);
 
-  const [claimedMissions, setClaimedMissions] = useState<Record<string, boolean>>({
-    m2: true,
-  });
+  const [claimedMissions, setClaimedMissions] = useState<Record<string, boolean>>({});
 
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -334,7 +332,7 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
                   {activeUser.name || 'Öğrenci'}
                 </h2>
                 <span className="text-[11px] font-semibold text-indigo-200 bg-white/10 px-2 py-0.5 rounded-lg border border-white/10">
-                  {activeUser.grade || 2}. Sınıf BİLSEM Adayı
+                  {activeUser.grade || 1}. Sınıf BİLSEM Adayı
                 </span>
               </div>
 
@@ -346,11 +344,11 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
                 <span className="text-slate-500">•</span>
                 <span className="flex items-center gap-1 font-bold text-orange-400">
                   <Flame className="w-3.5 h-3.5 fill-orange-400" />
-                  {activeUser.streak || 1} Günlük Kesintisiz Seri
+                  {activeUser.streak || 0} Günlük Kesintisiz Seri
                 </span>
                 <span className="text-slate-500">•</span>
                 <span className="text-indigo-300">
-                  En Uzun: {activeUser.longestStreak || activeUser.streak || 1} Gün
+                  En Uzun: {activeUser.longestStreak || activeUser.streak || 0} Gün
                 </span>
               </div>
             </div>
@@ -417,15 +415,15 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
         {/* Level XP Progress Bar */}
         <div className="mt-5 pt-4 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2">
-            <span className="text-slate-300">Seviye {user.level} Tamamlama</span>
+            <span className="text-slate-300">Seviye {activeUser.level} Tamamlama</span>
             <span className="font-mono text-amber-300 font-bold">
-              {user.xp % 250} / 250 XP
+              {activeUser.xp % 250} / 250 XP
             </span>
           </div>
           <div className="w-full sm:w-64 h-2.5 bg-white/10 rounded-full overflow-hidden p-0.5">
             <div
               className="h-full bg-gradient-to-r from-amber-400 to-amber-300 rounded-full transition-all duration-500"
-              style={{ width: `${Math.min(100, Math.round(((user.xp % 250) / 250) * 100))}%` }}
+              style={{ width: `${Math.min(100, Math.round(((activeUser.xp % 250) / 250) * 100))}%` }}
             />
           </div>
         </div>
@@ -467,7 +465,7 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
           <div className="flex items-baseline gap-1.5 mt-2">
             <strong className="text-2xl font-extrabold text-orange-600 font-['Outfit',sans-serif] flex items-center gap-1">
               <Flame className="w-5 h-5 fill-orange-500" />
-              {user.streak}
+              {activeUser.streak}
             </strong>
             <span className="text-xs text-orange-800 font-bold">Gün</span>
           </div>
@@ -756,7 +754,7 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
             <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredBadges.map((badge) => {
               const visuals = getTierVisuals(badge.tier);
-              const isEquipped = (user.featuredBadgeIds || []).includes(badge.id);
+              const isEquipped = (activeUser.featuredBadgeIds || []).includes(badge.id);
               const hasClaimableReward = badge.unlocked && !badge.rewardClaimed;
 
               return (
@@ -920,7 +918,7 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
             {/* Modal Header */}
             {(() => {
               const visuals = getTierVisuals(selectedBadge.tier);
-              const isEquipped = (user.featuredBadgeIds || []).includes(selectedBadge.id);
+              const isEquipped = (activeUser.featuredBadgeIds || []).includes(selectedBadge.id);
 
               return (
                 <>

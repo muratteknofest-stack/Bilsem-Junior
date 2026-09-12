@@ -1,51 +1,80 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
 
-    // Function to check if user is admin
+    function hasRole(role) {
+      return signedIn() && request.auth.token.role == role;
+    }
+
     function isAdmin() {
-      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return hasRole('admin');
     }
 
-    // Function to check if user is owner
     function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
+      return signedIn() && request.auth.uid == userId;
     }
 
-    // Users Collection
+    function isLinkedParent(userId) {
+      return hasRole('parent') &&
+        get(/databases/$(database)/documents/users/$(userId)).data.linkedParentId == request.auth.uid;
+    }
+
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if isOwner(userId) || isAdmin();
+      allow read: if isOwner(userId) || isLinkedParent(userId) || isAdmin();
+
+      // Browser registration can only create a student profile for that same account.
+      // Parent/child pairs and privileged roles are created by Firebase Admin on the server.
+      allow create: if isOwner(userId) &&
+        request.resource.data.id == userId &&
+        request.resource.data.role == 'student' &&
+        !request.resource.data.keys().hasAny(['linkedParentId', 'linkedStudentIds']);
+
+      // Identity, authorization and family-link fields cannot be changed by a browser client.
+      allow update: if isAdmin() ||
+        (isOwner(userId) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'name', 'grade', 'avatar', 'level', 'xp', 'streak', 'longestStreak', 'lastActiveDate', 'lastLoginAt',
+            'todayPracticed', 'streakFreezeCount', 'claimedStreakDays',
+            'weeklyStreakHistory', 'dailyGoalMinutes', 'todayMinutesSpent',
+            'dailyGoalQuestions', 'todayQuestionsSolved', 'dailyGoalSessions',
+            'todaySessionsCompleted', 'soundEnabled', 'totalQuestionsSolved',
+            'resolvedMistakesCount', 'featuredBadgeIds', 'reminderConfig', 'updatedAt'
+          ]));
+      allow delete: if isAdmin();
+
+      match /private/{documentId} {
+        allow read: if isOwner(userId) || isLinkedParent(userId) || isAdmin();
+        allow create, update: if isOwner(userId);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
     }
 
-    // Student Profiles
-    match /studentProfiles/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) || isAdmin();
-      allow update: if isOwner(userId) || isAdmin();
-    }
-
-    // Questions Collection
     match /questions/{questionId} {
-      // Anyone authenticated can read published questions, admins can read all
-      allow read: if request.auth != null && (resource.data.status == 'published' || isAdmin());
-      // Only admins can modify questions
+      allow read: if signedIn() && (resource.data.status == 'published' || isAdmin());
       allow write: if isAdmin();
     }
 
-    // Practice Sessions
     match /practiceSessions/{sessionId} {
-      allow read: if isOwner(resource.data.userId) || isAdmin();
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if isOwner(resource.data.userId) || isAdmin();
+      allow read: if isOwner(resource.data.userId) || isLinkedParent(resource.data.userId) || isAdmin();
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() ||
+        (isOwner(resource.data.userId) && request.resource.data.userId == resource.data.userId);
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
     }
-    
-    // Test Results
+
     match /testAttempts/{attemptId} {
-      allow read: if isOwner(resource.data.userId) || isAdmin();
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if isOwner(resource.data.userId) || isAdmin();
+      allow read: if isOwner(resource.data.userId) || isLinkedParent(resource.data.userId) || isAdmin();
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() ||
+        (isOwner(resource.data.userId) && request.resource.data.userId == resource.data.userId);
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

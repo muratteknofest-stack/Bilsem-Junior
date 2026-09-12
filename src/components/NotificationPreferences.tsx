@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Bell, Mail, CheckCircle2 } from 'lucide-react';
+import React from 'react';
+import { Bell, Mail, Info } from 'lucide-react';
 import { UserProfile, WeeklyQuestionProgressData } from '../types';
 
 interface NotificationPreferencesProps {
@@ -13,80 +13,24 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
   weeklyData,
   accuracy
 }) => {
-  const [emailEnabled, setEmailEnabled] = useState(true);
-  const [reportDay, setReportDay] = useState('Friday');
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'success'>('idle');
-
-  const handleSave = () => {
-    setIsSaving(true);
-    // Simulate save
-    setTimeout(() => {
-      setIsSaving(false);
-      setSaveStatus('success');
-      setTimeout(() => setSaveStatus('idle'), 2000);
-    }, 800);
-  };
-
   return (
     <div className="space-y-6">
-      {/* Settings Panel */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 md:p-8 border border-zinc-200/60 dark:border-zinc-800 shadow-sm">
         <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-8 flex items-center gap-2">
           <Bell className="w-5 h-5 text-indigo-500" />
-          Bildirim Ayarları
+          Haftalık Raporlar
         </h2>
-        
-        <div className="space-y-8 max-w-2xl">
-          <div className="flex items-start sm:items-center justify-between gap-4 flex-col sm:flex-row">
-            <div>
-              <p className="font-bold text-zinc-900 dark:text-zinc-100">Haftalık E-posta Bildirimleri</p>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Çocuğunuzun haftalık gelişim raporunu e-posta ile alın.</p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer shrink-0">
-              <input type="checkbox" className="sr-only peer" checked={emailEnabled} onChange={(e) => setEmailEnabled(e.target.checked)} />
-              <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500/20 rounded-full peer dark:bg-zinc-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-indigo-600"></div>
-            </label>
-          </div>
-          
-          {emailEnabled && (
-            <div className="pt-6 border-t border-zinc-200/60 dark:border-zinc-800">
-              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100 mb-3">Rapor Gönderim Günü</label>
-              <select 
-                value={reportDay}
-                onChange={(e) => setReportDay(e.target.value)}
-                className="w-full md:w-64 px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 focus:ring-2 focus:ring-indigo-500 font-medium shadow-sm transition-all outline-none"
-              >
-                <option value="Friday">Cuma Günü (Okul Çıkışı)</option>
-                <option value="Sunday">Pazar Akşamı (Hafta Özeti)</option>
-                <option value="Monday">Pazartesi Sabahı</option>
-              </select>
-            </div>
-          )}
-          
-          <div className="pt-2">
-            <button 
-              onClick={handleSave}
-              disabled={isSaving}
-              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all flex items-center justify-center min-w-[140px] shadow-sm"
-            >
-              {isSaving ? (
-                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : saveStatus === 'success' ? (
-                <>
-                  <CheckCircle2 className="w-4 h-4 mr-2" /> Kaydedildi
-                </>
-              ) : (
-                'Ayarları Kaydet'
-              )}
-            </button>
-          </div>
+        <div className="max-w-2xl flex items-start gap-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-950 dark:border-indigo-900/50 dark:bg-indigo-950/30 dark:text-indigo-200">
+          <Info className="mt-0.5 h-5 w-5 shrink-0" />
+          <p className="leading-relaxed">
+            Zamanlanmış otomatik gönderim etkin değil. Güncel raporu, Genel Bakış ekranındaki
+            <strong> Haftalık Raporu Gönder</strong> düğmesiyle kayıtlı veli e-posta adresine güvenli biçimde gönderebilirsiniz.
+          </p>
         </div>
       </div>
 
       {/* Email Preview Panel */}
-      {emailEnabled && (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 md:p-8 border border-zinc-200/60 dark:border-zinc-800 shadow-sm">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 md:p-8 border border-zinc-200/60 dark:border-zinc-800 shadow-sm">
           <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-8 flex items-center gap-2">
             <Mail className="w-5 h-5 text-indigo-500" />
             Haftalık Rapor Önizlemesi
@@ -102,12 +46,12 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
               
               <div className="bg-zinc-50 dark:bg-zinc-800 p-6 rounded-2xl border border-zinc-100 dark:border-zinc-700 mb-8 space-y-5 shadow-sm">
                 <div className="flex justify-between items-center text-sm sm:text-base">
-                  <span className="text-zinc-500 dark:text-zinc-400 font-semibold">⏱️ Haftalık Çalışma</span>
-                  <strong className="text-zinc-900 dark:text-zinc-100">{weeklyData?.thisWeekTotal || 0} dakika</strong>
+                  <span className="text-zinc-500 dark:text-zinc-400 font-semibold">⏱️ Bugünkü Çalışma</span>
+                  <strong className="text-zinc-900 dark:text-zinc-100">{currentStudent.todayMinutesSpent || 0} dakika</strong>
                 </div>
                 <div className="flex justify-between items-center text-sm sm:text-base">
                   <span className="text-zinc-500 dark:text-zinc-400 font-semibold">🎯 Çözülen Soru</span>
-                  <strong className="text-zinc-900 dark:text-zinc-100">42 soru</strong>
+                  <strong className="text-zinc-900 dark:text-zinc-100">{weeklyData?.summary.thisWeekTotal || 0} soru</strong>
                 </div>
                 <div className="flex justify-between items-center text-sm sm:text-base">
                   <span className="text-zinc-500 dark:text-zinc-400 font-semibold">✅ Doğruluk Oranı</span>
@@ -128,8 +72,7 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
               </div>
             </div>
           </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 };

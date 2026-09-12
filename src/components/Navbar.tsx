@@ -94,6 +94,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Audio Toggle */}
           <button 
             onClick={toggleSound}
+            aria-label={soundOn ? 'Sesi kapat' : 'Sesi aç'}
             className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-zinc-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors "
           >
             {soundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
@@ -103,10 +104,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border font-bold text-sm ${getRoleBg()}`}>
               <User className="w-4 h-4" />
               <span>{currentUser?.name}</span>
-              {role === 'student' && (currentUser.studentCode || currentUser.name) && (
+              {role === 'student' && currentUser.studentCode && (
                 <span className="ml-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-white/80 dark:bg-black/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200/50 flex items-center gap-1" title="Öğrenci Kodu">
                   <KeyRound className="w-3 h-3 text-indigo-500" />
-                  {currentUser.studentCode || `${currentUser.name.replace(/\s+/g, '').toUpperCase()}2026`}
+                  {currentUser.studentCode}
                 </span>
               )}
             </div>
@@ -118,6 +119,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 sound.playClick();
                 if(onLogout) onLogout();
               }}
+              aria-label="Çıkış yap"
               className="p-2.5 rounded-xl bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors border border-rose-200 dark:border-rose-900/50 "
             >
               <LogOut className="w-4 h-4" />
@@ -140,6 +142,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="md:hidden">
            <button 
              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+             aria-label={isMobileMenuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
+             aria-expanded={isMobileMenuOpen}
              className="p-2 text-slate-600 dark:text-slate-400"
            >
              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -157,7 +161,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="absolute top-full left-0 w-full bg-white dark:bg-slate-900 border-b border-zinc-200 dark:border-slate-800  p-4 flex flex-col gap-3 md:hidden z-50"
           >
             <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-slate-800">
-               <button onClick={toggleSound} className="flex items-center gap-2 text-slate-600 dark:text-slate-400 font-medium">
+               <button onClick={toggleSound} aria-label={soundOn ? 'Sesi kapat' : 'Sesi aç'} className="flex items-center gap-2 text-slate-600 dark:text-slate-400 font-medium">
                  {soundOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
                  Ses {soundOn ? 'Açık' : 'Kapalı'}
                </button>

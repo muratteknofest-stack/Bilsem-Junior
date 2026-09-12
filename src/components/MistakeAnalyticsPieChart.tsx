@@ -404,8 +404,6 @@ export const MistakeAnalyticsPieChart: React.FC<MistakeAnalyticsPieChartProps> =
                       }}
                     />
                     <Pie
-                      activeIndex={activeIndex !== null ? activeIndex : undefined}
-                      activeShape={renderActiveShape}
                       data={chartData}
                       cx="50%"
                       cy="50%"

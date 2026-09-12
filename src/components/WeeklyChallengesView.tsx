@@ -7,7 +7,6 @@ import {
   UserProfile,
 } from '../types';
 import { weeklyChallengesService } from '../services/weekly-challenges-service';
-import { dataService } from '../services/data-service';
 import { sound } from '../lib/sound';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
@@ -170,25 +169,6 @@ export const WeeklyChallengesView: React.FC<WeeklyChallengesViewProps> = ({
       setTimeout(() => setActiveXpGain(null), 3000);
       showCelebrationToast(`🏆 Efsanevi "${result.badge.title}" rozeti kazanıldı ve +${result.xpAwarded} XP eklendi!`, true);
     }
-  };
-
-  const handleSimulateQuestion = (challengeId: string) => {
-    sound.playClick();
-    const result = weeklyChallengesService.simulateSolveQuestion(challengeId);
-    setChallengesState(result.state);
-    const updatedUser = dataService.getCurrentUser();
-    if (onUserUpdate) onUserUpdate(updatedUser);
-
-    if (result.newlyCompleted) {
-      showCelebrationToast(`🎯 Tebrikler! "${result.challenge.title}" meydan okumasını tamamladın! Şimdi rozetini al.`);
-    }
-  };
-
-  const handleInstantComplete = (challengeId: string) => {
-    sound.playSuccess();
-    const result = weeklyChallengesService.instantCompleteChallenge(challengeId);
-    setChallengesState(result.state);
-    showCelebrationToast(`✨ "${result.challenge.categoryName}" hedefi tamamlandı! Rozetini alabilirsin.`);
   };
 
   const filteredChallenges = useMemo(() => {
@@ -574,7 +554,7 @@ export const WeeklyChallengesView: React.FC<WeeklyChallengesViewProps> = ({
                     </motion.button>
                   )
                 ) : (
-                  <div className="flex items-center gap-2">
+                  <div>
                     <button
                       onClick={() => {
                         sound.playClick();
@@ -586,14 +566,6 @@ export const WeeklyChallengesView: React.FC<WeeklyChallengesViewProps> = ({
                       Pratik Yap ({challenge.categoryName})
                     </button>
 
-                    {/* Quick Simulator / Advance button */}
-                    <button
-                      onClick={() => handleSimulateQuestion(challenge.id)}
-                      title="1 soru çözmüş gibi ilerlet (Hızlı Test)"
-                      className="py-2.5 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-bold transition-colors flex items-center gap-1 shrink-0 cursor-pointer"
-                    >
-                      <span>+1 Test</span>
-                    </button>
                   </div>
                 )}
               </div>

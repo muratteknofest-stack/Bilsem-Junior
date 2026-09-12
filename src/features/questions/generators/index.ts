@@ -266,6 +266,10 @@ export function generateQuestionByType(
       q = generateVisualSequenceQuestion(seed, difficulty);
   }
 
+  // IDs must remain unique across type, generator version, difficulty and seed.
+  // Individual legacy generators used shorter IDs that collided between levels.
+  q.id = `${q.type}-v${q.version}-d${q.difficulty}-s${q.seed}`;
+
   // Automatic Quality Gate Validation
   const val = validateQuestion(q);
   if (!val.isValid) {
@@ -323,4 +327,3 @@ export function generateQuestionForGrade(
   q.estimatedSeconds = cfg.timeLimitSeconds;
   return q;
 }
-

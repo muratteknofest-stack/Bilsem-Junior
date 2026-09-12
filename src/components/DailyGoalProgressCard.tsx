@@ -43,13 +43,13 @@ export const DailyGoalProgressCard: React.FC<DailyGoalProgressCardProps> = ({
 
   // Targets and actuals
   const targetQuestions = user.dailyGoalQuestions || dailyPlan?.targetQuestions || 10;
-  const completedQuestions = user.todayQuestionsSolved ?? dailyPlan?.completedQuestions ?? 7;
+  const completedQuestions = user.todayQuestionsSolved ?? dailyPlan?.completedQuestions ?? 0;
 
   const targetSessions = user.dailyGoalSessions || 2;
-  const completedSessions = user.todaySessionsCompleted ?? 1;
+  const completedSessions = user.todaySessionsCompleted ?? 0;
 
   const targetMinutes = user.dailyGoalMinutes || 15;
-  const completedMinutes = user.todayMinutesSpent || 8;
+  const completedMinutes = user.todayMinutesSpent || 0;
 
   // Active metrics based on selected mode
   let currentVal = completedQuestions;
@@ -92,52 +92,6 @@ export const DailyGoalProgressCard: React.FC<DailyGoalProgressCardProps> = ({
     onUserUpdate(updated);
     setBannerFeedback(`Günlük hedef ${newTarget} ${unitPlural} olarak güncellendi!`);
     setTimeout(() => setBannerFeedback(null), 3000);
-  };
-
-  // Quick test: simulate +1 question
-  const handleSimulateQuestion = () => {
-    sound.playSuccess();
-    const updated = dataService.incrementTodayQuestions(1);
-    onUserUpdate(updated);
-
-    if ((updated.todayQuestionsSolved || 0) >= (updated.dailyGoalQuestions || 10)) {
-      sound.playLevelUp();
-      try {
-        confetti({
-          particleCount: 120,
-          spread: 80,
-          origin: { y: 0.6 },
-          colors: ['#10b981', '#06b6d4', '#6366f1', '#f59e0b'],
-        });
-      } catch {}
-      setBannerFeedback('Tebrikler! Günlük soru hedefini tamamladın! 🎉 (+50 XP Kazandın)');
-    } else {
-      setBannerFeedback('+1 Soru tamamlandı! Harika ilerliyorsun.');
-    }
-    setTimeout(() => setBannerFeedback(null), 3500);
-  };
-
-  // Quick test: simulate +1 session
-  const handleSimulateSession = () => {
-    sound.playSuccess();
-    const updated = dataService.incrementTodaySessions(1);
-    onUserUpdate(updated);
-
-    if ((updated.todaySessionsCompleted || 0) >= (updated.dailyGoalSessions || 2)) {
-      sound.playLevelUp();
-      try {
-        confetti({
-          particleCount: 120,
-          spread: 80,
-          origin: { y: 0.6 },
-          colors: ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b'],
-        });
-      } catch {}
-      setBannerFeedback('Tebrikler! Günlük seans hedefini tamamladın! 🎉');
-    } else {
-      setBannerFeedback('+1 Seans tamamlandı! Süper odak.');
-    }
-    setTimeout(() => setBannerFeedback(null), 3500);
   };
 
   // Milestone points along the progress bar
@@ -429,16 +383,6 @@ export const DailyGoalProgressCard: React.FC<DailyGoalProgressCardProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          {/* Quick Simulate Buttons for immediate testing / demo feedback */}
-          <button
-            onClick={goalMode === 'sessions' ? handleSimulateSession : handleSimulateQuestion}
-            title="Hedefi test etmek için +1 ilerleme ekle"
-            className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
-          >
-            <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-            <span>Test: +1 {unitLabel} Ekle</span>
-          </button>
-
           {/* Primary Action Button */}
           <button
             onClick={onStartPractice}

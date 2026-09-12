@@ -3,8 +3,15 @@ import { z } from 'zod';
 /**
  * Regex & Helper Validations
  */
-// Password strength: at least 6 characters, at least 1 digit or special character recommended
-export const passwordStrengthRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&._-]{6,}$/;
+// Passwords must be at least 8 characters and contain a letter and a number.
+export const passwordStrengthRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&._-]{8,}$/;
+
+const strongPasswordSchema = z
+  .string()
+  .min(8, 'Şifreniz en az 8 karakter olmalıdır.')
+  .max(128, 'Şifreniz en fazla 128 karakter olabilir.')
+  .regex(/[A-Za-zğüşıöçĞÜŞİÖÇ]/, 'Şifreniz en az bir harf içermelidir.')
+  .regex(/\d/, 'Şifreniz en az bir rakam içermelidir.');
 
 export const phoneRegex = /^(\+90|0)?[5][0-9]{9}$/;
 
@@ -27,10 +34,7 @@ export const loginSchema = z.object({
     }, {
       message: 'Geçerli bir e-posta adresi veya öğrenci kodu giriniz (Örn: deniz@zekapark.com veya DENIZ2026).',
     }),
-  password: z
-    .string()
-    .min(1, 'Lütfen şifrenizi giriniz.')
-    .min(6, 'Şifreniz en az 6 karakter olmalıdır.'),
+  password: z.string().min(1, 'Lütfen şifrenizi giriniz.'),
   role: z.enum(['student', 'parent', 'admin']),
   rememberMe: z.boolean().optional().default(true),
 });
@@ -74,13 +78,7 @@ export const registerStudentSchema = z.object({
     }, {
       message: 'Lütfen geçerli bir telefon numarası giriniz (Örn: 0555 123 45 67).',
     }),
-  password: z
-    .string()
-    .min(1, 'Lütfen bir şifre belirleyiniz.')
-    .min(6, 'Şifreniz en az 6 karakter olmalıdır.')
-    .refine((val) => val.length >= 6, {
-      message: 'Şifreniz güvenliğiniz için en az 6 karakter olmalıdır.',
-    }),
+  password: strongPasswordSchema,
   kvkkConsent: z
     .boolean()
     .refine((val) => val === true, {
@@ -122,15 +120,16 @@ export const registerParentSchema = z.object({
     .min(1, 'Sınıf 1 ile 4 arasında olmalıdır.')
     .max(4, 'Sınıf 1 ile 4 arasında olmalıdır.'),
   examFocus: z.string().min(1, 'Hedef alan seçiniz.'),
-  password: z
-    .string()
-    .min(1, 'Lütfen güvenli bir şifre belirleyiniz.')
-    .min(6, 'Şifreniz en az 6 karakter olmalıdır.'),
+  password: strongPasswordSchema,
+  studentPassword: strongPasswordSchema,
   kvkkConsent: z
     .boolean()
     .refine((val) => val === true, {
       message: 'KVKK ve Veli Aydınlatma Sözleşmesi\'ni onaylamanız gerekmektedir.',
     }),
+}).refine((value) => value.password !== value.studentPassword, {
+  message: 'Veli ve öğrenci için farklı şifreler belirleyiniz.',
+  path: ['studentPassword'],
 });
 
 export type RegisterParentFormData = z.infer<typeof registerParentSchema>;
@@ -158,12 +157,6 @@ export const userProfileUpdateSchema = z.object({
     .min(2, 'İsim en az 2 karakter olmalıdır.')
     .max(50, 'İsim en fazla 50 karakter olabilir.')
     .optional(),
-  email: z
-    .string()
-    .trim()
-    .email('Geçersiz e-posta formatı.')
-    .optional(),
-  role: z.enum(['student', 'parent', 'admin']).optional(),
   grade: z.number().int().min(1).max(4).optional(),
   avatar: z.string().min(1).optional(),
   dailyGoalMinutes: z.number().int().min(5, 'Günlük hedef en az 5 dakika olmalıdır.').max(180).optional(),
@@ -205,14 +198,14 @@ export interface PasswordStrength {
 }
 
 export function evaluatePasswordStrength(password: string): PasswordStrength {
-  const hasMinLength = password.length >= 6;
+  const hasMinLength = password.length >= 8;
   const hasLetter = /[a-zA-ZğüşıöçĞÜŞİÖÇ]/.test(password);
   const hasNumber = /\d/.test(password);
   const hasSpecial = /[@$!%*#?&._-]/.test(password);
 
   let score = 0;
-  if (password.length >= 6) score += 1;
   if (password.length >= 8) score += 1;
+  if (password.length >= 12) score += 1;
   if (hasLetter && hasNumber) score += 1;
   if (hasSpecial) score += 1;
 

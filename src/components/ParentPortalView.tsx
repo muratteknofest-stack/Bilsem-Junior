@@ -10,6 +10,7 @@ import {
 } from '../types';
 import { dataService } from '../services/data-service';
 import { db } from '../lib/firebase';
+import { authenticatedFetch } from '../lib/api-client';
 import { doc, getDoc } from 'firebase/firestore';
 import { 
   LineChart, 
@@ -73,22 +74,22 @@ interface ParentPortalViewProps {
 
 export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: parentOrStudent, masteries }) => {
   const [currentStudent, setCurrentStudent] = useState<UserProfile>({
-    id: 'demo',
-    name: 'Demir Yılmaz',
-    level: 4,
+    id: 'pending',
+    name: 'Öğrenci',
+    level: 1,
     avatar: '🦊',
     role: 'student',
-    xp: 340,
-    streak: 5,
-    streakFreezeCount: 1,
+    xp: 0,
+    streak: 0,
+    streakFreezeCount: 0,
     dailyGoalMinutes: 15,
-    todayMinutesSpent: 12,
-    totalQuestionsSolved: 148,
-    todayQuestionsSolved: 16,
+    todayMinutesSpent: 0,
+    totalQuestionsSolved: 0,
+    todayQuestionsSolved: 0,
     soundEnabled: true,
-    studentCode: 'DEMIR2026',
-    lastActiveDate: new Date().toISOString()
+    lastActiveDate: ''
   });
+  const [displayMasteries, setDisplayMasteries] = useState<SkillMastery[]>(masteries);
 
   const [isLoadingStudent, setIsLoadingStudent] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'preferences'>('overview');
@@ -114,7 +115,11 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
           const docRef = doc(db, 'users', parentOrStudent.linkedStudentIds[0]);
           const snap = await getDoc(docRef);
           if (snap.exists()) {
-            setCurrentStudent(snap.data() as UserProfile);
+            const child = snap.data() as UserProfile;
+            setCurrentStudent(child);
+            const progress = await dataService.loadRemoteProgressForUser(child.id);
+            setDisplayMasteries(progress.masteries);
+            setWeeklyData(dataService.getWeeklyQuestionProgressData(child, progress.weeklyQuestions));
           }
         } catch(e) {
           console.error(e);
@@ -123,80 +128,62 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
         }
       } else if (parentOrStudent.role === 'student') {
         setCurrentStudent(parentOrStudent as UserProfile);
+        setDisplayMasteries(masteries);
       }
     };
     fetchStudent();
-  }, [parentOrStudent]);
+  }, [parentOrStudent, masteries]);
 
   useEffect(() => {
-    const wd = dataService.getWeeklyQuestionProgressData(currentStudent || undefined);
-    setWeeklyData(wd);
+    if (parentOrStudent?.role !== 'parent') {
+      setWeeklyData(dataService.getWeeklyQuestionProgressData(currentStudent || undefined));
+    }
 
     return reminderService.subscribeToConfig(() => {});
-  }, [currentStudent]);
+  }, [currentStudent, parentOrStudent?.role]);
 
   // Sort masteries
   const sorted = useMemo(() => {
-    return [...masteries].sort((a, b) => b.mastery - a.mastery);
-  }, [masteries]);
+    return [...displayMasteries].sort((a, b) => b.mastery - a.mastery);
+  }, [displayMasteries]);
 
   const strengths = useMemo(() => sorted.slice(0, 3), [sorted]);
   const needsAttention = useMemo(() => sorted.slice(-3).reverse(), [sorted]);
-  const accuracy = strengths.length > 0 ? strengths[0].accuracy : 78;
+  const accuracy = strengths.length > 0 ? strengths[0].accuracy : 0;
 
-  // Real or simulated weekly activity
+  // Activity is sourced from the linked student's persisted progress.
   const weekDays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
-  const activityData = weeklyData?.thisWeekDays || [12, 18, 15, 22, 14, 25, 19];
-  const maxQuestions = Math.max(...activityData, 25);
+  const activityData: number[] = weeklyData?.dailyStats.map((day) => day.thisWeek) || [0, 0, 0, 0, 0, 0, 0];
+  const maxQuestions = Math.max(...activityData, 1);
 
   // Radar Data for 8 Cognitive Dimensions
   const radarData = useMemo(() => {
-    return masteries.map((m) => ({
+    return displayMasteries.map((m) => ({
       category: m.categoryName.split(' ')[0], // short label
       fullName: m.categoryName,
       mastery: m.mastery,
       accuracy: m.accuracy,
       fullMark: 100
     }));
-  }, [masteries]);
+  }, [displayMasteries]);
 
-  // 30-Day Momentum Data (Stable via useMemo)
+  // Only the currently available seven-day history is charted.
   const monthlyMomentumData = useMemo(() => {
-    return Array.from({ length: 30 }).map((_, i) => {
-      const day = 30 - i;
-      const date = new Date();
-      date.setDate(date.getDate() - day);
-      const score = 45 + (i * 1.4) + Math.sin(i * 0.8) * 6;
-      return {
-        date: date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }),
-        score: Math.min(Math.max(Math.round(score), 20), 100),
-      };
-    });
-  }, []);
-
-  const monthlyCategoryData = [
-    { name: '1. Hf', 'Matris': 60, 'Görsel Algı': 65, 'Dikkat': 70, 'Sayısal': 55, questions: 45, minutes: 120 },
-    { name: '2. Hf', 'Matris': 65, 'Görsel Algı': 70, 'Dikkat': 72, 'Sayısal': 58, questions: 52, minutes: 135 },
-    { name: '3. Hf', 'Matris': 72, 'Görsel Algı': 75, 'Dikkat': 78, 'Sayısal': 64, questions: 68, minutes: 150 },
-    { name: '4. Hf', 'Matris': 80, 'Görsel Algı': 82, 'Dikkat': 85, 'Sayısal': 70, questions: 85, minutes: 190 },
-  ];
+    return (weeklyData?.dailyStats || []).map((day) => ({
+      date: day.shortDay,
+      score: day.thisWeek,
+    }));
+  }, [weeklyData]);
 
   const handleSendWeeklyReport = async () => {
     setIsSendingReport(true);
     setReportSendStatus('idle');
     try {
-      const response = await fetch('/api/send-weekly-report', {
+      const response = await authenticatedFetch('/api/send-weekly-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          parentEmail: parentProfile?.email || 'test@zekapark.com',
-          studentName: currentStudent?.name || 'Öğrenci',
-          weeklyData: {
-            totalMinutes: weeklyData?.thisWeekTotal || 45,
-            totalQuestions: currentStudent.todayQuestionsSolved ? currentStudent.todayQuestionsSolved * 4 : 42,
-            accuracy: accuracy,
-            streak: currentStudent?.streak || 5
-          }
+          studentId: currentStudent.id
         })
       });
       
@@ -231,8 +218,8 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
   const filteredMasteries = useMemo(() => {
     if (skillFilter === 'strengths') return strengths;
     if (skillFilter === 'weaknesses') return needsAttention;
-    return masteries;
-  }, [skillFilter, masteries, strengths, needsAttention]);
+    return displayMasteries;
+  }, [skillFilter, displayMasteries, strengths, needsAttention]);
 
   // Daily goal calculation for circular progress
   const targetMins = currentStudent.dailyGoalMinutes || 15;
@@ -530,7 +517,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                   </div>
                   <div className="mt-4">
                     <h3 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 font-['Outfit',sans-serif]">
-                      {currentStudent.totalQuestionsSolved || 148}
+                      {currentStudent.totalQuestionsSolved || 0}
                     </h3>
                     <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">Toplam Çözülen BİLSEM Sorusu</p>
                   </div>
@@ -567,12 +554,12 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                       <Flame className="w-5 h-5 animate-pulse" />
                     </div>
                     <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/50 dark:border-amber-900/30 flex items-center gap-1">
-                      <Shield className="w-3 h-3 text-indigo-500" /> {currentStudent.streakFreezeCount || 1} Kalkan
+                      <Shield className="w-3 h-3 text-indigo-500" /> {currentStudent.streakFreezeCount || 0} Kalkan
                     </span>
                   </div>
                   <div className="mt-4">
                     <h3 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 font-['Outfit',sans-serif]">
-                      {currentStudent.streak || 5} <span className="text-sm font-semibold text-zinc-400">Gün</span>
+                      {currentStudent.streak || 0} <span className="text-sm font-semibold text-zinc-400">Gün</span>
                     </h3>
                     <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">Kesintisiz Öğrenme Disiplini</p>
                   </div>
@@ -593,13 +580,13 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                         <div className="flex items-center gap-2">
                           <Compass className="w-5 h-5 text-indigo-500" />
                           <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                            {chartViewMode === 'radar' ? 'Bilişsel Yetenek Radar Haritası' : '30 Günlük Gelişim İvmesi'}
+                            {chartViewMode === 'radar' ? 'Bilişsel Yetenek Radar Haritası' : 'Bu Haftanın Soru Akışı'}
                           </h2>
                         </div>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                           {chartViewMode === 'radar' 
-                            ? 'Öğrencinin 8 temel bilişsel zeka alanındaki yetkinlik dağılımı' 
-                            : 'Tüm pratiklerden elde edilen kümülatif zeka gelişim skoru'}
+                            ? 'Öğrencinin çalıştığı bilişsel alanlardaki güncel ustalık dağılımı'
+                            : 'Günlere göre gerçekten tamamlanan soru sayısı'}
                         </p>
                       </div>
 
@@ -629,7 +616,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                               : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
                           }`}
                         >
-                          30 Günlük Eğri
+                          Haftalık Akış
                         </button>
                       </div>
                     </div>
@@ -715,9 +702,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                                   axisLine={false} 
                                   tickLine={false} 
                                   tick={{ fill: '#a1a1aa', fontSize: 11, fontWeight: 500 }}
-                                  domain={[0, 100]}
-                                  ticks={[0, 25, 50, 75, 100]}
-                                  tickFormatter={(val) => `%${val}`}
+                                  domain={[0, 'auto']}
                                 />
                                 <RechartsTooltip 
                                   contentStyle={{ 
@@ -737,7 +722,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                                   strokeWidth={3}
                                   fillOpacity={1} 
                                   fill="url(#colorMomentum)" 
-                                  name="Gelişim Skoru"
+                                  name="Çözülen Soru"
                                 />
                               </AreaChart>
                             </ResponsiveContainer>
@@ -796,54 +781,15 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                     </div>
                   </div>
 
-                  {/* Monthly Categorical Progression Chart */}
                   <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 md:p-8 border border-zinc-200/70 dark:border-zinc-800 shadow-sm">
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-indigo-500" />
-                        <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                          Haftalık Alan Bazlı Başarı Eğrisi
-                        </h2>
+                    <div className="flex items-start gap-3">
+                      <TrendingUp className="w-5 h-5 text-indigo-500 mt-0.5" />
+                      <div>
+                        <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">Uzun Dönem Eğilim</h2>
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                          Dört haftalık karşılaştırma, yeterli gerçek çalışma verisi biriktiğinde burada gösterilecek.
+                        </p>
                       </div>
-                      <span className="text-xs font-medium text-zinc-400">Son 4 Hafta</span>
-                    </div>
-
-                    <div className="h-[260px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={monthlyCategoryData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f4f4f5" className="dark:stroke-zinc-800" />
-                          <XAxis 
-                            dataKey="name" 
-                            axisLine={false} 
-                            tickLine={false} 
-                            tick={{ fill: '#a1a1aa', fontSize: 11, fontWeight: 500 }} 
-                            dy={12}
-                          />
-                          <YAxis 
-                            axisLine={false} 
-                            tickLine={false} 
-                            tick={{ fill: '#a1a1aa', fontSize: 11, fontWeight: 500 }}
-                            domain={[0, 100]}
-                            ticks={[0, 25, 50, 75, 100]}
-                            tickFormatter={(val) => `%${val}`}
-                          />
-                          <RechartsTooltip 
-                            contentStyle={{ 
-                              borderRadius: '12px', 
-                              backgroundColor: '#18181b', 
-                              border: 'none', 
-                              color: '#fff', 
-                              boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)', 
-                              fontSize: '12px' 
-                            }}
-                          />
-                          <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 600, marginTop: '16px' }} />
-                          <Line type="monotone" dataKey="Matris" stroke="#6366f1" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 6 }} />
-                          <Line type="monotone" dataKey="Görsel Algı" stroke="#10b981" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 6 }} />
-                          <Line type="monotone" dataKey="Dikkat" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 6 }} />
-                          <Line type="monotone" dataKey="Sayısal" stroke="#ec4899" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 6 }} />
-                        </LineChart>
-                      </ResponsiveContainer>
                     </div>
                   </div>
 
@@ -872,7 +818,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                       </div>
 
                       <p className="text-zinc-300 text-xs sm:text-sm leading-relaxed mb-6">
-                        Öğrencimiz <strong className="text-amber-300 font-bold">{strengths[0]?.categoryName || 'Örüntü Analizi'}</strong> kategorisinde %{strengths[0]?.accuracy || 85} doğruluk ile üstün kavrama gösteriyor. 
+                        Öğrencimiz <strong className="text-amber-300 font-bold">{strengths[0]?.categoryName || 'Henüz veri yok'}</strong> kategorisinde %{strengths[0]?.accuracy || 0} doğruluk gösteriyor.
                         Buna karşın <strong className="text-rose-300 font-bold">{needsAttention[0]?.categoryName || 'Matris'}</strong> alanında hata tekrarı mevcut. Hafta sonu 10 dakikalık odak egzersizi önerilir.
                       </p>
 
@@ -996,10 +942,10 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200/70 dark:border-zinc-800 shadow-sm">
                 <div>
                   <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-100 font-['Outfit',sans-serif]">
-                    8 Bilişsel Boyut Haritası
+                    10 Bilişsel Boyut Haritası
                   </h2>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                    BİLSEM sınavında ölçülen tüm zihinsel yetenek alanlarının anlık seviyesi ve performans metrikleri.
+                    Uygulamadaki bilişsel çalışma alanlarının güncel ve hesaplanmış performans metrikleri.
                   </p>
                 </div>
 
@@ -1013,7 +959,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                         : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
                     }`}
                   >
-                    Tümü ({masteries.length})
+                    Tümü ({displayMasteries.length})
                   </button>
                   <button
                     onClick={() => setSkillFilter('strengths')}
@@ -1203,14 +1149,10 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                   Kapat
                 </button>
                 <button
-                  onClick={() => {
-                    sound.playSuccess();
-                    confetti({ particleCount: 80, spread: 80, origin: { y: 0.6 } });
-                    setShowStudyPlanModal(false);
-                  }}
+                  onClick={() => setShowStudyPlanModal(false)}
                   className="flex-2 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <Check className="w-4 h-4" /> Öğrenci Paneline Gönder & Başlat
+                  <Check className="w-4 h-4" /> Planı İnceledim
                 </button>
               </div>
 

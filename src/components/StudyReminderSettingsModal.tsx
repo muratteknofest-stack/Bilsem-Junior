@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StudyReminderConfig, ReminderFrequency, UserProfile } from '../types';
 import { reminderService } from '../services/reminder-service';
+import { dataService } from '../services/data-service';
 import { sound } from '../lib/sound';
 import {
   Bell,
@@ -116,7 +117,7 @@ export const StudyReminderSettingsModal: React.FC<StudyReminderSettingsModalProp
   const handleTestReminder = () => {
     sound.playClick();
     setTestSent(true);
-    reminderService.testReminderNow(user || undefined);
+    reminderService.testReminderNow(user || dataService.getCurrentUser());
     setTimeout(() => {
       setTestSent(false);
     }, 4000);

@@ -360,9 +360,11 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
       } else if (userChoice === q.correctOptionId) {
         correctCount += 1;
         breakdown[cat].correct += 1;
+        dataService.recordQuestionSolved(true, cat);
         dataService.updateSkillMastery(cat, true, q.difficulty);
       } else {
         wrongCount += 1;
+        dataService.recordQuestionSolved(false, cat);
         dataService.addMistake(q);
         dataService.updateSkillMastery(cat, false, q.difficulty);
       }
@@ -437,7 +439,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
         <div className="bg-gradient-to-br from-indigo-900 via-indigo-950 to-purple-950 text-white rounded-xl p-6 sm:p-8  relative overflow-hidden space-y-6">
           <div className="space-y-2 max-w-xl">
             <span className="px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 text-xs font-bold">
-              Resmi Sınav Simülatörü
+              Süreli Deneme Modu
             </span>
             <h2 className="text-2xl sm:text-3xl font-extrabold font-['Outfit',sans-serif]">
               Test Modunu Seç
@@ -1006,7 +1008,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
                 Sınava Dön
               </button>
               <button
-                onClick={finishExam}
+                onClick={() => finishExam()}
                 className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs  cursor-pointer"
               >
                 Evet, Bitir

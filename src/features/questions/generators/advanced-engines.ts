@@ -39,7 +39,7 @@ export function generateOperationMachineQuestion(seed: number, difficulty: Diffi
   }
 
   // Generate 3 pairs
-  const pairs = [];
+  const pairs: Array<{ in: number; out: number | string }> = [];
   const startVals = rng.pickUnique([2,3,4,5,6,7,8,9,10,12,15], 3);
   
   // ensure no negative results for simplicity
@@ -52,10 +52,10 @@ export function generateOperationMachineQuestion(seed: number, difficulty: Diffi
   }
 
   const targetIn = pairs[2].in;
-  const targetOut = pairs[2].out;
+  const targetOut = Number(pairs[2].out);
   pairs[2].out = '?'; // Hide the last one
 
-  const distractors = [];
+  const distractors: number[] = [];
   while(distractors.length < 3) {
     const fake = targetOut + rng.nextInt(-5, 5);
     if (fake !== targetOut && fake > 0 && !distractors.includes(fake)) {
@@ -368,7 +368,7 @@ export function generateNumberPyramidQuestion(seed: number, difficulty: Difficul
   const target = vals[hiddenIdx];
   vals[hiddenIdx] = -1; // -1 means '?'
   
-  const distractors = [];
+  const distractors: number[] = [];
   while (distractors.length < 3) {
     const fake = target + rng.nextInt(-4, 4);
     if (fake !== target && fake > 0 && !distractors.includes(fake)) {

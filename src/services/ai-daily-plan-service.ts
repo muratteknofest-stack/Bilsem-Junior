@@ -9,6 +9,7 @@ import {
 } from '../types';
 import { dataService } from './data-service';
 import { safeStorage } from '../lib/storage';
+import { authenticatedFetch } from '../lib/api-client';
 
 const STORAGE_KEY_AI_DAILY_PLAN = 'bilsem_ai_personalized_daily_plan';
 
@@ -110,15 +111,15 @@ class AiDailyPlanService {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 7000);
 
-      const response = await fetch('/api/ai-daily-plan', {
+      const response = await authenticatedFetch('/api/ai-daily-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
           studentName: user.name.split(' ')[0] || user.name,
-          grade: user.grade || 3,
-          level: user.level || 4,
-          streak: user.streak || 5,
+          grade: user.grade || 1,
+          level: user.level || 1,
+          streak: user.streak || 0,
           dailyGoalQuestions: user.dailyGoalQuestions || 10,
           dailyGoalMinutes: user.dailyGoalMinutes || 15,
           todayQuestionsSolved: user.todayQuestionsSolved || 0,
@@ -149,7 +150,7 @@ class AiDailyPlanService {
             category: f.category,
             categoryName: f.categoryName,
             reason: f.reason,
-            currentMastery: Number(f.currentMastery) || 50,
+            currentMastery: Number(f.currentMastery) || 0,
             mistakeCount: unresolvedMistakes.filter((m) => m.category === f.category).length,
           }));
 
@@ -273,7 +274,7 @@ class AiDailyPlanService {
       formattedDate,
       generatedAtTimestamp: Date.now(),
       greetingTitle: `Günaydın ${studentFirstName}! Bugün Zihnini Parlatma Vakti 🚀`,
-      morningCoachMessage: `Dünkü ${user.streak} günlük harika serin sayesinde harika bir ritim yakaladın. Bu sabah yapay zeka analizimize göre en çok gelişim bekleyen "${weak1.categoryName}" ve "${weak2.categoryName}" konularına odaklanarak seviyeni bir üst basamağa taşıyoruz!`,
+      morningCoachMessage: `Kayıtlı çalışma sonuçlarına göre bugün "${weak1.categoryName}" ve "${weak2.categoryName}" konularına odaklanan dengeli bir plan hazırladık. Mevcut serin: ${user.streak} gün.`,
       motivationalQuote: 'Her yeni sabah, beynimizin nöronlarını güçlendirmek ve yeni bir zeka kapısı açmak için yepyeni bir fırsattır.',
       focusWeaknesses,
       tasks,

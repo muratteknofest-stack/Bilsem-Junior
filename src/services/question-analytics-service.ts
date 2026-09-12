@@ -182,63 +182,19 @@ class QuestionAnalyticsService {
     this.saveUserLiveStats();
   }
 
-  /**
-   * Deterministic pseudo-random statistical generator for realistic cohort baseline
-   */
-  private getCohortStatsForQuestion(q: BaseQuestion, gradeFilter?: 1 | 2 | 3 | 4 | 'all') {
-    // Generate deterministic hash from question ID and seed
-    let hash = 0;
-    const str = `${q.id}_${q.seed || 12345}`;
-    for (let i = 0; i < str.length; i++) {
-      hash = (hash << 5) - hash + str.charCodeAt(i);
-      hash |= 0;
-    }
-    const absHash = Math.abs(hash);
-
-    // Baseline base attempt count (65 - 280 cohort students)
-    const baseAttempts = 80 + (absHash % 140);
-
-    // Difficulty base success curve
-    let baseAccuracy = BENCHMARK_RATES[q.difficulty] || 70;
-
-    // Category modifiers (spatial and matrix are naturally more challenging)
-    if (q.category === 'spatial') baseAccuracy -= 6;
-    if (q.category === 'matrix') baseAccuracy -= 4;
-    if (q.category === 'visual_perception') baseAccuracy += 5;
-    if (q.category === 'attention') baseAccuracy += 3;
-
-    // Slight variation per question
-    const variation = (absHash % 15) - 7; // -7 to +7
-    let finalAccuracy = Math.min(96, Math.max(28, baseAccuracy + variation));
-
-    // Grade mismatch modifier if filter applied
-    if (gradeFilter && gradeFilter !== 'all' && q.targetGrade) {
-      if (gradeFilter < q.targetGrade) {
-        finalAccuracy = Math.max(22, finalAccuracy - 14); // younger students struggle more
-      } else if (gradeFilter > q.targetGrade) {
-        finalAccuracy = Math.min(98, finalAccuracy + 10); // older students find it easier
-      }
-    }
-
-    // Check user live attempts to blend with cohort
+  /** Returns only attempts actually captured by the local admin simulator. */
+  private getRecordedStatsForQuestion(q: BaseQuestion) {
     const live = this.userLiveStats[q.id];
-    let totalAttempts = baseAttempts;
-    let correctCount = Math.round((baseAttempts * finalAccuracy) / 100);
-    let totalTime = baseAttempts * (q.estimatedSeconds || 40);
-
-    if (live && live.attempts > 0) {
-      totalAttempts += live.attempts;
-      correctCount += live.correct;
-      totalTime += live.totalTime;
-    }
-
-    const calculatedRate = Math.round((correctCount / totalAttempts) * 100);
-    const avgTimeSeconds = Math.round((totalTime / totalAttempts) * 10) / 10;
+    const totalAttempts = live?.attempts || 0;
+    const correctCount = live?.correct || 0;
+    const wrongCount = Math.max(0, totalAttempts - correctCount);
+    const calculatedRate = totalAttempts > 0 ? Math.round((correctCount / totalAttempts) * 100) : 0;
+    const avgTimeSeconds = totalAttempts > 0 ? Math.round(((live?.totalTime || 0) / totalAttempts) * 10) / 10 : 0;
 
     // Distractor analysis: identify which wrong option was picked the most
     const wrongOptions = q.options.filter((opt) => opt.id !== q.correctOptionId);
     let topDistractorId = wrongOptions[0]?.id || 'B';
-    let topDistractorPickRate = 42 + (absHash % 25); // 42% - 66% of errors
+    let topDistractorPickRate = 0;
     if (live && wrongOptions.length > 0) {
       let maxPick = 0;
       wrongOptions.forEach((opt) => {
@@ -248,12 +204,13 @@ class QuestionAnalyticsService {
           topDistractorId = opt.id;
         }
       });
+      topDistractorPickRate = wrongCount > 0 ? Math.round((maxPick / wrongCount) * 100) : 0;
     }
 
     return {
       totalAttempts,
       correctCount,
-      wrongCount: totalAttempts - correctCount,
+      wrongCount,
       successRate: calculatedRate,
       avgTimeSeconds,
       topDistractorId,
@@ -292,7 +249,8 @@ class QuestionAnalyticsService {
     const questionRecords: ChallengingQuestionRecord[] = [];
 
     filteredQuestions.forEach((q) => {
-      const stats = this.getCohortStatsForQuestion(q, grade);
+      const stats = this.getRecordedStatsForQuestion(q);
+      if (stats.totalAttempts === 0) return;
       const targetTime = q.estimatedSeconds || 40;
       const overrunPct = Math.round(((stats.avgTimeSeconds - targetTime) / targetTime) * 100);
 
@@ -369,10 +327,10 @@ class QuestionAnalyticsService {
       const totalAttempts = diffQuestions.reduce((acc, curr) => acc + curr.totalAttempts, 0);
       const correctCount = diffQuestions.reduce((acc, curr) => acc + curr.correctCount, 0);
       const wrongCount = totalAttempts - correctCount;
-      const successRate = totalAttempts > 0 ? Math.round((correctCount / totalAttempts) * 100) : BENCHMARK_RATES[diff];
+      const successRate = totalAttempts > 0 ? Math.round((correctCount / totalAttempts) * 100) : 0;
       const benchmark = BENCHMARK_RATES[diff];
       const totalTime = diffQuestions.reduce((acc, curr) => acc + curr.avgTimeSeconds * curr.totalAttempts, 0);
-      const avgTimeSeconds = totalAttempts > 0 ? Math.round((totalTime / totalAttempts) * 10) / 10 : diff * 10;
+      const avgTimeSeconds = totalAttempts > 0 ? Math.round((totalTime / totalAttempts) * 10) / 10 : 0;
 
       const gradeLabels: Record<DifficultyLevel, string> = {
         1: '1. Sınıf Başlangıç',
@@ -408,9 +366,9 @@ class QuestionAnalyticsService {
         const totalAttempts = cellQuestions.reduce((acc, curr) => acc + curr.totalAttempts, 0);
         const correctCount = cellQuestions.reduce((acc, curr) => acc + curr.correctCount, 0);
         const wrongCount = totalAttempts - correctCount;
-        const successRate = totalAttempts > 0 ? Math.round((correctCount / totalAttempts) * 100) : BENCHMARK_RATES[diff];
+        const successRate = totalAttempts > 0 ? Math.round((correctCount / totalAttempts) * 100) : 0;
         const totalTime = cellQuestions.reduce((acc, curr) => acc + curr.avgTimeSeconds * curr.totalAttempts, 0);
-        const avgTimeSeconds = totalAttempts > 0 ? Math.round((totalTime / totalAttempts) * 10) / 10 : diff * 9;
+        const avgTimeSeconds = totalAttempts > 0 ? Math.round((totalTime / totalAttempts) * 10) / 10 : 0;
 
         let status: 'optimal' | 'moderate' | 'challenging' | 'critical' = 'optimal';
         if (successRate < 50) status = 'critical';
@@ -436,25 +394,25 @@ class QuestionAnalyticsService {
     const totalAllAttempts = questionRecords.reduce((acc, curr) => acc + curr.totalAttempts, 0);
     const totalAllCorrect = questionRecords.reduce((acc, curr) => acc + curr.correctCount, 0);
     const overallSuccessRate =
-      totalAllAttempts > 0 ? Math.round((totalAllCorrect / totalAllAttempts) * 100) : 74;
+      totalAllAttempts > 0 ? Math.round((totalAllCorrect / totalAllAttempts) * 100) : 0;
     const totalWeightedTime = questionRecords.reduce((acc, curr) => acc + curr.avgTimeSeconds * curr.totalAttempts, 0);
     const avgTimeSeconds =
-      totalAllAttempts > 0 ? Math.round((totalWeightedTime / totalAllAttempts) * 10) / 10 : 38.5;
+      totalAllAttempts > 0 ? Math.round((totalWeightedTime / totalAllAttempts) * 10) / 10 : 0;
 
     // Hardest & easiest categories
     const sortedCategories = [...byCategory].filter((c) => c.totalAttempts > 0).sort((a, b) => a.successRate - b.successRate);
     const hardestCatItem = sortedCategories[0];
     const hardestCategory = {
       category: hardestCatItem ? hardestCatItem.category : ('spatial' as CognitiveCategory),
-      name: hardestCatItem ? hardestCatItem.categoryName : 'Uzamsal Zeka & Döndürme',
-      rate: hardestCatItem ? hardestCatItem.successRate : 58,
+      name: hardestCatItem ? hardestCatItem.categoryName : 'Henüz veri yok',
+      rate: hardestCatItem ? hardestCatItem.successRate : 0,
     };
 
     const easiestCatItem = sortedCategories[sortedCategories.length - 1];
     const easiestCategory = {
       category: easiestCatItem ? easiestCatItem.category : ('visual_perception' as CognitiveCategory),
-      name: easiestCatItem ? easiestCatItem.categoryName : 'Görsel Algı & Ayrıştırma',
-      rate: easiestCatItem ? easiestCatItem.successRate : 88,
+      name: easiestCatItem ? easiestCatItem.categoryName : 'Henüz veri yok',
+      rate: easiestCatItem ? easiestCatItem.successRate : 0,
     };
 
     // Hardest difficulty
@@ -462,8 +420,8 @@ class QuestionAnalyticsService {
     const hardestDiffItem = sortedDifficulties[0];
     const hardestDifficulty = {
       difficulty: hardestDiffItem ? hardestDiffItem.difficulty : (6 as DifficultyLevel),
-      label: hardestDiffItem ? hardestDiffItem.label : 'Uzman (Seviye 6)',
-      rate: hardestDiffItem ? hardestDiffItem.successRate : 36,
+      label: hardestDiffItem ? hardestDiffItem.label : 'Henüz veri yok',
+      rate: hardestDiffItem ? hardestDiffItem.successRate : 0,
     };
 
     // Success Rate list filter
@@ -475,53 +433,36 @@ class QuestionAnalyticsService {
     }
 
     // 7. Generate Pedagogical Insights
-    const pedagogicalInsights: PedagogicalInsight[] = [
-      {
+    const pedagogicalInsights: PedagogicalInsight[] = [];
+    if (hardestCatItem) {
+      pedagogicalInsights.push({
         id: 'ins_1',
         type: 'critical_warning',
-        title: 'Uzamsal Rotasyon Sorularında Direnç Eşiği',
-        description: `Uzamsal Zeka kategorisindeki Seviye 4 ve 5 sorularda öğrenci başarı oranı %${hardestCategory.rate} seviyesine gerilemektedir. 90° ters dönüşler ile dikey simetri ekseni çeldiricisi en sık yanılınan noktadır.`,
-        targetCategory: 'spatial',
-        targetDifficulty: 4,
+        title: `${hardestCategory.name} için inceleme önerisi`,
+        description: `Kaydedilmiş ${hardestCatItem.totalAttempts} simülatör yanıtında başarı oranı %${hardestCategory.rate} olarak ölçüldü.`,
+        targetCategory: hardestCategory.category,
         actionRecommendation:
-          '1. ve 2. sınıf öğrencileri için "Ayna Simetrisi İpuçları" ve "90 Derece Adım Adım Döndürme" animasyon desteği artırılmalıdır.',
-      },
-      {
+          'Daha güvenilir bir yorum için farklı sorularda ek test yanıtları kaydedin ve çeldirici dağılımını inceleyin.',
+      });
+    }
+    const topDistractor = questionRecords
+      .filter((record) => record.wrongCount > 0)
+      .sort((a, b) => b.distractorPickRate - a.distractorPickRate)[0];
+    if (topDistractor) {
+      pedagogicalInsights.push({
         id: 'ins_2',
-        type: 'timing_friction',
-        title: '3x3 Matris Tamamlama Süre Aşımı Alarmı',
-        description:
-          '3x3 matris sorularında öğrencilerin %42’si hedeflenen 45 saniyenin üzerinde (ortalama 58.4 sn) zaman harcamaktadır. Çift değişkenli (renk + yön) kurallarda kilitlenme yaşanıyor.',
-        targetCategory: 'matrix',
-        targetDifficulty: 4,
-        actionRecommendation:
-          'Soru çözüm ekranında ilk 20 saniyede öğrenci cevap veremezse "Önce satırdaki şekil değişimine bak" yönlendirici ipucu etkinleştirilebilir.',
-      },
-      {
-        id: 'ins_3',
         type: 'distractor_trap',
-        title: 'Şekil Sayma ve Odaklanmada Çeldirici Çekimi',
-        description:
-          'İç içe geçmiş geometrik figürlerde (üçgen ve kare sayma) öğrencilerin %51’i kesişim alanlarını bağımsız figür olarak saymaktadır.',
-        targetCategory: 'attention',
-        targetDifficulty: 3,
-        actionRecommendation:
-          'Şekil sayma soruları için "Parçaları Renklendirerek Sayma" görsel çözüm katmanı öğrencilere hata incelemesinde sunulmalıdır.',
-      },
-      {
-        id: 'ins_4',
-        type: 'positive_strength',
-        title: 'Görsel Örüntü ve Sıralamada Yüksek Kazanım',
-        description: `Örüntü ve Dizi Analizi sorularında başarı oranı %${byCategory.find((c) => c.category === 'pattern')?.successRate || 82} ile BİLSEM standartlarının üzerindedir. Öğrenciler 1. ve 2. sınıf düzeyinde kural keşfinde başarılıdır.`,
-        targetCategory: 'pattern',
-        actionRecommendation:
-          'Öğrencilere bu kategoride Seviye 5 ve 6 analojik karma örüntü soruları açılarak akıcı zeka potansiyelleri üst seviyeye taşınabilir.',
-      },
-    ];
+        title: 'En sık seçilen çeldirici',
+        description: `${topDistractor.question.id} sorusunda yanlış yanıtların %${topDistractor.distractorPickRate} kadarı ${topDistractor.mostCommonDistractorOptionId} seçeneğinde toplandı.`,
+        targetCategory: topDistractor.question.category,
+        targetDifficulty: topDistractor.question.difficulty,
+        actionRecommendation: 'Soru kökünü ve bu çeldiricinin görsel/mantıksal ayrımını yeniden gözden geçirin.',
+      });
+    }
 
     return {
       overall: {
-        totalQuestions: filteredQuestions.length,
+        totalQuestions: questionRecords.length,
         totalAttempts: totalAllAttempts,
         overallSuccessRate,
         avgTimeSeconds,
