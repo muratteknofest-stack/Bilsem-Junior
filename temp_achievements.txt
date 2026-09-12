@@ -1,0 +1,793 @@
+256:  return (
+257-    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-28 space-y-6 font-['Plus_Jakarta_Sans',sans-serif]">
+258-      {/* Toast Notification */}
+259-      {toastMessage && (
+260-        <div className="fixed top-20 right-4 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl border border-slate-700 flex items-center gap-3 animate-fade-in text-xs sm:text-sm">
+261-          <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+262-          <span>{toastMessage}</span>
+263-        </div>
+264-      )}
+265-
+266-      {/* Top Header Navigation */}
+267-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+268-        <div className="flex items-center gap-3">
+269-          <button
+270-            onClick={onNavigateHome}
+271-            className="p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer shadow-xs active:scale-95"
+272-            title="Öğrenci Paneline Dön"
+273-          >
+274-            <ArrowLeft className="w-5 h-5" />
+275-          </button>
+276-          <div>
+277-            <div className="flex items-center gap-2">
+278-              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 font-['Outfit',sans-serif]">
+279-                Öğrenci Rozet Sistemi & Başarılar
+280-              </h1>
+281-              <span className="bg-amber-100 text-amber-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full border border-amber-300">
+282-                BİLSEM Vitrini
+283-              </span>
+284-            </div>
+285-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+286-              Zihinsel süreklilik, problem çözme azmi ve bilişsel ustalık rozetlerin
+287-            </p>
+288-          </div>
+289-        </div>
+290-
+291-        {onStartPractice && (
+292-          <button
+293-            onClick={onStartPractice}
+294-            className="self-start sm:self-auto px-4 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-indigo-600/20 active:scale-98 transition-all flex items-center gap-2 cursor-pointer"
+295-          >
+296-            <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
+297-            <span>Rozet İçin Soru Çöz</span>
+298-          </button>
+299-        )}
+300-      </div>
+301-
+302-      {/* STUDENT PROFILE & FEATURED BADGES SHOWCASE CARD */}
+303-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-7 shadow-xl border border-indigo-900/50">
+304-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+305-          {/* Avatar & Student Info */}
+306-          <div className="flex items-center gap-4">
+307-            <div className="relative">
+308-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/10 backdrop-blur-md border-2 border-amber-400/40 flex items-center justify-center text-3xl sm:text-4xl shadow-inner shrink-0">
+309-                {user.avatar}
+310-              </div>
+311-              <span className="absolute -bottom-1 -right-1 bg-amber-400 text-amber-950 font-black text-[10px] sm:text-xs px-2 py-0.5 rounded-full border border-slate-900">
+312-                Sv.{user.level}
+313-              </span>
+314-            </div>
+315-
+316-            <div>
+317-              <div className="flex items-center gap-2">
+318-                <h2 className="text-lg sm:text-xl font-extrabold font-['Outfit',sans-serif]">
+319-                  {user.name}
+320-                </h2>
+321-                <span className="text-[11px] font-semibold text-indigo-200 bg-white/10 px-2 py-0.5 rounded-lg border border-white/10">
+322-                  {user.grade}. Sınıf BİLSEM Adayı
+323-                </span>
+324-              </div>
+325-
+326-              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-300 mt-2">
+327-                <span className="flex items-center gap-1 font-bold text-amber-300">
+328-                  <Star className="w-3.5 h-3.5 fill-amber-300" />
+329-                  {user.xp} Toplam XP
+330-                </span>
+331-                <span className="text-slate-500">•</span>
+332-                <span className="flex items-center gap-1 font-bold text-orange-400">
+333-                  <Flame className="w-3.5 h-3.5 fill-orange-400" />
+334-                  {user.streak} Günlük Kesintisiz Seri
+335-                </span>
+336-                <span className="text-slate-500">•</span>
+337-                <span className="text-indigo-300">
+338-                  En Uzun: {user.longestStreak || user.streak} Gün
+339-                </span>
+340-              </div>
+341-            </div>
+342-          </div>
+343-
+344-          {/* FEATURED BADGES SHOWCASE (3 SLOTS) */}
+345-          <div className="bg-white/5 border border-white/10 backdrop-blur-md rounded-2xl p-4 sm:p-4.5 flex flex-col gap-2 min-w-[280px]">
+346-            <div className="flex items-center justify-between text-xs">
+347-              <span className="font-extrabold text-amber-300 flex items-center gap-1.5 font-['Outfit',sans-serif]">
+348-                <Crown className="w-4 h-4 text-amber-400" />
+349-                <span>Profil Vitrin Rozetlerin (Maks. 3)</span>
+350-              </span>
+351-              <span className="text-[10px] text-slate-400 font-semibold">
+352-                {equippedBadgeObjects.length} / 3 Takıldı
+353-              </span>
+354-            </div>
+355-
+356-            <div className="grid grid-cols-3 gap-2.5 pt-1">
+357-              {[0, 1, 2].map((slotIdx) => {
+358-                const badge = equippedBadgeObjects[slotIdx];
+359-                if (badge) {
+360-                  const visuals = getTierVisuals(badge.tier);
+361:                  return (
+362-                    <div
+363-                      key={badge.id}
+364-                      onClick={() => setSelectedBadge(badge)}
+365-                      className="group relative p-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 hover:border-amber-300/60 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-1 active:scale-95"
+366-                      title={`${badge.title} - Detayları gör veya çıkar`}
+367-                    >
+368-                      <span className="text-2xl filter drop-shadow-sm group-hover:scale-110 transition-transform">
+369-                        {badge.badgeIcon || '🏅'}
+370-                      </span>
+371-                      <span className="text-[10px] font-bold text-slate-200 line-clamp-1">
+372-                        {badge.title}
+373-                      </span>
+374-                      <span className="text-[8px] font-extrabold px-1.5 py-0.2 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
+375-                        {visuals.label}
+376-                      </span>
+377-                    </div>
+378-                  );
+379-                }
+380-
+381:                return (
+382-                  <div
+383-                    key={slotIdx}
+384-                    className="p-2.5 rounded-xl border border-dashed border-white/20 bg-white/5 flex flex-col items-center justify-center text-center gap-1 text-slate-400"
+385-                  >
+386-                    <div className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center text-xs">
+387-                      <Plus className="w-3.5 h-3.5 text-slate-400" />
+388-                    </div>
+389-                    <span className="text-[9px] font-medium text-slate-400">
+390-                      Boş Yuva
+391-                    </span>
+392-                  </div>
+393-                );
+394-              })}
+395-            </div>
+396-            <p className="text-[10px] text-slate-400 text-center">
+397-              Aşağıdaki kazanılmış rozetlerden birini seçerek vitrine ekleyebilirsin.
+398-            </p>
+399-          </div>
+400-        </div>
+401-
+402-        {/* Level XP Progress Bar */}
+403-        <div className="mt-5 pt-4 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+404-          <div className="flex items-center gap-2">
+405-            <span className="text-slate-300">Seviye {user.level} Tamamlama</span>
+406-            <span className="font-mono text-amber-300 font-bold">
+407-              {user.xp % 250} / 250 XP
+408-            </span>
+409-          </div>
+410-          <div className="w-full sm:w-64 h-2.5 bg-white/10 rounded-full overflow-hidden p-0.5">
+411-            <div
+412-              className="h-full bg-gradient-to-r from-amber-400 to-amber-300 rounded-full transition-all duration-500"
+413-              style={{ width: `${Math.min(100, Math.round(((user.xp % 250) / 250) * 100))}%` }}
+414-            />
+415-          </div>
+416-        </div>
+417-      </div>
+418-
+419-      {/* ROZET KOLEKSİYONU & SÜREKLİLİK ÖZET İSTATİSTİKLERİ */}
+420-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+421-        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col justify-between">
+422-          <span className="text-xs font-semibold text-slate-500">Kazanılan Rozetler</span>
+423-          <div className="flex items-baseline gap-1.5 mt-2">
+424-            <strong className="text-2xl font-extrabold text-slate-900 font-['Outfit',sans-serif]">
+425-              {unlockedCount}
+426-            </strong>
+427-            <span className="text-xs text-slate-400 font-semibold">/ {totalBadges}</span>
+428-          </div>
+429-          <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
+430-            <div
+431-              className="bg-indigo-600 h-full rounded-full transition-all"
+432-              style={{ width: `${completionPercentage}%` }}
+433-            />
+434-          </div>
+435-        </div>
+436-
+437-        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col justify-between">
+438-          <span className="text-xs font-semibold text-slate-500">Rozetlerden Gelen XP</span>
+439-          <div className="flex items-baseline gap-1.5 mt-2">
+440-            <strong className="text-2xl font-extrabold text-amber-600 font-['Outfit',sans-serif]">
+441-              +{totalEarnedBadgeXP}
+442-            </strong>
+443-            <span className="text-xs text-amber-800 font-bold">XP</span>
+444-          </div>
+445-          <span className="text-[10px] text-slate-400 mt-2">
+446-            Seviye atlamana doğrudan katkı sağlar
+447-          </span>
+448-        </div>
+449-
+450-        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col justify-between">
+451-          <span className="text-xs font-semibold text-slate-500">Süreklilik Serisi</span>
+452-          <div className="flex items-baseline gap-1.5 mt-2">
+453-            <strong className="text-2xl font-extrabold text-orange-600 font-['Outfit',sans-serif] flex items-center gap-1">
+454-              <Flame className="w-5 h-5 fill-orange-500" />
+455-              {user.streak}
+456-            </strong>
+457-            <span className="text-xs text-orange-800 font-bold">Gün</span>
+458-          </div>
+459-          <span className="text-[10px] text-emerald-600 font-semibold mt-2">
+460-            🔥 Süreklilik rozetleri açık
+461-          </span>
+462-        </div>
+463-
+464-        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col justify-between">
+465-          <span className="text-xs font-semibold text-slate-500">Koleksiyon Kademeleri</span>
+466-          <div className="flex items-center gap-2 mt-2">
+467-            <span className="px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200 text-[10px] font-bold">
+468-              🥉 {bronzeCount}
+469-            </span>
+470-            <span className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-800 border border-slate-300 text-[10px] font-bold">
+471-              🥈 {silverCount}
+472-            </span>
+473-            <span className="px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold">
+474-              🥇 {goldCount}
+475-            </span>
+476-            <span className="px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-900 border border-purple-300 text-[10px] font-bold">
+477-              💎 {diamondCount}
+478-            </span>
+479-          </div>
+480-          <span className="text-[10px] text-slate-400 mt-2">
+481-            Özel BİLSEM madalya dağılımı
+482-          </span>
+483-        </div>
+484-      </div>
+485-
+486-      {/* NEXT TARGET BADGE HERO BANNER (IF ANY) */}
+487-      {nextTargetBadge && (
+488-        <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-200 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+489-          <div className="flex items-center gap-3.5">
+490-            <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-2xl shadow-sm shrink-0">
+491-              {nextTargetBadge.badgeIcon || '🎯'}
+492-            </div>
+493-            <div>
+494-              <div className="flex items-center gap-2">
+495-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded-full">
+496-                  Kazanmaya Çok Yakınsın!
+497-                </span>
+498-                <span className="text-xs font-bold text-amber-800">
+499-                  +{nextTargetBadge.rewardXP} XP
+500-                </span>
+501-              </div>
+502-              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 mt-0.5">
+503-                {nextTargetBadge.title}: {nextTargetBadge.criteriaLabel || nextTargetBadge.description}
+504-              </h3>
+505-              <p className="text-xs text-slate-600 mt-0.5 line-clamp-1">
+506-                {nextTargetBadge.pedagogyNote || nextTargetBadge.description}
+507-              </p>
+508-            </div>
+509-          </div>
+510-
+511-          <div className="flex items-center gap-3 self-stretch sm:self-auto shrink-0">
+512-            <div className="text-right sm:w-28">
+513-              <span className="text-xs font-mono font-bold text-amber-900">
+514-                {nextTargetBadge.progress} / {nextTargetBadge.maxProgress}
+515-              </span>
+516-              <div className="w-full bg-amber-200 h-2 rounded-full overflow-hidden mt-1">
+517-                <div
+518-                  className="bg-amber-600 h-full rounded-full transition-all"
+519-                  style={{
+520-                    width: `${Math.min(100, Math.round((nextTargetBadge.progress / nextTargetBadge.maxProgress) * 100))}%`,
+521-                  }}
+522-                />
+523-              </div>
+524-            </div>
+525-
+526-            {onStartPractice && (
+527-              <button
+528-                onClick={onStartPractice}
+529-                className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs shadow-xs active:scale-95 transition-all cursor-pointer shrink-0"
+530-              >
+531-                Hemen Tamamla →
+532-              </button>
+533-            )}
+534-          </div>
+535-        </div>
+536-      )}
+537-
+538-      {/* DAILY MISSIONS SECTION */}
+539-      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+540-        <div className="flex items-center justify-between">
+541-          <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 font-['Outfit',sans-serif]">
+542-            <Zap className="w-5 h-5 text-indigo-600" />
+543-            <span>Günün Süreklilik Görevleri</span>
+544-          </h3>
+545-          <span className="text-xs text-slate-500 font-medium">
+546-            Her gün 00:00'da yenilenir
+547-          </span>
+548-        </div>
+549-
+550-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+551-          {missions.map((m) => {
+552-            const isClaimed = !!claimedMissions[m.id];
+553:            return (
+554-              <div
+555-                key={m.id}
+556-                className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between gap-3"
+557-              >
+558-                <div>
+559-                  <div className="flex items-center justify-between text-xs mb-1">
+560-                    <span className="font-extrabold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+561-                      +{m.rewardXP} XP
+562-                    </span>
+563-                    <span className="font-semibold text-slate-400 text-[11px]">
+564-                      {m.current} / {m.target}
+565-                    </span>
+566-                  </div>
+567-                  <h4 className="text-sm font-bold text-slate-800 mt-1">{m.title}</h4>
+568-                </div>
+569-
+570-                <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between">
+571-                  {m.completed ? (
+572-                    isClaimed ? (
+573-                      <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
+574-                        <Check className="w-3.5 h-3.5" />
+575-                        <span>Ödül Alındı</span>
+576-                      </span>
+577-                    ) : (
+578-                      <button
+579-                        onClick={() => handleClaimMissionReward(m)}
+580-                        className="w-full py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs shadow-xs transition-all cursor-pointer active:scale-98 animate-pulse"
+581-                      >
+582-                        Ödülü Al (+{m.rewardXP} XP)
+583-                      </button>
+584-                    )
+585-                  ) : (
+586-                    <div className="w-full">
+587-                      <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+588-                        <div
+589-                          className="bg-indigo-500 h-full rounded-full"
+590-                          style={{ width: `${Math.round((m.current / m.target) * 100)}%` }}
+591-                        />
+592-                      </div>
+593-                      <span className="text-[10px] text-slate-400 mt-1 block">
+594-                        Devam ediyor
+595-                      </span>
+596-                    </div>
+597-                  )}
+598-                </div>
+599-              </div>
+600-            );
+601-          })}
+602-        </div>
+603-      </div>
+604-
+605-      {/* FILTER CONTROLS & SEARCH BAR */}
+606-      <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-4">
+607-        {/* Category Tabs */}
+608-        <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-100 pb-3">
+609-          {[
+610-            { id: 'all', label: 'Tüm Rozetler', icon: Trophy },
+611-            { id: 'streak', label: '🔥 Süreklilik & Alışkanlık', icon: Flame },
+612-            { id: 'questions', label: '🎯 Soru Maratonu', icon: Star },
+613-            { id: 'special', label: '🛡️ Hata Fatihi & Azim', icon: ShieldCheck },
+614-            { id: 'mastery', label: '🧠 Bilişsel Ustalık', icon: Brain },
+615-            { id: 'exam', label: '🏅 Deneme & Hız', icon: Award },
+616-          ].map((cat) => (
+617-            <button
+618-              key={cat.id}
+619-              onClick={() => {
+620-                sound.playClick();
+621-                setCategoryFilter(cat.id as CategoryFilter);
+622-              }}
+623-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+624-                categoryFilter === cat.id
+625-                  ? 'bg-indigo-600 text-white shadow-xs'
+626-                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+627-              }`}
+628-            >
+629-              <span>{cat.label}</span>
+630-            </button>
+631-          ))}
+632-        </div>
+633-
+634-        {/* Sub-Filters: Status & Tier & Search */}
+635-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+636-          <div className="flex flex-wrap items-center gap-2 text-xs">
+637-            {/* Status Filter */}
+638-            <span className="text-slate-400 font-semibold text-[11px]">Durum:</span>
+639-            {[
+640-              { id: 'all', label: 'Tümü' },
+641-              { id: 'unlocked', label: 'Açılanlar' },
+642-              { id: 'locked', label: 'Kilitliler' },
+643-              { id: 'almost', label: 'Az Kalanlar (%60+)' },
+644-            ].map((st) => (
+645-              <button
+646-                key={st.id}
+647-                onClick={() => setStatusFilter(st.id as StatusFilter)}
+648-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+649-                  statusFilter === st.id
+650-                    ? 'bg-slate-900 text-white'
+651-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+652-                }`}
+653-              >
+654-                {st.label}
+655-              </button>
+656-            ))}
+657-
+658-            <span className="text-slate-300 mx-1">|</span>
+659-
+660-            {/* Tier Filter */}
+661-            <span className="text-slate-400 font-semibold text-[11px]">Kademe:</span>
+662-            {[
+663-              { id: 'all', label: 'Tümü' },
+664-              { id: 'bronze', label: 'Bronz' },
+665-              { id: 'silver', label: 'Gümüş' },
+666-              { id: 'gold', label: 'Altın' },
+667-              { id: 'diamond', label: 'Elmas' },
+668-            ].map((tf) => (
+669-              <button
+670-                key={tf.id}
+671-                onClick={() => setTierFilter(tf.id as TierFilter)}
+672-                className={`px-2 py-0.5 rounded-md text-[11px] font-semibold cursor-pointer transition-colors ${
+673-                  tierFilter === tf.id
+674-                    ? 'bg-amber-100 text-amber-900 font-bold border border-amber-300'
+675-                    : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+676-                }`}
+677-              >
+678-                {tf.label}
+679-              </button>
+680-            ))}
+681-          </div>
+682-
+683-          {/* Search Box */}
+684-          <div className="relative w-full md:w-64">
+685-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+686-            <input
+687-              type="text"
+688-              value={searchQuery}
+689-              onChange={(e) => setSearchQuery(e.target.value)}
+690-              placeholder="Rozet veya beceri ara..."
+691-              className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500"
+692-            />
+693-            {searchQuery && (
+694-              <button
+695-                onClick={() => setSearchQuery('')}
+696-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+697-              >
+698-                <X className="w-3.5 h-3.5" />
+699-              </button>
+700-            )}
+701-          </div>
+702-        </div>
+703-      </div>
+704-
+705-      {/* BADGES MAIN GRID */}
+706-      <div className="space-y-4">
+707-        <div className="flex items-center justify-between text-xs text-slate-500 px-1">
+708-          <span>
+709-            Toplam <strong>{filteredBadges.length}</strong> rozet listeleniyor
+710-          </span>
+711-          {unlockedCount === totalBadges && (
+712-            <span className="text-emerald-600 font-bold flex items-center gap-1">
+713-              <CheckCircle2 className="w-4 h-4" />
+714-              Tüm rozetler tamamlandı! Muhteşem BİLSEM hazırlığı!
+715-            </span>
+716-          )}
+717-        </div>
+718-
+719-        {filteredBadges.length === 0 ? (
+720-          <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 text-slate-500 space-y-3">
+721-            <Trophy className="w-10 h-10 text-slate-300 mx-auto" />
+722-            <p className="font-bold text-slate-700">Seçili filtrelere uygun rozet bulunamadı.</p>
+723-            <button
+724-              onClick={() => {
+725-                setCategoryFilter('all');
+726-                setStatusFilter('all');
+727-                setTierFilter('all');
+728-                setSearchQuery('');
+729-              }}
+730-              className="text-xs font-bold text-indigo-600 hover:underline cursor-pointer"
+731-            >
+732-              Filtreleri Sıfırla
+733-            </button>
+734-          </div>
+735-        ) : (
+736-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+737-            {filteredBadges.map((badge) => {
+738-              const visuals = getTierVisuals(badge.tier);
+739-              const isEquipped = (user.featuredBadgeIds || []).includes(badge.id);
+740-              const hasClaimableReward = badge.unlocked && !badge.rewardClaimed;
+741-
+742:              return (
+743-                <div
+744-                  key={badge.id}
+745-                  onClick={() => setSelectedBadge(badge)}
+746-                  className={`relative p-5 rounded-3xl border transition-all cursor-pointer flex flex-col justify-between gap-3 text-left group ${
+747-                    badge.unlocked
+748-                      ? `bg-white ${visuals.border} ${visuals.glow} hover:shadow-lg hover:-translate-y-0.5`
+749-                      : 'bg-slate-50/70 border-slate-200/80 opacity-75 hover:opacity-100 hover:bg-white hover:border-slate-300'
+750-                  }`}
+751-                >
+752-                  {/* Top Badges & Status */}
+753-                  <div className="flex items-start justify-between gap-2">
+754-                    <div className="flex items-center gap-3">
+755-                      <div
+756-                        className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shadow-sm shrink-0 transition-transform group-hover:scale-105 ${
+757-                          badge.unlocked ? 'bg-slate-100 border border-slate-200' : 'bg-slate-200/80 grayscale'
+758-                        }`}
+759-                      >
+760-                        {badge.badgeIcon || '🏅'}
+761-                      </div>
+762-
+763-                      <div>
+764-                        <div className="flex items-center gap-1.5">
+765-                          <span
+766-                            className={`text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full ${visuals.badgeText}`}
+767-                          >
+768-                            {visuals.label}
+769-                          </span>
+770-                          {badge.rewardXP && (
+771-                            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200">
+772-                              +{badge.rewardXP} XP
+773-                            </span>
+774-                          )}
+775-                        </div>
+776-                        <h4 className="font-extrabold text-sm sm:text-base text-slate-900 mt-1 font-['Outfit',sans-serif]">
+777-                          {badge.title}
+778-                        </h4>
+779-                      </div>
+780-                    </div>
+781-
+782-                    {/* Lock or Equipped Indicator */}
+783-                    <div className="shrink-0">
+784-                      {badge.unlocked ? (
+785-                        isEquipped ? (
+786-                          <span
+787-                            title="Profil Vitrinine Takılı"
+788-                            className="p-1 rounded-lg bg-amber-100 text-amber-900 block border border-amber-300"
+789-                          >
+790-                            <Crown className="w-3.5 h-3.5 fill-amber-400" />
+791-                          </span>
+792-                        ) : (
+793-                          <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">
+794-                            ✓
+795-                          </span>
+796-                        )
+797-                      ) : (
+798-                        <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center">
+799-                          <Lock className="w-3.5 h-3.5" />
+800-                        </span>
+801-                      )}
+802-                    </div>
+803-                  </div>
+804-
+805-                  {/* Description & Criteria */}
+806-                  <div className="space-y-1 my-1">
+807-                    <p className="text-xs text-slate-600 line-clamp-2">
+808-                      {badge.description}
+809-                    </p>
+810-                    {badge.criteriaLabel && (
+811-                      <p className="text-[11px] font-semibold text-indigo-700 flex items-center gap-1">
+812-                        <span>Hedef:</span>
+813-                        <span>{badge.criteriaLabel}</span>
+814-                      </p>
+815-                    )}
+816-                  </div>
+817-
+818-                  {/* Progress / Actions */}
+819-                  <div className="pt-3 border-t border-slate-100 space-y-2">
+820-                    <div className="flex items-center justify-between text-[11px]">
+821-                      {badge.unlocked ? (
+822-                        <span className="text-emerald-700 font-extrabold flex items-center gap-1">
+823-                          <CheckCircle2 className="w-3.5 h-3.5" />
+824-                          <span>Kazanıldı</span>
+825-                          {badge.unlockedAt && (
+826-                            <span className="text-slate-400 font-normal">
+827-                              ({badge.unlockedAt})
+828-                            </span>
+829-                          )}
+830-                        </span>
+831-                      ) : (
+832-                        <span className="text-slate-500 font-medium">
+833-                          İlerleme: <strong>{badge.progress}</strong> / {badge.maxProgress}
+834-                        </span>
+835-                      )}
+836-
+837-                      <span className="text-slate-400 text-[10px] group-hover:text-indigo-600 font-bold transition-colors">
+838-                        Detaylar →
+839-                      </span>
+840-                    </div>
+841-
+842-                    {!badge.unlocked && (
+843-                      <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+844-                        <div
+845-                          className="bg-indigo-600 h-full rounded-full transition-all"
+846-                          style={{
+847-                            width: `${Math.min(100, Math.round((badge.progress / badge.maxProgress) * 100))}%`,
+848-                          }}
+849-                        />
+850-                      </div>
+851-                    )}
+852-
+853-                    {/* Claim Button if Unlocked & Not Claimed */}
+854-                    {hasClaimableReward && (
+855-                      <button
+856-                        onClick={(e) => {
+857-                          e.stopPropagation();
+858-                          handleClaimBadgeReward(badge);
+859-                        }}
+860-                        className="w-full py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-extrabold text-xs shadow-md shadow-amber-500/20 active:scale-98 transition-all cursor-pointer flex items-center justify-center gap-1.5 animate-pulse"
+861-                      >
+862-                        <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+863-                        <span>Ödülü Al (+{badge.rewardXP} XP)</span>
+864-                      </button>
+865-                    )}
+866-                  </div>
+867-                </div>
+868-              );
+869-            })}
+870-          </div>
+871-        )}
+872-      </div>
+873-
+874-      {/* BADGE INSPECTION & DETAIL MODAL */}
+875-      {selectedBadge && (
+876-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+877-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5 animate-scale-up relative">
+878-            {/* Close Button */}
+879-            <button
+880-              onClick={() => setSelectedBadge(null)}
+881-              className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer"
+882-            >
+883-              <X className="w-5 h-5" />
+884-            </button>
+885-
+886-            {/* Modal Header */}
+887-            {(() => {
+888-              const visuals = getTierVisuals(selectedBadge.tier);
+889-              const isEquipped = (user.featuredBadgeIds || []).includes(selectedBadge.id);
+890-
+891:              return (
+892-                <>
+893-                  <div className="flex flex-col items-center text-center gap-3 pt-2">
+894-                    <div
+895-                      className={`w-24 h-24 rounded-3xl flex items-center justify-center text-5xl shadow-md border-2 ${
+896-                        selectedBadge.unlocked
+897-                          ? 'bg-amber-50 border-amber-300'
+898-                          : 'bg-slate-100 border-slate-300 grayscale'
+899-                      }`}
+900-                    >
+901-                      {selectedBadge.badgeIcon || '🏅'}
+902-                    </div>
+903-
+904-                    <div>
+905-                      <div className="flex items-center justify-center gap-2">
+906-                        <span
+907-                          className={`text-xs font-extrabold uppercase tracking-wider px-3 py-0.5 rounded-full ${visuals.badgeText}`}
+908-                        >
+909-                          {visuals.label} Rozet
+910-                        </span>
+911-                        {selectedBadge.rewardXP && (
+912-                          <span className="text-xs font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+913-                            +{selectedBadge.rewardXP} XP Ödül
+914-                          </span>
+915-                        )}
+916-                      </div>
+917-                      <h3 className="text-xl font-extrabold text-slate-900 font-['Outfit',sans-serif] mt-2">
+918-                        {selectedBadge.title}
+919-                      </h3>
+920-                      <p className="text-xs text-slate-500 mt-1 max-w-md">
+921-                        {selectedBadge.description}
+922-                      </p>
+923-                    </div>
+924-                  </div>
+925-
+926-                  {/* Pedagogical & Child Development Benefit Note */}
+927-                  {selectedBadge.pedagogyNote && (
+928-                    <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 flex items-start gap-3 text-left">
+929-                      <Brain className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+930-                      <div>
+931-                        <h4 className="text-xs font-extrabold text-indigo-950 font-['Outfit',sans-serif]">
+932-                          Pedagojik & Bilişsel Değer
+933-                        </h4>
+934-                        <p className="text-xs text-indigo-900 mt-0.5 leading-relaxed">
+935-                          {selectedBadge.pedagogyNote}
+936-                        </p>
+937-                      </div>
+938-                    </div>
+939-                  )}
+940-
+941-                  {/* Criteria & Current Progress */}
+942-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2 text-left">
+943-                    <div className="flex items-center justify-between text-xs">
+944-                      <span className="font-semibold text-slate-600">Gereksinim:</span>
+945-                      <strong className="text-slate-900">
+946-                        {selectedBadge.criteriaLabel || selectedBadge.description}
+947-                      </strong>
+948-                    </div>
+949-
+950-                    <div className="flex items-center justify-between text-xs pt-1">
+951-                      <span className="font-semibold text-slate-600">Durum:</span>
+952-                      {selectedBadge.unlocked ? (
+953-                        <span className="text-emerald-700 font-bold flex items-center gap-1">
+954-                          <CheckCircle2 className="w-4 h-4" />
+955-                          Kazanıldı {selectedBadge.unlockedAt ? `(${selectedBadge.unlockedAt})` : ''}
+956-                        </span>
+957-                      ) : (
+958-                        <span className="text-amber-800 font-bold">
+959-                          {selectedBadge.progress} / {selectedBadge.maxProgress} Tamamlandı
+960-                        </span>
+961-                      )}
+962-                    </div>
+963-
+964-                    {!selectedBadge.unlocked && (
+965-                      <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden mt-2">
+966-                        <div
+967-                          className="bg-indigo-600 h-full rounded-full transition-all"
+968-                          style={{
+969-                            width: `${Math.min(100, Math.round((selectedBadge.progress / selectedBadge.maxProgress) * 100))}%`,
+970-                          }}
+971-                        />
+972-                      </div>
+973-                    )}
+974-                  </div>
+975-
+976-                  {/* Actions in Modal */}
+977-                  <div className="flex flex-col sm:flex-row items-center gap-2 pt-2">
+978-                    {selectedBadge.unlocked ? (
+979-                      <>
+980-                        <div className="flex w-full gap-2">
+981-                          <button
+982-                            onClick={() => handleToggleEquipBadge(selectedBadge.id)}
+983-                            className={`flex-1 py-3 rounded-2xl font-extrabold text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs active:scale-98 ${
+984-                              isEquipped
+985-                                ? 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
+986-                                : 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
+987-                            }`}
+988-                          >
+989-                            <Crown className="w-4 h-4" />
+990-                            <span>
+991-                              {isEquipped ? 'Çıkar' : 'Sergile'}
+992-                            </span>
+993-                          </button>
+994-
+995-                          <button
+996-                            onClick={() => handleShareBadge(selectedBadge)}
+997-                            className="px-4 py-3 rounded-2xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-extrabold text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs active:scale-98"
+998-                            title="Sosyal Medyada Paylaş"
+999-                          >
+1000-                            <Share2 className="w-4 h-4" />
+1001-                            <span className="hidden sm:inline">Paylaş</span>
+1002-                          </button>
+1003-                        </div>
+1004-
+1005-                        {!selectedBadge.rewardClaimed && selectedBadge.rewardXP && (
+1006-                          <button
+1007-                            onClick={() => {
+1008-                              handleClaimBadgeReward(selectedBadge);
+1009-                              setSelectedBadge((prev) => prev ? { ...prev, rewardClaimed: true } : null);
+1010-                            }}
+1011-                            className="w-full sm:flex-1 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs active:scale-98"
+1012-                          >
+1013-                            <Sparkles className="w-4 h-4 text-emerald-200" />
+1014-                            <span>Ödülü Al (+{selectedBadge.rewardXP} XP)</span>
+1015-                          </button>
+1016-                        )}
+1017-                      </>
+1018-                    ) : (
+1019-                      onStartPractice && (
+1020-                        <button
+1021-                          onClick={() => {
+1022-                            setSelectedBadge(null);
+1023-                            onStartPractice();
+1024-                          }}
+1025-                          className="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20 active:scale-98"
+1026-                        >
+1027-                          <Zap className="w-4 h-4 text-amber-300" />
+1028-                          <span>Bu Rozet İçin Hemen Pratik Yap</span>
+1029-                        </button>
+1030-                      )
+1031-                    )}
+1032-
+1033-                    <button
+1034-                      onClick={() => setSelectedBadge(null)}
+1035-                      className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm transition-colors cursor-pointer"
+1036-                    >
+1037-                      Kapat
+1038-                    </button>
+1039-                  </div>
+1040-                </>
+1041-              );
+1042-            })()}
+1043-          </div>
+1044-        </div>
+1045-      )}
+1046-    </div>
+1047-  );
+1048-};

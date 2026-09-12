@@ -1,0 +1,61 @@
+                      className="text-xs font-bold text-purple-700 hover:text-purple-900 flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>{isExpanded ? 'Detayları Gizle' : 'Kural Detayını Gör'}</span>
+                      {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    </button>
+
+                    {/* Student Practice Simulator button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sound.playClick();
+                        setActiveSimulatorQuestion(q);
+                      }}
+                      className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      title="Bu soruyu öğrenci gözünden çöz ve süre sayacını test et"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-white text-white" />
+                      <span>Simülatörde Çöz</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* SECTION 4: PEDAGOGICAL RECOMMENDATIONS (Müfredat ve Geliştirici Önerileri) */}
+      {/* ========================================================================= */}
+      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-amber-500" />
+          <h3 className="text-base font-black text-slate-900">
+            Pedagojik Teşhis ve Müfredat İyileştirme Önerileri
+          </h3>
+        </div>
+        <p className="text-xs text-slate-500">
+          Öğrenci yanıt desenlerine dayalı olarak derlenen bilişsel destek ve soru kalitesi iyileştirme tavsiyeleri:
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {analytics.pedagogicalInsights.map((insight) => {
+            const isWarning = insight.type === 'critical_warning' || insight.type === 'timing_friction';
+
+            return (
+              <div
+                key={insight.id}
+                className={`p-4 rounded-2xl border space-y-2.5 ${
+                  isWarning
+                    ? 'bg-amber-50/60 border-amber-200'
+                    : 'bg-indigo-50/60 border-indigo-200'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {isWarning ? (
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0" />
+                  )}
+                  <h4 className="text-xs font-black text-slate-900">{insight.title}</h4>

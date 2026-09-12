@@ -1,0 +1,141 @@
+              onClick={handleResetFilters}
+              className="px-4 py-2 rounded-xl bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 cursor-pointer"
+            >
+              Filtreleri Temizle
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {analytics.challengingQuestions.map((item, idx) => {
+              const q = item.question;
+              const grade = (q.targetGrade || 1) as 1 | 2 | 3 | 4;
+              const gradeCfg = GRADE_CONFIGS[grade];
+              const isExpanded = expandedExplanationIds.has(q.id);
+
+              return (
+                <div
+                  key={q.id}
+                  className={`bg-white rounded-3xl border p-5 space-y-4 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between ${
+                    item.severity === 'critical'
+                      ? 'border-rose-300 ring-1 ring-rose-100'
+                      : 'border-slate-200'
+                  }`}
+                >
+                  <div className="space-y-3">
+                    {/* Header Badges */}
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* Rank Badge */}
+                        <span className="w-6 h-6 rounded-lg bg-slate-900 text-white font-black text-xs flex items-center justify-center">
+                          #{idx + 1}
+                        </span>
+
+                        {/* Grade Badge */}
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border ${gradeCfg.badgeBg} ${gradeCfg.badgeColor}`}
+                        >
+                          <span>{gradeCfg.icon}</span>
+                          <span>{gradeCfg.title}</span>
+                        </span>
+
+                        {/* Difficulty */}
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border ${
+                            DIFFICULTY_COLORS[q.difficulty]
+                          }`}
+                        >
+                          Seviye {q.difficulty} - {DIFFICULTY_LABELS[q.difficulty]}
+                        </span>
+                      </div>
+
+                      {/* Success Rate Warning Pill */}
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-black border flex items-center gap-1 ${
+                          item.severity === 'critical'
+                            ? 'bg-rose-100 text-rose-800 border-rose-300'
+                            : 'bg-amber-100 text-amber-800 border-amber-300'
+                        }`}
+                      >
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        <span>%{item.successRate} Başarı</span>
+                      </span>
+                    </div>
+
+                    {/* Question Prompt */}
+                    <div>
+                      <div className="text-xs font-mono text-purple-700 font-bold mb-1">
+                        {q.id} • {COGNITIVE_CATEGORY_LABELS[q.category]}
+                      </div>
+                      <p className="text-sm font-extrabold text-slate-900 leading-snug">
+                        {q.prompt}
+                      </p>
+                    </div>
+
+                    {/* Key Metrics Row */}
+                    <div className="grid grid-cols-3 gap-2 p-2.5 rounded-2xl bg-slate-50 border border-slate-100 text-center text-xs">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-medium">Toplam Çözüm</span>
+                        <span className="font-extrabold text-slate-800">{item.totalAttempts} Deneme</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-medium">Hata Dağılımı</span>
+                        <span className="font-extrabold text-rose-600">
+                          {item.wrongCount} Yanlış ({100 - item.successRate}%)
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-medium">Ortalama Süre</span>
+                        <span
+                          className={`font-extrabold ${
+                            item.timeOverrunPct > 15 ? 'text-amber-700' : 'text-slate-800'
+                          }`}
+                        >
+                          {item.avgTimeSeconds} sn{' '}
+                          {item.timeOverrunPct > 15 && (
+                            <span className="text-[9px] block text-amber-600 font-bold">
+                              (+%{item.timeOverrunPct} Aşım)
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Distractor & Cognitive Trap Callout */}
+                    <div className="p-3 rounded-2xl bg-rose-50/70 border border-rose-200/80 space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-xs font-black text-rose-800">
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                        <span>Çeldirici Tuzağı: Seçenek {item.mostCommonDistractorOptionId}</span>
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-rose-200 text-rose-900 ml-auto">
+                          Hataların %{item.distractorPickRate}'si bu şıkka düştü
+                        </span>
+                      </div>
+                      <p className="text-xs text-rose-900/90 leading-relaxed">
+                        {item.pedagogicalChallengeReason}
+                      </p>
+                    </div>
+
+                    {/* Expandable Explanation Details */}
+                    {isExpanded && (
+                      <div className="p-3.5 rounded-2xl bg-purple-50/80 border border-purple-200 space-y-2 text-xs">
+                        <div className="font-black text-purple-900 flex items-center gap-1.5">
+                          <Lightbulb className="w-4 h-4 text-purple-700" />
+                          <span>Doğru Kural Çözüm Mantığı</span>
+                        </div>
+                        <p className="font-bold text-slate-800">
+                          {q.explanation.summary || q.explanation.ruleTitle}
+                        </p>
+                        <ol className="list-decimal list-inside space-y-1 text-slate-700 font-medium">
+                          {q.explanation.steps.map((step, sIdx) => (
+                            <li key={sIdx}>{step}</li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Card Actions */}
+                  <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => toggleExplanation(q.id)}
+                      className="text-xs font-bold text-purple-700 hover:text-purple-900 flex items-center gap-1 cursor-pointer"
