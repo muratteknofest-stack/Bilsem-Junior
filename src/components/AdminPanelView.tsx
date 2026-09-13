@@ -489,7 +489,12 @@ export const AdminPanelView: React.FC = () => {
               alert('Soru doğrulama hatası:\n' + validation.errors.map(e => `• ${e.message}`).join('\n'));
               return;
             }
-            questionBankService.createCustomQuestion(q);
+            try {
+              questionBankService.createCustomQuestion(q);
+            } catch (error) {
+              alert(error instanceof Error ? error.message : 'Soru kaydedilemedi.');
+              return;
+            }
             sound.playSuccess();
             confetti({ particleCount: 50, spread: 60, origin: { y: 0.4 } });
             showToast(`Soru başarıyla eklendi! (ID: ${q.id})`);
