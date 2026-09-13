@@ -22,6 +22,15 @@ export interface UserProfile {
   linkedStudentIds?: string[];
   linkedParentId?: string;
   grade?: number;
+  examFocus?: string;
+  parentPhone?: string;
+  recoveryEmail?: string;
+  consent?: {
+    acceptedAt: number;
+    actorRole: 'student' | 'parent';
+    kvkkVersion: string;
+    termsVersion: string;
+  };
   avatar: string;
   level: number;
   xp: number;

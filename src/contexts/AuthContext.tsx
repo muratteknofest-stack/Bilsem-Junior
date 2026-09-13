@@ -55,11 +55,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let unsubSnap: (() => void) | null = null;
     let isMounted = true;
 
-    // Safety timeout: ensure loading state unblocks within 1.2s even if Firebase Auth is slow or unreachable
-    const safetyTimer = setTimeout(() => {
-      if (isMounted) setLoading(false);
-    }, 1200);
-
     const unsubscribe = onAuthStateChanged(
       auth,
       async (user) => {
@@ -78,9 +73,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Accounts without an application profile are not silently provisioned.
             const docSnap = await getDoc(userDocRef);
             if (!docSnap.exists()) {
+              dataService.logout();
               if (isMounted) setUserProfile(null);
             } else {
               const profile = docSnap.data() as UserProfile;
+              if (profile.id !== user.uid || !['student', 'parent', 'admin'].includes(profile.role)) {
+                dataService.logout();
+                if (isMounted) setUserProfile(null);
+                if (isMounted) setLoading(false);
+                return;
+              }
               dataService.loginAs(profile.role, profile);
               await dataService.hydrateUserStateFromFirebase();
               if (isMounted) setUserProfile(profile);
@@ -95,8 +97,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               (snap) => {
                 if (snap.exists() && isMounted) {
                   const profile = snap.data() as UserProfile;
-                  setUserProfile(profile);
-                  dataService.syncUserFromFirebase(profile);
+                  if (profile.id === user.uid && ['student', 'parent', 'admin'].includes(profile.role)) {
+                    setUserProfile(profile);
+                    dataService.syncUserFromFirebase(profile);
+                  } else {
+                    dataService.logout();
+                    setUserProfile(null);
+                  }
+                } else if (isMounted) {
+                  dataService.logout();
+                  setUserProfile(null);
                 }
               },
               (snapErr) => {
@@ -125,7 +135,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       isMounted = false;
-      clearTimeout(safetyTimer);
       if (unsubSnap) unsubSnap();
       unsubscribe();
     };

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, KeyRound, Mail, AlertCircle, CheckCircle2, Copy } from 'lucide-react';
+import { X, KeyRound, ShieldCheck, CheckCircle2, Copy } from 'lucide-react';
 import { UserProfile } from '../types';
 import { sound } from '../lib/sound';
 
@@ -7,18 +7,15 @@ interface StudentSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   student: UserProfile;
-  parentEmail?: string;
-  onSendResetEmail: (email: string) => Promise<void>;
+  onResetPassword: () => void;
 }
 
 export const StudentSettingsModal: React.FC<StudentSettingsModalProps> = ({
   isOpen,
   onClose,
   student,
-  parentEmail,
-  onSendResetEmail,
+  onResetPassword,
 }) => {
-  const [resetStatus, setResetStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
@@ -29,22 +26,6 @@ export const StudentSettingsModal: React.FC<StudentSettingsModalProps> = ({
       setCopied(true);
       sound.playSuccess();
       setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  const handleResetPassword = async () => {
-    if (!parentEmail) return;
-    setResetStatus('loading');
-    try {
-      // In a real app with Firebase Admin SDK, we would reset the student's specific password.
-      // Here, we send a reset link to the parent email as a fallback, or simulate the process.
-      await onSendResetEmail(parentEmail);
-      setResetStatus('success');
-      sound.playSuccess();
-    } catch (error) {
-      console.error(error);
-      setResetStatus('error');
-      sound.playError();
     }
   };
 
@@ -95,37 +76,21 @@ export const StudentSettingsModal: React.FC<StudentSettingsModalProps> = ({
           {/* Password Reset Box */}
           <div className="p-4 rounded-xl bg-indigo-50/50 dark:bg-indigo-500/5 border border-indigo-100 dark:border-indigo-500/20">
             <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-              <Mail className="w-4 h-4 text-indigo-500" />
-              Şifre Sıfırlama
+              <ShieldCheck className="w-4 h-4 text-indigo-500" />
+              Güvenli Şifre Yenileme
             </h4>
             <p className="text-xs text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
-              Öğrenciniz şifresini unuttuğunda, güvenliğiniz için şifre sıfırlama bağlantısı veli e-posta adresinize (<strong>{parentEmail}</strong>) gönderilir.
+              Yeni şifreyi veli olarak siz belirlersiniz. İşlem tamamlandığında öğrencinin açık oturumları güvenlik için kapatılır.
             </p>
-            
-            {resetStatus === 'idle' || resetStatus === 'error' ? (
-              <button
-                onClick={handleResetPassword}
-                disabled={!parentEmail}
-                className="mt-3 w-full py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                Veli E-postasına Sıfırlama Linki Gönder
-              </button>
-            ) : resetStatus === 'loading' ? (
-              <div className="mt-3 w-full py-2.5 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-500 flex items-center justify-center">
-                <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : (
-              <div className="mt-3 w-full py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center justify-center gap-2">
-                <CheckCircle2 className="w-4 h-4" />
-                Sıfırlama Linki Gönderildi!
-              </div>
-            )}
-            
-            {resetStatus === 'error' && (
-              <p className="text-[10px] text-rose-500 mt-1.5 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" /> İşlem başarısız oldu. Lütfen tekrar deneyin.
-              </p>
-            )}
+            <button
+              onClick={() => {
+                onClose();
+                onResetPassword();
+              }}
+              className="mt-3 w-full py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors cursor-pointer flex items-center justify-center gap-2"
+            >
+              Yeni Öğrenci Şifresi Belirle
+            </button>
           </div>
         </div>
       </div>

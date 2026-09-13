@@ -16,6 +16,9 @@ import { sound } from '../lib/sound';
 import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
 import { registerFamilyInFirebase } from '../services/family-registration-service';
+import { isManagedStudentEmail, studentCodeToEmail } from '../lib/account-identifiers';
+import { createConsentRecord } from '../lib/account-policy';
+import { FooterInfoModal, FooterModalTopic } from './FooterInfoModal';
 import { 
   loginSchema, 
   registerStudentSchema, 
@@ -69,6 +72,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [showRegStudentPassword, setShowRegStudentPassword] = useState(false);
   const [regKvkkConsent, setRegKvkkConsent] = useState(false);
+  const [legalTopic, setLegalTopic] = useState<FooterModalTopic | null>(null);
 
   // Password strength
   const passwordStrength = useMemo(() => evaluatePasswordStrength(regPassword), [regPassword]);
@@ -103,10 +107,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
     setIsSubmitting(true);
     try {
-      // If identifier is not standard email, provide domain for student usernames
+      // Student codes are backed by managed, non-deliverable Firebase addresses.
       let loginEmail = identifier.trim();
       if (!loginEmail.includes('@')) {
-        loginEmail = `${loginEmail.toLowerCase()}@zekapark.com`;
+        loginEmail = studentCodeToEmail(loginEmail);
       }
 
       await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
@@ -122,6 +126,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       if (loggedInProfile.id !== credential.user.uid || loggedInProfile.role !== selectedRole) {
         await signOut(auth);
         throw new Error('ROLE_MISMATCH');
+      }
+
+      const requiresVerification = !isManagedStudentEmail(credential.user.email);
+      if (requiresVerification && !credential.user.emailVerified) {
+        await sendEmailVerification(credential.user).catch(() => undefined);
+        await signOut(auth);
+        throw new Error('EMAIL_NOT_VERIFIED');
       }
 
       dataService.loginAs(loggedInProfile.role, loggedInProfile);
@@ -152,6 +163,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
          errMsg = 'Bu hesaba ait kullanıcı profili bulunamadı. Lütfen destek ekibiyle iletişime geçin.';
       } else if (error.message === 'ROLE_MISMATCH') {
          errMsg = 'Seçtiğiniz rol bu hesapla eşleşmiyor.';
+      } else if (error.message === 'EMAIL_NOT_VERIFIED') {
+         errMsg = 'E-posta adresiniz henüz doğrulanmadı. Yeni doğrulama bağlantısı gönderildi.';
       }
       setErrorMessage(errMsg);
     } finally {
@@ -171,7 +184,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         studentName: regStudentName.trim(),
         grade: regGrade,
         examFocus: regExamFocus,
-        parentEmail: regParentEmail.trim() || undefined,
+        parentEmail: regParentEmail.trim(),
         parentPhone: regParentPhone.trim() || undefined,
         password: regPassword,
         kvkkConsent: regKvkkConsent,
@@ -199,9 +212,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
     setIsSubmitting(true);
     try {
-      let newProfile: UserProfile;
-      let verificationSent = false;
-
       if (selectedRole === 'parent') {
         await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
         const result = await registerFamilyInFirebase({
@@ -213,27 +223,30 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           grade: regGrade,
           examFocus: regExamFocus,
         });
-        newProfile = result.parentProfile;
-        verificationSent = result.verificationSent;
-        dataService.loginAs('parent', newProfile);
-        await dataService.hydrateUserStateFromFirebase();
-        loginLocally(newProfile);
+        await signOut(auth);
+        dataService.logout();
+        setIdentifier(regParentEmail.trim());
+        setSelectedRole('parent');
+        setActiveTab('login');
         setSuccessToast(
-          `Kayıt tamamlandı. Öğrenci kodu: ${result.student.code}. Öğrenci, belirlediğiniz ayrı şifreyle giriş yapabilir.`,
+          result.verificationSent
+            ? `Aile hesabı hazır. Öğrenci kodu: ${result.student.code}. Veli girişi için e-postanıza gönderilen bağlantıyı doğrulayın.`
+            : `Aile hesabı hazır. Öğrenci kodu: ${result.student.code}. Veli girişinde doğrulama bağlantısını yeniden gönderebilirsiniz.`,
         );
       } else {
-        const generatedCode = `${regStudentName.replace(/\s+/g, '').toUpperCase()}${Date.now().toString().slice(-4)}`;
-        const email = regParentEmail.trim() || `${generatedCode.toLowerCase()}@zekapark.com`;
+        const email = regParentEmail.trim().toLowerCase();
         const pass = regPassword;
         const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
         
-        newProfile = {
+        const newProfile: UserProfile = {
           id: userCredential.user.uid,
           email: email,
           name: regStudentName.trim(),
           role: 'student',
-          studentCode: generatedCode,
           grade: regGrade,
+          examFocus: regExamFocus,
+          recoveryEmail: email,
+          consent: createConsentRecord('student'),
           avatar: '🦊',
           level: 1,
           xp: 0,
@@ -256,27 +269,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           await deleteUser(userCredential.user);
           throw profileError;
         }
-        if (!email.endsWith('@zekapark.com')) {
-          await sendEmailVerification(userCredential.user);
-          verificationSent = true;
-        }
-        dataService.loginAs('student', newProfile);
-        await dataService.hydrateUserStateFromFirebase();
-        loginLocally(newProfile);
+        const verificationSent = await sendEmailVerification(userCredential.user)
+          .then(() => true)
+          .catch(() => false);
+        await signOut(auth);
+        dataService.logout();
+        setIdentifier(email);
+        setSelectedRole('student');
+        setActiveTab('login');
+        setSuccessToast(
+          verificationSent
+            ? 'Hesabınız oluşturuldu. Giriş yapmadan önce e-postanıza gönderilen bağlantıyı doğrulayın.'
+            : 'Hesabınız oluşturuldu. Giriş yaptığınızda doğrulama bağlantısı yeniden gönderilecek.',
+        );
       }
 
       sound.playSuccess();
-      if (selectedRole === 'parent') {
-        // The student code message above is more useful than the generic toast.
-      } else if (verificationSent) {
-        setSuccessToast('Kayıt başarılı! Onay maili gönderildi. Lütfen e-postanızı kontrol edin.');
-      } else {
-        setSuccessToast('Kayıt başarılı! Hesabınız hazır.');
-      }
-      
-      setTimeout(() => {
-        onLoginSuccess(selectedRole, newProfile);
-      }, 500);
       
     } catch (error: any) {
       sound.playError();
@@ -288,7 +296,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       if (error.code === 'auth/network-request-failed' || error.message?.includes('network-request-failed')) {
         errMsg = 'Ağ bağlantısı kurulamadı. Lütfen tekrar deneyin.';
       }
-      if (error.message && !error.message.startsWith('Firebase:')) errMsg = error.message;
+      if (error.message && !error.message.startsWith('Firebase:') && !['EMAIL_NOT_VERIFIED'].includes(error.message)) errMsg = error.message;
       setErrorMessage(errMsg);
     } finally {
       setIsSubmitting(false);
@@ -317,9 +325,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       setForgotSubmitted(true);
       setSuccessToast('Eğer e-posta adresi kayıtlıysa, sıfırlama bağlantısı gönderildi.');
     } catch (err: any) {
+      if (err.code === 'auth/user-not-found') {
+        setForgotSubmitted(true);
+        setSuccessToast('Eğer e-posta adresi kayıtlıysa, sıfırlama bağlantısı gönderildi.');
+        return;
+      }
       sound.playError();
       let errMsg = 'Şifre sıfırlama e-postası gönderilemedi.';
-      if (err.code === 'auth/user-not-found') errMsg = 'Bu e-posta adresiyle kayıtlı bir hesap bulunamadı.';
       if (err.code === 'auth/invalid-email') errMsg = 'Geçersiz e-posta formatı.';
       if (err.code === 'auth/network-request-failed') errMsg = 'Ağ bağlantısı kurulamadı. Lütfen tekrar deneyin.';
       setForgotError(errMsg);
@@ -380,6 +392,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   onClick={() => {
                     sound.playClick();
                     setActiveTab('register');
+                    if (selectedRole === 'admin') setSelectedRole('student');
                     setErrorMessage(null);
                   }}
                   className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
@@ -669,8 +682,39 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   </p>
                 </div>
 
+                <div className="mb-4 grid grid-cols-2 gap-2" aria-label="Kayıt türü">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedRole('student');
+                      setErrorMessage(null);
+                      setFieldErrors({});
+                    }}
+                    className={`rounded-xl border px-3 py-2.5 text-sm font-bold transition-colors ${selectedRole === 'student' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-zinc-200 text-slate-600 hover:bg-slate-50'}`}
+                  >
+                    Bireysel Öğrenci
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedRole('parent');
+                      setErrorMessage(null);
+                      setFieldErrors({});
+                    }}
+                    className={`rounded-xl border px-3 py-2.5 text-sm font-bold transition-colors ${selectedRole === 'parent' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-zinc-200 text-slate-600 hover:bg-slate-50'}`}
+                  >
+                    Veli + Öğrenci
+                  </button>
+                </div>
+
+                <div className="mb-4 rounded-xl border border-sky-200 bg-sky-50 px-3.5 py-3 text-xs leading-relaxed text-sky-900">
+                  {selectedRole === 'parent'
+                    ? 'Veli hesabınızla birlikte öğrenciniz için ayrı bir giriş kodu ve ayrı şifre oluşturulur.'
+                    : 'Bireysel öğrenci hesabı gerçek bir e-posta kullanır. Öğrenci koduyla giriş için “Veli + Öğrenci” kaydını seçin.'}
+                </div>
+
                 <form onSubmit={handleRegisterSubmit} className="space-y-3.5" noValidate>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className={`grid grid-cols-1 ${selectedRole === 'parent' ? 'sm:grid-cols-2' : ''} gap-3`}>
                     {/* Student Name */}
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -741,11 +785,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className={`grid grid-cols-1 ${selectedRole === 'parent' ? 'sm:grid-cols-2' : ''} gap-3`}>
                     {/* Parent Email */}
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">
-                        {selectedRole === 'student' ? 'Veli E-postası (Kurtarma İçin)' : 'Veli E-posta Adresi'}
+                        {selectedRole === 'student' ? 'Öğrenci Giriş E-postası' : 'Veli E-posta Adresi'}
                       </label>
                       <input
                         type="email"
@@ -757,6 +801,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                           }
                         }}
                         placeholder="veli@eposta.com"
+                        autoComplete="email"
                         className={`w-full px-3 py-2 rounded-xl border text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 ${
                           fieldErrors.parentEmail
                             ? 'border-rose-400 bg-rose-50/20 focus:ring-rose-500'
@@ -772,7 +817,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     </div>
 
                     {/* Parent Phone */}
-                    <div>
+                    {selectedRole === 'parent' && <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">
                         Veli Cep Telefonu (İsteğe Bağlı)
                       </label>
@@ -798,7 +843,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                           <span>{fieldErrors.parentPhone}</span>
                         </p>
                       )}
-                    </div>
+                    </div>}
                   </div>
 
                   {/* Password with Strength Indicator */}
@@ -958,8 +1003,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         className="w-4 h-4 mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"
                       />
                       <span>
-                        <strong className="text-slate-900">KVKK Çocuk Verileri Koruma</strong> ve Veli
-                        Aydınlatma Sözleşmesi'ni okudum, kabul ediyorum.
+                        <button type="button" onClick={() => setLegalTopic('kvkk')} className="font-bold text-indigo-700 underline underline-offset-2">
+                          KVKK Çocuk Verileri Koruma Metni
+                        </button>{' '}
+                        ve{' '}
+                        <button type="button" onClick={() => setLegalTopic('terms')} className="font-bold text-indigo-700 underline underline-offset-2">
+                          Kullanım Koşulları
+                        </button>
+                        ’nı okudum, kabul ediyorum.
                       </span>
                     </label>
                     {fieldErrors.kvkkConsent && (
@@ -1109,7 +1160,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               Şifre & Giriş Kodu Sıfırlama
             </h3>
             <p className="text-xs text-slate-600 mt-1">
-              Öğrencinizin giriş kodunu veya veli şifrenizi e-posta adresinize anında gönderelim.
+              E-posta ile kullanılan hesabınız için güvenli bir şifre sıfırlama bağlantısı gönderelim.
             </p>
 
             {!forgotSubmitted ? (
@@ -1120,7 +1171,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               >
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Kayıtlı Veli E-postası
+                    Kayıtlı Hesap E-postası
                   </label>
                   <input
                     type="email"
@@ -1145,9 +1196,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 </div>
 
                 <div className="p-3 rounded-xl bg-slate-50 border border-zinc-200 text-[11px] text-slate-600 space-y-1">
-                  <div className="font-bold text-slate-800">💡 Öğrenci Kodu Hatırlatma:</div>
+                  <div className="font-bold text-slate-800">💡 Öğrenci koduyla giriş yapanlar:</div>
                   <div>
-                    Öğrenci şifresi hatırlanamıyorsa veli panelinden öğrenci kodu anında görüntülenebilir veya değiştirilebilir.
+                    Öğrenci kodu veli panelinde görüntülenebilir. Öğrenci şifresi yenileme işlemi de veli panelindeki hesap güvenliği bölümünden yapılır.
                   </div>
                 </div>
 
@@ -1172,7 +1223,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
                 <h4 className="text-sm font-bold">Talimatlar Gönderildi!</h4>
                 <p className="text-xs mt-1 text-emerald-700">
-                  {forgotEmail} adresine şifre ve öğrenci kodu sıfırlama bağlantısı iletildi.
+                  Kayıtlı bir hesap bulunuyorsa {forgotEmail} adresine şifre sıfırlama bağlantısı iletildi.
                 </p>
                 <button
                   onClick={() => setShowForgotPasswordModal(false)}
@@ -1184,6 +1235,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             )}
           </div>
         </div>
+      )}
+      {legalTopic && (
+        <FooterInfoModal
+          topic={legalTopic}
+          onClose={() => setLegalTopic(null)}
+          onSelectTopic={setLegalTopic}
+        />
       )}
     </div>
   );

@@ -9,6 +9,8 @@ import {
 import { deleteDoc, doc, initializeFirestore, setDoc } from 'firebase/firestore';
 import { auth, databaseId, db, firebaseConfig } from '../lib/firebase';
 import { UserProfile } from '../types';
+import { createStudentCode } from '../lib/account-identifiers';
+import { createConsentRecord } from '../lib/account-policy';
 
 export interface FamilyRegistrationInput {
   parentEmail: string;
@@ -25,16 +27,6 @@ export interface FamilyRegistrationResult {
   student: { id: string; code: string; email: string };
   verificationSent: boolean;
 }
-
-const normalizeStudentCode = (name: string) => {
-  const normalized = name
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9]/g, '')
-    .toUpperCase()
-    .slice(0, 8);
-  return normalized || 'ZEKA';
-};
 
 const randomDigits = () => {
   const values = new Uint32Array(1);
@@ -70,7 +62,7 @@ export async function registerFamilyInFirebase(
     let studentEmail = '';
     let lastCollision: unknown;
     for (let attempt = 0; attempt < 5; attempt += 1) {
-      studentCode = `${normalizeStudentCode(input.studentName)}${randomDigits()}`;
+      studentCode = createStudentCode(input.studentName);
       studentEmail = `${studentCode.toLowerCase()}@zekapark.com`;
       try {
         const studentCredential = await createUserWithEmailAndPassword(
@@ -103,6 +95,9 @@ export async function registerFamilyInFirebase(
       todayMinutesSpent: 0,
       soundEnabled: true,
       linkedParentId: parentCredential.user.uid,
+      examFocus: input.examFocus,
+      recoveryEmail: parentEmail,
+      consent: createConsentRecord('parent', now),
       createdAt: now,
       updatedAt: now,
       totalPoints: 0,
@@ -130,14 +125,13 @@ export async function registerFamilyInFirebase(
       todayMinutesSpent: 0,
       soundEnabled: true,
       linkedStudentIds: [studentUser.uid],
+      parentPhone: input.parentPhone || '',
+      consent: createConsentRecord('parent', now),
       createdAt: now,
       updatedAt: now,
     };
 
-    await setDoc(doc(db, 'users', parentCredential.user.uid), {
-      ...parentProfile,
-      parentPhone: input.parentPhone || '',
-    });
+    await setDoc(doc(db, 'users', parentCredential.user.uid), parentProfile);
     parentProfileCreated = true;
 
     let verificationSent = false;

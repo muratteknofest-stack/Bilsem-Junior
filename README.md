@@ -25,6 +25,14 @@ browser. Family registration creates the parent and linked student as two separa
 Firebase accounts without exposing an admin credential. Deploy `firestore.rules`
 before accepting registrations.
 
+Real-email student and parent accounts must verify their email before the first
+login. Code-based child accounts are managed through the linked parent profile.
+The parent password-reset action uses the authenticated API endpoint
+`POST /api/parent/reset-student-password`; it verifies the family link, requires a
+verified parent email, changes the password, revokes the child's other sessions,
+and records a security event. Set `VITE_API_BASE_URL` to the deployed API origin
+when the frontend is hosted as a static Site.
+
 AI hints first use the configured server API, then Firebase AI Logic, and finally
 the deterministic pedagogical engine. To enable Firebase AI Logic for production,
 enable it in the Firebase console and set up App Check with

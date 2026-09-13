@@ -63,10 +63,8 @@ export const registerStudentSchema = z.object({
   parentEmail: z
     .string()
     .trim()
-    .optional()
-    .refine((val) => !val || z.string().email().safeParse(val).success, {
-      message: 'Lütfen geçerli bir veli e-posta adresi giriniz (Örn: veli@ornek.com).',
-    }),
+    .min(1, 'Şifre kurtarma için geçerli bir e-posta adresi giriniz.')
+    .email('Lütfen geçerli bir e-posta adresi giriniz (Örn: ogrenci@ornek.com).'),
   parentPhone: z
     .string()
     .trim()

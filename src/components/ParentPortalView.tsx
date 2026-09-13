@@ -66,6 +66,8 @@ import { NotificationPreferences } from './NotificationPreferences';
 import { useAuth } from '../contexts/AuthContext';
 import { sound } from '../lib/sound';
 import { shareWeeklyReport } from '../services/weekly-report-service';
+import { resetLinkedStudentPassword } from '../services/account-security-service';
+import { evaluatePasswordStrength } from '../lib/validations';
 
 interface ParentPortalViewProps {
   student?: UserProfile | null;
@@ -99,8 +101,13 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
   const [showStudentSettingsModal, setShowStudentSettingsModal] = useState(false);
   const [showStudyPlanModal, setShowStudyPlanModal] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
+  const [newStudentPassword, setNewStudentPassword] = useState('');
+  const [confirmStudentPassword, setConfirmStudentPassword] = useState('');
+  const [passwordResetError, setPasswordResetError] = useState<string | null>(null);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
-  const { userProfile: parentProfile, sendPasswordResetEmail } = useAuth();
+  const { userProfile: parentProfile } = useAuth();
   const [weeklyData, setWeeklyData] = useState<WeeklyQuestionProgressData | null>(null);
   const [isSendingReport, setIsSendingReport] = useState(false);
   const [reportSendStatus, setReportSendStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -213,6 +220,34 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
     }
   };
 
+  const handleResetStudentPassword = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setPasswordResetError(null);
+    const strength = evaluatePasswordStrength(newStudentPassword);
+    if (!strength.hasMinLength || !strength.hasLetter || !strength.hasNumber) {
+      setPasswordResetError('Yeni şifre en az 8 karakter, bir harf ve bir rakam içermelidir.');
+      return;
+    }
+    if (newStudentPassword !== confirmStudentPassword) {
+      setPasswordResetError('Şifreler birbiriyle eşleşmiyor.');
+      return;
+    }
+
+    setIsResettingPassword(true);
+    try {
+      await resetLinkedStudentPassword(currentStudent.id, newStudentPassword);
+      sound.playSuccess();
+      setShowPasswordResetModal(false);
+      setNewStudentPassword('');
+      setConfirmStudentPassword('');
+    } catch (error) {
+      sound.playError();
+      setPasswordResetError(error instanceof Error ? error.message : 'Öğrenci şifresi yenilenemedi.');
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
   const filteredMasteries = useMemo(() => {
     if (skillFilter === 'strengths') return strengths;
     if (skillFilter === 'weaknesses') return needsAttention;
@@ -296,21 +331,35 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                   </div>
 
                   {currentStudent.studentCode && (
-                    <motion.button
-                      onClick={handleCopyCode}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="inline-flex items-center gap-2 bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-800 dark:hover:bg-zinc-700/80 px-3 py-1 rounded-lg text-xs font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer group"
-                      title="Öğrenci giriş kodunu kopyala"
-                    >
-                      <KeyRound className="w-3.5 h-3.5 text-zinc-500 group-hover:text-indigo-500 transition-colors" />
-                      <span>Giriş Kodu: <strong className="tracking-widest font-mono text-zinc-900 dark:text-white">{currentStudent.studentCode}</strong></span>
-                      {codeCopied ? (
-                        <span className="text-emerald-500 flex items-center gap-1 font-bold"><Check className="w-3 h-3" /> Kopyalandı</span>
-                      ) : (
-                        <Copy className="w-3 h-3 text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-200" />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <motion.button
+                        onClick={handleCopyCode}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="inline-flex items-center gap-2 bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-800 dark:hover:bg-zinc-700/80 px-3 py-1 rounded-lg text-xs font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer group"
+                        title="Öğrenci giriş kodunu kopyala"
+                      >
+                        <KeyRound className="w-3.5 h-3.5 text-zinc-500 group-hover:text-indigo-500 transition-colors" />
+                        <span>Giriş Kodu: <strong className="tracking-widest font-mono text-zinc-900 dark:text-white">{currentStudent.studentCode}</strong></span>
+                        {codeCopied ? (
+                          <span className="text-emerald-500 flex items-center gap-1 font-bold"><Check className="w-3 h-3" /> Kopyalandı</span>
+                        ) : (
+                          <Copy className="w-3 h-3 text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-200" />
+                        )}
+                      </motion.button>
+                      {parentOrStudent?.role === 'parent' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPasswordResetError(null);
+                            setShowPasswordResetModal(true);
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700 hover:bg-indigo-100"
+                        >
+                          <ShieldCheck className="h-3.5 w-3.5" /> Şifreyi Yenile
+                        </button>
                       )}
-                    </motion.button>
+                    </div>
                   )}
                 </div>
               )}
@@ -1166,14 +1215,54 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
         onClose={() => setShowReminderModal(false)}
         onConfigSaved={() => {}}
       />
-      
+      <AnimatePresence>
+        {showPasswordResetModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/65 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="student-password-title"
+          >
+            <motion.form
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
+              onSubmit={handleResetStudentPassword}
+              className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 id="student-password-title" className="text-lg font-black text-zinc-950 dark:text-white">Öğrenci şifresini yenile</h2>
+                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">İşlemden sonra öğrencinin diğer cihazlardaki oturumları kapatılır.</p>
+                </div>
+                <button type="button" onClick={() => setShowPasswordResetModal(false)} aria-label="Kapat" className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"><X className="h-5 w-5" /></button>
+              </div>
+              <div className="mt-5 space-y-3">
+                <input type="password" autoComplete="new-password" value={newStudentPassword} onChange={(e) => setNewStudentPassword(e.target.value)} placeholder="Yeni şifre" className="w-full rounded-xl border border-zinc-300 px-3.5 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-950" />
+                <input type="password" autoComplete="new-password" value={confirmStudentPassword} onChange={(e) => setConfirmStudentPassword(e.target.value)} placeholder="Yeni şifreyi tekrar girin" className="w-full rounded-xl border border-zinc-300 px-3.5 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-950" />
+                {passwordResetError && <p className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700">{passwordResetError}</p>}
+              </div>
+              <div className="mt-5 flex justify-end gap-2">
+                <button type="button" onClick={() => setShowPasswordResetModal(false)} className="rounded-xl px-4 py-2 text-sm font-bold text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800">Vazgeç</button>
+                <button type="submit" disabled={isResettingPassword} className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-60">{isResettingPassword ? 'Yenileniyor…' : 'Şifreyi Güvenle Yenile'}</button>
+              </div>
+            </motion.form>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* MODAL 3: Student Login & Security Modal */}
       <StudentSettingsModal
         isOpen={showStudentSettingsModal}
         onClose={() => setShowStudentSettingsModal(false)}
         student={currentStudent}
-        parentEmail={parentProfile?.email}
-        onSendResetEmail={sendPasswordResetEmail}
+        onResetPassword={() => {
+          setPasswordResetError(null);
+          setShowPasswordResetModal(true);
+        }}
       />
 
     </div>

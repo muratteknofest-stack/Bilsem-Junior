@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { escapeHtml, normalizeStudentCode } from '../server/security.ts';
+import { normalizeStudentCodeBase, studentCodeToEmail } from '../src/lib/account-identifiers.ts';
 
 test('HTML inserted into report emails is escaped', () => {
   assert.equal(
@@ -12,6 +13,8 @@ test('HTML inserted into report emails is escaped', () => {
 
 test('student codes contain only normalized ASCII letters and digits', () => {
   assert.equal(normalizeStudentCode('Çağrı Öztürk<script>'), 'CAGRIOZTURKS');
+  assert.equal(normalizeStudentCodeBase('Işık Çağrı'), 'ISIKCAGRI');
+  assert.equal(studentCodeToEmail(' IŞIK 123 '), 'isik123@zekapark.com');
 });
 
 test('Firestore authorization protects admin access and validates family links', async () => {
@@ -20,9 +23,20 @@ test('Firestore authorization protects admin access and validates family links',
   assert.doesNotMatch(rules, /documents\/users\/.*\.data\.role == 'admin'/);
   assert.match(rules, /validInitialParentLink/);
   assert.match(rules, /linkedParentId == userId/);
-  assert.match(rules, /request\.resource\.data\.role == 'parent'/);
+  assert.match(rules, /validAccountIdentity\(userId, 'parent'\)/);
+  assert.match(rules, /request\.resource\.data\.email == request\.auth\.token\.email/);
+  assert.match(rules, /validConsent/);
   assert.match(rules, /affectedKeys\(\)\.hasOnly/);
   assert.match(rules, /match \/\{document=\*\*\}[\s\S]*allow read, write: if false/);
+});
+
+test('linked student password reset requires verified parent authorization', async () => {
+  const source = await readFile(new URL('../server.ts', import.meta.url), 'utf8');
+  assert.match(source, /\/api\/parent\/reset-student-password/);
+  assert.match(source, /requireVerifiedEmail/);
+  assert.match(source, /requireProfileRole\('parent'\)/);
+  assert.match(source, /revokeRefreshTokens/);
+  assert.match(source, /linkedParentId === req\.authUser\.uid/);
 });
 
 test('login source contains no local authentication fallback or fixed password', async () => {

@@ -33,6 +33,21 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.resource.data.linkedStudentIds[0])).data.linkedParentId == userId;
     }
 
+    function validAccountIdentity(userId, role) {
+      return request.resource.data.id == userId &&
+        request.resource.data.role == role &&
+        request.auth.token.email is string &&
+        request.resource.data.email == request.auth.token.email;
+    }
+
+    function validConsent(role) {
+      return request.resource.data.consent is map &&
+        request.resource.data.consent.actorRole == role &&
+        request.resource.data.consent.acceptedAt is int &&
+        request.resource.data.consent.kvkkVersion is string &&
+        request.resource.data.consent.termsVersion is string;
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId) || isLinkedParent(userId) || isAdmin();
 
@@ -40,13 +55,14 @@ service cloud.firestore {
       // account is accepted only after the linked student created their own
       // profile and explicitly points back to the parent UID.
       allow create: if isOwner(userId) &&
-        request.resource.data.id == userId &&
         (
-          (request.resource.data.role == 'student' &&
+          (validAccountIdentity(userId, 'student') &&
+            validConsent(request.resource.data.keys().hasAny(['linkedParentId']) ? 'parent' : 'student') &&
             !request.resource.data.keys().hasAny(['linkedStudentIds']) &&
             (!request.resource.data.keys().hasAny(['linkedParentId']) ||
               request.resource.data.linkedParentId is string)) ||
-          (request.resource.data.role == 'parent' &&
+          (validAccountIdentity(userId, 'parent') &&
+            validConsent('parent') &&
             !request.resource.data.keys().hasAny(['linkedParentId']) &&
             validInitialParentLink(userId))
         );

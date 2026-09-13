@@ -44,6 +44,29 @@ export async function requireFirebaseAuth(req: AuthenticatedRequest, res: Respon
   }
 }
 
+export function requireVerifiedEmail(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (!req.authUser?.email_verified) {
+    return res.status(403).json({ error: 'Bu işlem için veli e-posta adresi doğrulanmalıdır.' });
+  }
+  return next();
+}
+
+export function requireProfileRole(...roles: Exclude<AppRole, 'admin'>[]) {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (!req.authUser) return res.status(401).json({ error: 'Oturum doğrulaması gerekli.' });
+    try {
+      const snapshot = await getAdminDb().doc(`users/${req.authUser.uid}`).get();
+      const profile = snapshot.data();
+      if (!profile || profile.id !== req.authUser.uid || !roles.includes(profile.role)) {
+        return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmuyor.' });
+      }
+      return next();
+    } catch {
+      return res.status(503).json({ error: 'Hesap yetkisi şu anda doğrulanamadı.' });
+    }
+  };
+}
+
 export function requireRole(...roles: AppRole[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const role = req.authUser?.role as AppRole | undefined;

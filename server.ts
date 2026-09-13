@@ -6,15 +6,14 @@ import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
-import { randomInt } from 'node:crypto';
 import { z } from 'zod';
 import {
   escapeHtml,
   getAdminAuth,
   getAdminDb,
-  normalizeStudentCode,
   requireFirebaseAuth,
-  requireRole,
+  requireProfileRole,
+  requireVerifiedEmail,
   type AuthenticatedRequest,
 } from './server/security';
 
@@ -120,13 +119,6 @@ async function startServer() {
   }));
   app.use(express.json({ limit: '256kb' }));
 
-  const authLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000,
-    limit: 8,
-    standardHeaders: 'draft-8',
-    legacyHeaders: false,
-    message: { error: 'Çok fazla kayıt denemesi yapıldı. Lütfen daha sonra tekrar deneyin.' },
-  });
   const aiLimiter = rateLimit({
     windowMs: 10 * 60 * 1000,
     limit: 30,
@@ -141,135 +133,60 @@ async function startServer() {
     legacyHeaders: false,
     message: { error: 'Saatlik rapor gönderim sınırına ulaşıldı.' },
   });
+  const accountSecurityLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 6,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'Saatlik hesap güvenliği işlem sınırına ulaşıldı.' },
+  });
 
   const strongPassword = z.string().min(8).max(128).regex(/^(?=.*[A-Za-z])(?=.*\d)/, {
     message: 'Şifre en az bir harf ve bir rakam içermelidir.',
   });
-  const familyRegistrationSchema = z.object({
-    parentEmail: z.string().email().max(254),
-    parentPassword: strongPassword,
-    parentPhone: z.string().max(24).optional().default(''),
-    studentName: z.string().trim().min(2).max(50),
-    studentPassword: strongPassword,
-    grade: z.number().int().min(1).max(4),
-    examFocus: z.string().trim().min(2).max(80),
-    kvkkConsent: z.literal(true),
-  }).refine((value) => value.parentPassword !== value.studentPassword, {
-    path: ['studentPassword'],
-    message: 'Öğrenci şifresi veli şifresinden farklı olmalıdır.',
-  });
+  const linkedStudentPasswordSchema = z.object({
+    studentId: z.string().min(1).max(128),
+    newPassword: strongPassword,
+  }).strict();
 
-  app.post('/api/auth/register-family', authLimiter, async (req, res) => {
-    const parsed = familyRegistrationSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Kayıt bilgileri geçersiz.' });
-    }
+  app.post(
+    '/api/parent/reset-student-password',
+    accountSecurityLimiter,
+    requireFirebaseAuth,
+    requireVerifiedEmail,
+    requireProfileRole('parent'),
+    async (req: AuthenticatedRequest, res) => {
+      const parsed = linkedStudentPasswordSchema.safeParse(req.body);
+      if (!parsed.success || !req.authUser) {
+        return res.status(400).json({ error: parsed.success ? 'Oturum doğrulanamadı.' : parsed.error.issues[0]?.message });
+      }
 
-    const createdUserIds: string[] = [];
-    let adminAuth: ReturnType<typeof getAdminAuth> | null = null;
-    try {
-      adminAuth = getAdminAuth();
       const adminDb = getAdminDb();
-      const input = parsed.data;
-      const parentRecord = await adminAuth.createUser({
-        email: input.parentEmail.toLowerCase(),
-        password: input.parentPassword,
-        emailVerified: false,
-        displayName: input.parentEmail.split('@')[0],
-      });
-      createdUserIds.push(parentRecord.uid);
-
-      let studentCode = '';
-      let studentEmail = '';
-      for (let attempt = 0; attempt < 5; attempt += 1) {
-        studentCode = `${normalizeStudentCode(input.studentName)}${randomInt(1000, 10000)}`;
-        studentEmail = `${studentCode.toLowerCase()}@zekapark.com`;
-        try {
-          await adminAuth.getUserByEmail(studentEmail);
-        } catch (error: any) {
-          if (error?.code === 'auth/user-not-found') break;
-          throw error;
-        }
-      }
-
-      const studentRecord = await adminAuth.createUser({
-        email: studentEmail,
-        password: input.studentPassword,
-        emailVerified: true,
-        displayName: input.studentName,
-      });
-      createdUserIds.push(studentRecord.uid);
-
-      await Promise.all([
-        adminAuth.setCustomUserClaims(parentRecord.uid, { role: 'parent' }),
-        adminAuth.setCustomUserClaims(studentRecord.uid, { role: 'student' }),
+      const [parentSnapshot, studentSnapshot] = await Promise.all([
+        adminDb.doc(`users/${req.authUser.uid}`).get(),
+        adminDb.doc(`users/${parsed.data.studentId}`).get(),
       ]);
+      const parent = parentSnapshot.data();
+      const student = studentSnapshot.data();
+      const isLinked = Array.isArray(parent?.linkedStudentIds)
+        && parent.linkedStudentIds.includes(parsed.data.studentId)
+        && student?.linkedParentId === req.authUser.uid
+        && student?.role === 'student';
 
-      const now = Date.now();
-      const parentProfile = {
-        id: parentRecord.uid,
-        email: input.parentEmail.toLowerCase(),
-        name: input.parentEmail.split('@')[0],
-        role: 'parent',
-        avatar: '👨‍👩‍👧',
-        level: 1,
-        xp: 0,
-        streak: 0,
-        lastActiveDate: new Date(now).toISOString(),
-        dailyGoalMinutes: 0,
-        todayMinutesSpent: 0,
-        soundEnabled: true,
-        parentPhone: input.parentPhone,
-        linkedStudentIds: [studentRecord.uid],
-        createdAt: now,
-        updatedAt: now,
-      };
-      const studentProfile = {
-        id: studentRecord.uid,
-        email: studentEmail,
-        name: input.studentName,
-        role: 'student',
-        studentCode,
-        grade: input.grade,
-        examFocus: input.examFocus,
-        avatar: '🦊',
-        level: 1,
-        xp: 0,
-        streak: 0,
-        lastActiveDate: new Date(now).toISOString(),
-        dailyGoalMinutes: 15,
-        todayMinutesSpent: 0,
-        soundEnabled: true,
-        linkedParentId: parentRecord.uid,
-        createdAt: now,
-        updatedAt: now,
-        totalPoints: 0,
-        totalQuestionsSolved: 0,
-        resolvedMistakesCount: 0,
-      };
+      if (!isLinked) return res.status(403).json({ error: 'Öğrenci bu veli hesabına bağlı değil.' });
 
-      const batch = adminDb.batch();
-      batch.create(adminDb.doc(`users/${parentRecord.uid}`), parentProfile);
-      batch.create(adminDb.doc(`users/${studentRecord.uid}`), studentProfile);
-      await batch.commit();
-
-      const customToken = await adminAuth.createCustomToken(parentRecord.uid);
-      return res.status(201).json({
-        customToken,
-        parentProfile,
-        student: { id: studentRecord.uid, code: studentCode, email: studentEmail },
+      const adminAuth = getAdminAuth();
+      await adminAuth.updateUser(parsed.data.studentId, { password: parsed.data.newPassword });
+      await adminAuth.revokeRefreshTokens(parsed.data.studentId);
+      await adminDb.collection('securityEvents').add({
+        type: 'student_password_reset_by_parent',
+        actorId: req.authUser.uid,
+        studentId: parsed.data.studentId,
+        createdAt: Date.now(),
       });
-    } catch (error: any) {
-      if (adminAuth) {
-        await Promise.all(createdUserIds.map((uid) => adminAuth?.deleteUser(uid).catch(() => undefined)));
-      }
-      if (error?.code === 'auth/email-already-exists') {
-        return res.status(409).json({ error: 'Bu veli e-posta adresi zaten kullanımda.' });
-      }
-      console.error('Family registration failed:', error?.code || error?.message || error);
-      return res.status(500).json({ error: 'Aile hesabı oluşturulamadı. Lütfen tekrar deneyin.' });
-    }
-  });
+      return res.status(204).send();
+    },
+  );
 
   // Lazy initialize Gemini client
   let aiClient: GoogleGenAI | null = null;
@@ -287,7 +204,7 @@ async function startServer() {
     studentId: z.string().min(1).max(128),
   }).strict();
 
-  app.post('/api/send-weekly-report', reportLimiter, requireFirebaseAuth, requireRole('parent'), async (req: AuthenticatedRequest, res) => {
+  app.post('/api/send-weekly-report', reportLimiter, requireFirebaseAuth, requireVerifiedEmail, requireProfileRole('parent'), async (req: AuthenticatedRequest, res) => {
     try {
       const parsed = reportSchema.safeParse(req.body);
       if (!parsed.success || !req.authUser) {
