@@ -46,8 +46,9 @@ export function generateOperationMachineQuestion(seed: number, difficulty: Diffi
   for(let i=0; i<3; i++) {
     let inVal = startVals[i];
     if (ruleType === 1 && inVal <= a) {
-      inVal = a + rng.nextInt(1, 5); // ensure positive output
+      inVal = a + 1 + i; // ensure positive output
     }
+    while (pairs.some(p => p.in === inVal)) inVal++;
     pairs.push({ in: inVal, out: opFn(inVal) });
   }
 
@@ -415,7 +416,7 @@ export function generateNumberPyramidQuestion(seed: number, difficulty: Difficul
     options,
     correctOptionId: correctId,
     explanation: {
-      summary: 'Alttaki iki sayının toplamı üstlerindeki sayıya eşittir.',
+      summary: `Alttaki iki sayının toplamı üstlerindeki sayıya eşittir. Eksik sayı ${target}; doğru seçenek ${correctId}.`,
       ruleTitle: 'Sayısal İlişki',
       steps: [
         'Piramitteki herhangi bir yan yana duran iki sayıyı toplayın.',

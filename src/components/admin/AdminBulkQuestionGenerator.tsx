@@ -54,6 +54,7 @@ import {
   CATEGORY_TYPES_MAP,
 } from '../../features/questions/generators';
 import { GRADE_CONFIGS, ALL_GRADES } from '../../features/questions/grade-config';
+import { generateQuestionBatch, BatchReport } from '../../features/questions/batch-generation';
 import { validateQuestion } from '../../features/questions/validator';
 import { QuestionRenderer } from '../../features/questions/renderers/QuestionRenderer';
 import { OptionRenderer } from '../../features/questions/renderers/OptionRenderer';
@@ -84,7 +85,7 @@ const PRESET_SCENARIOS = [
     count: 40,
     grade: 'balanced' as GradeSelection,
     difficulty: 'gauss' as DifficultyStrategy,
-    description: '40 Soru • 1-4. Sınıf Dengeli • BİLSEM MEB Standart Dağılımı',
+    description: '40 Soru • 1-4. Sınıf • Bağımsız alıştırma paketi',
     icon: '📱',
     badge: 'Önerilen',
     badgeColor: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
@@ -158,6 +159,10 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
   const [resultFilterCat, setResultFilterCat] = useState<'all' | CognitiveCategory>('all');
   const [resultSearch, setResultSearch] = useState<string>('');
 
+  const [batchReport, setBatchReport] = useState<BatchReport | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => abortRef.current?.abort(), []);
+
   const logContainerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll logs
@@ -188,16 +193,7 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
 
   const selectAllCategories = () => {
     sound.playClick();
-    setSelectedCategories([
-      'matrix',
-      'pattern',
-      'spatial',
-      'logic',
-      'attention',
-      'visual_perception',
-      'numerical',
-      'memory',
-    ]);
+    setSelectedCategories([...ALL_COGNITIVE_CATEGORIES]);
   };
 
   // Apply Preset
@@ -209,148 +205,29 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
     showNotification(`"${preset.title}" senaryo parametreleri uygulandı.`);
   };
 
-  // Helper: Pick difficulty according to strategy
-  const pickDifficulty = (strategy: DifficultyStrategy, stepIndex: number, total: number): DifficultyLevel => {
-    if (strategy === 'easy') {
-      return (stepIndex % 2 === 0 ? 1 : 2) as DifficultyLevel;
-    }
-    if (strategy === 'medium') {
-      return (stepIndex % 2 === 0 ? 3 : 4) as DifficultyLevel;
-    }
-    if (strategy === 'hard') {
-      return (stepIndex % 2 === 0 ? 5 : 6) as DifficultyLevel;
-    }
-    if (strategy === 'equal') {
-      return ((stepIndex % 6) + 1) as DifficultyLevel;
-    }
-    // Gauss: 15% Easy (1-2), 60% Medium (3-4), 25% Hard (5-6)
-    const rand = Math.random();
-    if (rand < 0.15) {
-      return (Math.random() < 0.5 ? 1 : 2) as DifficultyLevel;
-    } else if (rand < 0.75) {
-      return (Math.random() < 0.5 ? 3 : 4) as DifficultyLevel;
-    } else {
-      return (Math.random() < 0.5 ? 5 : 6) as DifficultyLevel;
-    }
-  };
-
-  // Main Generation Pipeline
   const handleStartBulkGeneration = async () => {
-    if (selectedCategories.length === 0) {
-      showNotification('Lütfen en az bir kategori seçin.', 'error');
-      return;
-    }
-
-    sound.playClick();
+    if (abortRef.current) return;
+    const controller = new AbortController();
+    abortRef.current = controller;
     setIsGenerating(true);
-    setGenerationProgress(0);
     setGeneratedQuestions([]);
     setGenerationLogs([]);
-
-    const totalToGenerate = questionCount;
-    const batchResult: BaseQuestion[] = [];
-    const logItems: GenerationLogItem[] = [];
-
-    // Candidate types from selected categories
-    const candidateTypes: QuestionType[] = [];
-    selectedCategories.forEach((cat) => {
-      const types = CATEGORY_TYPES_MAP[cat];
-      if (types && types.length > 0) {
-        candidateTypes.push(...types);
-      }
-    });
-
-    if (candidateTypes.length === 0) {
-      candidateTypes.push(...ALL_QUESTION_TYPES);
-    }
-
-    // Process chunked with small timeouts to give real-time rendering feedback
-    const startTime = Date.now();
-    for (let i = 0; i < totalToGenerate; i++) {
-      // 1. Determine Grade
-      let targetGrade: 1 | 2 | 3 | 4;
-      if (selectedGradeMode === 'balanced') {
-        targetGrade = ((i % 4) + 1) as 1 | 2 | 3 | 4;
-      } else {
-        targetGrade = selectedGradeMode;
-      }
-
-      // 2. Pick Category & Question Type (favor grade recommended types if available)
-      const gradeCfg = GRADE_CONFIGS[targetGrade];
-      const matchingGradeTypes = candidateTypes.filter((t) =>
-        gradeCfg.recommendedTypes.includes(t)
-      );
-      const typePool = matchingGradeTypes.length > 0 ? matchingGradeTypes : candidateTypes;
-      const chosenType = typePool[Math.floor(Math.random() * typePool.length)];
-
-      // 3. Determine Difficulty
-      const chosenDiff = pickDifficulty(difficultyStrategy, i, totalToGenerate);
-
-      // 4. Generate with unique deterministic seed
-      const seed = saltSeedBase + i * 173 + Math.floor(Math.random() * 997);
-      let q: BaseQuestion;
-      try {
-        q = generateQuestionByType(chosenType, seed, chosenDiff);
-      } catch (e) {
-        // Fallback to visual sequence if generator threw
-        q = generateQuestionByType('visual_sequence', seed, chosenDiff);
-      }
-
-      // Adjust grade and metadata
-      q.id = `q_bulk_${targetGrade}_${Date.now()}_${i + 1}`;
-      q.targetGrade = targetGrade;
-      q.targetGrades = [targetGrade];
-      q.ageGroup = targetGrade <= 2 ? '1-2' : '3-4';
-      q.estimatedSeconds = gradeCfg.timeLimitSeconds;
-      q.createdAt = new Date().toISOString();
-      q.isCustom = true;
-
-      // 5. Validation Check
-      const val = validateQuestion(q);
-      const isValid = val.isValid;
-
-      batchResult.push(q);
-
-      const logItem: GenerationLogItem = {
-        id: q.id,
-        index: i + 1,
-        type: q.type,
-        grade: targetGrade,
-        category: q.category,
-        difficulty: chosenDiff,
-        isValid,
-        timestamp: new Date().toLocaleTimeString('tr-TR', { hour12: false }),
-      };
-      logItems.push(logItem);
-
-      // Yield UI update every 2 items or at the end
-      if (i % 2 === 0 || i === totalToGenerate - 1) {
-        setGenerationProgress(Math.round(((i + 1) / totalToGenerate) * 100));
-        setGenerationLogs([...logItems]);
-        await new Promise((res) => setTimeout(res, 25));
-      }
-    }
-
-    const elapsed = Date.now() - startTime;
-    setGeneratedQuestions(batchResult);
-    setIsGenerating(false);
-    setGenerationProgress(100);
-
-    // Auto-save if toggle was active
-    if (autoSaveToBank) {
-      questionBankService.addBulkQuestions(batchResult);
-      sound.playSuccess();
-      confetti({ particleCount: 60, spread: 70, origin: { y: 0.5 } });
-      showNotification(
-        `${batchResult.length} soru üretildi ve ana soru havuzuna kaydedildi! (${elapsed}ms)`,
-        'success'
-      );
-    } else {
-      sound.playSuccess();
-      showNotification(
-        `${batchResult.length} soru başarıyla oluşturuldu! Havuza eklemek için aşağıdaki butonu kullanabilirsiniz.`,
-        'info'
-      );
+    setGenerationProgress(0);
+    setBatchReport(null);
+    try {
+      const report = await generateQuestionBatch({ count: questionCount, grade: selectedGradeMode, categories: selectedCategories, strategy: difficultyStrategy, seed: saltSeedBase }, questionBankService.getAll(), progress => {
+        setBatchReport(progress);
+        setGenerationProgress(Math.round(progress.questions.length / questionCount * 100));
+        setGenerationLogs(progress.questions.map((q, i) => ({ id: q.id, index: i+1, type: q.type, grade: q.targetGrade!, category: q.category, difficulty: q.difficulty, isValid: true, timestamp: '' })));
+      }, controller.signal);
+      setGeneratedQuestions(report.questions);
+      const saved = autoSaveToBank && !report.cancelled ? questionBankService.addBulkQuestions(report.questions) : 0;
+      showNotification(`${report.questions.length}/${questionCount} soru üretildi. ${report.duplicates} tekrar, ${report.rejected} hatalı aday elendi.${autoSaveToBank ? ` ${saved} yeni soru kaydedildi.` : ''}${report.cancelled ? ' Üretim durduruldu.' : ''}`, report.questions.length === questionCount ? 'success' : 'info');
+    } catch (error) {
+      showNotification(error instanceof Error ? error.message : 'Üretim tamamlanamadı.', 'error');
+    } finally {
+      abortRef.current = null;
+      setIsGenerating(false);
     }
   };
 
@@ -742,28 +619,28 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
                 {[
                   {
                     id: 'gauss' as DifficultyStrategy,
-                    title: 'BİLSEM Çan Eğrisi (Gauss)',
-                    desc: '%15 Kolay, %60 Orta, %25 Zor',
+                    title: 'Dengeli Dağılım',
+                    desc: 'Sınıf aralığında orta düzey ağırlıklı',
                   },
                   {
                     id: 'medium' as DifficultyStrategy,
                     title: 'Standart Orta Seviye',
-                    desc: 'Seviye 3 ve 4 ağırlıklı',
+                    desc: 'Sınıfın orta zorluk düzeyi',
                   },
                   {
                     id: 'hard' as DifficultyStrategy,
                     title: 'Üstün Zeka / İleri Düzey',
-                    desc: 'Seviye 5 ve 6 ağırlıklı',
+                    desc: 'Sınıfın en yüksek zorluk düzeyi',
                   },
                   {
                     id: 'easy' as DifficultyStrategy,
                     title: 'Temel Seviye (Başlangıç)',
-                    desc: 'Seviye 1 ve 2 ağırlıklı',
+                    desc: 'Sınıfın en düşük zorluk düzeyi',
                   },
                   {
                     id: 'equal' as DifficultyStrategy,
                     title: 'Eşit Dağılım',
-                    desc: '1-6 arası eşit sayıda',
+                    desc: 'Sınıfın uygun seviyeleri arasında',
                   },
                 ].map((strat) => (
                   <button
@@ -935,9 +812,9 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
                 </div>
               </div>
               <div className="p-2 rounded-xl bg-slate-800/50">
-                <div className="text-[10px] text-slate-400">Hatasızlık</div>
+                <div className="text-[10px] text-slate-400">Kabul oranı</div>
                 <div className="font-bold text-emerald-400 font-mono mt-0.5">
-                  {generatedQuestions.length > 0 ? '%100' : '-'}
+                  {batchReport?.attempted ? `%${Math.round(batchReport.questions.length / batchReport.attempted * 100)}` : '-'}
                 </div>
               </div>
               <div className="p-2 rounded-xl bg-slate-800/50">
@@ -948,6 +825,16 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
           </div>
         </div>
       </div>
+
+      {(batchReport || isGenerating) && (
+        <div role="status" aria-live="polite" className="p-4 rounded-2xl bg-slate-900 text-slate-200 border border-slate-700 text-sm space-y-2">
+          <p>{batchReport?.questions.length || 0} kabul · {batchReport?.duplicates || 0} tekrar · {batchReport?.rejected || 0} hatalı aday</p>
+          <p>Sınıfa uygun zorluk ve içerik tekrarı kontrol edilir. Matematiksel çözüm kontrolü desteklenen dört soru tipinde uygulanır. Yayınlamadan önce soruları inceleyin.</p>
+          <p>Havuz bu tarayıcıda saklanır. Sorularınızı JSON olarak yedekleyebilirsiniz.</p>
+          {batchReport?.reasons.map(reason => <p key={reason} className="text-amber-300">{reason}</p>)}
+          {isGenerating && <button onClick={() => abortRef.current?.abort()} className="px-4 py-2 rounded-lg bg-rose-700 text-white">Üretimi durdur</button>}
+        </div>
+      )}
 
       {/* Results Section: Review, Analytics, Action Bar */}
       {generatedQuestions.length > 0 && (
@@ -965,7 +852,7 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
                   Üretilen Soru Havuzu ({generatedQuestions.length} Adet)
                 </h3>
                 <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-bold border border-emerald-500/30">
-                  Doğrulandı
+                  Yapısal kontrol geçti
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-1">
@@ -1036,17 +923,17 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
                 Ort. Çözüm Süresi
               </div>
               <div className="text-2xl font-black text-amber-400 font-['Outfit',sans-serif] mt-1">
-                ~45 sn
+                ~{Math.round(generatedQuestions.reduce((sum, q) => sum + q.estimatedSeconds, 0) / generatedQuestions.length)} sn
               </div>
             </div>
 
             {/* Pedagogical Compliance */}
             <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60">
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Pedagojik Kalite
+                Kontrol Durumu
               </div>
               <div className="text-2xl font-black text-emerald-400 font-['Outfit',sans-serif] mt-1">
-                %100 Onaylı
+                Otomatik kontrol
               </div>
             </div>
           </div>

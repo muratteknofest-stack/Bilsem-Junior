@@ -127,6 +127,9 @@ export function generateQuestionByType(
   difficulty: DifficultyLevel = 3,
   retryCount = 0
 ): BaseQuestion {
+  if (!Number.isSafeInteger(seed) || seed < 0 || !Number.isInteger(difficulty) || difficulty < 1 || difficulty > 6) {
+    throw new Error('Tohum pozitif tam sayı, zorluk 1–6 arasında tam sayı olmalıdır.');
+  }
   let q: BaseQuestion;
 
   switch (type) {
@@ -263,7 +266,7 @@ export function generateQuestionByType(
       q = generateSpatialOrigamiQuestion(seed, difficulty);
       break;
     default:
-      q = generateVisualSequenceQuestion(seed, difficulty);
+      throw new Error('Desteklenmeyen soru tipi: ' + type);
   }
 
   // IDs must remain unique across type, generator version, difficulty and seed.
@@ -273,11 +276,11 @@ export function generateQuestionByType(
   // Automatic Quality Gate Validation
   const val = validateQuestion(q);
   if (!val.isValid) {
-    if (retryCount < 3) {
+    if (retryCount < 12) {
       // Safe retry with salted seed
       return generateQuestionByType(type, seed + 10007, difficulty, retryCount + 1);
     } else {
-      console.warn(`Question validation failed after 3 retries for type "${type}", seed ${seed}`, val.errors);
+      throw new Error(`${type}: ${val.errors.map(e => e.message).join(' ')}`);
     }
   }
 

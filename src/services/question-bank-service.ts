@@ -7,6 +7,8 @@ import {
 } from '../types';
 import { generateQuestionByType, CATEGORY_TYPES_MAP } from '../features/questions/generators';
 import { GRADE_CONFIGS, ALL_GRADES } from '../features/questions/grade-config';
+import { validateQuestion } from '../features/questions/validator';
+import { questionContentKey } from '../features/questions/quality';
 import { safeStorage } from '../lib/storage';
 
 const STORAGE_KEY = 'bilsem_admin_managed_questions_v1';
@@ -38,7 +40,7 @@ export interface CreateQuestionPayload {
   customExplanationSteps?: string[];
 }
 
-class QuestionBankService {
+export class QuestionBankService {
   private questions: BaseQuestion[] = [];
   private initialized: boolean = false;
 
@@ -196,7 +198,16 @@ class QuestionBankService {
     return [...this.questions];
   }
 
+  private assertAcceptable(question: BaseQuestion, excludeId?: string) {
+    const result = validateQuestion(question);
+    if (!result.isValid) throw new Error(result.errors.map(e => e.message).join(' '));
+    if (this.questions.some(q => q.id !== excludeId && (q.id === question.id || questionContentKey(q) === questionContentKey(question)))) {
+      throw new Error('Bu içerik soru havuzunda zaten var. Yeni bir varyasyon üretin.');
+    }
+  }
+
   public createCustomQuestion(question: BaseQuestion): BaseQuestion {
+    this.assertAcceptable(question, question.id);
     const existingIdx = this.questions.findIndex((q) => q.id === question.id);
     if (existingIdx !== -1) {
       this.questions[existingIdx] = { ...this.questions[existingIdx], ...question };
@@ -240,7 +251,7 @@ class QuestionBankService {
   }
 
   public addQuestion(payload: CreateQuestionPayload): BaseQuestion {
-    const finalSeed = payload.seed || Math.floor(Math.random() * 900000) + 100000;
+    const finalSeed = payload.seed ?? Math.floor(Math.random() * 900000) + 100000;
     const base = generateQuestionByType(payload.type, finalSeed, payload.difficulty);
 
     const newId = `q_gr${payload.targetGrade}_${Date.now()}`;
@@ -268,6 +279,7 @@ class QuestionBankService {
       };
     }
 
+    this.assertAcceptable(newQuestion);
     this.questions.unshift(newQuestion);
     this.save();
     return newQuestion;
@@ -275,10 +287,19 @@ class QuestionBankService {
 
   public addBulkQuestions(newQuestions: BaseQuestion[]): number {
     if (!newQuestions || newQuestions.length === 0) return 0;
-    // Prepend all new questions
-    this.questions.unshift(...newQuestions);
-    this.save();
-    return newQuestions.length;
+    const seen = new Set(this.questions.map(questionContentKey));
+    const ids = new Set(this.questions.map(q => q.id));
+    const accepted: BaseQuestion[] = [];
+    for (const question of newQuestions) {
+      if (!validateQuestion(question).isValid) continue;
+      const key = questionContentKey(question);
+      if (seen.has(key) || ids.has(question.id)) continue;
+      seen.add(key);
+      ids.add(question.id);
+      accepted.push(question);
+    }
+    if (accepted.length) { this.questions.unshift(...accepted); this.save(); }
+    return accepted.length;
   }
 
   public updateQuestion(id: string, updates: Partial<BaseQuestion>): BaseQuestion | null {
@@ -292,6 +313,7 @@ class QuestionBankService {
       id: existing.id, // preserve id
     };
 
+    this.assertAcceptable(updated, id);
     this.questions[idx] = updated;
     this.save();
     return updated;
@@ -312,22 +334,22 @@ class QuestionBankService {
     if (!source) return null;
 
     const grade = targetGrade || source.targetGrade || 1;
-    const newSeed = Math.floor(Math.random() * 900000) + 100000;
-    const clone: BaseQuestion = {
-      ...source,
-      id: `q_gr${grade}_copy_${Date.now()}`,
-      targetGrade: grade,
-      targetGrades: [grade],
-      seed: newSeed,
-      ageGroup: grade <= 2 ? '1-2' : '3-4',
-      estimatedSeconds: GRADE_CONFIGS[grade].timeLimitSeconds,
-      createdAt: new Date().toISOString(),
-      isCustom: true,
-    };
-
-    this.questions.unshift(clone);
-    this.save();
-    return clone;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const seed = Math.floor(Math.random() * 2_000_000_000);
+      try {
+        const clone = generateQuestionByType(source.type, seed, source.difficulty);
+        clone.targetGrade = grade;
+        clone.targetGrades = [grade];
+        clone.ageGroup = grade <= 2 ? '1-2' : '3-4';
+        clone.createdAt = new Date().toISOString();
+        clone.isCustom = true;
+        this.assertAcceptable(clone);
+        this.questions.unshift(clone);
+        this.save();
+        return clone;
+      } catch { /* Try another genuinely different variant, with a bounded limit. */ }
+    }
+    return null;
   }
 
   public resetToDefaults(): BaseQuestion[] {
@@ -363,22 +385,7 @@ class QuestionBankService {
         return { success: false, count: 0, error: 'Geçerli bir soru dizisi (questions listesi) bulunamadı.' };
       }
 
-      let importedCount = 0;
-      for (const item of list) {
-        if (item && item.type && item.prompt && item.options) {
-          const validatedQuestion: BaseQuestion = {
-            ...item,
-            id: item.id || `q_imported_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-            targetGrade: item.targetGrade || (item.ageGroup === '1-2' ? 2 : 3),
-            category: item.category || 'visual_perception',
-            difficulty: item.difficulty || 3,
-            createdAt: item.createdAt || new Date().toISOString(),
-            isCustom: true,
-          };
-          this.questions.unshift(validatedQuestion);
-          importedCount++;
-        }
-      }
+      const importedCount = this.addBulkQuestions(list);
 
       if (importedCount > 0) {
         this.save();

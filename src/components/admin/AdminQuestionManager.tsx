@@ -1474,8 +1474,10 @@ const CreateQuestionModal: React.FC<CreateQuestionModalProps> = ({
         customSummary.trim() !== '' ? customSummary : liveQuestion.explanation.summary,
     };
 
-    const created = questionBankService.addQuestion(payload);
-    onCreated(created);
+    try {
+      const created = questionBankService.addQuestion(payload);
+      onCreated(created);
+    } catch (error) { window.alert(error instanceof Error ? error.message : 'Soru kaydedilemedi.'); }
   };
 
   return (
@@ -1860,6 +1862,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
 
   const handleUpdate = () => {
     sound.playSuccess();
+    try {
     const updated = questionBankService.updateQuestion(question.id, {
       targetGrade,
       targetGrades: [targetGrade],
@@ -1877,6 +1880,7 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
     if (updated) {
       onSaved(updated);
     }
+    } catch (error) { window.alert(error instanceof Error ? error.message : 'Soru güncellenemedi.'); }
   };
 
   return (

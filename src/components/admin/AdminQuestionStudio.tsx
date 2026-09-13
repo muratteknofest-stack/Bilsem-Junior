@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { QuestionType, DifficultyLevel, BaseQuestion, QUESTION_TYPE_LABELS, DIFFICULTY_LABELS } from '../../types';
 import { generateQuestionByType, ALL_QUESTION_TYPES } from '../../features/questions/generators';
+import { solveQuestion } from '../../features/questions/quality';
 import { validateQuestion, QuestionValidationResult } from '../../features/questions/validator';
 import { GRADE_CONFIGS, ALL_GRADES, GradeLevelConfig } from '../../features/questions/grade-config';
 import { QuestionRenderer } from '../../features/questions/renderers/QuestionRenderer';
@@ -335,27 +336,14 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
                     : 'bg-rose-100 text-rose-800'
                 }`}
               >
-                {validationResult.isValid ? 'Tam Uyumlu (%100)' : 'Uyarı Tespit Edildi'}
+                {validationResult.isValid ? 'Otomatik kontroller geçti' : 'Uyarı Tespit Edildi'}
               </span>
             </div>
 
-            <div className="space-y-1.5 font-medium text-slate-600">
-              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50">
-                <span>Deterministik Tohum & ID Bütünlüğü</span>
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              </div>
-              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50">
-                <span>Seçenek Benzersizliği (Parmak İzi)</span>
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              </div>
-              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50">
-                <span>Tekil Doğru Cevap ({generatedQuestion.correctOptionId})</span>
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              </div>
-              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50">
-                <span>Pedagojik Çözüm Adımları ({generatedQuestion.explanation.steps.length} adım)</span>
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              </div>
+            <div className="space-y-2 text-sm text-slate-600">
+              <p>Seçenekler, tohum, yönerge ve çözüm açıklaması kontrol edilir.</p>
+              <p>{solveQuestion(generatedQuestion).supported ? 'Bağımsız matematiksel çözüm kontrolü uygulanıyor.' : 'Bu soru tipinde bağımsız çözüm kontrolü henüz yok; kuralı ve cevap anahtarını inceleyin.'}</p>
+              <p>Otomatik kontrol, pedagojik uzman onayı anlamına gelmez.</p>
             </div>
 
             {/* Any validation errors */}

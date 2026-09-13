@@ -1,4 +1,5 @@
 import React from 'react';
+import { DetailGrid } from './DetailGrid';
 import { motion } from 'motion/react';
 import { BaseQuestion } from '../../../types';
 import { ShapeSvg, PALETTE } from '../../../lib/svg-primitives';
@@ -977,6 +978,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({ question }) 
   }
 
   // 31. Detail Detection
+  if (mode === 'detail_detection' && visualConfig.detailCells) return <DetailGrid cells={visualConfig.detailCells} size={visualConfig.gridSize} />;
   if (mode === 'detail_detection') {
     const { baseShape, color } = visualConfig;
     return (

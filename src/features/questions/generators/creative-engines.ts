@@ -388,67 +388,30 @@ export function generatePunchFoldingQuestion(seed: number, difficulty: Difficult
 export function generateDetailDetectionQuestion(seed: number, difficulty: DifficultyLevel): BaseQuestion {
   const rng = new SeededRNG(seed);
 
-  const shapes = ['star', 'gear', 'flower', 'shield', 'compass'];
-  const baseShape = rng.pick(shapes);
-
-  const colors = [PALETTE.indigo, PALETTE.purple, PALETTE.blue, PALETTE.teal];
-  const mainColor = rng.pick(colors);
-
-  // Detail variation: 'missing_dot', 'extra_line', 'rotated_center', 'inverted_leaf'
-  const variations = ['Eksik İç Nokta', 'Fazla Kenar Çizgisi', 'Farklı Merkez Açısı', 'Ters Dönmüş Detay'];
-  const correctVariation = variations[0];
-
-  const rawOpts = [
-    { label: 'Orijinal Şekil', isDifferent: false, diffDesc: 'Kusursuz Orijinal' },
-    { label: 'Hafif Farklı (A)', isDifferent: false, diffDesc: 'Doğru Detay' },
-    { label: 'Kusurlu / Farklı Şekil', isDifferent: true, diffDesc: correctVariation },
-    { label: 'Hafif Farklı (B)', isDifferent: false, diffDesc: 'Doğru Detay' },
-  ];
-
-  const shuffled = rng.shuffle(rawOpts);
-  let correctId = 'A';
-
-  const options = shuffled.map((opt, i) => {
-    const id = ['A', 'B', 'C', 'D'][i];
-    if (opt.isDifferent) correctId = id;
-    return {
-      id,
-      label: `Şekil ${id}`,
-      fingerprint: `detail-${id}-${opt.isDifferent}`,
-      visualData: {
-        baseShape,
-        isDifferent: opt.isDifferent,
-        color: mainColor,
-      },
-    };
+  const gridSize = difficulty <= 3 ? 3 : 4;
+  const cellCount = gridSize * gridSize;
+  const cells = rng.pickUnique(Array.from({length: cellCount}, (_, i) => i), 3 + difficulty).sort((a,b) => a-b);
+  const empty = Array.from({length: cellCount}, (_, i) => i).filter(i => !cells.includes(i));
+  const choices = [{ cells, correct: true }];
+  for (let i = 0; i < 3; i++) {
+    choices.push({ cells: [...cells.filter(c => c !== cells[i]), empty[i % empty.length]].sort((a,b) => a-b), correct: false });
+  }
+  let correctOptionId = 'A';
+  const options = rng.shuffle(choices).map((choice, i) => {
+    const id = ['A','B','C','D'][i];
+    if (choice.correct) correctOptionId = id;
+    return { id, label: id, fingerprint: choice.cells.join(','), visualData: { detailCells: choice.cells, gridSize } };
   });
-
   return {
-    id: `detail-${seed}`,
-    version: 1,
-    type: 'detail_detection',
-    category: 'attention',
-    difficulty,
-    ageGroup: 'all',
-    estimatedSeconds: 30,
-    skills: ['Görsel Dikkat', 'Detay Ayrıştırma', 'Mikro Karşılaştırma'],
-    seed,
-    prompt: 'Aşağıdaki seçeneklerde verilen şekillerden biri diğerlerinden ince bir detay (iç nokta veya çizgi eksikliği) ile ayrılmaktadır. Farklı olan hangisidir?',
-    visualConfig: {
-      displayMode: 'detail_detection',
-      baseShape,
-      color: mainColor,
-    },
-    options,
-    correctOptionId: correctId,
+    id: `detail-${seed}`, version: 2, type: 'detail_detection', category: 'attention', difficulty,
+    ageGroup: 'all', estimatedSeconds: 25 + difficulty * 5, skills: ['Görsel Dikkat', 'Konum Karşılaştırma'], seed,
+    prompt: 'Hangi seçenekteki koyu noktaların yerleri örnektekiyle tamamen aynıdır?',
+    visualConfig: { displayMode: 'detail_detection', detailCells: cells, gridSize },
+    options, correctOptionId,
     explanation: {
-      summary: `Tüm şekiller dikkatle incelendiğinde ${correctId} seçeneğinde yer alan şeklin iç detayının (${correctVariation}) diğerlerinden farklı olduğu görülür.`,
-      ruleTitle: 'İnce Detay Karşılaştırma',
-      steps: [
-        'Şekillerin köşe sayıları, iç sembolleri ve simetri çizgileri tek tek karşılaştırılır.',
-        `${correctId} seçeneğinde bir iç elemanın eksik veya farklı konumda olduğu saptanır.`,
-        `Bu nedenle farklı olan seçenek ${correctId}'dir.`,
-      ],
+      ruleTitle: 'Noktaların Konumunu Karşılaştırma',
+      summary: `Örnekteki ${cells.length} koyu noktanın tamamı ${correctOptionId} seçeneğinde aynı konumdadır. Diğer seçeneklerde bir noktanın yeri değişmiştir.`,
+      steps: ['Örneği yukarıdan aşağıya, her satırda soldan sağa incele.', 'Her koyu noktanın satır ve sütununu seçeneklerle karşılaştır.', `Tüm konumlar yalnızca ${correctOptionId} seçeneğinde eşleşir.`],
     },
   };
 }

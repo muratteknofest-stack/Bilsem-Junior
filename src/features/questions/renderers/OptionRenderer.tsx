@@ -1,4 +1,5 @@
 import React from 'react';
+import { DetailGrid } from './DetailGrid';
 import { motion } from 'motion/react';
 import { VisualOption, QuestionType } from '../../../types';
 import { ShapeSvg, ShapeKind } from '../../../lib/svg-primitives';
@@ -156,6 +157,8 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
         </div>
       );
     }
+
+    if (vd.detailCells) return <DetailGrid cells={vd.detailCells} size={vd.gridSize} />;
 
     // 5. Detail Detection Shape
     if (vd.baseShape) {

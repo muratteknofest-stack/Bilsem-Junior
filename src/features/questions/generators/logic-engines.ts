@@ -429,7 +429,7 @@ export function generateNumberPatternQuestion(seed: number, difficulty: Difficul
 
   const distractor1 = isMultiplicative ? numbers[2] + step : correctNumber + 2;
   const distractor2 = correctNumber - 1;
-  const distractor3 = correctNumber + step;
+  const distractor3 = correctNumber + step + 3;
 
   const choices = [
     { num: correctNumber, isCorrect: true },
