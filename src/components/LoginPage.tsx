@@ -33,6 +33,32 @@ import {
   HelpCircle, X, Phone, User, AlertCircle, Check 
 } from 'lucide-react';
 
+const OWNER_ADMIN_EMAIL = 'zeka.kupu.test@gmail.com';
+
+function createOwnerAdminProfile(uid: string, email: string): UserProfile {
+  const now = Date.now();
+  return {
+    id: uid,
+    email,
+    name: 'ZekaPark Yönetici',
+    role: 'admin',
+    avatar: '👨‍💻',
+    level: 1,
+    xp: 0,
+    streak: 0,
+    lastActiveDate: new Date(now).toISOString(),
+    dailyGoalMinutes: 20,
+    todayMinutesSpent: 0,
+    soundEnabled: true,
+    createdAt: now,
+    updatedAt: now,
+    totalPoints: 0,
+    claimedStreakDays: [],
+    totalQuestionsSolved: 0,
+    resolvedMistakesCount: 0,
+  };
+}
+
 interface LoginPageProps {
   onLoginSuccess: (role: UserRole, userProfile?: UserProfile) => void;
   onNavigateHome: () => void;
@@ -115,7 +141,35 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
       await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
       const credential = await signInWithEmailAndPassword(auth, loginEmail, password);
-      const profileSnapshot = await getDoc(doc(db, 'users', credential.user.uid));
+
+      const requiresVerification = !isManagedStudentEmail(credential.user.email);
+      if (requiresVerification && !credential.user.emailVerified) {
+        await sendEmailVerification(credential.user).catch(() => undefined);
+        await signOut(auth);
+        throw new Error('EMAIL_NOT_VERIFIED');
+      }
+
+      const userDocRef = doc(db, 'users', credential.user.uid);
+      let profileSnapshot = await getDoc(userDocRef);
+
+      // The pre-created owner account may exist in Firebase Auth before its
+      // application profile. Provision only the exact, verified owner address.
+      const signedInEmail = credential.user.email?.trim().toLowerCase() || '';
+      if (
+        !profileSnapshot.exists() &&
+        selectedRole === 'admin' &&
+        signedInEmail === OWNER_ADMIN_EMAIL &&
+        credential.user.emailVerified
+      ) {
+        const ownerProfile = createOwnerAdminProfile(credential.user.uid, signedInEmail);
+        try {
+          await setDoc(userDocRef, ownerProfile);
+          profileSnapshot = await getDoc(userDocRef);
+        } catch {
+          await signOut(auth);
+          throw new Error('ADMIN_PROFILE_PROVISION_FAILED');
+        }
+      }
 
       if (!profileSnapshot.exists()) {
         await signOut(auth);
@@ -126,13 +180,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       if (loggedInProfile.id !== credential.user.uid || loggedInProfile.role !== selectedRole) {
         await signOut(auth);
         throw new Error('ROLE_MISMATCH');
-      }
-
-      const requiresVerification = !isManagedStudentEmail(credential.user.email);
-      if (requiresVerification && !credential.user.emailVerified) {
-        await sendEmailVerification(credential.user).catch(() => undefined);
-        await signOut(auth);
-        throw new Error('EMAIL_NOT_VERIFIED');
       }
 
       dataService.loginAs(loggedInProfile.role, loggedInProfile);
@@ -165,6 +212,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
          errMsg = 'Seçtiğiniz rol bu hesapla eşleşmiyor.';
       } else if (error.message === 'EMAIL_NOT_VERIFIED') {
          errMsg = 'E-posta adresiniz henüz doğrulanmadı. Yeni doğrulama bağlantısı gönderildi.';
+      } else if (error.message === 'ADMIN_PROFILE_PROVISION_FAILED') {
+         errMsg = 'Yönetici profili henüz etkinleştirilemedi. Lütfen kısa süre sonra tekrar deneyin.';
       }
       setErrorMessage(errMsg);
     } finally {

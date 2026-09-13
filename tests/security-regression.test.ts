@@ -26,6 +26,7 @@ test('Firestore authorization protects admin access and validates family links',
   assert.match(rules, /validAccountIdentity\(userId, 'parent'\)/);
   assert.match(rules, /request\.resource\.data\.email == request\.auth\.token\.email/);
   assert.match(rules, /validConsent/);
+  assert.match(rules, /allow create: if isAdmin\(\)/);
   assert.match(rules, /affectedKeys\(\)\.hasOnly/);
   assert.match(rules, /match \/\{document=\*\*\}[\s\S]*allow read, write: if false/);
 });
@@ -46,4 +47,7 @@ test('login source contains no local authentication fallback or fixed password',
   assert.doesNotMatch(source, /Standart şifre|setPassword\('123456'\)/);
   assert.doesNotMatch(source, /\/api\/auth\/register-family/);
   assert.match(source, /registerFamilyInFirebase/);
+  assert.match(source, /OWNER_ADMIN_EMAIL = 'zeka\.kupu\.test@gmail\.com'/);
+  assert.match(source, /credential\.user\.emailVerified/);
+  assert.match(source, /createOwnerAdminProfile/);
 });

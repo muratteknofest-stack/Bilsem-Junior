@@ -60,8 +60,9 @@ service cloud.firestore {
       // Each browser account can only create its own non-admin profile. A family
       // account is accepted only after the linked student created their own
       // profile and explicitly points back to the parent UID.
-      allow create: if isOwner(userId) &&
-        (
+      allow create: if isAdmin() ||
+        (isOwner(userId) &&
+          (
           (validAccountIdentity(userId, 'student') &&
             validConsent(request.resource.data.keys().hasAny(['linkedParentId']) ? 'parent' : 'student') &&
             !request.resource.data.keys().hasAny(['linkedStudentIds']) &&
@@ -71,7 +72,7 @@ service cloud.firestore {
             validConsent('parent') &&
             !request.resource.data.keys().hasAny(['linkedParentId']) &&
             validInitialParentLink(userId))
-        );
+          ));
 
       // Identity, authorization and family-link fields cannot be changed by a browser client.
       allow update: if isAdmin() ||
