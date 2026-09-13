@@ -48,8 +48,10 @@ frontend and add the Sites origin to `CORS_ALLOWED_ORIGINS` on the server.
 - Browser clients can create only their own non-admin profile.
 - Parent/child account pairs use separate Firebase Auth sessions and passwords;
   the rules accept a parent link only after the student profile points back to it.
-- Admin access requires an `admin` Firebase custom claim. A profile document alone
-  never grants admin access.
+- Admin access normally requires an `admin` Firebase custom claim. The initial
+  verified owner account (`zeka.kupu.test@gmail.com`) is explicitly allowlisted in
+  Firestore rules so it can bootstrap administration when Admin SDK access is not
+  available. A profile document alone never grants admin access.
 - User progress is stored under `users/{uid}/private/state`; linked parents have
   read-only access to their child's profile and progress.
 
