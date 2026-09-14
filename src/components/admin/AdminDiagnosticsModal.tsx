@@ -124,7 +124,7 @@ export const AdminDiagnosticsModal: React.FC<AdminDiagnosticsModalProps> = ({ on
                 Sistem Sağlığı & Motor Tanılama
               </h3>
               <p className="text-xs text-slate-500">
-                18 prosedürel motorun üretim hızı, doğrulama durumu ve yerel bellek sağlığı.
+                44 soru motorunun üretim hızı, bağımsız doğrulama durumu ve önbellek sağlığı.
               </p>
             </div>
           </div>

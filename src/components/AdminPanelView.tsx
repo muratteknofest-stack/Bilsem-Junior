@@ -44,6 +44,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 import { sound } from '../lib/sound';
+import { publishQuestion } from '../services/question-bank-cloud-service';
 import { questionBankService } from '../services/question-bank-service';
 import { dataService } from '../services/data-service';
 import {
@@ -483,17 +484,16 @@ export const AdminPanelView: React.FC = () => {
       {showCreateWizard && (
         <CreateQuestionWizard
           onClose={() => setShowCreateWizard(false)}
-          onSave={(q) => {
+          onSave={async (q) => {
             const validation = validateQuestion(q);
             if (!validation.isValid) {
-              alert('Soru doğrulama hatası:\n' + validation.errors.map(e => `• ${e.message}`).join('\n'));
-              return;
+              throw new Error('Soru doğrulama hatası:\n' + validation.errors.map(e => `• ${e.message}`).join('\n'));
             }
             try {
               questionBankService.createCustomQuestion(q);
+              try { await publishQuestion(q); } catch (error) { questionBankService.deleteQuestion(q.id); throw error; }
             } catch (error) {
-              alert(error instanceof Error ? error.message : 'Soru kaydedilemedi.');
-              return;
+              throw error instanceof Error ? error : new Error('Soru kaydedilemedi.');
             }
             sound.playSuccess();
             confetti({ particleCount: 50, spread: 60, origin: { y: 0.4 } });
@@ -531,7 +531,7 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
   const [questionsPool, setQuestionsPool] = useState<BaseQuestion[]>([]);
 
   useEffect(() => {
-    setQuestionsPool(questionBankService.getAll());
+    return questionBankService.subscribe(setQuestionsPool);
   }, []);
 
   // Category counts
@@ -571,7 +571,7 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
               Sistem Durumu & Soru Havuzu İzleme
             </h2>
             <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl leading-relaxed">
-              Soru üreteçlerini, yerel soru havuzunu ve tanı araçlarını tek noktadan yönetin.
+              Soru üreteçlerini, cihazlar arasında eşitlenen ortak havuzu ve tanı araçlarını tek noktadan yönetin.
             </p>
           </div>
 
@@ -718,7 +718,7 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
               10 Bilişsel Çalışma Alanı Dağılımı
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Her kategoride yerel soru bankasına kaydedilmiş soru sayısı
+              Her kategoride merkezi soru bankasına kaydedilmiş yayınlanmış soru sayısı
             </p>
           </div>
 
@@ -795,7 +795,7 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
           <div className="space-y-3">
             {[
               { text: `${ALL_QUESTION_TYPES.length} parametrik soru tipi yüklendi.`, time: "Bu oturum", badge: "Üreteç", color: "text-emerald-400" },
-              { text: `${questionsPool.length} soru yerel soru bankasında kayıtlı.`, time: "Bu oturum", badge: "Havuz", color: "text-indigo-400" },
+              { text: `${questionsPool.length} soru ortak soru bankasında kayıtlı.`, time: "Canlı", badge: "Havuz", color: "text-indigo-400" },
               { text: `${ALL_COGNITIVE_CATEGORIES.length} bilişsel çalışma alanı yapılandırıldı.`, time: "Bu oturum", badge: "Kapsam", color: "text-amber-400" },
               { text: "Ayrıntılı sonuçlar için motor tanı veya stres testi çalıştırılabilir.", time: "İsteğe bağlı", badge: "Tanı", color: "text-teal-400" },
             ].map((act, i) => (

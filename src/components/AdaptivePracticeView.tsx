@@ -9,6 +9,7 @@ import { ComboStreakIndicator, getComboTier } from './animations/ComboStreakIndi
 import { ComboBurstOverlay } from './animations/ComboBurstOverlay';
 import { StreakFloatingFloater } from './animations/StreakFloatingFloater';
 import { dataService } from '../services/data-service';
+import { questionBankService } from '../services/question-bank-service';
 import { sound } from '../lib/sound';
 import {
   ArrowLeft,
@@ -82,7 +83,7 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
   };
 
   const [currentQuestion, setCurrentQuestion] = useState<BaseQuestion>(() => {
-    return generateQuestion({
+    return questionBankService.pickForPractice({ category: 'matrix', difficulty: 3, count: 1 })[0] || generateQuestion({
       category: 'matrix',
       difficulty: 3,
       seed: Math.floor(Math.random() * 900000) + 100000,
@@ -167,7 +168,12 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
   const handleNextQuestion = () => {
     sound.playClick();
     const nextCat = getAdaptiveCategory();
-    const nextQ = generateQuestion({
+    const nextQ = questionBankService.pickForPractice({
+      category: nextCat,
+      difficulty: currentDifficulty,
+      count: 1,
+      excludeIds: [currentQuestion.id],
+    })[0] || generateQuestion({
       category: nextCat,
       difficulty: currentDifficulty,
       seed: Math.floor(Math.random() * 900000) + 100000,

@@ -6,7 +6,7 @@ import { questionContentKey } from '../src/features/questions/quality.ts';
 import { generateQuestionBatch } from '../src/features/questions/batch-generation.ts';
 import { GRADE_CONFIGS } from '../src/features/questions/grade-config.ts';
 import { QuestionBankService } from '../src/services/question-bank-service.ts';
-import type { DifficultyLevel } from '../src/types.ts';
+import type { BaseQuestion, DifficultyLevel } from '../src/types.ts';
 
 test('forged fingerprints cannot hide identical answer content', () => {
   const q = generateQuestionByType('number_pattern', 22, 2);
@@ -14,8 +14,8 @@ test('forged fingerprints cannot hide identical answer content', () => {
   q.options[1].fingerprint = 'pretend-unique';
   assert.equal(validateQuestion(q).isValid, false);
 });
-test('independent solvers reject a changed answer key', () => {
-  for (const type of ['number_pattern','number_pyramid','operation_machine','figure_rotation'] as const) {
+test('all 44 independent solvers reject a changed answer key', () => {
+  for (const type of ALL_QUESTION_TYPES) {
     const q = generateQuestionByType(type, 8391, 4);
     q.correctOptionId = q.options.find(o => o.id !== q.correctOptionId)!.id;
     assert.equal(validateQuestion(q).isValid, false, type);
@@ -63,4 +63,21 @@ test('bank rejects repeated content, invalid imports and genuinely regenerates v
   assert.ok(copy);
   assert.notEqual(questionContentKey(copy), questionContentKey(q));
   assert.equal(validateQuestion(copy).isValid, true);
+});
+
+test('a cloud replacement is observable by a second client and remains filterable', () => {
+  const writer = new QuestionBankService();
+  const reader = new QuestionBankService();
+  const shared = [generateQuestionByType('matrix_2x2', 8842, 3)];
+  shared[0].targetGrade = 2;
+  let observed: BaseQuestion[] = [];
+  const unsubscribe = reader.subscribe(questions => { observed = questions; });
+  reader.replaceFromCloud(shared);
+  assert.equal(observed[0].id, shared[0].id);
+  assert.equal(reader.pickForPractice({ grade: 2, category: 'matrix', count: 1 })[0].id, shared[0].id);
+  reader.replaceFromCloud([]);
+  assert.deepEqual(observed, []);
+  assert.deepEqual(reader.getAll(), []);
+  unsubscribe();
+  assert.ok(writer.getAll().length > 0);
 });

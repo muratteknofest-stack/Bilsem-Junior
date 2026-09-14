@@ -37,6 +37,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 import { sound } from '../../lib/sound';
 import { questionBankService } from '../../services/question-bank-service';
+import { publishQuestions } from '../../services/question-bank-cloud-service';
 import {
   BaseQuestion,
   CognitiveCategory,
@@ -221,7 +222,11 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
         setGenerationLogs(progress.questions.map((q, i) => ({ id: q.id, index: i+1, type: q.type, grade: q.targetGrade!, category: q.category, difficulty: q.difficulty, isValid: true, timestamp: '' })));
       }, controller.signal);
       setGeneratedQuestions(report.questions);
-      const saved = autoSaveToBank && !report.cancelled ? questionBankService.addBulkQuestions(report.questions) : 0;
+      let saved = 0;
+      if (autoSaveToBank && !report.cancelled) {
+        await publishQuestions(report.questions);
+        saved = questionBankService.addBulkQuestions(report.questions);
+      }
       showNotification(`${report.questions.length}/${questionCount} soru üretildi. ${report.duplicates} tekrar, ${report.rejected} hatalı aday elendi.${autoSaveToBank ? ` ${saved} yeni soru kaydedildi.` : ''}${report.cancelled ? ' Üretim durduruldu.' : ''}`, report.questions.length === questionCount ? 'success' : 'info');
     } catch (error) {
       showNotification(error instanceof Error ? error.message : 'Üretim tamamlanamadı.', 'error');
@@ -232,15 +237,17 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
   };
 
   // Save all generated questions to the central bank
-  const handleSaveToBank = () => {
+  const handleSaveToBank = async () => {
     if (generatedQuestions.length === 0) return;
-    sound.playSuccess();
-    const count = questionBankService.addBulkQuestions(generatedQuestions);
-    confetti({ particleCount: 80, spread: 80, origin: { y: 0.4 } });
-    showNotification(
-      `${count} yeni soru BİLSEM Soru Havuzuna başarıyla eklendi!`,
-      'success'
-    );
+    try {
+      await publishQuestions(generatedQuestions);
+      const count = questionBankService.addBulkQuestions(generatedQuestions);
+      sound.playSuccess();
+      confetti({ particleCount: 80, spread: 80, origin: { y: 0.4 } });
+      showNotification(`${count} yeni soru ortak havuza kaydedildi ve tüm cihazlarla eşitlendi.`, 'success');
+    } catch (error) {
+      showNotification(error instanceof Error ? error.message : 'Sorular merkezi havuza kaydedilemedi.', 'error');
+    }
   };
 
   // Export JSON
@@ -830,7 +837,7 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
         <div role="status" aria-live="polite" className="p-4 rounded-2xl bg-slate-900 text-slate-200 border border-slate-700 text-sm space-y-2">
           <p>{batchReport?.questions.length || 0} kabul · {batchReport?.duplicates || 0} tekrar · {batchReport?.rejected || 0} hatalı aday</p>
           <p>Sınıfa uygun zorluk ve içerik tekrarı kontrol edilir. Matematiksel çözüm kontrolü desteklenen dört soru tipinde uygulanır. Yayınlamadan önce soruları inceleyin.</p>
-          <p>Havuz bu tarayıcıda saklanır. Sorularınızı JSON olarak yedekleyebilirsiniz.</p>
+          <p>Onaylanan sorular merkezi havuzda saklanır ve giriş yapan tüm cihazlara gerçek zamanlı aktarılır.</p>
           {batchReport?.reasons.map(reason => <p key={reason} className="text-amber-300">{reason}</p>)}
           {isGenerating && <button onClick={() => abortRef.current?.abort()} className="px-4 py-2 rounded-lg bg-rose-700 text-white">Üretimi durdur</button>}
         </div>

@@ -37,7 +37,7 @@ export function validateQuestion(question: BaseQuestion): QuestionValidationResu
     };
   }
 
-  if (!question.id || typeof question.id !== 'string') {
+  if (!question.id || typeof question.id !== 'string' || !/^[A-Za-z0-9_-]{1,160}$/.test(question.id)) {
     errors.push({ code: 'QUESTION_STRUCTURE_INVALID', message: 'Soru kimliği (id) eksik.', field: 'id' });
   }
 
@@ -114,8 +114,8 @@ export function validateQuestion(question: BaseQuestion): QuestionValidationResu
   }
   if (errors.length === 0) {
     const solved = solveQuestion(question);
-    if (solved.supported && (solved.matchingIds.length !== 1 || solved.matchingIds[0] !== question.correctOptionId)) {
-      errors.push({ code: solved.matchingIds.length > 1 ? 'MULTIPLE_CORRECT_ANSWERS' : 'NO_CORRECT_ANSWER', message: 'Bağımsız çözüm kontrolü: cevap anahtarı görünür kuralla eşleşmiyor veya tek bir doğru cevap yok.' });
+    if (!solved.supported || solved.matchingIds.length !== 1 || solved.matchingIds[0] !== question.correctOptionId) {
+      errors.push({ code: solved.matchingIds.length > 1 ? 'MULTIPLE_CORRECT_ANSWERS' : 'NO_CORRECT_ANSWER', message: solved.reason || 'Bağımsız çözüm kontrolü: cevap anahtarı görünür kuralla eşleşmiyor veya tek bir doğru cevap yok.' });
     }
   }
   return {

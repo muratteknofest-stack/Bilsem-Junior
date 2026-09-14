@@ -20,6 +20,7 @@ import { ComboStreakIndicator, getComboTier } from './animations/ComboStreakIndi
 import { ComboBurstOverlay } from './animations/ComboBurstOverlay';
 import { StreakFloatingFloater } from './animations/StreakFloatingFloater';
 import { dataService } from '../services/data-service';
+import { questionBankService } from '../services/question-bank-service';
 import { sound } from '../lib/sound';
 import {
   ArrowLeft,
@@ -230,12 +231,20 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
 
   const startSession = () => {
     sound.playClick();
-    const qList: BaseQuestion[] = [];
-    for (let i = 0; i < 10; i++) {
+    const desiredDifficulties = Array.from({ length: 10 }, (_, i) =>
+      selectedDifficulty === 'adaptive'
+        ? ((i < 3 ? 2 : i < 7 ? 3 : 4) as DifficultyLevel)
+        : (selectedDifficulty as DifficultyLevel)
+    );
+    const qList = questionBankService.pickForPractice({
+      grade: userProfile?.grade as 1 | 2 | 3 | 4 | undefined,
+      category: selectedCategory,
+      difficulty: selectedDifficulty === 'adaptive' ? undefined : selectedDifficulty,
+      count: 10,
+    });
+    for (let i = qList.length; i < 10; i++) {
       const diff: DifficultyLevel =
-        selectedDifficulty === 'adaptive'
-          ? ((i < 3 ? 2 : i < 7 ? 3 : 4) as DifficultyLevel)
-          : (selectedDifficulty as DifficultyLevel);
+        desiredDifficulties[i];
 
       const q = generateQuestion({
         category: selectedCategory,
@@ -1108,4 +1117,3 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
     </div>
   );
 };
-

@@ -15,6 +15,7 @@ import {
   QuestionFilter,
   CreateQuestionPayload,
 } from '../../services/question-bank-service';
+import { publishQuestion, publishQuestions, removePublishedQuestion, replacePublishedPool } from '../../services/question-bank-cloud-service';
 import {
   GRADE_CONFIGS,
   ALL_GRADES,
@@ -203,6 +204,7 @@ export const AdminQuestionManager: React.FC<AdminQuestionManagerProps> = ({
 
   useEffect(() => {
     refreshQuestions();
+    return questionBankService.subscribe(refreshQuestions);
   }, [selectedGrade, selectedCategory, selectedDifficulty, searchQuery]);
 
   // Overall Stats
@@ -263,26 +265,26 @@ export const AdminQuestionManager: React.FC<AdminQuestionManagerProps> = ({
     }
   };
 
-  const handleBatchDelete = () => {
+  const handleBatchDelete = async () => {
     sound.playClick();
     if (selectedQuestionIds.size === 0) return;
     if (window.confirm(`Seçilen ${selectedQuestionIds.size} soruyu silmek istediğinize emin misiniz?`)) {
-      selectedQuestionIds.forEach((id) => {
-        questionBankService.deleteQuestion(id);
-      });
+      try { await Promise.all([...selectedQuestionIds].map(removePublishedQuestion)); }
+      catch (error) { window.alert(error instanceof Error ? error.message : 'Sorular silinemedi.'); return; }
+      selectedQuestionIds.forEach((id) => questionBankService.deleteQuestion(id));
       showNotification(`${selectedQuestionIds.size} soru havuzdan başarıyla silindi.`);
       setSelectedQuestionIds(new Set());
       refreshQuestions();
     }
   };
 
-  const handleBatchDuplicate = (targetGrade: 1 | 2 | 3 | 4) => {
+  const handleBatchDuplicate = async (targetGrade: 1 | 2 | 3 | 4) => {
     sound.playClick();
     if (selectedQuestionIds.size === 0) return;
-    selectedQuestionIds.forEach((id) => {
-      questionBankService.duplicateQuestion(id, targetGrade);
-    });
-    showNotification(`${selectedQuestionIds.size} soru ${targetGrade}. Sınıf havuzuna kopyalandı.`);
+    const clones = [...selectedQuestionIds].map(id => questionBankService.duplicateQuestion(id, targetGrade)).filter(Boolean) as BaseQuestion[];
+    try { await publishQuestions(clones); }
+    catch (error) { clones.forEach(q => questionBankService.deleteQuestion(q.id)); window.alert(error instanceof Error ? error.message : 'Sorular kaydedilemedi.'); return; }
+    showNotification(`${clones.length} yeni varyasyon ${targetGrade}. sınıf ortak havuzuna kaydedildi.`);
     setSelectedQuestionIds(new Set());
     refreshQuestions();
   };
@@ -319,9 +321,11 @@ export const AdminQuestionManager: React.FC<AdminQuestionManagerProps> = ({
     sortBy !== 'default';
 
   // Handle Delete
-  const handleDelete = (id: string, promptTitle: string) => {
+  const handleDelete = async (id: string, promptTitle: string) => {
     sound.playClick();
     if (window.confirm(`"${promptTitle}" sorusunu havuzdan silmek istediğinize emin misiniz?`)) {
+      try { await removePublishedQuestion(id); }
+      catch (error) { window.alert(error instanceof Error ? error.message : 'Soru silinemedi.'); return; }
       const ok = questionBankService.deleteQuestion(id);
       if (ok) {
         showNotification('Soru başarıyla havuzdan kaldırıldı.');
@@ -331,10 +335,12 @@ export const AdminQuestionManager: React.FC<AdminQuestionManagerProps> = ({
   };
 
   // Handle Duplicate
-  const handleDuplicate = (id: string, targetGrade: 1 | 2 | 3 | 4) => {
+  const handleDuplicate = async (id: string, targetGrade: 1 | 2 | 3 | 4) => {
     sound.playClick();
     const cloned = questionBankService.duplicateQuestion(id, targetGrade);
     if (cloned) {
+      try { await publishQuestion(cloned); }
+      catch (error) { questionBankService.deleteQuestion(cloned.id); window.alert(error instanceof Error ? error.message : 'Yeni varyasyon kaydedilemedi.'); return; }
       showNotification(`Soru başarıyla ${targetGrade}. Sınıf havuzuna kopyalandı.`);
       refreshQuestions();
     }
@@ -355,10 +361,13 @@ export const AdminQuestionManager: React.FC<AdminQuestionManagerProps> = ({
   };
 
   // Handle Reset to Defaults
-  const handleResetDefaults = () => {
+  const handleResetDefaults = async () => {
     sound.playClick();
     if (window.confirm('Tüm özel sorular sıfırlanıp varsayılan BİLSEM soru havuzuna dönülsün mü?')) {
-      questionBankService.resetToDefaults();
+      const previous = questionBankService.getAll();
+      const defaults = questionBankService.resetToDefaults();
+      try { await replacePublishedPool(defaults); }
+      catch (error) { questionBankService.replaceFromCloud(previous); window.alert(error instanceof Error ? error.message : 'Ortak havuz sıfırlanamadı.'); return; }
       refreshQuestions();
       showNotification('Soru havuzu varsayılan BİLSEM standartlarına sıfırlandı.', 'info');
     }
@@ -1459,7 +1468,7 @@ const CreateQuestionModal: React.FC<CreateQuestionModalProps> = ({
     setSeed(Math.floor(Math.random() * 900000) + 100000);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     sound.playSuccess();
     const payload: CreateQuestionPayload = {
       targetGrade,
@@ -1476,6 +1485,8 @@ const CreateQuestionModal: React.FC<CreateQuestionModalProps> = ({
 
     try {
       const created = questionBankService.addQuestion(payload);
+      try { await publishQuestion(created); }
+      catch (error) { questionBankService.deleteQuestion(created.id); throw error; }
       onCreated(created);
     } catch (error) { window.alert(error instanceof Error ? error.message : 'Soru kaydedilemedi.'); }
   };
@@ -1860,9 +1871,10 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
   const [summary, setSummary] = useState<string>(question.explanation.summary);
   const [correctOptionId, setCorrectOptionId] = useState<string>(question.correctOptionId);
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     sound.playSuccess();
     try {
+    const previous = question;
     const updated = questionBankService.updateQuestion(question.id, {
       targetGrade,
       targetGrades: [targetGrade],
@@ -1878,6 +1890,8 @@ const EditQuestionModal: React.FC<EditQuestionModalProps> = ({
     });
 
     if (updated) {
+      try { await publishQuestion(updated); }
+      catch (error) { questionBankService.updateQuestion(previous.id, previous); throw error; }
       onSaved(updated);
     }
     } catch (error) { window.alert(error instanceof Error ? error.message : 'Soru güncellenemedi.'); }
@@ -2215,17 +2229,25 @@ const ImportQuestionModal: React.FC<ImportQuestionModalProps> = ({
   const [jsonText, setJsonText] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
-  const handleImport = () => {
+  const handleImport = async () => {
     sound.playClick();
     if (!jsonText.trim()) {
       setError('Lütfen içe aktarılacak JSON içeriğini yapıştırın.');
       return;
     }
 
+    const before = new Set(questionBankService.getAll().map(q => q.id));
     const res = questionBankService.importQuestionsJson(jsonText);
     if (res.success) {
-      sound.playSuccess();
-      onImported(res.count);
+      const imported = questionBankService.getAll().filter(q => !before.has(q.id));
+      try {
+        await publishQuestions(imported);
+        sound.playSuccess();
+        onImported(res.count);
+      } catch (error) {
+        imported.forEach(q => questionBankService.deleteQuestion(q.id));
+        setError(error instanceof Error ? error.message : 'Sorular ortak havuza aktarılamadı.');
+      }
     } else {
       setError(res.error || 'İçe aktarma sırasında bir hata oluştu.');
     }

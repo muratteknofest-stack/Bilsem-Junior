@@ -426,12 +426,8 @@ export function generateShapeCountingQuestion(seed: number, difficulty: Difficul
 
   // Generate coordinates for the items inside a 100x100 box
   const itemsCoords: { x: number; y: number }[] = [];
-  for (let i = 0; i < targetCount; i++) {
-    itemsCoords.push({
-      x: rng.nextInt(15, 85),
-      y: rng.nextInt(15, 85),
-    });
-  }
+  const locations = rng.pickUnique(Array.from({length: 25}, (_, i) => ({x: 15+(i%5)*17, y: 15+Math.floor(i/5)*17})), targetCount);
+  itemsCoords.push(...locations);
 
   return {
     id: `cnt-${seed}-${difficulty}`,

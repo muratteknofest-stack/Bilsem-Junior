@@ -1,4 +1,5 @@
 import React from 'react';
+import { GridBoard, PolygonBoard } from './VerifiedPuzzle';
 import { DetailGrid } from './DetailGrid';
 import { motion } from 'motion/react';
 import { VisualOption, QuestionType } from '../../../types';
@@ -52,6 +53,9 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
     }
 
     const vd: any = visualData || {};
+
+    if (vd.cells) return <GridBoard cells={vd.cells} size={vd.size} />;
+    if (vd.points) return <PolygonBoard points={vd.points} size={vd.size} />;
 
     // 1. Direct numerical or text badge (e.g. counting, equation, or number pattern)
     if (vd.textNumber !== undefined && vd.textNumber !== null) {

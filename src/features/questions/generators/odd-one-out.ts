@@ -45,7 +45,7 @@ export function generateOddOneOutQuestion(seed: number, difficulty: DifficultyLe
     explanationStep = `${String.fromCharCode(65 + correctIdx)} seçeneğindeki şekil diğerleri gibi 90° dik açılarla değil, 45° eğik bir açıyla döndürülmüştür.`;
   } else if (ruleType === 2) {
     // Marker position rule with 4 distinct rotations (0, 90, 180, 270)
-    const shape = rng.pick(SHAPES_POOL.filter((s) => s !== 'arrow' && s !== 'circle'));
+    const shape = rng.pick(ASYMMETRIC_SHAPES);
     ruleTitle = 'İşaretleyici Konumu';
     const angles = [0, 90, 180, 270];
     const markerPositions: ('top' | 'right' | 'bottom' | 'left')[] = ['top', 'right', 'bottom', 'left'];
@@ -53,7 +53,7 @@ export function generateOddOneOutQuestion(seed: number, difficulty: DifficultyLe
     for (let i = 0; i < 4; i++) {
       if (i === correctIdx) {
         // Inverted marker position
-        const wrongPos = markerPositions[(i + 2) % 4];
+        const wrongPos = 'bottom';
         optionsData.push({
           kind: shape,
           fill: baseColor,
@@ -68,7 +68,7 @@ export function generateOddOneOutQuestion(seed: number, difficulty: DifficultyLe
           fill: baseColor,
           rotation: angles[i],
           marker: 'dot',
-          markerPos: markerPositions[i],
+          markerPos: 'top',
           markerColor: PALETTE.white,
         });
       }

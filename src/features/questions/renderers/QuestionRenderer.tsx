@@ -1,4 +1,5 @@
 import React from 'react';
+import { VerifiedPuzzle } from './VerifiedPuzzle';
 import { DetailGrid } from './DetailGrid';
 import { motion } from 'motion/react';
 import { BaseQuestion } from '../../../types';
@@ -12,6 +13,8 @@ interface QuestionRendererProps {
 export const QuestionRenderer: React.FC<QuestionRendererProps> = ({ question }) => {
   const { visualConfig, type } = question;
   const mode = visualConfig?.displayMode || 'default';
+
+  if (mode === 'verified_puzzle') return <VerifiedPuzzle task={visualConfig.task} />;
 
   // 1. Sequence Mode (Görsel Örüntü)
   if (mode === 'sequence') {

@@ -24,7 +24,7 @@ const QUESTION_TYPES: { id: QuestionType; label: string }[] = [
 
 interface CreateQuestionWizardProps {
   onClose: () => void;
-  onSave: (question: any) => void;
+  onSave: (question: any) => void | Promise<void>;
 }
 
 export const CreateQuestionWizard: React.FC<CreateQuestionWizardProps> = ({ onClose, onSave }) => {
@@ -88,10 +88,15 @@ export const CreateQuestionWizard: React.FC<CreateQuestionWizardProps> = ({ onCl
 
   const handleSave = () => {
     setIsGenerating(true);
-    setTimeout(() => {
-      onSave(mockPreviewQuestion);
-      setIsGenerating(false);
-      onClose();
+    setTimeout(async () => {
+      try {
+        await onSave(mockPreviewQuestion);
+        onClose();
+      } catch (error) {
+        window.alert(error instanceof Error ? error.message : 'Soru ortak havuza kaydedilemedi.');
+      } finally {
+        setIsGenerating(false);
+      }
     }, 800);
   };
 

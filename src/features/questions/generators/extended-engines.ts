@@ -58,6 +58,7 @@ export function generateShapeEquationQuestion(seed: number, difficulty: Difficul
     visualConfig: {
       displayMode: 'shape_equation',
       equations: [
+        { left: [{ shape: shapes[0], fill: color }, { shape: shapes[0], fill: color }], right: valA * 2, op: '+' },
         { left: [{ shape: shapes[0], fill: color }, { shape: shapes[1], fill: color }], right: eq1Ans, op: '+' },
         { left: [{ shape: shapes[0], fill: color }, { shape: shapes[2], fill: color }], right: eq2Ans, op: '+' },
         { left: [{ shape: shapes[1], fill: color }, { shape: shapes[2], fill: color }], right: '?', op: '+' }
@@ -173,7 +174,7 @@ export function generateLatinSquareQuestion(seed: number, difficulty: Difficulty
     difficulty,
     prompt: 'Her satır ve her sütunda her şekil sadece bir kez bulunmalıdır. Soru işaretli yere hangi şekil gelmelidir?',
     visualConfig: {
-      displayMode: size === 3 ? 'matrix_3x3' : 'shape_grid',
+      displayMode: 'shape_grid',
       gridSize: size,
       grid: renderGrid
     },
@@ -766,8 +767,8 @@ export function generateCryptogramQuestion(seed: number, difficulty: DifficultyL
     return w;
   };
   
-  const word1 = generateWord(4);
-  const word2 = generateWord(4);
+  const word1 = subset.slice(0, 4).join('');
+  const word2 = subset.slice(1).join('');
   const word3 = generateWord(4);
   const targetWord = generateWord(4);
   

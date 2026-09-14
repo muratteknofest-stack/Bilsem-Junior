@@ -282,6 +282,7 @@ export interface BaseQuestion {
   targetGrades?: (1 | 2 | 3 | 4)[];
   createdAt?: string;
   isCustom?: boolean;
+  status?: 'published' | 'draft';
 }
 
 export interface PracticeSessionState {

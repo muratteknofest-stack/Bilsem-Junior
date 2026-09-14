@@ -4,6 +4,7 @@ import { useAuth } from './contexts/AuthContext';
 import { AnimatePresence, motion } from 'motion/react';
 import { UserProfile, UserRole, SkillMastery, MistakeItem, DailyStudyPlan, ReminderAlertEvent, CognitiveCategory } from './types';
 import { dataService } from './services/data-service';
+import { startQuestionBankSync, stopQuestionBankSync } from './services/question-bank-cloud-service';
 import { reminderService } from './services/reminder-service';
 import { Navbar } from './components/Navbar';
 import { MobileBottomNav } from './components/MobileBottomNav';
@@ -75,6 +76,12 @@ export default function App() {
       }
     }
   }, [userProfile]);
+
+  useEffect(() => {
+    if (!authUser || !userProfile) { stopQuestionBankSync(); return; }
+    startQuestionBankSync(userProfile.role === 'admin').catch(error => console.error('Soru havuzu eşitlenemedi:', error));
+    return stopQuestionBankSync;
+  }, [authUser?.uid, userProfile?.role]);
 
   // Subscribe to background/instant study reminder alerts
   useEffect(() => {

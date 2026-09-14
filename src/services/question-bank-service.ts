@@ -43,6 +43,8 @@ export interface CreateQuestionPayload {
 export class QuestionBankService {
   private questions: BaseQuestion[] = [];
   private initialized: boolean = false;
+  private listeners = new Set<(questions: BaseQuestion[]) => void>();
+  private cloudError: string | null = null;
 
   constructor() {
     this.init();
@@ -55,8 +57,16 @@ export class QuestionBankService {
       const stored = safeStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          this.questions = parsed;
+        if (Array.isArray(parsed)) {
+          const valid = parsed.filter((q: BaseQuestion) => validateQuestion(q).isValid);
+          if (valid.length !== parsed.length) {
+            const defaults = this.buildInitialQuestionPool();
+            const seen = new Set(defaults.map(questionContentKey));
+            this.questions = [...defaults, ...valid.filter((q: BaseQuestion) => q.isCustom && !seen.has(questionContentKey(q)))];
+            this.save();
+          } else {
+            this.questions = valid;
+          }
           this.initialized = true;
           return;
         }
@@ -182,9 +192,23 @@ export class QuestionBankService {
     return pool;
   }
 
+  private notify() { const snapshot=this.getAll(); this.listeners.forEach(listener=>listener(snapshot)); }
+
+  public subscribe(listener: (questions: BaseQuestion[]) => void) { this.listeners.add(listener); listener(this.getAll()); return () => { this.listeners.delete(listener); }; }
+  public replaceFromCloud(questions: BaseQuestion[]) { this.questions=[...questions]; this.save(); this.cloudError=null; }
+  public reportCloudError(error: unknown) { this.cloudError=error instanceof Error?error.message:String(error); this.notify(); }
+  public getCloudError() { return this.cloudError; }
+  public pickForPractice(options: {grade?: 1|2|3|4; category?: CognitiveCategory|'mixed'; difficulty?: DifficultyLevel; count:number; excludeIds?:string[]}): BaseQuestion[] {
+    const excluded=new Set(options.excludeIds||[]);
+    let pool=this.questions.filter(q=>!excluded.has(q.id)&&(options.category==='mixed'||!options.category||q.category===options.category)&&(!options.grade||q.targetGrade===options.grade||q.targetGrades?.includes(options.grade))&&(!options.difficulty||Math.abs(q.difficulty-options.difficulty)<=1));
+    if(pool.length<options.count) pool=this.questions.filter(q=>!excluded.has(q.id)&&(options.category==='mixed'||!options.category||q.category===options.category));
+    return [...pool].sort(()=>Math.random()-.5).slice(0,options.count);
+  }
+
   private save() {
     try {
       safeStorage.setItem(STORAGE_KEY, JSON.stringify(this.questions));
+      this.notify();
     } catch (e) {
       console.warn('Failed to save questions to safeStorage', e);
     }

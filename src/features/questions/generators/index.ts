@@ -1,4 +1,5 @@
 import { BaseQuestion, CognitiveCategory, DifficultyLevel, QuestionType } from '../../../types';
+import { generateVerifiedPuzzle, REBUILT_TYPES } from './verified-puzzles';
 import { SeededRNG } from '../../../lib/rng';
 import { validateQuestion } from '../validator';
 import { GRADE_CONFIGS } from '../grade-config';
@@ -132,7 +133,8 @@ export function generateQuestionByType(
   }
   let q: BaseQuestion;
 
-  switch (type) {
+  if (REBUILT_TYPES.includes(type)) q = generateVerifiedPuzzle(type, seed, difficulty);
+  else switch (type) {
     case 'odd_one_out':
       q = generateOddOneOutQuestion(seed, difficulty);
       break;

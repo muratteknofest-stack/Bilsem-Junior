@@ -6,6 +6,7 @@ import { QuestionRenderer } from '../features/questions/renderers/QuestionRender
 import { OptionRenderer } from '../features/questions/renderers/OptionRenderer';
 import { VisualCountdownTimer } from './VisualCountdownTimer';
 import { dataService } from '../services/data-service';
+import { questionBankService } from '../services/question-bank-service';
 import { sound } from '../lib/sound';
 import {
   Trophy,
@@ -223,9 +224,13 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
       'memory',
     ];
 
-    const qList: BaseQuestion[] = [];
     const count = targetMode.qCount || 10;
-    for (let i = 0; i < count; i++) {
+    const qList = questionBankService.pickForPractice({
+      grade: targetMode.grade as 1 | 2 | 3 | 4 | undefined,
+      category: targetMode.category || 'mixed',
+      count,
+    });
+    for (let i = qList.length; i < count; i++) {
       if (targetMode.category) {
         const diff = Math.min(6, Math.floor(i / (count / 4)) + 2) as DifficultyLevel;
         qList.push(generateQuestion({

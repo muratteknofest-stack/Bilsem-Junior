@@ -1,0 +1,32 @@
+import React from 'react';
+import type { Cell } from '../solvers/puzzle';
+export function GridBoard({cells,size=4,colors,heights}:{cells:Cell[];size?:number;colors?:string[];heights?:number[][]}) {
+  return <svg viewBox={`0 0 ${size*32+8} ${size*32+8}`} role="img" aria-label={heights?'Küp yükseklik planı':'Kare deseni'} className="w-full max-w-56 max-h-56 mx-auto">
+    {Array.from({length:size*size},(_,i)=>{
+      const x=i%size,y=Math.floor(i/size),index=cells.findIndex(c=>c[0]===x&&c[1]===y);
+      return <g key={i}><rect x={4+x*32} y={4+y*32} width="32" height="32" fill={heights?'#f8fafc':index<0?'#fff':colors?.[index]||'#334155'} stroke="#94a3b8" strokeWidth="1"/>{heights&&<text x={20+x*32} y={26+y*32} textAnchor="middle" fontSize="18" fontWeight="700" fill="#0f172a">{heights[y][x]}</text>}</g>;
+    })}
+  </svg>;
+}
+export function PolygonBoard({points,size=8}:{points:Cell[];size?:number}) {
+  return <svg viewBox={`-1 -1 ${size+2} ${size+2}`} className="w-full h-32" role="img" aria-label="Geometrik parça"><polygon points={points.map(p=>p.join(',')).join(' ')} fill="#4f46e5" stroke="#1e293b" strokeWidth=".12"/></svg>;
+}
+export function VerifiedPuzzle({task:t}: {task:any}) {
+  const board=(cells:Cell[],size=t.size,colors?:string[]) => <GridBoard cells={cells} size={size} colors={colors}/>;
+  const card=(title:string,child:React.ReactNode,key?:number)=><div key={key} className="p-3 bg-white rounded-xl border border-slate-200 space-y-2 min-w-0"><p className="text-sm text-slate-700 font-semibold text-center">{title}</p>{child}</div>;
+  switch(t.kind) {
+    case 'reflection': return <div className="space-y-3 w-full">{board(t.cells)}<p className="text-sm text-center text-slate-700">{t.axis==='vertical'?'Dikey eksen: sağ ↔ sol':'Yatay eksen: üst ↔ alt'} · Aynı büyüklükte karşı yarı</p></div>;
+    case 'silhouette': return board(t.cells,t.size,t.colors);
+    case 'union': return <div className="grid grid-cols-2 gap-3 w-full">{t.parts.map((p:Cell[],i:number)=>card(`Parça ${i+1}`,board(p),i))}</div>;
+    case 'polygon_piece': return <svg viewBox="-1 -1 10 10" className="w-full h-64" role="img" aria-label="Eksik parçalı tangram karesi">{t.pieces.map((p:Cell[],i:number)=><polygon key={i} points={p.map(c=>c.join(',')).join(' ')} fill={i===t.missing?'#fff':['#4f46e5','#2563eb','#059669','#db2777','#d97706','#0891b2','#7c3aed'][i]} stroke="#0f172a" strokeWidth=".08" strokeDasharray={i===t.missing?'.2 .15':undefined}/>)}<text x={t.pieces[t.missing].reduce((s:number,p:Cell)=>s+p[0],0)/t.pieces[t.missing].length} y={t.pieces[t.missing].reduce((s:number,p:Cell)=>s+p[1],0)/t.pieces[t.missing].length+.25} textAnchor="middle" fill="#0f172a" fontSize=".8">?</text></svg>;
+    case 'fold': return <div className="space-y-3 w-full"><p className="text-sm text-center text-slate-800">{t.axes.map((a:string,i:number)=>`${i+1}. katlama: ${a==='vertical'?'sol yarı sağa →':'üst yarı aşağıya ↓'}`).join(' · ')}</p><svg viewBox="0 0 272 272" className="h-56 w-full" role="img" aria-label="Katlanmış bölge ve delik konumu"><rect x="8" y="8" width="256" height="256" fill="#f1f5f9" stroke="#64748b"/>{t.axes.includes('vertical')&&<path d="M136 8V264" stroke="#4f46e5" strokeDasharray="5 4"/>}{t.axes.includes('horizontal')&&<path d="M8 136H264" stroke="#4f46e5" strokeDasharray="5 4"/>}<rect x={t.axes.includes('vertical')?136:8} y={t.axes.includes('horizontal')?136:8} width={t.axes.includes('vertical')?128:256} height={t.axes.includes('horizontal')?128:256} fill="#c7d2fe" stroke="#4f46e5"/>{t.holes.map(([x,y]:Cell,i:number)=><circle key={i} cx={24+x*32} cy={24+y*32} r="9" fill="#0f172a"/>)}</svg><p className="text-sm text-center text-slate-600">Mor alan: katlanan kağıt · Siyah nokta: açılan delik</p></div>;
+    case 'projection': return <div className="w-full space-y-2"><p className="text-sm text-center font-semibold text-slate-700">Üstten yükseklik planı · Her sayı bir sütunun yüksekliğidir</p><GridBoard cells={[]} size={t.heights.length} heights={t.heights}/><p className="text-sm text-center text-slate-700">ÖN: planın alt kenarı ↑ · SAĞ: sağ kenarı ←</p>{t.view==='right'&&<p className="text-sm text-center">Sağdan görünüşte soldan sağa sıra: plandaki üst satırdan alt satıra.</p>}</div>;
+    case 'boolean_matrix': return <div className="grid grid-cols-3 gap-2 w-full">{t.rows.flatMap((row:any[],r:number)=>row.map((cells:Cell[]|null,c:number)=>card(`${r+1}. satır · ${c+1}. kutu`,cells?board(cells):<div className="h-28 flex items-center justify-center text-4xl text-indigo-600">?</div>,r*3+c)))}</div>;
+    case 'assignment': return <div className="w-full text-slate-800 space-y-3"><p className="text-sm">Nesneler: {t.items.join(' · ')}</p><ul className="list-disc pl-5 space-y-2">{t.clues.map((c:any,i:number)=><li key={i}>{t.names[c.person]} — {c.item} {c.op==='is'?'eşleşmesi kesindir.':'eşleşmesi değildir.'}</li>)}</ul></div>;
+    case 'ordering': return <div className="w-full text-slate-800 space-y-3"><p>Kişiler: {t.names.join(', ')}</p><ul className="list-disc pl-5 space-y-2">{t.before.map(([a,b]:string[],i:number)=><li key={i}>{a}, {b} kişisinden önce gelir.</li>)}</ul></div>;
+    case 'word_order': return <div className="w-full space-y-4"><div className="flex justify-center gap-2">{Array.from(t.word as string).map((c,i)=><div key={i} className="text-center bg-white rounded-lg p-2 border text-slate-900"><span className="block text-2xl font-bold">{c}</span><span className="text-sm">{i+1}</span></div>)}</div><p className="text-center text-slate-800">Yeni sıra: {t.order.join(' → ')}</p></div>;
+    case 'analogy': return <div className="w-full overflow-x-auto"><table className="w-full text-sm text-slate-800"><thead><tr><th className="p-2">Sözcük</th><th>İlişki</th><th>Karşılık</th></tr></thead><tbody>{t.facts.map((f:any,i:number)=><tr key={i} className="border-t"><td className="p-2">{f.from}</td><td>{f.relation}</td><td>{f.to}</td></tr>)}</tbody></table></div>;
+    case 'cube_net': return <svg viewBox="-5 -5 160 210" className="w-full h-64" role="img" aria-label="Altı yüzlü küp açılımı">{t.cells.map(([x,y]:Cell,i:number)=><g key={i}><rect x={x*50} y={y*50} width="50" height="50" fill={i===t.target?'#c7d2fe':'#fff'} stroke="#475569" strokeWidth="2"/><text x={x*50+25} y={y*50+32} textAnchor="middle" fontSize="24" fill="#1e293b">{t.labels[i]}</text></g>)}</svg>;
+    default:return <p role="alert">Görsel soru yapılandırması geçersiz.</p>;
+  }
+}
