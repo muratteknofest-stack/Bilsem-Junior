@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, ChevronRight, ChevronLeft, Save, Plus, Wand2, Play, Image as ImageIcon, Settings2, Sparkles, CheckCircle2 } from 'lucide-react';
 import { 
@@ -8,19 +8,14 @@ import {
   COGNITIVE_CATEGORY_LABELS,
   ALL_COGNITIVE_CATEGORIES,
   BaseQuestion,
-  DIFFICULTY_LABELS
+  DIFFICULTY_LABELS,
+  QUESTION_TYPE_LABELS
 } from '../types';
+import { CATEGORY_TYPES_MAP } from '../features/questions/generators';
+import { createManagedQuestion } from '../features/questions/create-managed-question';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
 import { OptionRenderer } from '../features/questions/renderers/OptionRenderer';
 import { QuestionQualityChecker } from './QuestionQualityChecker';
-
-const QUESTION_TYPES: { id: QuestionType; label: string }[] = [
-  { id: 'odd_one_out', label: '01 Farklı Olanı Bul' },
-  { id: 'visual_sequence', label: '02 Görsel Örüntü' },
-  { id: 'matrix_2x2', label: '03 2x2 Matris' },
-  { id: 'figure_rotation', label: '04 Şekil Döndürme' },
-  { id: 'spatial_relationship', label: '08 Uzamsal İlişki' },
-];
 
 interface CreateQuestionWizardProps {
   onClose: () => void;
@@ -35,46 +30,14 @@ export const CreateQuestionWizard: React.FC<CreateQuestionWizardProps> = ({ onCl
   const [category, setCategory] = useState<CognitiveCategory>('visual_perception');
   const [type, setType] = useState<QuestionType>('odd_one_out');
   const [difficulty, setDifficulty] = useState<DifficultyLevel>(1);
-  const [ageGroup, setAgeGroup] = useState<'1-2' | '3-4' | 'all'>('all');
-  const [prompt, setPrompt] = useState('Aşağıdaki örüntüde soru işareti yerine hangi şekil gelmelidir?');
+  const [targetGrade, setTargetGrade] = useState<1 | 2 | 3 | 4>(1);
   const [secondaryPrompt, setSecondaryPrompt] = useState('');
   const [seed, setSeed] = useState(1001);
 
-  // Mock Preview Question based on current state
-  const mockPreviewQuestion: BaseQuestion = {
-    id: `NEW-${Date.now()}`,
-    version: 1,
-    type,
-    category,
-    difficulty,
-    ageGroup,
-    prompt,
-    secondaryPrompt,
-        options: [
-      { id: 'A', label: 'A', fingerprint: 'a', visualData: { type: 'shape', kind: 'triangle', color: '#3b82f6' } },
-      { id: 'B', label: 'B', fingerprint: 'b', visualData: { type: 'shape', kind: 'square', color: '#ef4444' } },
-      { id: 'C', label: 'C', fingerprint: 'c', visualData: { type: 'shape', kind: 'circle', color: '#10b981' } },
-      { id: 'D', label: 'D', fingerprint: 'd', visualData: { type: 'shape', kind: 'star', color: '#f59e0b' } },
-    ],
-    correctOptionId: 'C',
-    explanation: { summary: '', ruleTitle: '', steps: [] },
-    estimatedSeconds: 30,
-    skills: [],
-    seed,
-    visualConfig: {
-      displayMode: type === 'visual_sequence' ? 'sequence' : type === 'matrix_2x2' ? 'matrix_2x2' : 'default',
-      sequenceItems: [
-        { kind: 'circle', color: '#3b82f6' },
-        { kind: 'square', color: '#ef4444' },
-        { kind: 'triangle', color: '#10b981' }
-      ],
-      matrixItems: [
-        [ { kind: 'circle', color: '#3b82f6' }, { kind: 'circle', color: '#ef4444' } ],
-        [ { kind: 'square', color: '#3b82f6' }, null ]
-      ]
-    },
-    isCustom: true
-  };
+  const availableTypes = CATEGORY_TYPES_MAP[category];
+  const previewQuestion: BaseQuestion = useMemo(() => createManagedQuestion({
+    category, difficulty, secondaryPrompt, seed, targetGrade, type,
+  }), [category, difficulty, secondaryPrompt, seed, targetGrade, type]);
 
   const steps = [
     { num: 1, title: 'Temel Bilgiler' },
@@ -90,7 +53,7 @@ export const CreateQuestionWizard: React.FC<CreateQuestionWizardProps> = ({ onCl
     setIsGenerating(true);
     setTimeout(async () => {
       try {
-        await onSave(mockPreviewQuestion);
+        await onSave(previewQuestion);
         onClose();
       } catch (error) {
         window.alert(error instanceof Error ? error.message : 'Soru ortak havuza kaydedilemedi.');
@@ -169,7 +132,11 @@ export const CreateQuestionWizard: React.FC<CreateQuestionWizardProps> = ({ onCl
                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Bilişsel Kategori</label>
                     <select 
                       value={category}
-                      onChange={e => setCategory(e.target.value as CognitiveCategory)}
+                      onChange={e => {
+                        const nextCategory = e.target.value as CognitiveCategory;
+                        setCategory(nextCategory);
+                        setType(CATEGORY_TYPES_MAP[nextCategory][0]);
+                      }}
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow"
                     >
                       {ALL_COGNITIVE_CATEGORIES.map(cat => (
@@ -185,8 +152,8 @@ export const CreateQuestionWizard: React.FC<CreateQuestionWizardProps> = ({ onCl
                       onChange={e => setType(e.target.value as QuestionType)}
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow"
                     >
-                      {QUESTION_TYPES.map(qt => (
-                        <option key={qt.id} value={qt.id}>{qt.label}</option>
+                      {availableTypes.map(questionType => (
+                        <option key={questionType} value={questionType}>{QUESTION_TYPE_LABELS[questionType]}</option>
                       ))}
                     </select>
                   </div>
@@ -194,7 +161,7 @@ export const CreateQuestionWizard: React.FC<CreateQuestionWizardProps> = ({ onCl
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Zorluk Seviyesi</label>
                     <div className="grid grid-cols-3 gap-2">
-                      {[1, 2, 3].map(lvl => (
+                      {[1, 2, 3, 4, 5, 6].map(lvl => (
                         <button
                           key={lvl}
                           onClick={() => setDifficulty(lvl as DifficultyLevel)}
@@ -204,22 +171,23 @@ export const CreateQuestionWizard: React.FC<CreateQuestionWizardProps> = ({ onCl
                               : 'bg-white dark:bg-slate-800 border-2 border-transparent text-slate-600 dark:text-slate-400 hover:border-zinc-200'
                           }`}
                         >
-                          {DIFFICULTY_LABELS[lvl as 1|2|3]}
+                          {DIFFICULTY_LABELS[lvl as DifficultyLevel]}
                         </button>
                       ))}
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Hedef Sınıf / Yaş</label>
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Hedef Sınıf</label>
                     <select 
-                      value={ageGroup}
-                      onChange={e => setAgeGroup(e.target.value as '1-2'|'3-4'|'all')}
+                      value={targetGrade}
+                      onChange={e => setTargetGrade(Number(e.target.value) as 1 | 2 | 3 | 4)}
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow"
                     >
-                      <option value="all">Tüm Sınıflar</option>
-                      <option value="1-2">1. ve 2. Sınıflar</option>
-                      <option value="3-4">3. ve 4. Sınıflar</option>
+                      <option value={1}>1. Sınıf</option>
+                      <option value={2}>2. Sınıf</option>
+                      <option value={3}>3. Sınıf</option>
+                      <option value={4}>4. Sınıf</option>
                     </select>
                   </div>
                 </div>
@@ -238,24 +206,24 @@ export const CreateQuestionWizard: React.FC<CreateQuestionWizardProps> = ({ onCl
                 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Ana Yönerge (Prompt)</label>
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Doğrulanmış Ana Yönerge</label>
                     <textarea 
-                      value={prompt}
-                      onChange={e => setPrompt(e.target.value)}
+                      value={previewQuestion.prompt}
+                      readOnly
                       rows={3}
-                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow resize-none"
-                      placeholder="Örn: Aşağıdaki şekillerin örüntüsünü bozan hangisidir?"
+                      className="w-full px-4 py-3 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/20 text-slate-800 dark:text-slate-200 outline-none resize-none"
                     />
+                    <p className="text-xs text-emerald-700 dark:text-emerald-400">Yönerge, görünen veriler ve bağımsız çözümleyici aynı kurala bağlıdır; bu nedenle otomatik oluşturulur.</p>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">İkincil Yönerge (Opsiyonel)</label>
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Ek Açıklama (Opsiyonel)</label>
                     <input 
                       type="text"
                       value={secondaryPrompt}
                       onChange={e => setSecondaryPrompt(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow"
-                      placeholder="Örn: Dikkatlice inceleyin."
+                      placeholder="Örn: Dikkatlice inceleyin. Çözüm kuralını değiştirmez."
                     />
                   </div>
 
@@ -332,7 +300,7 @@ export const CreateQuestionWizard: React.FC<CreateQuestionWizardProps> = ({ onCl
                       <div>
                         <p className="text-sm font-medium text-amber-800 dark:text-amber-400">Canlı Üretim Aktif</p>
                         <p className="text-xs text-amber-700/80 dark:text-amber-500/80 mt-1">
-                          Girdiğiniz tohum değeri (seed) ile sonsuz sayıda benzersiz soru varyasyonu oluşturabilirsiniz. Renkler, şekiller ve doğru cevap lokasyonu otomatik belirlenir.
+                          Tohum değeriyle binlerce tekrarlanabilir varyasyon oluşturabilirsiniz. Görsel veriler, çeldiriciler ve doğru cevap bağımsız çözüm kontrolünden geçirilir.
                         </p>
                       </div>
                     </div>
@@ -358,26 +326,26 @@ export const CreateQuestionWizard: React.FC<CreateQuestionWizardProps> = ({ onCl
                 
                 <div className="bg-white dark:bg-slate-900 border border-zinc-200 dark:border-slate-700 rounded-xl p-6 ">
                   <div className="text-center mb-8">
-                    <h2 className="text-xl font-bold text-slate-800 dark:text-white">{mockPreviewQuestion.prompt}</h2>
-                    {mockPreviewQuestion.secondaryPrompt && (
-                      <p className="text-slate-500 dark:text-slate-400 mt-2">{mockPreviewQuestion.secondaryPrompt}</p>
+                    <h2 className="text-xl font-bold text-slate-800 dark:text-white">{previewQuestion.prompt}</h2>
+                    {previewQuestion.secondaryPrompt && (
+                      <p className="text-slate-500 dark:text-slate-400 mt-2">{previewQuestion.secondaryPrompt}</p>
                     )}
                   </div>
 
                   <div className="pointer-events-none">
-                    <QuestionRenderer question={mockPreviewQuestion} />
+                    <QuestionRenderer question={previewQuestion} />
                   </div>
                   
                   <div className="mt-8 border-t border-zinc-200 dark:border-slate-800 pt-6">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pointer-events-none">
-                      {mockPreviewQuestion.options.map((opt) => (
+                      {previewQuestion.options.map((opt) => (
                         <OptionRenderer
                           key={opt.id}
                           option={opt}
-                          isSelected={opt.id === mockPreviewQuestion.correctOptionId}
+                          isSelected={opt.id === previewQuestion.correctOptionId}
                           onSelect={() => {}}
                           showCorrect={true}
-                          isCorrectOption={opt.id === mockPreviewQuestion.correctOptionId}
+                          isCorrectOption={opt.id === previewQuestion.correctOptionId}
                         />
                       ))}
                     </div>
@@ -387,7 +355,7 @@ export const CreateQuestionWizard: React.FC<CreateQuestionWizardProps> = ({ onCl
                 {/* Pre-Submission Quality Checker */}
                 <div className="mt-4">
                   <QuestionQualityChecker
-                    question={mockPreviewQuestion}
+                    question={previewQuestion}
                     showAutoFixButton={false}
                   />
                 </div>

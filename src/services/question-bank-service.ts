@@ -27,6 +27,12 @@ export interface QuestionBankStats {
   byDifficulty: Record<DifficultyLevel, number>;
 }
 
+export interface QuestionBankSyncStatus {
+  state: 'idle' | 'syncing' | 'connected' | 'error';
+  lastSyncedAt: number | null;
+  error: string | null;
+}
+
 export interface CreateQuestionPayload {
   targetGrade: 1 | 2 | 3 | 4;
   category: CognitiveCategory;
@@ -44,7 +50,7 @@ export class QuestionBankService {
   private questions: BaseQuestion[] = [];
   private initialized: boolean = false;
   private listeners = new Set<(questions: BaseQuestion[]) => void>();
-  private cloudError: string | null = null;
+  private syncStatus: QuestionBankSyncStatus = { state: 'idle', lastSyncedAt: null, error: null };
 
   constructor() {
     this.init();
@@ -195,9 +201,11 @@ export class QuestionBankService {
   private notify() { const snapshot=this.getAll(); this.listeners.forEach(listener=>listener(snapshot)); }
 
   public subscribe(listener: (questions: BaseQuestion[]) => void) { this.listeners.add(listener); listener(this.getAll()); return () => { this.listeners.delete(listener); }; }
-  public replaceFromCloud(questions: BaseQuestion[]) { this.questions=[...questions]; this.save(); this.cloudError=null; }
-  public reportCloudError(error: unknown) { this.cloudError=error instanceof Error?error.message:String(error); this.notify(); }
-  public getCloudError() { return this.cloudError; }
+  public beginCloudSync() { this.syncStatus={...this.syncStatus,state:'syncing',error:null}; this.notify(); }
+  public replaceFromCloud(questions: BaseQuestion[]) { this.questions=[...questions]; this.syncStatus={state:'connected',lastSyncedAt:Date.now(),error:null}; this.save(); }
+  public reportCloudError(error: unknown) { this.syncStatus={...this.syncStatus,state:'error',error:error instanceof Error?error.message:String(error)}; this.notify(); }
+  public getCloudError() { return this.syncStatus.error; }
+  public getSyncStatus(): QuestionBankSyncStatus { return {...this.syncStatus}; }
   public pickForPractice(options: {grade?: 1|2|3|4; category?: CognitiveCategory|'mixed'; difficulty?: DifficultyLevel; count:number; excludeIds?:string[]}): BaseQuestion[] {
     const excluded=new Set(options.excludeIds||[]);
     let pool=this.questions.filter(q=>!excluded.has(q.id)&&(options.category==='mixed'||!options.category||q.category===options.category)&&(!options.grade||q.targetGrade===options.grade||q.targetGrades?.includes(options.grade))&&(!options.difficulty||Math.abs(q.difficulty-options.difficulty)<=1));

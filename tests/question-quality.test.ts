@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ALL_QUESTION_TYPES, generateQuestionByType } from '../src/features/questions/generators/index.ts';
+import { ALL_QUESTION_TYPES, CATEGORY_TYPES_MAP, generateQuestionByType } from '../src/features/questions/generators/index.ts';
+import { createManagedQuestion } from '../src/features/questions/create-managed-question.ts';
 import { validateQuestion } from '../src/features/questions/validator.ts';
 import { questionContentKey } from '../src/features/questions/quality.ts';
 import { generateQuestionBatch } from '../src/features/questions/batch-generation.ts';
@@ -19,6 +20,22 @@ test('all 44 independent solvers reject a changed answer key', () => {
     const q = generateQuestionByType(type, 8391, 4);
     q.correctOptionId = q.options.find(o => o.id !== q.correctOptionId)!.id;
     assert.equal(validateQuestion(q).isValid, false, type);
+  }
+});
+test('the admin wizard creates a publishable real question for all 44 engines', () => {
+  for (const [index, type] of ALL_QUESTION_TYPES.entries()) {
+    const category = Object.entries(CATEGORY_TYPES_MAP).find(([, types]) => types.includes(type))![0] as keyof typeof CATEGORY_TYPES_MAP;
+    const question = createManagedQuestion({
+      type,
+      category,
+      seed: 93000 + index,
+      difficulty: ((index % 6) + 1) as DifficultyLevel,
+      targetGrade: ((index % 4) + 1) as 1 | 2 | 3 | 4,
+      createdAt: '2026-09-14T00:00:00.000Z',
+    });
+    assert.equal(validateQuestion(question).isValid, true, type);
+    assert.equal(question.isCustom, true);
+    assert.deepEqual(question.targetGrades, [question.targetGrade]);
   }
 });
 test('malformed imports are rejected without crashing', () => {
@@ -72,12 +89,18 @@ test('a cloud replacement is observable by a second client and remains filterabl
   shared[0].targetGrade = 2;
   let observed: BaseQuestion[] = [];
   const unsubscribe = reader.subscribe(questions => { observed = questions; });
+  reader.beginCloudSync();
+  assert.equal(reader.getSyncStatus().state, 'syncing');
   reader.replaceFromCloud(shared);
+  assert.equal(reader.getSyncStatus().state, 'connected');
+  assert.ok(reader.getSyncStatus().lastSyncedAt);
   assert.equal(observed[0].id, shared[0].id);
   assert.equal(reader.pickForPractice({ grade: 2, category: 'matrix', count: 1 })[0].id, shared[0].id);
   reader.replaceFromCloud([]);
   assert.deepEqual(observed, []);
   assert.deepEqual(reader.getAll(), []);
+  reader.reportCloudError(new Error('network'));
+  assert.equal(reader.getSyncStatus().state, 'error');
   unsubscribe();
   assert.ok(writer.getAll().length > 0);
 });

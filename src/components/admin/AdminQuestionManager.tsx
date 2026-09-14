@@ -14,6 +14,7 @@ import {
   questionBankService,
   QuestionFilter,
   CreateQuestionPayload,
+  QuestionBankSyncStatus,
 } from '../../services/question-bank-service';
 import { publishQuestion, publishQuestions, removePublishedQuestion, replacePublishedPool } from '../../services/question-bank-cloud-service';
 import {
@@ -68,6 +69,9 @@ import {
   ArrowUpDown,
   BarChart3,
   Zap,
+  Cloud,
+  CloudOff,
+  Loader2,
 } from 'lucide-react';
 
 interface AdminQuestionManagerProps {
@@ -163,6 +167,7 @@ export const AdminQuestionManager: React.FC<AdminQuestionManagerProps> = ({
 }) => {
   // State
   const [questions, setQuestions] = useState<BaseQuestion[]>([]);
+  const [syncStatus, setSyncStatus] = useState<QuestionBankSyncStatus>(() => questionBankService.getSyncStatus());
   const [selectedGrade, setSelectedGrade] = useState<1 | 2 | 3 | 4 | 'all'>('all');
   const [selectedCategory, setSelectedCategory] = useState<CognitiveCategory | 'all'>('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyLevel | 'all'>('all');
@@ -200,6 +205,7 @@ export const AdminQuestionManager: React.FC<AdminQuestionManagerProps> = ({
       search: searchQuery,
     });
     setQuestions(list);
+    setSyncStatus(questionBankService.getSyncStatus());
   };
 
   useEffect(() => {
@@ -396,6 +402,19 @@ export const AdminQuestionManager: React.FC<AdminQuestionManagerProps> = ({
               </h2>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
                 MEB BİLSEM Havuzu
+              </span>
+              <span
+                title={syncStatus.error || (syncStatus.lastSyncedAt ? `Son eşitleme: ${new Date(syncStatus.lastSyncedAt).toLocaleTimeString('tr-TR')}` : 'Merkezi bağlantı bekleniyor')}
+                className={`px-2.5 py-0.5 rounded-full text-xs font-bold border inline-flex items-center gap-1.5 ${
+                  syncStatus.state === 'connected'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : syncStatus.state === 'error'
+                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                }`}
+              >
+                {syncStatus.state === 'connected' ? <Cloud className="w-3.5 h-3.5" /> : syncStatus.state === 'error' ? <CloudOff className="w-3.5 h-3.5" /> : <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {syncStatus.state === 'connected' ? 'Ortak Havuz Canlı' : syncStatus.state === 'error' ? 'Eşitleme Hatası' : 'Bağlanıyor'}
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-600 mt-1">

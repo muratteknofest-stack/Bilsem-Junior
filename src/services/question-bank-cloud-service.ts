@@ -51,19 +51,25 @@ let unsubscribe:Unsubscribe|null=null;
 export function stopQuestionBankSync(){unsubscribe?.();unsubscribe=null;}
 export async function startQuestionBankSync(isAdmin:boolean):Promise<Unsubscribe> {
   stopQuestionBankSync();
-  const source=query(questionsRef,where('status','==','published'));
-  const initial=await getDocs(source);
-  let questions=validSnapshot(initial.docs);
-  if(isAdmin){
-    const state=await getDoc(stateRef);
-    if(!state.exists()){
-      if(questions.length===0&&questionBankService.getAll().length===0) questionBankService.resetToDefaults();
-      const additions=questions.length===0?questionBankService.getAll().filter(q=>validateQuestion(q).isValid):[];
-      if(additions.length){await publishQuestions(additions);questions=validSnapshot([...initial.docs,...additions.map(q=>({id:q.id,data:()=>q}))]);}
-      else await markInitialized();
+  questionBankService.beginCloudSync();
+  try {
+    const source=query(questionsRef,where('status','==','published'));
+    const initial=await getDocs(source);
+    let questions=validSnapshot(initial.docs);
+    if(isAdmin){
+      const state=await getDoc(stateRef);
+      if(!state.exists()){
+        if(questions.length===0&&questionBankService.getAll().length===0) questionBankService.resetToDefaults();
+        const additions=questions.length===0?questionBankService.getAll().filter(q=>validateQuestion(q).isValid):[];
+        if(additions.length){await publishQuestions(additions);questions=validSnapshot([...initial.docs,...additions.map(q=>({id:q.id,data:()=>q}))]);}
+        else await markInitialized();
+      }
     }
+    questionBankService.replaceFromCloud(questions);
+    unsubscribe=onSnapshot(source,snapshot=>questionBankService.replaceFromCloud(validSnapshot(snapshot.docs)),error=>questionBankService.reportCloudError(error));
+    return stopQuestionBankSync;
+  } catch (error) {
+    questionBankService.reportCloudError(error);
+    throw error;
   }
-  questionBankService.replaceFromCloud(questions);
-  unsubscribe=onSnapshot(source,snapshot=>questionBankService.replaceFromCloud(validSnapshot(snapshot.docs)),error=>questionBankService.reportCloudError(error));
-  return stopQuestionBankSync;
 }
