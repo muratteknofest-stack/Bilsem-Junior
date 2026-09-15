@@ -1,0 +1,103 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile document storing student, parent, or admin data",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique user ID matching Firebase Auth UID" },
+        "email": { "type": "string", "format": "email", "description": "User email address" },
+        "name": { "type": "string", "description": "Full name of the user" },
+        "role": { "type": "string", "enum": ["student", "parent", "admin"], "description": "System role" },
+        "grade": { "type": "number", "description": "School grade level (1-4)" },
+        "avatar": { "type": "string", "description": "Avatar emoji or identifier" },
+        "level": { "type": "number", "description": "Current gamification level" },
+        "xp": { "type": "number", "description": "Accumulated XP points" },
+        "streak": { "type": "number", "description": "Current consecutive study streak days" },
+        "longestStreak": { "type": "number", "description": "All time longest streak days" },
+        "lastActiveDate": { "type": "string", "description": "ISO date of last active session" },
+        "dailyGoalMinutes": { "type": "number", "description": "Daily study target in minutes" },
+        "todayMinutesSpent": { "type": "number", "description": "Minutes studied today" },
+        "dailyGoalQuestions": { "type": "number", "description": "Daily question count target" },
+        "todayQuestionsSolved": { "type": "number", "description": "Questions solved today" },
+        "soundEnabled": { "type": "boolean", "description": "Whether sound effects are enabled" },
+        "totalQuestionsSolved": { "type": "number", "description": "All time solved question count" },
+        "resolvedMistakesCount": { "type": "number", "description": "Number of reviewed and corrected mistakes" },
+        "createdAt": { "type": "number", "description": "Account creation timestamp" },
+        "updatedAt": { "type": "number", "description": "Profile update timestamp" }
+      },
+      "required": ["id", "name", "role", "avatar", "level", "xp", "streak"]
+    },
+    "Question": {
+      "title": "Question",
+      "description": "BİLSEM cognitive question item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Question unique identifier" },
+        "category": { "type": "string", "description": "Cognitive category" },
+        "type": { "type": "string", "description": "Specific question template or generator type" },
+        "difficulty": { "type": "number", "description": "Difficulty level from 1 to 6" },
+        "gradeLevel": { "type": "number", "description": "Target grade level 1 to 4" },
+        "status": { "type": "string", "enum": ["published", "draft", "archived"], "description": "Publication status" },
+        "prompt": { "type": "string", "description": "Primary question statement or instruction" },
+        "correctOptionId": { "type": "string", "description": "ID of the correct answer option" },
+        "createdAt": { "type": "number", "description": "Creation timestamp" }
+      },
+      "required": ["id", "category", "type", "difficulty", "prompt", "correctOptionId", "status"]
+    },
+    "PracticeSession": {
+      "title": "PracticeSession",
+      "description": "User practice session log and score",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Session unique ID" },
+        "userId": { "type": "string", "description": "Author student user ID" },
+        "category": { "type": "string", "description": "Practiced cognitive category or mixed" },
+        "questionCount": { "type": "number", "description": "Total questions in session" },
+        "correctCount": { "type": "number", "description": "Number of correct answers" },
+        "wrongCount": { "type": "number", "description": "Number of wrong answers" },
+        "timeSpentSeconds": { "type": "number", "description": "Duration in seconds" },
+        "xpEarned": { "type": "number", "description": "XP gained from session" },
+        "createdAt": { "type": "number", "description": "Session creation timestamp" }
+      },
+      "required": ["userId", "questionCount", "correctCount", "xpEarned"]
+    },
+    "TestAttempt": {
+      "title": "TestAttempt",
+      "description": "Official or trial BİLSEM exam attempt result",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Test attempt ID" },
+        "userId": { "type": "string", "description": "Student user ID" },
+        "examTitle": { "type": "string", "description": "Exam name" },
+        "totalQuestions": { "type": "number", "description": "Total question count" },
+        "correctCount": { "type": "number", "description": "Correct answer count" },
+        "wrongCount": { "type": "number", "description": "Wrong answer count" },
+        "emptyCount": { "type": "number", "description": "Unanswered question count" },
+        "score": { "type": "number", "description": "Final calculated score" },
+        "passed": { "type": "boolean", "description": "Whether passing threshold was reached" },
+        "timeSpentSeconds": { "type": "number", "description": "Duration in seconds" },
+        "createdAt": { "type": "number", "description": "Attempt timestamp" }
+      },
+      "required": ["userId", "totalQuestions", "correctCount", "score", "passed"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile records indexed by auth UID"
+    },
+    "/questions/{questionId}": {
+      "schema": "Question",
+      "description": "Published and draft cognitive question repository"
+    },
+    "/practiceSessions/{sessionId}": {
+      "schema": "PracticeSession",
+      "description": "Student practice session telemetry and achievements"
+    },
+    "/testAttempts/{attemptId}": {
+      "schema": "TestAttempt",
+      "description": "Formal exam attempt logs and scoring data"
+    }
+  }
+}
