@@ -5,7 +5,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
 import helmet from 'helmet';
-import { rateLimit } from 'express-rate-limit';
+import { rateLimit, RateLimitRequestHandler } from 'express-rate-limit';
 import { z } from 'zod';
 import {
   escapeHtml,
@@ -19,64 +19,121 @@ import {
 
 dotenv.config();
 
+// ============================================================================
+// CONSTANTS - Magic numbers centralized for maintainability
+// ============================================================================
+const DEFAULT_PORT = 3000;
+const AI_LIMITER_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const AI_LIMITER_MAX_REQUESTS = 30;
+const REPORT_LIMITER_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const REPORT_LIMITER_MAX_REQUESTS = 5;
+const ACCOUNT_SECURITY_LIMITER_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const ACCOUNT_SECURITY_LIMITER_MAX_REQUESTS = 6;
+const ADMIN_AI_LIMITER_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const ADMIN_AI_LIMITER_MAX_REQUESTS = 50;
+const REQUEST_BODY_LIMIT = '256kb';
+const MAX_OPTIONS_COUNT = 8;
+const MIN_OPTIONS_COUNT = 2;
+const MAX_EXPLANATION_STEPS = 12;
+const MAX_STEP_LENGTH = 1000;
+const MAX_SUMMARY_LENGTH = 4000;
+const MAX_RULE_TITLE_LENGTH = 500;
+const MAX_OPTION_LABEL_LENGTH = 500;
+const MAX_OPTION_ID_LENGTH = 32;
+const MIN_QUESTION_ID_LENGTH = 1;
+const MAX_QUESTION_ID_LENGTH = 160;
+const MAX_QUESTION_TYPE_LENGTH = 80;
+const MAX_CATEGORY_LENGTH = 80;
+const MIN_DIFFICULTY = 1;
+const MAX_DIFFICULTY = 6;
+const MAX_PROMPT_LENGTH = 4000;
+const MAX_SECONDARY_PROMPT_LENGTH = 2000;
+const MAX_STUDENT_NAME_LENGTH = 50;
+const MIN_GRADE = 1;
+const MAX_GRADE = 4;
+const MAX_LEVEL = 1000;
+const MAX_STREAK = 3660;
+const MAX_DAILY_GOAL_QUESTIONS = 200;
+const MAX_DAILY_GOAL_MINUTES = 180;
+const MAX_TODAY_QUESTIONS = 1000;
+const MAX_UNRESOLVED_MISTAKES = 50;
+const MAX_MASTERIES = 20;
+const MAX_MASTERY_SCORE = 100;
+const MAX_ACCURACY_SCORE = 100;
+const MAX_RECENT_TREND_LENGTH = 20;
+const MAX_CATEGORY_NAME_LENGTH = 120;
+const MIN_PASSWORD_LENGTH = 8;
+const MAX_PASSWORD_LENGTH = 128;
+const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)/;
+const MAX_CODE_LENGTH = 6;
+const CODE_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_VERIFICATION_ATTEMPTS = 3;
+const VERIFICATION_LOCKOUT_MS = 60 * 60 * 1000; // 1 hour
+const MAX_EMAIL_LENGTH = 254;
+const MAX_SUBJECT_LENGTH = 200;
+const MAX_MESSAGE_LENGTH = 5000;
+
+// ============================================================================
+// ZOD SCHEMAS - Using constants for maintainability and consistency
+// ============================================================================
 const questionOptionSchema = z.object({
-  id: z.string().min(1).max(32),
-  label: z.string().max(500).default(''),
+  id: z.string().min(MIN_QUESTION_ID_LENGTH).max(MAX_OPTION_ID_LENGTH),
+  label: z.string().max(MAX_OPTION_LABEL_LENGTH).default(''),
 }).passthrough();
 
 const explanationSchema = z.object({
-  summary: z.string().max(4000).optional().default(''),
-  ruleTitle: z.string().max(500).optional().default(''),
-  steps: z.array(z.string().max(1000)).max(12).optional().default([]),
+  summary: z.string().max(MAX_SUMMARY_LENGTH).optional().default(''),
+  ruleTitle: z.string().max(MAX_RULE_TITLE_LENGTH).optional().default(''),
+  steps: z.array(z.string().max(MAX_STEP_LENGTH)).max(MAX_EXPLANATION_STEPS).optional().default([]),
 }).passthrough().optional();
 
 const questionRequestSchema = z.object({
-  questionId: z.string().min(1).max(160),
-  questionType: z.string().min(1).max(80),
-  category: z.string().min(1).max(80),
-  difficulty: z.number().int().min(1).max(6),
-  prompt: z.string().min(1).max(4000),
-  secondaryPrompt: z.string().max(2000).optional(),
+  questionId: z.string().min(MIN_QUESTION_ID_LENGTH).max(MAX_QUESTION_ID_LENGTH),
+  questionType: z.string().min(MIN_QUESTION_ID_LENGTH).max(MAX_QUESTION_TYPE_LENGTH),
+  category: z.string().min(MIN_QUESTION_ID_LENGTH).max(MAX_CATEGORY_LENGTH),
+  difficulty: z.number().int().min(MIN_DIFFICULTY).max(MAX_DIFFICULTY),
+  prompt: z.string().min(MIN_QUESTION_ID_LENGTH).max(MAX_PROMPT_LENGTH),
+  secondaryPrompt: z.string().max(MAX_SECONDARY_PROMPT_LENGTH).optional(),
   explanation: explanationSchema,
-  options: z.array(questionOptionSchema).min(2).max(8),
-  correctOptionId: z.string().min(1).max(32),
+  options: z.array(questionOptionSchema).min(MIN_OPTIONS_COUNT).max(MAX_OPTIONS_COUNT),
+  correctOptionId: z.string().min(MIN_QUESTION_ID_LENGTH).max(MAX_OPTION_ID_LENGTH),
 });
 
 const hintRequestSchema = questionRequestSchema.extend({
   stepRequested: z.number().int().min(1).max(3).optional().default(1),
 });
 const mistakeRequestSchema = questionRequestSchema.extend({
-  selectedOptionId: z.string().min(1).max(32),
+  selectedOptionId: z.string().min(MIN_QUESTION_ID_LENGTH).max(MAX_OPTION_ID_LENGTH),
 });
 const stepExplanationRequestSchema = mistakeRequestSchema.extend({
   isCorrect: z.boolean(),
 });
 const dailyPlanRequestSchema = z.object({
-  studentName: z.string().trim().min(1).max(50).default('Öğrenci'),
-  grade: z.number().int().min(1).max(4).default(3),
-  level: z.number().int().min(1).max(1000).default(1),
-  streak: z.number().int().min(0).max(3660).default(0),
-  dailyGoalQuestions: z.number().int().min(1).max(200).default(10),
-  dailyGoalMinutes: z.number().int().min(1).max(180).default(15),
-  todayQuestionsSolved: z.number().int().min(0).max(1000).default(0),
+  studentName: z.string().trim().min(MIN_QUESTION_ID_LENGTH).max(MAX_STUDENT_NAME_LENGTH).default('Öğrenci'),
+  grade: z.number().int().min(MIN_GRADE).max(MAX_GRADE).default(3),
+  level: z.number().int().min(MIN_QUESTION_ID_LENGTH).max(MAX_LEVEL).default(1),
+  streak: z.number().int().min(0).max(MAX_STREAK).default(0),
+  dailyGoalQuestions: z.number().int().min(MIN_QUESTION_ID_LENGTH).max(MAX_DAILY_GOAL_QUESTIONS).default(10),
+  dailyGoalMinutes: z.number().int().min(MIN_QUESTION_ID_LENGTH).max(MAX_DAILY_GOAL_MINUTES).default(15),
+  todayQuestionsSolved: z.number().int().min(0).max(MAX_TODAY_QUESTIONS).default(0),
   unresolvedMistakes: z.array(z.object({
-    category: z.string().max(80),
-    questionType: z.string().max(80),
-    difficulty: z.number().int().min(1).max(6),
-    prompt: z.string().max(1000),
-  }).passthrough()).max(50).default([]),
+    category: z.string().max(MAX_CATEGORY_LENGTH),
+    questionType: z.string().max(MAX_QUESTION_TYPE_LENGTH),
+    difficulty: z.number().int().min(MIN_DIFFICULTY).max(MAX_DIFFICULTY),
+    prompt: z.string().max(MAX_STEP_LENGTH),
+  }).passthrough()).max(MAX_UNRESOLVED_MISTAKES).default([]),
   masteries: z.array(z.object({
-    category: z.string().max(80),
-    categoryName: z.string().max(120),
-    mastery: z.number().min(0).max(100),
-    accuracy: z.number().min(0).max(100),
-    recentTrend: z.string().max(20),
-  }).passthrough()).max(20).default([]),
+    category: z.string().max(MAX_CATEGORY_LENGTH),
+    categoryName: z.string().max(MAX_CATEGORY_NAME_LENGTH),
+    mastery: z.number().min(0).max(MAX_MASTERY_SCORE),
+    accuracy: z.number().min(0).max(MAX_ACCURACY_SCORE),
+    recentTrend: z.string().max(MAX_RECENT_TREND_LENGTH),
+  }).passthrough()).max(MAX_MASTERIES).default([]),
 });
 
 async function startServer() {
   const app = express();
-  const PORT = Number(process.env.PORT) || 3000;
+  const PORT = Number(process.env.PORT) || DEFAULT_PORT;
 
   app.disable('x-powered-by');
   if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
@@ -117,7 +174,7 @@ async function startServer() {
     } : false,
     crossOriginResourcePolicy: { policy: 'cross-origin' },
   }));
-  app.use(express.json({ limit: '256kb' }));
+  app.use(express.json({ limit: REQUEST_BODY_LIMIT }));
 
   const aiLimiter = rateLimit({
     windowMs: 10 * 60 * 1000,
