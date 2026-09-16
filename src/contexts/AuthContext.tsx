@@ -73,11 +73,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Accounts without an application profile are not silently provisioned.
             const docSnap = await getDoc(userDocRef);
             if (!docSnap.exists()) {
+              await firebaseSignOut(auth).catch(() => undefined);
               dataService.logout();
               if (isMounted) setUserProfile(null);
+              if (isMounted) setLoading(false);
+              return;
             } else {
               const profile = docSnap.data() as UserProfile;
               if (profile.id !== user.uid || !['student', 'parent', 'admin'].includes(profile.role)) {
+                await firebaseSignOut(auth).catch(() => undefined);
                 dataService.logout();
                 if (isMounted) setUserProfile(null);
                 if (isMounted) setLoading(false);
@@ -105,6 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     setUserProfile(null);
                   }
                 } else if (isMounted) {
+                  void firebaseSignOut(auth).catch(() => undefined);
                   dataService.logout();
                   setUserProfile(null);
                 }

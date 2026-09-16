@@ -37,6 +37,16 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Lütfen şifrenizi giriniz.'),
   role: z.enum(['student', 'parent', 'admin']),
   rememberMe: z.boolean().optional().default(true),
+}).superRefine((value, ctx) => {
+  if (value.role !== 'student' && !value.identifier.includes('@')) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['identifier'],
+      message: value.role === 'parent'
+        ? 'Veli girişi için kayıtlı e-posta adresinizi giriniz.'
+        : 'Yönetici girişi için kayıtlı e-posta adresinizi giriniz.',
+    });
+  }
 });
 
 export type LoginFormData = z.infer<typeof loginSchema>;

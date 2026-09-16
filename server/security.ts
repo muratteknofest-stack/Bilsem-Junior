@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { getApps, initializeApp, type App } from 'firebase-admin/app';
+import { getAppCheck } from 'firebase-admin/app-check';
 import { getAuth, type DecodedIdToken } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
@@ -44,6 +45,24 @@ export async function requireFirebaseAuth(req: AuthenticatedRequest, res: Respon
   }
 }
 
+export async function requireAppCheck(req: Request, res: Response, next: NextFunction) {
+  const configured = process.env.ENFORCE_APP_CHECK?.trim().toLowerCase();
+  const shouldEnforce = configured === 'true' || (configured !== 'false' && process.env.NODE_ENV === 'production');
+  if (!shouldEnforce) return next();
+
+  const token = req.header('x-firebase-appcheck');
+  if (!token) {
+    return res.status(401).json({ error: 'Uygulama doğrulaması gerekli.' });
+  }
+
+  try {
+    await getAppCheck(getAdminApp()).verifyToken(token);
+    return next();
+  } catch {
+    return res.status(401).json({ error: 'Uygulama doğrulaması geçersiz.' });
+  }
+}
+
 export function requireVerifiedEmail(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (!req.authUser?.email_verified) {
     return res.status(403).json({ error: 'Bu işlem için veli e-posta adresi doğrulanmalıdır.' });
@@ -84,6 +103,10 @@ export function escapeHtml(value: unknown): string {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
+}
+
+export function sanitizeHeaderValue(value: unknown): string {
+  return String(value ?? '').replace(/[\r\n]+/g, ' ').trim().slice(0, 160);
 }
 
 export function normalizeStudentCode(name: string): string {

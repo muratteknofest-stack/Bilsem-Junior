@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider, type AppCheck } from 'firebase/app-check';
 import { getAuth } from 'firebase/auth';
 import { initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
@@ -27,9 +27,10 @@ if (missingFirebaseKeys.length > 0) {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 const appCheckSiteKey = env.VITE_FIREBASE_APPCHECK_SITE_KEY || appletConfig.recaptchaSiteKey;
+let appCheck: AppCheck | null = null;
 if (typeof window !== 'undefined' && appCheckSiteKey) {
   try {
-    initializeAppCheck(app, {
+    appCheck = initializeAppCheck(app, {
       provider: new ReCaptchaEnterpriseProvider(appCheckSiteKey),
       isTokenAutoRefreshEnabled: true,
     });
@@ -49,4 +50,4 @@ const db = initializeFirestore(app, {}, databaseId);
 
 const storage = getStorage(app);
 
-export { app, auth, db, storage };
+export { app, appCheck, auth, db, storage };

@@ -5,15 +5,17 @@ import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
 import helmet from 'helmet';
-import { rateLimit } from 'express-rate-limit';
+import { ipKeyGenerator, rateLimit } from 'express-rate-limit';
 import { z } from 'zod';
 import {
   escapeHtml,
   getAdminAuth,
   getAdminDb,
+  requireAppCheck,
   requireFirebaseAuth,
   requireProfileRole,
   requireVerifiedEmail,
+  sanitizeHeaderValue,
   type AuthenticatedRequest,
 } from './server/security';
 
@@ -88,10 +90,15 @@ async function startServer() {
   );
   app.use('/api', (req, res, next) => {
     const origin = req.headers.origin;
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    if (origin && !allowedOrigins.has(origin)) {
+      return res.status(403).json({ error: 'İstek kaynağına izin verilmiyor.' });
+    }
     if (origin && allowedOrigins.has(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Vary', 'Origin');
-      res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+      res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Firebase-AppCheck');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     }
     if (req.method === 'OPTIONS') return res.sendStatus(origin && allowedOrigins.has(origin) ? 204 : 403);
@@ -119,11 +126,16 @@ async function startServer() {
   }));
   app.use(express.json({ limit: '256kb' }));
 
+  const authenticatedRateLimitKey = (req: AuthenticatedRequest) => (
+    req.authUser?.uid ? `uid:${req.authUser.uid}` : `ip:${ipKeyGenerator(req.ip || '0.0.0.0')}`
+  );
+
   const aiLimiter = rateLimit({
     windowMs: 10 * 60 * 1000,
     limit: 30,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
+    keyGenerator: authenticatedRateLimitKey,
     message: { error: 'Yapay zekâ istek sınırına ulaşıldı. Lütfen kısa süre sonra tekrar deneyin.' },
   });
   const reportLimiter = rateLimit({
@@ -131,6 +143,7 @@ async function startServer() {
     limit: 5,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
+    keyGenerator: authenticatedRateLimitKey,
     message: { error: 'Saatlik rapor gönderim sınırına ulaşıldı.' },
   });
   const accountSecurityLimiter = rateLimit({
@@ -138,6 +151,7 @@ async function startServer() {
     limit: 6,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
+    keyGenerator: authenticatedRateLimitKey,
     message: { error: 'Saatlik hesap güvenliği işlem sınırına ulaşıldı.' },
   });
 
@@ -151,8 +165,9 @@ async function startServer() {
 
   app.post(
     '/api/parent/reset-student-password',
-    accountSecurityLimiter,
     requireFirebaseAuth,
+    requireAppCheck,
+    accountSecurityLimiter,
     requireVerifiedEmail,
     requireProfileRole('parent'),
     async (req: AuthenticatedRequest, res) => {
@@ -204,7 +219,7 @@ async function startServer() {
     studentId: z.string().min(1).max(128),
   }).strict();
 
-  app.post('/api/send-weekly-report', reportLimiter, requireFirebaseAuth, requireVerifiedEmail, requireProfileRole('parent'), async (req: AuthenticatedRequest, res) => {
+  app.post('/api/send-weekly-report', requireFirebaseAuth, requireAppCheck, reportLimiter, requireVerifiedEmail, requireProfileRole('parent'), async (req: AuthenticatedRequest, res) => {
     try {
       const parsed = reportSchema.safeParse(req.body);
       if (!parsed.success || !req.authUser) {
@@ -220,12 +235,20 @@ async function startServer() {
       ]);
       const parent = parentSnap.data();
       const student = studentSnap.data();
-      if (!parent || !student || !Array.isArray(parent.linkedStudentIds) || !parent.linkedStudentIds.includes(studentId)) {
+      if (
+        !parent ||
+        !student ||
+        student.role !== 'student' ||
+        student.linkedParentId !== req.authUser.uid ||
+        !Array.isArray(parent.linkedStudentIds) ||
+        !parent.linkedStudentIds.includes(studentId)
+      ) {
         return res.status(403).json({ error: 'Öğrenci bu veli hesabına bağlı değil.' });
       }
       const parentEmail = String(req.authUser.email || parent.email || '');
       if (!parentEmail) return res.status(400).json({ error: 'Veli e-posta adresi bulunamadı.' });
       const studentName = escapeHtml(student.name || 'Öğrenci');
+      const studentNameHeader = sanitizeHeaderValue(student.name || 'Öğrenci');
       const persistedValues = (stateSnap.data()?.values || {}) as Record<string, unknown>;
       const parsePersisted = <T>(key: string, fallback: T): T => {
         const raw = persistedValues[key];
@@ -301,7 +324,7 @@ async function startServer() {
       await transporter.sendMail({
         from: process.env.SMTP_FROM || process.env.SMTP_USER,
         to: parentEmail,
-        subject: `${studentName} - Haftalık ZekaPark Gelişim Özeti`,
+        subject: `${studentNameHeader} - Haftalık ZekaPark Gelişim Özeti`,
         html: emailHtml,
       });
 
@@ -322,7 +345,7 @@ async function startServer() {
   });
 
   // AI Step-by-Step Question Hint Endpoint
-  app.post('/api/ai-hint', aiLimiter, requireFirebaseAuth, async (req, res) => {
+  app.post('/api/ai-hint', requireFirebaseAuth, requireAppCheck, aiLimiter, requireProfileRole('student', 'admin'), async (req, res) => {
     try {
       const validation = hintRequestSchema.safeParse(req.body);
       if (!validation.success) {
@@ -442,7 +465,7 @@ Soru Bilgileri:
   });
 
   // AI Mistake Explanation ('Neden Yanlış?') Endpoint
-  app.post('/api/ai-explain-mistake', aiLimiter, requireFirebaseAuth, async (req, res) => {
+  app.post('/api/ai-explain-mistake', requireFirebaseAuth, requireAppCheck, aiLimiter, requireProfileRole('student', 'admin'), async (req, res) => {
     try {
       const validation = mistakeRequestSchema.safeParse(req.body);
       if (!validation.success) {
@@ -569,7 +592,7 @@ Soru Bilgileri:
   });
 
   // AI Step-by-Step Question Explanation Endpoint (Accordion Flow)
-  app.post('/api/ai-step-explanation', aiLimiter, requireFirebaseAuth, async (req, res) => {
+  app.post('/api/ai-step-explanation', requireFirebaseAuth, requireAppCheck, aiLimiter, requireProfileRole('student', 'admin'), async (req, res) => {
     try {
       const validation = stepExplanationRequestSchema.safeParse(req.body);
       if (!validation.success) {
@@ -701,7 +724,7 @@ GÖREVİN: Çocuğun zihninde soru çözümünü netleştirecek 4 KADEMELİ ADIM
   });
 
   // AI Personalized Daily Study Plan Endpoint ("Bugünün Çalışma Planı")
-  app.post('/api/ai-daily-plan', aiLimiter, requireFirebaseAuth, async (req, res) => {
+  app.post('/api/ai-daily-plan', requireFirebaseAuth, requireAppCheck, aiLimiter, requireProfileRole('student', 'admin'), async (req, res) => {
     try {
       const validation = dailyPlanRequestSchema.safeParse(req.body);
       if (!validation.success) {
@@ -914,6 +937,7 @@ Plan Şunları İçermelidir:
     limit: 60,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
+    keyGenerator: authenticatedRateLimitKey,
     message: { error: 'AI soru motoru istek sınırına ulaşıldı.' },
   });
 
@@ -959,7 +983,7 @@ Plan Şunları İçermelidir:
   }
 
   // POST /api/admin/ai-generate-question — Single question generation
-  app.post('/api/admin/ai-generate-question', adminAiLimiter, requireFirebaseAuth, requireProfileRole('admin'), async (req: AuthenticatedRequest, res) => {
+  app.post('/api/admin/ai-generate-question', requireFirebaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole('admin'), async (req: AuthenticatedRequest, res) => {
     try {
       const parsed = aiQuestionGenerateSchema.safeParse(req.body);
       if (!parsed.success || !req.authUser) {
@@ -1028,12 +1052,12 @@ Plan Şunları İçermelidir:
       });
     } catch (err: any) {
       console.error('AI soru üretim hatası:', err);
-      return res.status(500).json({ error: 'AI soru üretimi başarısız: ' + (err.message || 'Bilinmeyen hata') });
+      return res.status(500).json({ error: 'AI soru üretimi başarısız.' });
     }
   });
 
   // POST /api/admin/ai-bulk-generate — Bulk question generation
-  app.post('/api/admin/ai-bulk-generate', adminAiLimiter, requireFirebaseAuth, requireProfileRole('admin'), async (req: AuthenticatedRequest, res) => {
+  app.post('/api/admin/ai-bulk-generate', requireFirebaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole('admin'), async (req: AuthenticatedRequest, res) => {
     try {
       const parsed = aiBulkGenerateSchema.safeParse(req.body);
       if (!parsed.success || !req.authUser) {
@@ -1063,7 +1087,7 @@ Plan Şunları İçermelidir:
   });
 
   // GET /api/admin/ai-generation-job/:jobId — Job status
-  app.get('/api/admin/ai-generation-job/:jobId', requireFirebaseAuth, requireProfileRole('admin'), async (req: AuthenticatedRequest, res) => {
+  app.get('/api/admin/ai-generation-job/:jobId', requireFirebaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole('admin'), async (req: AuthenticatedRequest, res) => {
     try {
       const queue = await getAiQueue();
       if (!queue) {
@@ -1102,7 +1126,7 @@ Plan Şunları İçermelidir:
   });
 
   // POST /api/admin/ai-question-review — Approve/Reject/Regenerate
-  app.post('/api/admin/ai-question-review', adminAiLimiter, requireFirebaseAuth, requireProfileRole('admin'), async (req: AuthenticatedRequest, res) => {
+  app.post('/api/admin/ai-question-review', requireFirebaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole('admin'), async (req: AuthenticatedRequest, res) => {
     try {
       const parsed = aiQuestionReviewSchema.safeParse(req.body);
       if (!parsed.success || !req.authUser) {

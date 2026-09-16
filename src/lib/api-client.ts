@@ -1,4 +1,5 @@
-import { auth } from './firebase';
+import { getToken } from 'firebase/app-check';
+import { appCheck, auth } from './firebase';
 
 const env = typeof import.meta !== 'undefined' && import.meta.env
   ? import.meta.env
@@ -17,6 +18,10 @@ export async function authenticatedFetch(input: RequestInfo | URL, init: Request
   const token = await user.getIdToken();
   const headers = new Headers(init.headers);
   headers.set('Authorization', `Bearer ${token}`);
+  if (appCheck) {
+    const appCheckToken = await getToken(appCheck);
+    headers.set('X-Firebase-AppCheck', appCheckToken.token);
+  }
   if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
 
   return fetch(resolveApiUrl(input), {

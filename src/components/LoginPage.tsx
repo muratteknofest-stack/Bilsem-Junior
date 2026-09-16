@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { auth, db } from '../lib/firebase';
 import {
   createUserWithEmailAndPassword,
@@ -86,6 +86,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [createdStudentCode, setCreatedStudentCode] = useState<string | null>(null);
 
   // Register Form States
   const [regStudentName, setRegStudentName] = useState('');
@@ -108,10 +109,26 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSubmitted, setForgotSubmitted] = useState(false);
   const [forgotError, setForgotError] = useState<string | null>(null);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const forgotEmailInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!showForgotPasswordModal) return;
+
+    forgotEmailInputRef.current?.focus();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !isResettingPassword) {
+        setShowForgotPasswordModal(false);
+      }
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [showForgotPasswordModal, isResettingPassword]);
 
   // Submit Login Form with Zod Validation
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setErrorMessage(null);
     setFieldErrors({});
 
@@ -144,9 +161,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
       const requiresVerification = !isManagedStudentEmail(credential.user.email);
       if (requiresVerification && !credential.user.emailVerified) {
-        await sendEmailVerification(credential.user).catch(() => undefined);
+        const verificationResent = await sendEmailVerification(credential.user)
+          .then(() => true)
+          .catch(() => false);
         await signOut(auth);
-        throw new Error('EMAIL_NOT_VERIFIED');
+        throw new Error(verificationResent ? 'EMAIL_NOT_VERIFIED_SENT' : 'EMAIL_NOT_VERIFIED_UNSENT');
       }
 
       const userDocRef = doc(db, 'users', credential.user.uid);
@@ -187,6 +206,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         await setDoc(userDocRef, { ...loggedInProfile, role: 'admin' }, { merge: true });
       }
 
+      if (loggedInProfile.role !== selectedRole) {
+        await signOut(auth);
+        throw new Error('ROLE_MISMATCH');
+      }
+
       dataService.loginAs(loggedInProfile.role, loggedInProfile);
       dataService.hydrateUserStateFromFirebase().catch(console.error);
       loginLocally(loggedInProfile);
@@ -201,10 +225,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       sound.playError();
       console.warn('Login notice (handled):', error.code || error.message);
       let errMsg = 'Giriş yapılamadı.';
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') {
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials' || error.code === 'auth/wrong-password') {
          errMsg = 'E-posta veya şifre hatalı.';
-      } else if (error.code === 'auth/wrong-password') {
-         errMsg = 'Şifre hatalı.';
       } else if (error.code === 'auth/invalid-email') {
          errMsg = 'Geçersiz e-posta formatı.';
       } else if (error.code === 'auth/too-many-requests') {
@@ -215,8 +237,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
          errMsg = 'Bu hesaba ait kullanıcı profili bulunamadı. Lütfen destek ekibiyle iletişime geçin.';
       } else if (error.message === 'ROLE_MISMATCH') {
          errMsg = 'Seçtiğiniz rol bu hesapla eşleşmiyor.';
-      } else if (error.message === 'EMAIL_NOT_VERIFIED') {
+      } else if (error.message === 'EMAIL_NOT_VERIFIED_SENT') {
          errMsg = 'E-posta adresiniz henüz doğrulanmadı. Yeni doğrulama bağlantısı gönderildi.';
+      } else if (error.message === 'EMAIL_NOT_VERIFIED_UNSENT') {
+         errMsg = 'E-posta adresiniz henüz doğrulanmadı. Bağlantı şu anda yeniden gönderilemedi; lütfen biraz sonra tekrar deneyin.';
       } else if (error.message === 'ADMIN_PROFILE_PROVISION_FAILED') {
          errMsg = 'Yönetici profili henüz etkinleştirilemedi. Lütfen kısa süre sonra tekrar deneyin.';
       }
@@ -229,8 +253,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   // Submit Register Form with Zod Validation
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setErrorMessage(null);
     setFieldErrors({});
+    setCreatedStudentCode(null);
 
     let validationResult;
     if (selectedRole === 'student') {
@@ -282,6 +308,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         setIdentifier(regParentEmail.trim());
         setSelectedRole('parent');
         setActiveTab('login');
+        setCreatedStudentCode(result.student.code);
         setSuccessToast(
           result.verificationSent
             ? `Aile hesabı hazır. Öğrenci kodu: ${result.student.code}. Veli girişi için e-postanıza gönderilen bağlantıyı doğrulayın.`
@@ -350,7 +377,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       if (error.code === 'auth/network-request-failed' || error.message?.includes('network-request-failed')) {
         errMsg = 'Ağ bağlantısı kurulamadı. Lütfen tekrar deneyin.';
       }
-      if (error.message && !error.message.startsWith('Firebase:') && !['EMAIL_NOT_VERIFIED'].includes(error.message)) errMsg = error.message;
       setErrorMessage(errMsg);
     } finally {
       setIsSubmitting(false);
@@ -360,6 +386,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   // Submit Forgot Password with Zod Validation
   const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isResettingPassword) return;
     setForgotError(null);
 
     const validationResult = forgotPasswordSchema.safeParse({
@@ -373,6 +400,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       return;
     }
 
+    setIsResettingPassword(true);
     try {
       await sendPasswordResetEmail(forgotEmail.trim());
       sound.playSuccess();
@@ -389,6 +417,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       if (err.code === 'auth/invalid-email') errMsg = 'Geçersiz e-posta formatı.';
       if (err.code === 'auth/network-request-failed') errMsg = 'Ağ bağlantısı kurulamadı. Lütfen tekrar deneyin.';
       setForgotError(errMsg);
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -416,7 +446,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         <div className="lg:col-span-7 p-6 sm:p-10 flex flex-col justify-between">
           <div>
             {/* Header / Brand Title */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
               <Logo
                 size="md"
                 showText={true}
@@ -425,7 +455,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               />
 
               {/* Mode Toggle Pills (Giriş / Kayıt) */}
-              <div className="flex p-1 rounded-xl bg-slate-100 text-xs font-bold border border-zinc-200">
+              <div className="flex w-full sm:w-auto p-1 rounded-xl bg-slate-100 text-xs font-bold border border-zinc-200" role="tablist" aria-label="Hesap işlemi">
                 <button
                   type="button"
                   onClick={() => {
@@ -435,7 +465,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     setFieldErrors({});
                     setSuccessToast(null);
                   }}
-                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  role="tab"
+                  aria-selected={activeTab === 'login'}
+                  className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                     activeTab === 'login'
                       ? 'bg-white text-indigo-700 '
                       : 'text-slate-600 hover:text-slate-900'
@@ -453,7 +485,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     setFieldErrors({});
                     setSuccessToast(null);
                   }}
-                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  role="tab"
+                  aria-selected={activeTab === 'register'}
+                  className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                     activeTab === 'register'
                       ? 'bg-white text-indigo-700 '
                       : 'text-slate-600 hover:text-slate-900'
@@ -466,16 +500,30 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
             {/* Error & Success Messages */}
             {errorMessage && (
-              <div className="mb-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-2.5">
+              <div role="alert" aria-live="assertive" className="mb-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-2.5">
                 <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
                 <span>{errorMessage}</span>
               </div>
             )}
 
             {successToast && (
-              <div className="mb-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2.5 animate-pulse">
+              <div role="status" aria-live="polite" className="mb-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>{successToast}</span>
+                <div className="flex-1">
+                  <span>{successToast}</span>
+                  {createdStudentCode && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-white/80 px-2.5 py-2 text-slate-800">
+                      <span>Öğrenci kodu: <strong className="tracking-wider">{createdStudentCode}</strong></span>
+                      <button
+                        type="button"
+                        onClick={() => navigator.clipboard?.writeText(createdStudentCode)}
+                        className="rounded-md border border-emerald-300 bg-white px-2 py-1 text-[11px] font-bold text-emerald-800 hover:bg-emerald-50"
+                      >
+                        Kodu Kopyala
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -571,6 +619,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         id="login-identifier"
                         type={selectedRole === 'student' ? 'text' : 'email'}
                         value={identifier}
+                        autoComplete="username"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        aria-invalid={Boolean(fieldErrors.identifier)}
+                        aria-describedby={fieldErrors.identifier ? 'login-identifier-error' : undefined}
                         onChange={(e) => {
                           setIdentifier(e.target.value);
                           if (fieldErrors.identifier) {
@@ -592,7 +645,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       />
                     </div>
                     {fieldErrors.identifier && (
-                      <p className="mt-1.5 text-xs text-rose-600 font-bold flex items-center gap-1">
+                      <p id="login-identifier-error" className="mt-1.5 text-xs text-rose-600 font-bold flex items-center gap-1">
                         <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                         <span>{fieldErrors.identifier}</span>
                       </p>
@@ -625,6 +678,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         id="login-password"
                         type={showPassword ? 'text' : 'password'}
                         value={password}
+                        autoComplete="current-password"
+                        aria-invalid={Boolean(fieldErrors.password)}
+                        aria-describedby={fieldErrors.password ? 'login-password-error' : undefined}
                         onChange={(e) => {
                           setPassword(e.target.value);
                           if (fieldErrors.password) {
@@ -652,7 +708,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       </button>
                     </div>
                     {fieldErrors.password && (
-                      <p className="mt-1.5 text-xs text-rose-600 font-bold flex items-center gap-1">
+                      <p id="login-password-error" className="mt-1.5 text-xs text-rose-600 font-bold flex items-center gap-1">
                         <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                         <span>{fieldErrors.password}</span>
                       </p>
@@ -677,6 +733,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   <button
                     type="submit"
                     disabled={isSubmitting}
+                    aria-busy={isSubmitting}
                     className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-extrabold text-sm   hover: transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
                   >
                     {isSubmitting ? (
@@ -1054,6 +1111,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   <button
                     type="submit"
                     disabled={isSubmitting}
+                    aria-busy={isSubmitting}
                     className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-sm   hover: transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
                   >
                     {isSubmitting ? (
@@ -1172,10 +1230,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
       {/* Forgot Password Modal */}
       {showForgotPasswordModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-xl p-6 sm:p-8 max-w-md w-full  border border-zinc-200 relative animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs" role="presentation">
+          <div role="dialog" aria-modal="true" aria-labelledby="forgot-password-title" className="bg-white rounded-xl p-6 sm:p-8 max-w-md w-full border border-zinc-200 relative animate-in fade-in zoom-in-95 duration-200">
             <button
+              type="button"
+              aria-label="Şifre sıfırlama penceresini kapat"
               onClick={() => setShowForgotPasswordModal(false)}
+              disabled={isResettingPassword}
               className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-1.5 rounded-full hover:bg-slate-100 cursor-pointer"
             >
               <X className="w-5 h-5" />
@@ -1185,7 +1246,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <KeyRound className="w-6 h-6" />
             </div>
 
-            <h3 className="text-lg font-black text-slate-900 font-['Outfit',sans-serif]">
+            <h3 id="forgot-password-title" className="text-lg font-black text-slate-900 font-['Outfit',sans-serif]">
               Şifre & Giriş Kodu Sıfırlama
             </h3>
             <p className="text-xs text-slate-600 mt-1">
@@ -1199,10 +1260,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 noValidate
               >
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label htmlFor="forgot-email" className="block text-xs font-bold text-slate-700 mb-1">
                     Kayıtlı Hesap E-postası
                   </label>
                   <input
+                    ref={forgotEmailInputRef}
+                    id="forgot-email"
                     type="email"
                     value={forgotEmail}
                     onChange={(e) => {
@@ -1210,6 +1273,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       if (forgotError) setForgotError(null);
                     }}
                     placeholder="veli@eposta.com"
+                    autoComplete="email"
+                    aria-invalid={Boolean(forgotError)}
+                    aria-describedby={forgotError ? 'forgot-email-error' : undefined}
                     className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-medium text-slate-900 focus:outline-hidden focus:ring-2 ${
                       forgotError
                         ? 'border-rose-400 bg-rose-50/20 focus:ring-rose-500'
@@ -1217,7 +1283,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     }`}
                   />
                   {forgotError && (
-                    <p className="mt-1.5 text-xs text-rose-600 font-bold flex items-center gap-1">
+                    <p id="forgot-email-error" role="alert" className="mt-1.5 text-xs text-rose-600 font-bold flex items-center gap-1">
                       <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                       <span>{forgotError}</span>
                     </p>
@@ -1235,15 +1301,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowForgotPasswordModal(false)}
+                    disabled={isResettingPassword}
                     className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
                   >
                     Vazgeç
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold  cursor-pointer"
+                    disabled={isResettingPassword}
+                    aria-busy={isResettingPassword}
+                    className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer disabled:cursor-wait disabled:opacity-60"
                   >
-                    Sıfırlama Bağlantısı Gönder
+                    {isResettingPassword ? 'Gönderiliyor…' : 'Sıfırlama Bağlantısı Gönder'}
                   </button>
                 </div>
               </form>
