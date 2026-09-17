@@ -71,7 +71,7 @@ export function requireVerifiedEmail(req: AuthenticatedRequest, res: Response, n
 }
 
 const roleCache = new Map<string, { role: string; expiresAt: number }>();
-const ROLE_CACHE_TTL_MS = 60_000; // 1 minute
+const ROLE_CACHE_TTL_MS = 600_000; // 10 minutes
 
 export function requireProfileRole(...roles: AppRole[]) {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -121,6 +121,16 @@ export function escapeHtml(value: unknown): string {
 
 export function sanitizeHeaderValue(value: unknown): string {
   return String(value ?? '').replace(/[\r\n]+/g, ' ').trim().slice(0, 160);
+}
+
+export function sanitizeForPrompt(input: string): string {
+  // Remove potential prompt injection patterns
+  return input
+    .replace(/"""/g, '\\"\\"\\"')  // Escape triple quotes
+    .replace(/```/g, '\\`\\`\\`')   // Escape markdown code blocks
+    .replace(/<\|end\|>/g, '')      // Remove special tokens
+    .replace(/<\|.*?\|>/g, '')      // Remove other special tokens
+    .slice(0, 4000);                // Enforce length limit
 }
 
 export function normalizeStudentCode(name: string): string {

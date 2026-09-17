@@ -5,6 +5,7 @@ import {
   requireAppCheck,
   requireFirebaseAuth,
   requireProfileRole,
+  sanitizeForPrompt,
 } from '../security';
 import { aiLimiter } from '../rate-limiters';
 import { getGeminiClient } from '../gemini-client';
@@ -94,6 +95,9 @@ studentAiRoutes.post('/ai-hint', requireFirebaseAuth, requireAppCheck, aiLimiter
       });
     }
 
+    const sanitizedPrompt = sanitizeForPrompt(prompt);
+    const sanitizedSecondaryPrompt = secondaryPrompt ? sanitizeForPrompt(secondaryPrompt) : undefined;
+
     const promptContext = `
 Sen BİLSEM (Bilim ve Sanat Merkezleri) ve bilişsel yetenek sınavlarına hazırlanan ilkokul öğrencileri (7-11 yaş) için özel tasarlanmış şefkatli, eğlenceli ve cesaret verici bir "Bilişsel Zeka ve Pedagoji Rehberisin".
 
@@ -104,7 +108,7 @@ Soru Bilgileri:
 - Kategori: ${category}
 - Soru Tipi: ${questionType}
 - Zorluk Seviyesi: ${difficulty} / 6
-- Soru Metni: "${prompt}" ${secondaryPrompt ? `(${secondaryPrompt})` : ''}
+- Soru Metni: "${sanitizedPrompt}" ${sanitizedSecondaryPrompt ? `(${sanitizedSecondaryPrompt})` : ''}
 - Sorunun Mantık Özeti ve Çözüm Adımları: "${explanation?.summary || ''}" - "${explanation?.steps?.join(' | ') || ''}"
 - Seçenekler: ${JSON.stringify(options?.map((o: any) => ({ id: o.id, label: o.label })) || [])}
 - Doğru Seçenek: ${correctOptionId}
@@ -202,6 +206,9 @@ studentAiRoutes.post('/ai-explain-mistake', requireFirebaseAuth, requireAppCheck
       correctOptionId,
     } = validation.data;
 
+    const sanitizedPrompt = sanitizeForPrompt(prompt);
+    const sanitizedSecondaryPrompt = secondaryPrompt ? sanitizeForPrompt(secondaryPrompt) : undefined;
+
     const ai = getGeminiClient();
 
     if (!ai) {
@@ -224,7 +231,7 @@ Soru Bilgileri:
 - Kategori: ${category}
 - Soru Tipi: ${questionType}
 - Zorluk Seviyesi: ${difficulty} / 6
-- Soru Metni: "${prompt}" ${secondaryPrompt ? \`(\${secondaryPrompt})\` : ''}
+- Soru Metni: "${sanitizedPrompt}" ${sanitizedSecondaryPrompt ? `(${sanitizedSecondaryPrompt})` : ''}
 - Sorunun Mantık Özeti ve Çözüm Adımları: "${explanation?.summary || ''}" - "${explanation?.steps?.join(' | ') || ''}"
 - Seçenekler: ${JSON.stringify(options || [])}
 - Öğrencinin İşaretlediği Yanlış Seçenek: ${selectedOptionId}
@@ -329,6 +336,8 @@ studentAiRoutes.post('/ai-step-explanation', requireFirebaseAuth, requireAppChec
       correctOptionId,
       isCorrect,
     } = validation.data;
+    const sanitizedPrompt = sanitizeForPrompt(prompt);
+    const sanitizedSecondaryPrompt = secondaryPrompt ? sanitizeForPrompt(secondaryPrompt) : undefined;
 
     const ai = getGeminiClient();
 
@@ -351,7 +360,7 @@ Soru Bilgileri:
 - Kategori: ${category}
 - Soru Tipi: ${questionType}
 - Zorluk Seviyesi: ${difficulty} / 6
-- Soru Metni: "${prompt}" ${secondaryPrompt ? \`(\${secondaryPrompt})\` : ''}
+- Soru Metni: "${sanitizedPrompt}" ${sanitizedSecondaryPrompt ? `(${sanitizedSecondaryPrompt})` : ''}
 - Sorunun Mantık Özeti ve Çözüm Adımları: "${explanation?.summary || ''}" - "${explanation?.steps?.join(' | ') || ''}"
 - Kural Başlığı: "${explanation?.ruleTitle || ''}"
 - Seçenekler: ${JSON.stringify(options || [])}
