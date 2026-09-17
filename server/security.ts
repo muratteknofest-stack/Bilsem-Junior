@@ -70,15 +70,29 @@ export function requireVerifiedEmail(req: AuthenticatedRequest, res: Response, n
   return next();
 }
 
+const roleCache = new Map<string, { role: string; expiresAt: number }>();
+const ROLE_CACHE_TTL_MS = 60_000; // 1 minute
+
 export function requireProfileRole(...roles: AppRole[]) {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.authUser) return res.status(401).json({ error: 'Oturum doğrulaması gerekli.' });
     try {
-      const snapshot = await getAdminDb().doc(`users/${req.authUser.uid}`).get();
+      const uid = req.authUser.uid;
+      const cached = roleCache.get(uid);
+      if (cached && cached.expiresAt > Date.now()) {
+        if (!roles.includes(cached.role as AppRole)) {
+          return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmuyor.' });
+        }
+        return next();
+      }
+
+      const snapshot = await getAdminDb().doc(`users/${uid}`).get();
       const profile = snapshot.data();
-      if (!profile || profile.id !== req.authUser.uid || !roles.includes(profile.role)) {
+      if (!profile || profile.id !== uid || !roles.includes(profile.role)) {
         return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmuyor.' });
       }
+      
+      roleCache.set(uid, { role: profile.role, expiresAt: Date.now() + ROLE_CACHE_TTL_MS });
       return next();
     } catch {
       return res.status(503).json({ error: 'Hesap yetkisi şu anda doğrulanamadı.' });

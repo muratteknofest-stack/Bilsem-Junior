@@ -1,4 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAnalytics, isSupported } from 'firebase/analytics';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider, type AppCheck } from 'firebase/app-check';
 import { getAuth } from 'firebase/auth';
 import { initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
@@ -14,6 +15,8 @@ export const firebaseConfig = {
   storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || appletConfig.storageBucket,
   messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || appletConfig.messagingSenderId,
   appId: env.VITE_FIREBASE_APP_ID || appletConfig.appId,
+  measurementId: env.VITE_FIREBASE_MEASUREMENT_ID,
+  databaseURL: env.VITE_FIREBASE_DATABASE_URL,
 };
 
 const missingFirebaseKeys = Object.entries(firebaseConfig)
@@ -50,4 +53,7 @@ const db = initializeFirestore(app, {}, databaseId);
 
 const storage = getStorage(app);
 
-export { app, appCheck, auth, db, storage };
+let analytics = null;
+isSupported().then((yes) => yes && (analytics = getAnalytics(app))).catch(() => {});
+
+export { app, appCheck, auth, db, storage, analytics };

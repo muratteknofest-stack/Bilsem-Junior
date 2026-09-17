@@ -133,6 +133,12 @@ export function calculateQualityScore(result: Partial<PipelineResult>): number {
   return Math.min(100, Math.max(0, score));
 }
 
+function getSolverConfig(difficulty: number): { attempts: number; minConsensus: number } {
+  if (difficulty <= 2) return { attempts: 3, minConsensus: 2 };
+  if (difficulty <= 4) return { attempts: 5, minConsensus: 4 };
+  return { attempts: 10, minConsensus: 7 };
+}
+
 export async function runQuestionPipeline(
   aiClient: GoogleGenAI,
   config: PipelineConfig
@@ -218,7 +224,7 @@ Zorluk: ${config.difficulty} / 6`;
     };
 
     const generatorPrompt = `Şu taslağa dayanarak tam bir JSON soru nesnesi üret (ZekaPark BaseQuestion formatına uygun):
-Taslak: \${JSON.stringify(plannerOutput)}
+Taslak: ${JSON.stringify(plannerOutput)}
 4 seçenek oluştur (A, B, C, D). Doğru cevabın hangisi olduğunu 'correctOptionId' içinde belirt.
 'distractorNotes' içine her yanlış seçeneğin (çeldiricinin) neden seçilebileceğini açıklayan notlar yaz.
 Görsel data şimdilik sadece metin tabanlı (textNumber) olarak temsil edilebilir.`;
@@ -238,11 +244,11 @@ Görsel data şimdilik sadece metin tabanlı (textNumber) olarak temsil edilebil
     };
 
     const solverPrompt = `Aşağıdaki soruyu çöz. Çözüm mantığını açıkla ve en uygun seçeneği seç.
-Soru Metni: \${generatedRaw.prompt}
-Ek Bilgi: \${generatedRaw.secondaryPrompt || ''}
-Seçenekler: \${JSON.stringify(generatedRaw.options.map((o: any) => ({ id: o.id, data: o.visualData })))}`;
+Soru Metni: ${generatedRaw.prompt}
+Ek Bilgi: ${generatedRaw.secondaryPrompt || ''}
+Seçenekler: ${JSON.stringify(generatedRaw.options.map((o: any) => ({ id: o.id, data: o.visualData })))}`;
 
-    const SOLVER_ATTEMPTS = 10;
+    const { attempts: SOLVER_ATTEMPTS, minConsensus } = getSolverConfig(config.difficulty);
     const solverPromises = Array.from({ length: SOLVER_ATTEMPTS }).map(() =>
       callAiWithRetry(aiClient, validatorModel, solverPrompt, solverSchema, 'Sen mantık bulmacalarını hatasız çözen bir yapay zekasın.', 0.7)
     );
@@ -266,17 +272,17 @@ Seçenekler: \${JSON.stringify(generatedRaw.options.map((o: any) => ({ id: o.id,
     result.rawSolverResponse = JSON.stringify({ answerCounts, consensus: bestAnswer });
     result.solverAnswer = bestAnswer;
 
-    if (result.solverAnswer === result.generatedAnswer && maxCount >= 7) {
+    if (result.solverAnswer === result.generatedAnswer && maxCount >= minConsensus) {
       result.solverVerified = true;
-    } else if (result.solverAnswer === result.generatedAnswer && maxCount < 7) {
-      result.rejectionReasons.push(`Bağımsız çözüm testinde AI doğru cevabı buldu ama tutarlılık düşük (${maxCount}/10).`);
+    } else if (result.solverAnswer === result.generatedAnswer && maxCount < minConsensus) {
+      result.rejectionReasons.push(`Bağımsız çözüm testinde AI doğru cevabı buldu ama tutarlılık düşük (${maxCount}/${SOLVER_ATTEMPTS}).`);
     } else {
       result.rejectionReasons.push(`Bağımsız çözüm testinde AI farklı bir cevap buldu (Çoğunluk: ${bestAnswer}, Üretilen: ${result.generatedAnswer}).`);
     }
 
     // 4. Validation
     const baseQuestion: Partial<BaseQuestion> = {
-      id: `ai-\${Date.now()}`,
+      id: `ai-${Date.now()}`,
       version: 1,
       type: (config.questionType as QuestionType) || 'logic_grid',
       category: (config.category as CognitiveCategory) || 'logic',
@@ -336,12 +342,12 @@ Seçenekler: \${JSON.stringify(generatedRaw.options.map((o: any) => ({ id: o.id,
       };
     } else {
       if (result.qualityScore < minScore) {
-        result.rejectionReasons.push(`Kalite skoru (\${result.qualityScore}) hedeflenenin (\${minScore}) altında.`);
+        result.rejectionReasons.push(`Kalite skoru (${result.qualityScore}) hedeflenenin (${minScore}) altında.`);
       }
     }
 
   } catch (error: any) {
-    result.validationErrors.push(`Pipeline Error: \${error.message}`);
+    result.validationErrors.push(`Pipeline Error: ${error.message}`);
     result.rejectionReasons.push('Pipeline çalıştırılırken hata oluştu.');
   } finally {
     result.durationMs = Date.now() - startTime;

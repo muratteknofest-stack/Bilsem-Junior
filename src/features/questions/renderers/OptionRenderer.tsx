@@ -439,16 +439,32 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
     );
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      onSelect();
+    }
+  };
+
+  const optionLabelText = option.label ? `${id} seçeneği: ${option.label}` : `Seçenek ${id}`;
+
   return (
     <button
       type="button"
       id={`option-card-${id}`}
       onClick={onSelect}
+      onKeyDown={handleKeyDown}
       disabled={disabled}
-      className={`relative flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer text-left w-full min-h-[110px] md:min-h-[130px] ${cardStyle} ${disabled && !showCorrect ? 'opacity-70 pointer-events-none shadow-none translate-y-1' : ''}`}
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      aria-pressed={isSelected}
+      aria-disabled={disabled}
+      aria-label={optionLabelText}
+      className={`relative flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer text-left w-full min-h-[110px] md:min-h-[130px] min-w-[52px] touch-manipulation focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/50 ${cardStyle} ${disabled && !showCorrect ? 'opacity-70 pointer-events-none shadow-none translate-y-1' : ''}`}
     >
       {/* Option Identifier Badge */}
       <span
+        aria-hidden="true"
         className={`absolute top-2.5 left-2.5 flex items-center justify-center w-7 h-7 rounded-xl text-sm font-bold border transition-colors ${badgeStyle}`}
       >
         {id}

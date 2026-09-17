@@ -8,6 +8,7 @@ import {
 import { generateQuestionByType, CATEGORY_TYPES_MAP } from '../features/questions/generators';
 import { GRADE_CONFIGS, ALL_GRADES } from '../features/questions/grade-config';
 import { safeStorage } from '../lib/storage';
+import { z } from 'zod';
 
 const STORAGE_KEY = 'bilsem_admin_managed_questions_v1';
 
@@ -350,41 +351,82 @@ class QuestionBankService {
     );
   }
 
-  public importQuestionsJson(jsonString: string): { success: boolean; count: number; error?: string } {
+  public importQuestionsJson(jsonString: string): { success: boolean; count: number; rejectedCount?: number; error?: string } {
     try {
       const parsed = JSON.parse(jsonString);
-      let list: any[] = [];
+      let rawList: unknown[] = [];
 
       if (Array.isArray(parsed)) {
-        list = parsed;
-      } else if (parsed && Array.isArray(parsed.questions)) {
-        list = parsed.questions;
+        rawList = parsed;
+      } else if (parsed && typeof parsed === 'object' && Array.isArray((parsed as any).questions)) {
+        rawList = (parsed as any).questions;
       } else {
         return { success: false, count: 0, error: 'Geçerli bir soru dizisi (questions listesi) bulunamadı.' };
       }
 
+      // Zod Validation Schema for Individual Imported Question
+      const importedItemSchema = z.object({
+        type: z.string().min(1).max(64),
+        prompt: z.string().min(2).max(1000),
+        options: z.array(z.object({
+          id: z.string().min(1),
+          label: z.string().optional(),
+          visualData: z.unknown().optional(),
+        })).min(2, 'Soru en az 2 seçenek içermelidir.').max(8),
+        correctOptionId: z.string().min(1),
+        targetGrade: z.number().int().min(1).max(4).optional(),
+        category: z.string().optional(),
+        difficulty: z.number().min(1).max(6).optional(),
+      }).passthrough();
+
+      const sanitizeText = (val: string) =>
+        val.replace(/<[^>]*>?/gm, '').trim();
+
       let importedCount = 0;
-      for (const item of list) {
-        if (item && item.type && item.prompt && item.options) {
-          const validatedQuestion: BaseQuestion = {
-            ...item,
-            id: item.id || `q_imported_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-            targetGrade: item.targetGrade || (item.ageGroup === '1-2' ? 2 : 3),
-            category: item.category || 'visual_perception',
-            difficulty: item.difficulty || 3,
-            createdAt: item.createdAt || new Date().toISOString(),
-            isCustom: true,
-          };
-          this.questions.unshift(validatedQuestion);
-          importedCount++;
+      let rejectedCount = 0;
+
+      for (const item of rawList) {
+        const result = importedItemSchema.safeParse(item);
+        if (!result.success) {
+          rejectedCount++;
+          continue;
         }
+
+        const validItem = result.data;
+        // Verify that correctOptionId actually exists in options
+        const hasCorrectOption = validItem.options.some((opt) => opt.id === validItem.correctOptionId);
+        if (!hasCorrectOption) {
+          rejectedCount++;
+          continue;
+        }
+
+        const validatedQuestion: BaseQuestion = {
+          ...(item as any),
+          id: (item as any).id || `q_imported_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+          prompt: sanitizeText(validItem.prompt),
+          targetGrade: (validItem.targetGrade || ((item as any).ageGroup === '1-2' ? 2 : 3)) as 1 | 2 | 3 | 4,
+          category: (validItem.category || 'visual_perception') as CognitiveCategory,
+          difficulty: (validItem.difficulty || 3) as DifficultyLevel,
+          createdAt: (item as any).createdAt || new Date().toISOString(),
+          isCustom: true,
+        };
+
+        this.questions.unshift(validatedQuestion);
+        importedCount++;
       }
 
       if (importedCount > 0) {
         this.save();
-        return { success: true, count: importedCount };
+        return { success: true, count: importedCount, rejectedCount };
       } else {
-        return { success: false, count: 0, error: 'İçe aktarılacak geçerli formatta soru bulunamadı.' };
+        return {
+          success: false,
+          count: 0,
+          rejectedCount,
+          error: rejectedCount > 0
+            ? `${rejectedCount} soru incelendi ancak hiçbiri şema doğrulamalarından (seçenek eşleşmesi, zorunlu alanlar) geçemedi.`
+            : 'İçe aktarılacak geçerli formatta soru bulunamadı.',
+        };
       }
     } catch (e: any) {
       return { success: false, count: 0, error: e?.message || 'JSON ayrıştırma hatası' };

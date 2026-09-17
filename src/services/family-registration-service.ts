@@ -1,6 +1,7 @@
 import { deleteApp, initializeApp } from 'firebase/app';
 import {
   createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
   deleteUser,
   getAuth,
   sendEmailVerification,
@@ -39,6 +40,48 @@ export async function registerFamilyInFirebase(
 ): Promise<FamilyRegistrationResult> {
   const parentEmail = input.parentEmail.trim().toLowerCase();
   const now = Date.now();
+
+  // ── 1. Öncelikli Yol: Güvenli Sunucu Tarafı Atomik Kayıt (Server-Side Atomic Registration) ──
+  try {
+    const res = await fetch('/api/register-family', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.parentProfile && data.student) {
+        // Automatically sign in parent on client to establish session
+        const credential = await signInWithEmailAndPassword(auth, parentEmail, input.parentPassword);
+        let verificationSent = false;
+        try {
+          await sendEmailVerification(credential.user);
+          verificationSent = true;
+        } catch {
+          verificationSent = false;
+        }
+
+        return {
+          parentProfile: data.parentProfile,
+          student: data.student,
+          verificationSent,
+        };
+      }
+    } else if (res.status === 400 || res.status === 409) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || 'Kayıt işlemi gerçekleştirilemedi.');
+    }
+    // If 404 or 5xx, fall through to client-side fallback
+  } catch (err: any) {
+    // If it's a validation or conflict error, bubble it up immediately
+    if (err.message && (err.message.includes('kayıtlı bir hesap') || err.message.includes('Geçerli bir'))) {
+      throw err;
+    }
+    console.warn('[FamilyRegistration] Sunucu API yanıt vermedi, güvenli istemci yedeği kullanılıyor...', err);
+  }
+
+  // ── 2. Yedek Yol: İstemci Tarafı (Client-Side Fallback) ──
   const secondaryApp = initializeApp(firebaseConfig, `family-registration-${now}-${randomDigits()}`);
   const studentAuth = getAuth(secondaryApp);
   const studentDb = databaseId

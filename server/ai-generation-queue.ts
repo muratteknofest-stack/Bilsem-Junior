@@ -31,6 +31,7 @@ export interface GenerationJob {
   results: PipelineResult[];
   createdAt: number;
   completedAt?: number;
+  retryCount?: number;
 }
 
 const CONCURRENCY_LIMIT = 3;
@@ -45,6 +46,43 @@ export class AiGenerationQueue {
   constructor(aiClient: GoogleGenAI, firestore: any) {
     this.aiClient = aiClient;
     this.firestore = firestore;
+    this.hydrateFromFirestore();
+  }
+
+  async hydrateFromFirestore(): Promise<void> {
+    try {
+      const snapshot = await this.firestore
+        .collection('ai_generation_jobs')
+        .where('status', 'in', ['queued', 'processing'])
+        .get();
+      
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        if (!this.jobs.has(doc.id)) {
+          const job: GenerationJob = {
+            jobId: doc.id,
+            adminId: data.adminId,
+            config: data.config,
+            status: 'queued', // Reset to queued for re-processing
+            progress: data.progress || { completed: 0, total: data.config?.count || 0, approved: 0, rejected: 0, failed: 0 },
+            results: [],
+            createdAt: data.createdAt || Date.now(),
+          };
+          // Adjust progress to skip already completed items
+          job.progress.completed = Math.min(job.progress.completed, job.progress.total);
+          this.jobs.set(doc.id, job);
+          if (job.progress.completed < job.progress.total) {
+            this.processingQueue.push(doc.id);
+          }
+        }
+      }
+      if (this.processingQueue.length > 0) {
+        console.log(`[AiGenerationQueue] Hydrated ${this.processingQueue.length} unfinished jobs from Firestore`);
+        this.processNext();
+      }
+    } catch (err) {
+      console.error('[AiGenerationQueue] Failed to hydrate from Firestore:', err);
+    }
   }
 
   public createJob(adminId: string, config: GenerationJobConfig): string {
@@ -111,6 +149,8 @@ export class AiGenerationQueue {
     job.status = 'processing';
     await this.saveJobToFirestore(job);
 
+    let isRetrying = false;
+
     try {
       // Determine difficulty
       const diff = job.config.difficulty === 'auto' 
@@ -127,6 +167,8 @@ export class AiGenerationQueue {
 
       const result = await runQuestionPipeline(this.aiClient, pipelineConfig);
       
+      // Reset retry count on successful pipeline completion
+      job.retryCount = 0;
       job.progress.completed++;
       job.results.push(result);
 
@@ -144,8 +186,28 @@ export class AiGenerationQueue {
       await this.logGenerationAttempt(job.jobId, result);
       await this.saveJobToFirestore(job);
 
-    } catch (error) {
-      console.error(`[AiGenerationQueue] Error processing job \${jobId}:`, error);
+    } catch (error: any) {
+      const isTransient = String(error).includes('429') ||
+        String(error).includes('RESOURCE_EXHAUSTED') ||
+        String(error).includes('503') ||
+        String(error).includes('fetch failed') ||
+        String(error).includes('timeout');
+
+      job.retryCount = (job.retryCount || 0) + 1;
+
+      if (isTransient && job.retryCount <= 3) {
+        isRetrying = true;
+        const delayMs = Math.pow(2, job.retryCount) * 1000;
+        console.warn(`[AiGenerationQueue] Transient error on job ${jobId}. Retrying attempt ${job.retryCount}/3 after ${delayMs}ms...`);
+        // Schedule next process after delay without incrementing failed count
+        setTimeout(() => {
+          this.processNext().catch(console.error);
+        }, delayMs);
+        return;
+      }
+
+      console.error(`[AiGenerationQueue] Error processing job ${jobId} (Retries exhausted):`, error);
+      job.retryCount = 0; // Reset for subsequent questions
       job.progress.completed++;
       job.progress.failed++;
       
@@ -165,8 +227,10 @@ export class AiGenerationQueue {
       await this.saveJobToFirestore(job);
     } finally {
       this.activeWorkers--;
-      // Call again to process next item in this job or next job
-      this.processNext().catch(console.error);
+      // Only immediately trigger next item if not in backoff delay
+      if (!isRetrying) {
+        this.processNext().catch(console.error);
+      }
     }
   }
 

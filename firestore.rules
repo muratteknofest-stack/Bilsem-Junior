@@ -54,6 +54,17 @@ service cloud.firestore {
         request.resource.data.consent.termsVersion is string;
     }
 
+    function validProgressDeltas() {
+      let oldXp = resource.data.get('xp', 0);
+      let newXp = request.resource.data.get('xp', 0);
+      let oldStreak = resource.data.get('streak', 0);
+      let newStreak = request.resource.data.get('streak', 0);
+      return newXp >= oldXp &&
+        (newXp - oldXp <= 200) &&
+        newStreak >= 0 &&
+        (newStreak <= oldStreak + 1);
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId) || isLinkedParent(userId) || isAdmin();
 
@@ -75,6 +86,7 @@ service cloud.firestore {
           ));
 
       // Identity, authorization and family-link fields cannot be changed by a browser client.
+      // Progress increments are bounded to prevent client-side score manipulation.
       allow update: if isAdmin() ||
         (isOwner(userId) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -84,7 +96,8 @@ service cloud.firestore {
             'dailyGoalQuestions', 'todayQuestionsSolved', 'dailyGoalSessions',
             'todaySessionsCompleted', 'soundEnabled', 'totalQuestionsSolved',
             'resolvedMistakesCount', 'featuredBadgeIds', 'reminderConfig', 'updatedAt'
-          ]));
+          ]) &&
+          validProgressDeltas());
       allow delete: if isOwner(userId) || isAdmin();
 
       match /private/{documentId} {

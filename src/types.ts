@@ -243,11 +243,184 @@ export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   spatial_origami: '44. Zihinsel Kutu & Açılım Eşleme',
 };
 
+// ── VisualData Types ──
+// Each interface represents a possible shape of visualData in question options.
+// Fields are mostly optional to maintain backward compatibility.
+
+export interface NumericVisualData {
+  textNumber: number | string;
+}
+
+export interface TextVisualData {
+  textOnly?: string;
+  text?: string;
+  label?: string;
+  val?: string | number;
+  title?: string;
+}
+
+export interface TileDiagramVisualData {
+  cells: Record<string, unknown>[];
+  size: number;
+}
+
+export interface TangramPieceVisualData {
+  tangramPiece: string;
+  color?: string;
+}
+
+export interface MazeTargetVisualData {
+  target: { symbol: string; label: string };
+}
+
+export interface PunchFoldOptionVisualData {
+  punchOpt: { unfoldedHoles: number; punchType: string };
+  foldType: string;
+}
+
+export interface DetailDetectionVisualData {
+  baseShape: string;
+  color?: string;
+  isDifferent: boolean;
+}
+
+export interface MultiviewOptionVisualData {
+  viewOption: { matrix: number[][] };
+}
+
+export interface RavenOptionVisualData {
+  optId: string;
+  ravenRule?: string;
+}
+
+export interface SymbolOptionVisualData {
+  symbol: string;
+}
+
+export interface WordOptionVisualData {
+  word: string;
+}
+
+export interface StackVisualData {
+  stack: Array<{
+    kind?: string;
+    shape?: string;
+    cx?: number;
+    cy?: number;
+    size?: number;
+    fill?: string;
+    stroke?: string;
+    rotation?: number;
+    marker?: string;
+    markerPos?: string;
+    markerColor?: string;
+  }>;
+}
+
+export interface LiquidVisualData {
+  fillPercent: number;
+  color?: string;
+}
+
+export interface PaperPatternVisualData {
+  paperPattern: string[];
+}
+
+export interface Grid2DVisualData {
+  grid2D: number[][] | number[];
+}
+
+export interface ShapeItemVisualData {
+  kind: string;
+  cx?: number;
+  cy?: number;
+  size?: number;
+  fill?: string;
+  stroke?: string;
+  strokeWidth?: number;
+  rotation?: number;
+  marker?: string;
+  markerPos?: string;
+  markerColor?: string;
+}
+
+export type VisualData =
+  | NumericVisualData
+  | TextVisualData
+  | TileDiagramVisualData
+  | TangramPieceVisualData
+  | MazeTargetVisualData
+  | PunchFoldOptionVisualData
+  | DetailDetectionVisualData
+  | MultiviewOptionVisualData
+  | RavenOptionVisualData
+  | SymbolOptionVisualData
+  | WordOptionVisualData
+  | StackVisualData
+  | LiquidVisualData
+  | PaperPatternVisualData
+  | Grid2DVisualData
+  | ShapeItemVisualData
+  | Record<string, unknown>;
+
+// ── VisualConfig Types ──
+
+export interface VerifiedBoardVisualConfig {
+  displayMode: 'verified_board';
+  tiles?: unknown[];
+  [key: string]: unknown;
+}
+
+export interface SequenceVisualConfig {
+  sequenceItems: unknown[];
+}
+
+export interface MatrixVisualConfig {
+  grid: unknown[];
+  color?: string;
+}
+
+export interface RotationVisualConfig {
+  targetItem: unknown;
+  direction?: 'clockwise' | 'counter_clockwise';
+  rotationAngle?: number;
+}
+
+export interface MirrorVisualConfig {
+  baseItem: unknown;
+  mirrorAxis?: 'vertical' | 'horizontal';
+}
+
+export interface NumberPatternVisualConfig {
+  displayNumbers: (number | string)[];
+}
+
+export interface SymbolCodingVisualConfig {
+  mapping: Record<string, string>;
+  targetSequence: string[];
+}
+
+export interface GenericVisualConfig {
+  [key: string]: unknown;
+}
+
+export type VisualConfig =
+  | VerifiedBoardVisualConfig
+  | SequenceVisualConfig
+  | MatrixVisualConfig
+  | RotationVisualConfig
+  | MirrorVisualConfig
+  | NumberPatternVisualConfig
+  | SymbolCodingVisualConfig
+  | GenericVisualConfig
+  | Record<string, unknown>
+  | null;
+
 export interface VisualOption {
   id: string; // 'A' | 'B' | 'C' | 'D'
   label: string;
   fingerprint: string;
-  visualData: any;
+  visualData: VisualData | null;
 }
 
 export interface VisualExplanation {
@@ -277,7 +450,7 @@ export interface BaseQuestion {
   estimatedSeconds: number;
   skills: string[];
   seed: number;
-  visualConfig: any;
+  visualConfig: VisualConfig;
   targetGrade?: 1 | 2 | 3 | 4;
   targetGrades?: (1 | 2 | 3 | 4)[];
   createdAt?: string;
