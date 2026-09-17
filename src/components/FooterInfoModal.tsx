@@ -275,7 +275,7 @@ export const FooterInfoModal: React.FC<FooterInfoModalProps> = ({
                 <div>
                   <h4 className="font-bold text-slate-900 mb-1">4. Veri Saklama ve Silme Hakkı</h4>
                   <p>
-                    Veliler diledikleri zaman <code className="bg-slate-100 text-indigo-700 px-1.5 py-0.5 rounded font-mono font-bold">muratteknofest@gmail.com</code> adresine e-posta göndererek kayıtlı öğrenci profilinin ve tüm performans geçmişinin kalıcı olarak silinmesini talep edebilirler.
+                    Veliler diledikleri zaman <code className="bg-slate-100 text-indigo-700 px-1.5 py-0.5 rounded font-mono font-bold">zeka.kupu.test@gmail.com</code> adresine e-posta göndererek kayıtlı öğrenci profilinin ve tüm performans geçmişinin kalıcı olarak silinmesini talep edebilirler.
                   </p>
                 </div>
               </div>
@@ -462,10 +462,10 @@ export const FooterInfoModal: React.FC<FooterInfoModalProps> = ({
                   <div>
                     <span className="text-xs text-slate-500 font-medium block">Resmi Destek E-Postası</span>
                     <a
-                      href="mailto:muratteknofest@gmail.com"
+                      href="mailto:zeka.kupu.test@gmail.com"
                       className="font-bold text-indigo-700 hover:text-indigo-900 text-sm break-all"
                     >
-                      muratteknofest@gmail.com
+                      zeka.kupu.test@gmail.com
                     </a>
                     <span className="text-[11px] text-slate-500 block mt-0.5">
                       Ortalama yanıt süresi: &lt; 4 saat
