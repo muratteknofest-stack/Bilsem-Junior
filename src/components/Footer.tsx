@@ -125,10 +125,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onStartDemo }) => {
               <div className="flex items-start gap-2 text-slate-400">
                 <Mail className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
                 <a
-                  href="mailto:muratteknofest@gmail.com"
+                  href="mailto:zeka.kupu.test@gmail.com"
                   className="hover:text-white transition-colors break-all"
                 >
-                  muratteknofest@gmail.com
+                  zeka.kupu.test@gmail.com
                 </a>
               </div>
               <div className="flex items-center gap-2 text-slate-400">
@@ -420,7 +420,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onStartDemo }) => {
 
             <div className="mt-5 p-3 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-400 leading-normal">
               <span className="text-slate-300 font-bold block mb-1">Pedagojik Destek Hattı:</span>
-              <span>Uzman psikolojik danışmanlarımıza <a href="mailto:muratteknofest@gmail.com" className="text-indigo-400 hover:underline">e-posta ile</a> soru iletebilirsiniz.</span>
+              <span>Uzman psikolojik danışmanlarımıza <a href="mailto:zeka.kupu.test@gmail.com" className="text-indigo-400 hover:underline">e-posta ile</a> soru iletebilirsiniz.</span>
             </div>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   Sparkles,
   ArrowRight,
@@ -11,31 +12,17 @@ import {
   Eye,
   BookOpen,
   Calculator,
-  Trophy,
   CheckCircle2,
   ChevronRight,
-  ShieldAlert,
   Flame,
-  Star,
-  Users,
   Play,
   RotateCcw,
-  Check,
-  HelpCircle,
-  Lightbulb,
-  BarChart2,
-  GraduationCap,
-  HeartHandshake,
-  Award,
+  MousePointerClick,
   Zap,
   ChevronDown,
   ChevronUp,
-  Layers,
-  Activity,
-  MousePointerClick,
-  Timer,
-  ShieldCheck,
-  Quote,
+  HeartHandshake,
+  GraduationCap,
   ArrowUpRight,
 } from 'lucide-react';
 import { generateQuestionByType } from '../features/questions/generators';
@@ -51,6 +38,20 @@ interface LandingPageProps {
   onNavigateToLogin: (role: UserRole) => void;
   onNavigate: (route: string) => void;
 }
+
+// Animation Variants
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 },
+  },
+};
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } },
+};
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   onStartDemo,
@@ -324,12 +325,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
           <div className="flex items-center gap-3 shrink-0 text-xs">
             <span className="text-amber-800 hidden md:inline">Bağımsız Eğitim Aracı</span>
-            <button
+            <motion.button
+              whileTap={{ scale: 0.95 }}
               onClick={() => onNavigateToLogin('student')}
               className="bg-amber-900 text-amber-100 hover:bg-amber-950 px-2.5 py-1 rounded-lg font-bold transition-colors cursor-pointer text-xs"
             >
               Hemen Başla →
-            </button>
+            </motion.button>
           </div>
         </div>
       </div>
@@ -338,26 +340,31 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <section className="relative overflow-hidden pt-8 pb-16 md:pt-14 md:pb-24 px-4 sm:px-6 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           {/* Left Column: Value Proposition & Interactive Trust */}
-          <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-200/90 text-indigo-700 text-xs sm:text-sm font-bold ">
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="show"
+            className="lg:col-span-6 space-y-6 text-center lg:text-left"
+          >
+            <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-200/90 text-indigo-700 text-xs sm:text-sm font-bold ">
               <Sparkles className="w-4 h-4 text-indigo-600 animate-pulse" />
               <span>Yapay Zeka Destekli Parametrik Bilişsel Soru Motoru</span>
-            </div>
+            </motion.div>
 
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.2rem] font-extrabold text-slate-900 tracking-tight font-['Outfit',sans-serif] leading-[1.18]">
+            <motion.h1 variants={fadeUp} className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.2rem] font-extrabold text-slate-900 tracking-tight font-['Outfit',sans-serif] leading-[1.18]">
               Çocuğunuzun Bilişsel Becerilerini{' '}
               <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
                 Düzenli Pratikle
               </span>{' '}
               Destekleyin
-            </h1>
+            </motion.h1>
 
-            <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl mx-auto lg:mx-0">
+            <motion.p variants={fadeUp} className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl mx-auto lg:mx-0">
               10 bilişsel alana yayılan 44 parametrik soru tipi ve yapay zekâ destekli ipuçlarıyla düzenli, ölçülebilir pratik yapın. ZekaPark bağımsız bir çalışma aracıdır; resmi sınavın yerine geçmez.
-            </p>
+            </motion.p>
 
             {/* Live Trust Metrics Bar */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-4 py-2 border-y border-zinc-200/80">
+            <motion.div variants={fadeUp} className="grid grid-cols-3 gap-2 sm:gap-4 py-2 border-y border-zinc-200/80">
               <div className="text-center lg:text-left">
                 <div className="text-xl sm:text-2xl font-black text-indigo-900 font-['Outfit',sans-serif]">
                   44
@@ -376,25 +383,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
                 <div className="text-[11px] sm:text-xs text-slate-500 font-medium">Zorluk Seviyesi</div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Primary Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-1">
-              <button
+            <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-1">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 id="hero-student-start"
                 onClick={() => onNavigateToLogin('student')}
-                className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-extrabold text-base   active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-extrabold text-base transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-indigo-600/30"
               >
                 <span>Öğrenci Olarak Başla</span>
                 <ArrowRight className="w-5 h-5" />
-              </button>
+              </motion.button>
 
-              <button
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   sound.playClick();
                   setHeroView(heroView === 'visual_deck' ? 'live_solver' : 'visual_deck');
                 }}
-                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white border-2 border-zinc-200 text-slate-700 font-bold text-base hover:bg-slate-50 hover:border-indigo-300 hover:text-indigo-900 transition-all flex items-center justify-center gap-2 cursor-pointer "
+                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white border-2 border-zinc-200 text-slate-700 font-bold text-base hover:bg-slate-50 hover:border-indigo-300 hover:text-indigo-900 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 {heroView === 'visual_deck' ? (
                   <>
@@ -407,37 +418,48 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <span>Fotoğraf & Deneyimi Gör</span>
                   </>
                 )}
-              </button>
-            </div>
+              </motion.button>
+            </motion.div>
 
             {/* Direct Role Login Portal Selectors */}
-            <div className="pt-3 flex flex-wrap items-center justify-center lg:justify-start gap-2 text-xs font-semibold text-slate-600">
+            <motion.div variants={fadeUp} className="pt-3 flex flex-wrap items-center justify-center lg:justify-start gap-2 text-xs font-semibold text-slate-600">
               <span className="text-slate-400 font-medium">Giriş Yap:</span>
-              <button
+              <motion.button
+                whileTap={{ scale: 0.95 }}
                 onClick={() => onNavigateToLogin('student')}
                 className="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 cursor-pointer transition-colors flex items-center gap-1.5 font-bold"
               >
                 <span>🦊 Öğrenci Girişi</span>
-              </button>
-              <button
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
                 onClick={() => onNavigateToLogin('parent')}
                 className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 cursor-pointer transition-colors flex items-center gap-1.5 font-bold"
               >
                 <span>👩‍🏫 Veli Portalı</span>
-              </button>
-              <button
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
                 onClick={() => onNavigateToLogin('admin')}
                 className="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 cursor-pointer transition-colors flex items-center gap-1.5 font-bold"
               >
                 <span>👨‍💻 Yönetici & Eğitmen</span>
-              </button>
-            </div>
-          </div>
+              </motion.button>
+            </motion.div>
+          </motion.div>
 
           {/* Right Column: High-Impact Real Photography Deck OR Live Interactive Question */}
-          <div id="canli-soru" className="lg:col-span-6 relative scroll-mt-24">
-            {heroView === 'visual_deck' ? (
-              <div className="relative group">
+          <div id="canli-soru" className="lg:col-span-6 relative scroll-mt-24 min-h-[460px]">
+            <AnimatePresence mode="wait">
+              {heroView === 'visual_deck' ? (
+                <motion.div
+                  key="visual_deck"
+                  initial={{ opacity: 0, scale: 0.95, filter: 'blur(10px)' }}
+                  animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                  exit={{ opacity: 0, scale: 0.95, filter: 'blur(10px)' }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  className="relative group"
+                >
                 {/* Real Photograph with Modern Rounded Styling & Glassmorphic Badges */}
                 <div className="relative overflow-hidden rounded-xl border-2 border-indigo-100   bg-slate-900">
                   <img
@@ -500,7 +522,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                 {/* Floating Interactive CTA pill to switch to question */}
                 <div className="absolute top-4 left-4">
-                  <button
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => {
                       sound.playClick();
                       setHeroView('live_solver');
@@ -509,14 +532,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   >
                     <MousePointerClick className="w-3.5 h-3.5 text-amber-300" />
                     <span>Canlı Soruyu Test Et</span>
-                  </button>
+                  </motion.button>
                 </div>
-              </div>
+              </motion.div>
             ) : (
               /* Live Interactive Question Sandbox */
-              <div
+              <motion.div
+                key="live_solver"
+                initial={{ opacity: 0, y: 20, filter: 'blur(10px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, y: -20, filter: 'blur(10px)' }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
                 id="hero-live-question-box"
-                className="bg-white rounded-xl p-4 sm:p-6 border-2 border-indigo-200   relative transition-all"
+                className="bg-white rounded-xl p-4 sm:p-6 border-2 border-indigo-200 shadow-xl shadow-indigo-100/50 relative"
               >
                 {/* Interactive Question Header with Category Pills */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-3 border-b border-zinc-200 mb-3">
@@ -670,8 +698,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     </div>
                   </div>
                 )}
-              </div>
+              </motion.div>
             )}
+            </AnimatePresence>
           </div>
         </div>
       </section>
@@ -761,49 +790,55 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-[minmax(200px,auto)]">
           {categories.map((cat, idx) => {
             const Icon = cat.icon;
             const isSelected = selectedCatIdx === idx;
+            // Bento Grid: Make first 2 items span 2 columns on lg screens
+            const isBentoLarge = idx === 0 || idx === 1;
+
             return (
-              <button
+              <motion.button
                 type="button"
                 key={idx}
+                whileHover={{ y: -5 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   sound.playClick();
                   setSelectedCatIdx(idx);
                 }}
                 aria-pressed={isSelected}
-                className={`p-5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between text-left ${
+                className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between text-left ${
+                  isBentoLarge ? 'lg:col-span-2' : 'lg:col-span-1'
+                } ${
                   isSelected
-                    ? 'bg-white border-indigo-500   ring-2 ring-indigo-500/20'
-                    : 'bg-white border-zinc-200 hover:border-indigo-300 hover:'
+                    ? 'bg-white border-indigo-500 ring-2 ring-indigo-500/20 shadow-lg shadow-indigo-100/50'
+                    : 'bg-white border-zinc-200 hover:border-indigo-300 hover:shadow-md'
                 }`}
               >
                 <div>
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-4">
                     <div
-                      className={`w-11 h-11 rounded-xl bg-gradient-to-br ${cat.color} text-white flex items-center justify-center `}
+                      className={`w-12 h-12 rounded-xl bg-gradient-to-br ${cat.color} text-white flex items-center justify-center shadow-inner`}
                     >
-                      <Icon className="w-5 h-5" />
+                      <Icon className="w-6 h-6" />
                     </div>
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-zinc-200">
+                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-50 text-slate-600 border border-zinc-200">
                       {cat.badge}
                     </span>
                   </div>
-                  <h4 className="font-extrabold text-slate-900 text-base font-['Outfit',sans-serif]">
+                  <h4 className="font-extrabold text-slate-900 text-lg font-['Outfit',sans-serif]">
                     {cat.name}
                   </h4>
-                  <div className="text-[11px] font-bold text-indigo-600 mt-0.5">{cat.sub}</div>
-                  <p className="text-xs text-slate-600 mt-2 leading-relaxed">{cat.desc}</p>
+                  <div className="text-xs font-bold text-indigo-600 mt-1">{cat.sub}</div>
+                  <p className="text-sm text-slate-600 mt-3 leading-relaxed">{cat.desc}</p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-zinc-200 text-[11px] text-slate-500 flex items-center justify-between font-medium">
-                  <span>{cat.difficulty}</span>
-                  <span className="text-slate-400">•</span>
+                <div className="mt-5 pt-4 border-t border-zinc-100 text-xs text-slate-500 flex flex-wrap items-center justify-between gap-2 font-medium">
+                  <span className="bg-slate-100 px-2 py-1 rounded-md">{cat.difficulty}</span>
                   <span className="text-slate-700 font-semibold">{cat.bilsemMatch}</span>
                 </div>
-              </button>
+              </motion.button>
             );
           })}
         </div>
@@ -1021,29 +1056,34 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {testimonials.map((t, idx) => (
-              <div
+              <motion.div
                 key={idx}
-                className="bg-slate-50 p-6 rounded-xl border border-zinc-200 flex flex-col justify-between hover: transition-all"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5, delay: idx * 0.15 }}
+                className="bg-slate-50 p-6 rounded-2xl border border-zinc-200 flex flex-col justify-between hover:shadow-xl hover:border-emerald-300 transition-all cursor-default"
               >
                 <div>
-                  <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
-                    {t.comment}
+                  <p className="text-xs sm:text-sm text-slate-700 leading-relaxed italic relative">
+                    <span className="text-3xl text-emerald-300 absolute -top-4 -left-2">"</span>
+                    <span className="relative z-10">{t.comment}</span>
                   </p>
                 </div>
 
-                <div className="pt-4 mt-4 border-t border-zinc-200 flex items-center gap-3">
+                <div className="pt-4 mt-6 border-t border-zinc-200 flex items-center gap-3">
                   <img
                     src={t.avatar}
                     alt={t.name}
                     referrerPolicy="no-referrer"
-                    className="w-12 h-12 rounded-full object-cover border-2 border-indigo-300 shrink-0"
+                    className="w-12 h-12 rounded-full object-cover border-2 border-emerald-300 shrink-0"
                   />
                   <div>
                     <div className="font-extrabold text-slate-900 text-sm font-['Outfit',sans-serif]">
                       {t.name}
                     </div>
                     <div className="text-[11px] text-slate-500">{t.role}</div>
-                    <div className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md inline-block mt-0.5">
+                    <div className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md inline-block mt-0.5 border border-emerald-200">
                       {t.badge}
                     </div>
                   </div>
@@ -1132,15 +1172,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     className="w-full p-4 sm:p-5 text-left font-extrabold text-slate-900 text-sm sm:text-base flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-100 transition-colors"
                   >
                     <span>{faq.q}</span>
-                    <span className="p-1 rounded-lg bg-white shrink-0 text-slate-600">
-                      {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </span>
+                    <motion.span
+                      animate={{ rotate: isOpen ? 180 : 0 }}
+                      className="p-1 rounded-lg bg-white shrink-0 text-slate-600"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </motion.span>
                   </button>
-                  {isOpen && (
-                    <div className="px-4 pb-5 sm:px-5 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-zinc-200/60 pt-3">
-                      {faq.a}
-                    </div>
-                  )}
+                  <AnimatePresence>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-4 pb-5 sm:px-5 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-zinc-200/60 pt-3">
+                          {faq.a}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               );
             })}

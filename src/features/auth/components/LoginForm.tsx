@@ -291,7 +291,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                   ? 'Örn: DENIZ2026 veya deniz@zekapark.com'
                   : selectedRole === 'parent'
                   ? 'Örn: zeynep@zekapark.com'
-                  : 'Örn: muratteknofest@gmail.com'
+                  : 'Örn: zeka.kupu.test@gmail.com'
               }
               className={`w-full pl-9.5 pr-4 py-2.5 rounded-xl border text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 transition-all ${
                 fieldErrors.identifier
