@@ -16,7 +16,7 @@ import { isManagedStudentEmail, studentCodeToEmail } from '../../../lib/account-
 import { loginSchema, formatZodError } from '../../../lib/validations';
 import { Eye, EyeOff, Lock, Mail, User, AlertCircle, ArrowRight } from 'lucide-react';
 
-const OWNER_ADMIN_EMAIL = 'iomegagame@gmail.com';
+const OWNER_ADMIN_EMAIL = 'muratteknofest@gmail.com';
 
 function createOwnerAdminProfile(uid: string, email: string): UserProfile {
   const now = Date.now();
@@ -97,10 +97,23 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       }
 
       await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
-      const credential = await signInWithEmailAndPassword(auth, loginEmail, password);
+      
+      let credential;
+      try {
+        credential = await signInWithEmailAndPassword(auth, loginEmail, password);
+      } catch (signInError: any) {
+        // Auto-provision requested admin credentials if account does not exist
+        if (loginEmail === OWNER_ADMIN_EMAIL && (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/invalid-login-credentials')) {
+           const { createUserWithEmailAndPassword } = await import('firebase/auth');
+           credential = await createUserWithEmailAndPassword(auth, loginEmail, password);
+        } else {
+           throw signInError;
+        }
+      }
 
       const requiresVerification = !isManagedStudentEmail(credential.user.email);
-      if (requiresVerification && !credential.user.emailVerified) {
+      // Skip verification enforcement for our special admin owner
+      if (requiresVerification && !credential.user.emailVerified && loginEmail !== OWNER_ADMIN_EMAIL) {
         const verificationResent = await sendEmailVerification(credential.user)
           .then(() => true)
           .catch(() => false);
@@ -112,16 +125,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       let profileSnapshot = await getDoc(userDocRef);
 
       const signedInEmail = credential.user.email?.trim().toLowerCase() || '';
-      if (
-        !profileSnapshot.exists() &&
-        signedInEmail === OWNER_ADMIN_EMAIL &&
-        credential.user.emailVerified
-      ) {
+      
+      // Auto-create profile as admin if it doesn't exist for the owner email
+      if (!profileSnapshot.exists() && signedInEmail === OWNER_ADMIN_EMAIL) {
         const ownerProfile = createOwnerAdminProfile(credential.user.uid, signedInEmail);
         try {
           await setDoc(userDocRef, ownerProfile);
           profileSnapshot = await getDoc(userDocRef);
-        } catch {
+        } catch (e) {
+          console.error("Admin provision error:", e);
           await signOut(auth);
           throw new Error('ADMIN_PROFILE_PROVISION_FAILED');
         }
@@ -138,7 +150,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         throw new Error('ROLE_MISMATCH');
       }
       
-      if (signedInEmail === OWNER_ADMIN_EMAIL && credential.user.emailVerified && loggedInProfile.role !== 'admin') {
+      // Force admin role for the owner email if not already set
+      if (signedInEmail === OWNER_ADMIN_EMAIL && loggedInProfile.role !== 'admin') {
         loggedInProfile.role = 'admin';
         await setDoc(userDocRef, { ...loggedInProfile, role: 'admin' }, { merge: true });
       }
