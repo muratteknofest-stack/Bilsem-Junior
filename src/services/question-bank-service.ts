@@ -10,7 +10,7 @@ import { GRADE_CONFIGS, ALL_GRADES } from '../features/questions/grade-config';
 import { safeStorage } from '../lib/storage';
 import { z } from 'zod';
 
-const STORAGE_KEY = 'bilsem_admin_managed_questions_v1';
+const STORAGE_KEY = 'bilsem_admin_managed_questions_v2';
 
 export interface QuestionFilter {
   grade?: 1 | 2 | 3 | 4 | 'all';
@@ -71,114 +71,9 @@ class QuestionBankService {
   }
 
   private buildInitialQuestionPool(): BaseQuestion[] {
-    const pool: BaseQuestion[] = [];
-    const baseSeed = 51000;
-
-    // Build curated initial questions for Grade 1
-    const g1Configs = [
-      { type: 'odd_one_out' as QuestionType, diff: 1 as DifficultyLevel, cat: 'visual_perception' as CognitiveCategory, seed: baseSeed + 101 },
-      { type: 'figure_completion' as QuestionType, diff: 2 as DifficultyLevel, cat: 'visual_perception' as CognitiveCategory, seed: baseSeed + 102 },
-      { type: 'visual_sequence' as QuestionType, diff: 2 as DifficultyLevel, cat: 'pattern' as CognitiveCategory, seed: baseSeed + 103 },
-      { type: 'shape_counting' as QuestionType, diff: 1 as DifficultyLevel, cat: 'attention' as CognitiveCategory, seed: baseSeed + 104 },
-      { type: 'symmetry_completion' as QuestionType, diff: 2 as DifficultyLevel, cat: 'spatial' as CognitiveCategory, seed: baseSeed + 105 },
-      { type: 'direction_path' as QuestionType, diff: 1 as DifficultyLevel, cat: 'spatial' as CognitiveCategory, seed: baseSeed + 106 },
-      { type: 'shadow_matching' as QuestionType, diff: 2 as DifficultyLevel, cat: 'visual_perception' as CognitiveCategory, seed: baseSeed + 107 },
-      { type: 'tangram_puzzle' as QuestionType, diff: 2 as DifficultyLevel, cat: 'visual_perception' as CognitiveCategory, seed: baseSeed + 108 },
-      { type: 'maze_path' as QuestionType, diff: 2 as DifficultyLevel, cat: 'spatial' as CognitiveCategory, seed: baseSeed + 109 },
-      { type: 'detail_detection' as QuestionType, diff: 2 as DifficultyLevel, cat: 'attention' as CognitiveCategory, seed: baseSeed + 110 },
-    ];
-
-    g1Configs.forEach((c, idx) => {
-      const q = generateQuestionByType(c.type, c.seed, c.diff);
-      q.id = `q_gr1_${idx + 1}`;
-      q.targetGrade = 1;
-      q.targetGrades = [1];
-      q.category = c.cat;
-      q.ageGroup = '1-2';
-      q.estimatedSeconds = GRADE_CONFIGS[1].timeLimitSeconds;
-      q.createdAt = new Date(Date.now() - (15 - idx) * 3600000).toISOString();
-      pool.push(q);
-    });
-
-    // Build curated initial questions for Grade 2
-    const g2Configs = [
-      { type: 'matrix_2x2' as QuestionType, diff: 3 as DifficultyLevel, cat: 'matrix' as CognitiveCategory, seed: baseSeed + 201 },
-      { type: 'mirror_reflection' as QuestionType, diff: 2 as DifficultyLevel, cat: 'spatial' as CognitiveCategory, seed: baseSeed + 202 },
-      { type: 'figure_rotation' as QuestionType, diff: 3 as DifficultyLevel, cat: 'spatial' as CognitiveCategory, seed: baseSeed + 203 },
-      { type: 'visual_memory' as QuestionType, diff: 2 as DifficultyLevel, cat: 'memory' as CognitiveCategory, seed: baseSeed + 204 },
-      { type: 'classification' as QuestionType, diff: 3 as DifficultyLevel, cat: 'logic' as CognitiveCategory, seed: baseSeed + 205 },
-      { type: 'balance_scale' as QuestionType, diff: 3 as DifficultyLevel, cat: 'logic' as CognitiveCategory, seed: baseSeed + 206 },
-      { type: 'gear_rotation' as QuestionType, diff: 3 as DifficultyLevel, cat: 'spatial' as CognitiveCategory, seed: baseSeed + 207 },
-      { type: 'top_view' as QuestionType, diff: 3 as DifficultyLevel, cat: 'spatial' as CognitiveCategory, seed: baseSeed + 208 },
-      { type: 'punch_folding' as QuestionType, diff: 3 as DifficultyLevel, cat: 'spatial' as CognitiveCategory, seed: baseSeed + 209 },
-      { type: 'weight_comparison' as QuestionType, diff: 3 as DifficultyLevel, cat: 'numerical' as CognitiveCategory, seed: baseSeed + 210 },
-    ];
-
-    g2Configs.forEach((c, idx) => {
-      const q = generateQuestionByType(c.type, c.seed, c.diff);
-      q.id = `q_gr2_${idx + 1}`;
-      q.targetGrade = 2;
-      q.targetGrades = [2];
-      q.category = c.cat;
-      q.ageGroup = '1-2';
-      q.estimatedSeconds = GRADE_CONFIGS[2].timeLimitSeconds;
-      q.createdAt = new Date(Date.now() - (12 - idx) * 3600000).toISOString();
-      pool.push(q);
-    });
-
-    // Build curated initial questions for Grade 3
-    const g3Configs = [
-      { type: 'visual_analogy' as QuestionType, diff: 4 as DifficultyLevel, cat: 'logic' as CognitiveCategory, seed: baseSeed + 301 },
-      { type: 'number_pattern' as QuestionType, diff: 3 as DifficultyLevel, cat: 'numerical' as CognitiveCategory, seed: baseSeed + 302 },
-      { type: 'symbol_coding' as QuestionType, diff: 4 as DifficultyLevel, cat: 'logic' as CognitiveCategory, seed: baseSeed + 303 },
-      { type: 'matrix_3x3' as QuestionType, diff: 4 as DifficultyLevel, cat: 'matrix' as CognitiveCategory, seed: baseSeed + 304 },
-      { type: 'logical_sequence' as QuestionType, diff: 3 as DifficultyLevel, cat: 'pattern' as CognitiveCategory, seed: baseSeed + 305 },
-      { type: 'operation_machine' as QuestionType, diff: 4 as DifficultyLevel, cat: 'numerical' as CognitiveCategory, seed: baseSeed + 306 },
-      { type: 'verbal_analogy' as QuestionType, diff: 4 as DifficultyLevel, cat: 'logic' as CognitiveCategory, seed: baseSeed + 307 },
-      { type: 'logic_grid' as QuestionType, diff: 4 as DifficultyLevel, cat: 'logic' as CognitiveCategory, seed: baseSeed + 308 },
-      { type: 'multiview_perspective' as QuestionType, diff: 4 as DifficultyLevel, cat: 'spatial' as CognitiveCategory, seed: baseSeed + 309 },
-      { type: 'spatial_origami' as QuestionType, diff: 4 as DifficultyLevel, cat: 'spatial' as CognitiveCategory, seed: baseSeed + 310 },
-    ];
-
-    g3Configs.forEach((c, idx) => {
-      const q = generateQuestionByType(c.type, c.seed, c.diff);
-      q.id = `q_gr3_${idx + 1}`;
-      q.targetGrade = 3;
-      q.targetGrades = [3];
-      q.category = c.cat;
-      q.ageGroup = '3-4';
-      q.estimatedSeconds = GRADE_CONFIGS[3].timeLimitSeconds;
-      q.createdAt = new Date(Date.now() - (9 - idx) * 3600000).toISOString();
-      pool.push(q);
-    });
-
-    // Build curated initial questions for Grade 4
-    const g4Configs = [
-      { type: 'matrix_3x3' as QuestionType, diff: 5 as DifficultyLevel, cat: 'matrix' as CognitiveCategory, seed: baseSeed + 401 },
-      { type: 'logical_sequence' as QuestionType, diff: 5 as DifficultyLevel, cat: 'logic' as CognitiveCategory, seed: baseSeed + 402 },
-      { type: 'spatial_relationship' as QuestionType, diff: 5 as DifficultyLevel, cat: 'spatial' as CognitiveCategory, seed: baseSeed + 403 },
-      { type: 'symbol_coding' as QuestionType, diff: 6 as DifficultyLevel, cat: 'logic' as CognitiveCategory, seed: baseSeed + 404 },
-      { type: 'visual_analogy' as QuestionType, diff: 5 as DifficultyLevel, cat: 'logic' as CognitiveCategory, seed: baseSeed + 405 },
-      { type: 'story_logic' as QuestionType, diff: 5 as DifficultyLevel, cat: 'logic' as CognitiveCategory, seed: baseSeed + 406 },
-      { type: 'raven_matrix' as QuestionType, diff: 5 as DifficultyLevel, cat: 'matrix' as CognitiveCategory, seed: baseSeed + 407 },
-      { type: 'word_scramble_logic' as QuestionType, diff: 5 as DifficultyLevel, cat: 'pattern' as CognitiveCategory, seed: baseSeed + 408 },
-      { type: 'number_pyramid' as QuestionType, diff: 5 as DifficultyLevel, cat: 'numerical' as CognitiveCategory, seed: baseSeed + 409 },
-      { type: 'latin_square' as QuestionType, diff: 5 as DifficultyLevel, cat: 'logic' as CognitiveCategory, seed: baseSeed + 410 },
-    ];
-
-    g4Configs.forEach((c, idx) => {
-      const q = generateQuestionByType(c.type, c.seed, c.diff);
-      q.id = `q_gr4_${idx + 1}`;
-      q.targetGrade = 4;
-      q.targetGrades = [4];
-      q.category = c.cat;
-      q.ageGroup = '3-4';
-      q.estimatedSeconds = GRADE_CONFIGS[4].timeLimitSeconds;
-      q.createdAt = new Date(Date.now() - (6 - idx) * 3600000).toISOString();
-      pool.push(q);
-    });
-
-    return pool;
+    // Admin panelinde sıfır başlangıç istenildiği için önceden eklenmiş test soruları kaldırıldı.
+    // Artık sistem sadece Admin'in oluşturduğu soruları içerecek.
+    return [];
   }
 
   private save() {
