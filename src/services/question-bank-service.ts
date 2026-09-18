@@ -8,6 +8,16 @@ import {
 import { generateQuestionByType, CATEGORY_TYPES_MAP } from '../features/questions/generators';
 import { GRADE_CONFIGS, ALL_GRADES } from '../features/questions/grade-config';
 import { safeStorage } from '../lib/storage';
+import {
+  collection,
+  doc,
+  setDoc,
+  deleteDoc,
+  writeBatch,
+  onSnapshot,
+  getDocs,
+} from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { z } from 'zod';
 
 const STORAGE_KEY = 'bilsem_admin_managed_questions_v2';
@@ -42,9 +52,23 @@ export interface CreateQuestionPayload {
 class QuestionBankService {
   private questions: BaseQuestion[] = [];
   private initialized: boolean = false;
+  private listeners: Set<() => void> = new Set();
 
   constructor() {
     this.init();
+  }
+
+  public subscribe(callback: () => void): () => void {
+    this.listeners.add(callback);
+    return () => {
+      this.listeners.delete(callback);
+    };
+  }
+
+  private notify() {
+    this.listeners.forEach((cb) => {
+      try { cb(); } catch {}
+    });
   }
 
   private init() {
@@ -56,23 +80,45 @@ class QuestionBankService {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
           this.questions = parsed;
-          this.initialized = true;
-          return;
         }
       }
     } catch (e) {
       console.warn('Failed to parse questions from safeStorage', e);
     }
 
-    // Default Seeded Questions across 4 grades and 8 cognitive categories
-    this.questions = this.buildInitialQuestionPool();
-    this.save();
     this.initialized = true;
+
+    // Real-time live Firestore synchronization
+    if (typeof window !== 'undefined') {
+      try {
+        onSnapshot(
+          collection(db, 'questions'),
+          (snapshot) => {
+            if (!snapshot.empty) {
+              const liveList = snapshot.docs.map((d) => ({
+                ...(d.data() as BaseQuestion),
+                id: d.id,
+              }));
+              this.questions = liveList;
+              this.save();
+              this.notify();
+            } else if (snapshot.empty && this.questions.length > 0) {
+              this.questions = [];
+              this.save();
+              this.notify();
+            }
+          },
+          (err) => {
+            console.warn('Firestore live sync notice (fallback to local cache):', err);
+          }
+        );
+      } catch (err) {
+        console.warn('Firestore snapshot setup skipped:', err);
+      }
+    }
   }
 
   private buildInitialQuestionPool(): BaseQuestion[] {
-    // Admin panelinde sıfır başlangıç istenildiği için önceden eklenmiş test soruları kaldırıldı.
-    // Artık sistem sadece Admin'in oluşturduğu soruları içerecek.
     return [];
   }
 
@@ -93,14 +139,29 @@ class QuestionBankService {
   }
 
   public createCustomQuestion(question: BaseQuestion): BaseQuestion {
-    const existingIdx = this.questions.findIndex((q) => q.id === question.id);
+    const publishedQ: BaseQuestion = {
+      ...question,
+      status: question.status || 'published',
+      isCustom: true,
+      updatedAt: new Date().toISOString(),
+    };
+    const existingIdx = this.questions.findIndex((q) => q.id === publishedQ.id);
     if (existingIdx !== -1) {
-      this.questions[existingIdx] = { ...this.questions[existingIdx], ...question };
+      this.questions[existingIdx] = { ...this.questions[existingIdx], ...publishedQ };
     } else {
-      this.questions.unshift(question);
+      this.questions.unshift(publishedQ);
     }
     this.save();
-    return question;
+    this.notify();
+
+    // Live sync to Firestore
+    try {
+      setDoc(doc(db, 'questions', publishedQ.id), publishedQ).catch((err) => {
+        console.warn('Live Firestore sync error (createCustomQuestion):', err);
+      });
+    } catch {}
+
+    return publishedQ;
   }
 
   public getFiltered(filter?: QuestionFilter): BaseQuestion[] {
@@ -153,7 +214,9 @@ class QuestionBankService {
       ageGroup: payload.targetGrade <= 2 ? '1-2' : '3-4',
       estimatedSeconds: GRADE_CONFIGS[payload.targetGrade].timeLimitSeconds,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       isCustom: true,
+      status: 'published',
     };
 
     if (payload.customExplanationSummary || payload.customExplanationSteps) {
@@ -166,15 +229,53 @@ class QuestionBankService {
 
     this.questions.unshift(newQuestion);
     this.save();
+    this.notify();
+
+    // Live Sync to Firebase Firestore
+    try {
+      setDoc(doc(db, 'questions', newQuestion.id), newQuestion).catch((err) => {
+        console.warn('Live Firestore sync error (addQuestion):', err);
+      });
+    } catch {}
+
     return newQuestion;
   }
 
   public addBulkQuestions(newQuestions: BaseQuestion[]): number {
     if (!newQuestions || newQuestions.length === 0) return 0;
-    // Prepend all new questions
-    this.questions.unshift(...newQuestions);
+    
+    const preparedQuestions: BaseQuestion[] = newQuestions.map((q) => ({
+      ...q,
+      status: q.status || 'published',
+      isCustom: true,
+      createdAt: q.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }));
+
+    // Prepend all new questions locally
+    this.questions.unshift(...preparedQuestions);
     this.save();
-    return newQuestions.length;
+    this.notify();
+
+    // Live Batch Sync to Firebase Firestore
+    if (typeof window !== 'undefined') {
+      try {
+        for (let i = 0; i < preparedQuestions.length; i += 400) {
+          const chunk = preparedQuestions.slice(i, i + 400);
+          const batch = writeBatch(db);
+          chunk.forEach((q) => {
+            batch.set(doc(db, 'questions', q.id), q);
+          });
+          batch.commit().catch((err) => {
+            console.warn('Live Firestore batch sync error (addBulkQuestions):', err);
+          });
+        }
+      } catch (e) {
+        console.warn('Firebase batch error:', e);
+      }
+    }
+
+    return preparedQuestions.length;
   }
 
   public updateQuestion(id: string, updates: Partial<BaseQuestion>): BaseQuestion | null {
@@ -185,11 +286,21 @@ class QuestionBankService {
     const updated: BaseQuestion = {
       ...existing,
       ...updates,
-      id: existing.id, // preserve id
+      id: existing.id,
+      updatedAt: new Date().toISOString(),
     };
 
     this.questions[idx] = updated;
     this.save();
+    this.notify();
+
+    // Live Sync update to Firebase Firestore
+    try {
+      setDoc(doc(db, 'questions', id), updated, { merge: true }).catch((err) => {
+        console.warn('Live Firestore update error:', err);
+      });
+    } catch {}
+
     return updated;
   }
 
@@ -198,9 +309,47 @@ class QuestionBankService {
     this.questions = this.questions.filter((q) => q.id !== id);
     if (this.questions.length !== initialLen) {
       this.save();
+      this.notify();
+
+      // Live delete from Firebase Firestore
+      try {
+        deleteDoc(doc(db, 'questions', id)).catch((err) => {
+          console.warn('Live Firestore delete error:', err);
+        });
+      } catch {}
+
       return true;
     }
     return false;
+  }
+
+  public deleteBulkQuestions(ids: string[]): number {
+    if (!ids || ids.length === 0) return 0;
+    const idSet = new Set(ids);
+    const initialLen = this.questions.length;
+    this.questions = this.questions.filter((q) => !idSet.has(q.id));
+    this.save();
+    this.notify();
+
+    // Live Batch Delete from Firebase Firestore
+    if (typeof window !== 'undefined') {
+      try {
+        for (let i = 0; i < ids.length; i += 400) {
+          const chunk = ids.slice(i, i + 400);
+          const batch = writeBatch(db);
+          chunk.forEach((id) => {
+            batch.delete(doc(db, 'questions', id));
+          });
+          batch.commit().catch((err) => {
+            console.warn('Live Firestore batch delete error:', err);
+          });
+        }
+      } catch (e) {
+        console.warn('Firebase batch delete error:', e);
+      }
+    }
+
+    return initialLen - this.questions.length;
   }
 
   public duplicateQuestion(id: string, targetGrade?: 1 | 2 | 3 | 4): BaseQuestion | null {
@@ -218,18 +367,45 @@ class QuestionBankService {
       ageGroup: grade <= 2 ? '1-2' : '3-4',
       estimatedSeconds: GRADE_CONFIGS[grade].timeLimitSeconds,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       isCustom: true,
+      status: 'published',
     };
 
     this.questions.unshift(clone);
     this.save();
+    this.notify();
+
+    // Live Sync clone to Firebase Firestore
+    try {
+      setDoc(doc(db, 'questions', clone.id), clone).catch((err) => {
+        console.warn('Live Firestore duplicate error:', err);
+      });
+    } catch {}
+
     return clone;
   }
 
   public resetToDefaults(): BaseQuestion[] {
-    this.questions = this.buildInitialQuestionPool();
+    const existingIds = this.questions.map((q) => q.id);
+    this.questions = [];
     this.save();
-    return [...this.questions];
+    this.notify();
+
+    // Live Wipe from Firebase Firestore
+    if (typeof window !== 'undefined' && existingIds.length > 0) {
+      try {
+        getDocs(collection(db, 'questions')).then((snapshot) => {
+          if (!snapshot.empty) {
+            const batch = writeBatch(db);
+            snapshot.docs.forEach((d) => batch.delete(d.ref));
+            batch.commit().catch(console.warn);
+          }
+        }).catch(console.warn);
+      } catch {}
+    }
+
+    return [];
   }
 
   public exportQuestionsJson(gradeFilter?: 1 | 2 | 3 | 4 | 'all'): string {

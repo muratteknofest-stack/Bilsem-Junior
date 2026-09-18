@@ -39,6 +39,13 @@ export function useAdminQuestionState() {
     refreshQuestions();
   }, [selectedGrade, selectedCategory, selectedDifficulty, searchQuery]);
 
+  useEffect(() => {
+    const unsubscribe = questionBankService.subscribe(() => {
+      refreshQuestions();
+    });
+    return unsubscribe;
+  }, [selectedGrade, selectedCategory, selectedDifficulty, searchQuery]);
+
   const stats = useMemo(() => {
     return questionBankService.getStats();
   }, [questions]);
