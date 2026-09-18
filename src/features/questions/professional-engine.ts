@@ -174,9 +174,18 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
             a.cells[0] = 1; b.cells[0] = 1;
             a.cells[1] = 1; b.cells[1] = 0;
             a.cells[2] = 0; b.cells[2] = 1;
-            a.cells[3] = row === 0 ? 1 : 0;
-            b.cells[4] = row === 1 ? 1 : 0;
-            a.cells[5] = row === 2 ? 1 : 0;
+            
+            // Dynamic based on size
+            const rowOffset = row * size;
+            if (rowOffset + 3 < size * size) {
+               a.cells[rowOffset] = 1;
+               b.cells[rowOffset + 1] = 1;
+            }
+            if (size === 4) {
+               a.cells[15] = row === 2 ? 1 : 0;
+               b.cells[14] = row === 1 ? 1 : 0;
+            }
+
             tiles.push(a, b, combine(a, b, op));
           }
         }

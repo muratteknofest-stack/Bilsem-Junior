@@ -581,32 +581,63 @@ export function generateLogicalSequenceQuestion(seed: number, difficulty: Diffic
 // 18 3x3 Matrix (3x3 İleri Düzey Matris)
 export function generateMatrix3x3Question(seed: number, difficulty: DifficultyLevel): BaseQuestion {
   const rng = new SeededRNG(seed);
-  // Latin square or shape/color matrix
-  // Row 1: [Circle, Square, Triangle]
-  // Row 2: [Square, Triangle, Circle]
-  // Row 3: [Triangle, Circle, (?)] -> Correct is Square!
+  
   const SHAPE_POOLS = [
     ['circle', 'square', 'triangle'],
     ['hexagon', 'star', 'diamond'],
     ['pentagon', 'arrow', 'cross'],
     ['heart', 'crescent', 'oval'],
   ] as const;
-  const pool = SHAPE_POOLS[rng.nextInt(0, SHAPE_POOLS.length - 1)];
-  const color = PALETTE.indigo;
-
-  const correctShape = pool[1];
-  const cellGrid = [
-    [pool[0], pool[1], pool[2]],
-    [pool[1], pool[2], pool[0]],
-    [pool[2], pool[0], '?'],
+  
+  const shapePool = SHAPE_POOLS[rng.nextInt(0, SHAPE_POOLS.length - 1)];
+  const colorPool = rng.shuffle([PALETTE.indigo, PALETTE.emerald, PALETTE.rose, PALETTE.amber, PALETTE.cyan]).slice(0, 3);
+  
+  // Base shape latin square
+  const shapeGrid = [
+    [shapePool[0], shapePool[1], shapePool[2]],
+    [shapePool[1], shapePool[2], shapePool[0]],
+    [shapePool[2], shapePool[0], shapePool[1]],
   ];
 
-  const distractors = rng.shuffle(SHAPES_POOL.filter(s => s !== correctShape)).slice(0, 3);
+  // Base color latin square
+  const colorGrid = [
+    [colorPool[0], colorPool[1], colorPool[2]],
+    [colorPool[2], colorPool[0], colorPool[1]],
+    [colorPool[1], colorPool[2], colorPool[0]],
+  ];
+
+  const isComplex = difficulty >= 4;
+  
+  // Select target attributes
+  const targetShape = shapeGrid[2][2];
+  const targetColor = isComplex ? colorGrid[2][2] : PALETTE.indigo;
+  const targetRotation = isComplex ? (difficulty === 6 ? 180 : 90) : 0;
+
+  // Build distractors (Smart Partial-Truth Distractors)
+  let distractors: { kind: string, fill: string, rotation: number }[] = [];
+  
+  if (isComplex) {
+    // D1: Correct Shape, Wrong Color
+    distractors.push({ kind: targetShape, fill: colorGrid[2][1], rotation: targetRotation });
+    // D2: Wrong Shape, Correct Color
+    distractors.push({ kind: shapeGrid[2][1], fill: targetColor, rotation: targetRotation });
+    // D3: Correct Shape, Correct Color, Wrong Rotation (if high diff)
+    if (difficulty >= 5) {
+      distractors.push({ kind: targetShape, fill: targetColor, rotation: targetRotation === 90 ? 270 : 90 });
+    } else {
+      distractors.push({ kind: shapeGrid[2][0], fill: colorGrid[2][0], rotation: targetRotation });
+    }
+  } else {
+    // Simple Distractors (only shape changes)
+    const wrongShapes = rng.shuffle(SHAPES_POOL.filter(s => s !== targetShape)).slice(0, 3);
+    distractors = wrongShapes.map(s => ({ kind: s, fill: targetColor, rotation: 0 }));
+  }
+
   const choices = [
-    { kind: correctShape, isCorrect: true },
-    { kind: distractors[0], isCorrect: false },
-    { kind: distractors[1], isCorrect: false },
-    { kind: distractors[2], isCorrect: false },
+    { item: { kind: targetShape, fill: targetColor, rotation: targetRotation }, isCorrect: true },
+    { item: distractors[0], isCorrect: false },
+    { item: distractors[1], isCorrect: false },
+    { item: distractors[2], isCorrect: false },
   ];
 
   const shuffled = rng.shuffle(choices);
@@ -616,46 +647,59 @@ export function generateMatrix3x3Question(seed: number, difficulty: DifficultyLe
   const options: VisualOption[] = shuffled.map((c, i) => {
     if (c.isCorrect) correctOptionId = letters[i];
     const data: ShapeItem = {
-      kind: c.kind as any,
-      fill: color,
-      rotation: 0,
+      kind: c.item.kind as any,
+      fill: c.item.fill,
+      rotation: c.item.rotation,
       marker: 'none',
     };
     return {
       id: letters[i],
       label: letters[i],
-      fingerprint: `mat3_${c.kind}`,
+      fingerprint: `m3_${c.item.kind}_${c.item.fill}_${c.item.rotation}`,
       visualData: data,
     };
   });
 
+  const ruleTitle = isComplex 
+    ? 'Çok Boyutlu Latin Karesi (Şekil ve Renk)'
+    : '3x3 Latin Karesi (Şekil)';
+    
+  const explanationSteps = ['Her satırda 3 farklı geometrik şekil bulunmaktadır.'];
+  if (isComplex) {
+    explanationSteps.push('Aynı zamanda her satırda 3 farklı renk belirli bir düzende dizilmiştir.');
+    if (difficulty >= 5) explanationSteps.push('Şekillerin dönüş açılarına (rotasyon) dikkat edin.');
+    explanationSteps.push(`Eksik olan kombinasyon: ${targetShape} şekli ve belirtilen renktir.`);
+  } else {
+    explanationSteps.push('Üçüncü satırda eksik olan tek şekli bulmalısın.');
+  }
+  explanationSteps.push(`Cevap: ${correctOptionId}`);
+
   return {
     id: `mat3-${seed}-${difficulty}`,
-    version: 1,
+    version: 2,
     type: 'matrix_3x3',
     category: 'matrix',
     difficulty,
     ageGroup: '3-4',
-    prompt: '3x3 Matris kuralına göre (her satır ve sütunda her şekil bir kez) soru işareti (?) yerine hangisi gelmelidir?',
-    secondaryPrompt: 'Sudoku mantığı gibi her sırada çember, kare ve üçgen tam bir kez bulunmalıdır.',
+    prompt: isComplex 
+      ? '3x3 Matris kuralına göre soru işareti (?) yerine hangisi gelmelidir? Şekil, renk ve yön kurallarına aynı anda dikkat edin.'
+      : '3x3 Matris kuralına göre (her satır ve sütunda her şekil bir kez) soru işareti (?) yerine hangisi gelmelidir?',
+    secondaryPrompt: isComplex ? 'Birden fazla kural (şekil sırası, renk sırası) gizli.' : 'Sudoku mantığı gibi her sırada her şekil tam bir kez bulunmalıdır.',
     options,
     correctOptionId,
     explanation: {
-      ruleTitle: '3x3 Latin Karesi ve Çift Yönlü Eşsizlik',
-      summary: `Son satır ve son sütunda eksik olan şekil karedir. Doğru seçenek ${correctOptionId} seçeneğidir.`,
-      steps: [
-        'Her satırda 3 farklı geometrik şekil (çember, kare, üçgen) bulunmaktadır.',
-        'Üçüncü satırda üçgen ve çember mevcuttur, eksik olan tek şekil karedir.',
-        `Cevap: ${correctOptionId} (Kare)`,
-      ],
+      ruleTitle,
+      summary: `Son satır ve sütunda eksik olan eşleşme ${correctOptionId} seçeneğindedir.`,
+      steps: explanationSteps,
     },
     estimatedSeconds: 30 + difficulty * 5,
     skills: ['İleri Düzey Matris', 'Çift Boyutlu Muhakeme', 'Kombinatorik Düşünme'],
     seed,
     visualConfig: {
-      displayMode: 'matrix_3x3',
-      grid: cellGrid,
-      color,
+      displayMode: 'grid_2d',
+      rows: 3,
+      cols: 3,
+      cellGrid: finalCellGrid,
     },
   };
 }
