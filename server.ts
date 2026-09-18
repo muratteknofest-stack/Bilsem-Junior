@@ -3,7 +3,6 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
-import csrf from 'csurf';
 
 import parentRoutes from './server/routes/parent-routes';
 import studentAiRoutes from './server/routes/student-ai-routes';
@@ -61,14 +60,6 @@ async function startServer() {
     crossOriginResourcePolicy: { policy: 'cross-origin' },
   }));
   app.use(express.json({ limit: '256kb' }));
-  
-  // CSRF Protection for API routes
-  const csrfProtection = csrf({ cookie: { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' } });
-  app.use('/api', csrfProtection);
-  app.use((req, res, next) => {
-    res.setHeader('X-CSRF-Token', (req as any).csrfToken());
-    next();
-  });
 
   app.use('/api', parentRoutes);
   app.use('/api', studentAiRoutes);
