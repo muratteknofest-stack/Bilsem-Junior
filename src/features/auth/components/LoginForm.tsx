@@ -206,7 +206,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
           Kullanıcı Rolünüzü Seçiniz
         </label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <button
             type="button"
             onClick={() => {
@@ -227,10 +227,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               )}
             </div>
             <div>
-              <div className="text-xs font-extrabold text-slate-900 font-['Outfit',sans-serif]">
+              <div className="text-[11px] sm:text-xs font-extrabold text-slate-900 font-['Outfit',sans-serif]">
                 Öğrenci
               </div>
-              <div className="text-[10px] text-slate-500 font-medium leading-tight mt-0.5">
+              <div className="text-[9px] sm:text-[10px] text-slate-500 font-medium leading-tight mt-0.5">
                 BİLSEM Adayı
               </div>
             </div>
@@ -256,11 +256,40 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               )}
             </div>
             <div>
-              <div className="text-xs font-extrabold text-slate-900 font-['Outfit',sans-serif]">
-                Veli Portalı
+              <div className="text-[11px] sm:text-xs font-extrabold text-slate-900 font-['Outfit',sans-serif]">
+                Veli
               </div>
-              <div className="text-[10px] text-slate-500 font-medium leading-tight mt-0.5">
-                Rapor & Analiz
+              <div className="text-[9px] sm:text-[10px] text-slate-500 font-medium leading-tight mt-0.5">
+                Raporlar
+              </div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              sound.playClick();
+              setSelectedRole('admin');
+              setErrorMessage(null);
+            }}
+            className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+              selectedRole === 'admin'
+                ? 'border-indigo-600 bg-indigo-50/70 ring-2 ring-indigo-500/20 '
+                : 'border-zinc-200 hover:border-slate-300 bg-slate-50/50'
+            }`}
+          >
+            <div className="flex items-center justify-between w-full mb-1">
+              <span className="text-xl">👨‍🏫</span>
+              {selectedRole === 'admin' && (
+                <span className="w-2 h-2 rounded-full bg-indigo-600" />
+              )}
+            </div>
+            <div>
+              <div className="text-[11px] sm:text-xs font-extrabold text-slate-900 font-['Outfit',sans-serif]">
+                Yönetici
+              </div>
+              <div className="text-[9px] sm:text-[10px] text-slate-500 font-medium leading-tight mt-0.5">
+                Panel
               </div>
             </div>
           </button>
