@@ -214,6 +214,7 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
   // 19. Venn Diagram
   if (mode === 'venn_diagram') {
     const { leftSet, rightSet } = visualConfig;
+    const MAX_ITEMS = 3;
     return (
       <div className="w-full flex items-center justify-center p-4 md:p-8 bg-slate-50/80 rounded-xl border border-slate-200">
         <div className="relative w-64 h-40 sm:w-80 sm:h-48 flex items-center justify-center">
@@ -223,11 +224,16 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
             style={{ backgroundColor: leftSet.color }}
           >
             <div className="flex flex-col gap-2 ml-4">
-              {leftSet.items.map((k: any, i: number) => (
+              {leftSet.items.slice(0, MAX_ITEMS).map((k: any, i: number) => (
                 <div key={i} className="w-8 h-8 bg-white/90 rounded-md p-1 ">
                   <svg viewBox="0 0 100 100"><ShapeSvg kind={k} size={80} style={{fill:'#1e293b'}} /></svg>
                 </div>
               ))}
+              {leftSet.items.length > MAX_ITEMS && (
+                <div className="text-sm font-bold text-slate-800 bg-white/60 rounded px-1 text-center">
+                  +{leftSet.items.length - MAX_ITEMS}
+                </div>
+              )}
             </div>
           </div>
           {/* Right Circle */}
@@ -236,11 +242,16 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
             style={{ backgroundColor: rightSet.color }}
           >
             <div className="flex flex-col gap-2 mr-4">
-              {rightSet.items.map((k: any, i: number) => (
+              {rightSet.items.slice(0, MAX_ITEMS).map((k: any, i: number) => (
                 <div key={i} className="w-8 h-8 bg-white/90 rounded-md p-1 ">
                   <svg viewBox="0 0 100 100"><ShapeSvg kind={k} size={80} style={{fill:'#1e293b'}} /></svg>
                 </div>
               ))}
+              {rightSet.items.length > MAX_ITEMS && (
+                <div className="text-sm font-bold text-slate-800 bg-white/60 rounded px-1 text-center">
+                  +{rightSet.items.length - MAX_ITEMS}
+                </div>
+              )}
             </div>
           </div>
           {/* Center (Intersection) Indicator */}
@@ -254,6 +265,34 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
   if (mode === 'shape_pieces') {
     const kind = visualConfig.targetShape;
     const color = visualConfig.color;
+    const pieces = visualConfig.pieces;
+
+    if (pieces && Array.isArray(pieces) && pieces.length > 0) {
+      return (
+        <div className="w-full flex items-center justify-center p-8 bg-slate-50/80 rounded-xl border border-slate-200">
+          <div className="flex flex-wrap gap-4 items-center justify-center w-full min-h-[10rem]">
+            {pieces.map((piece: any, idx: number) => (
+              <React.Fragment key={idx}>
+                <div className="w-24 h-24 sm:w-32 sm:h-32 flex items-center justify-center">
+                  <svg viewBox="0 0 100 100" className="w-full h-full">
+                    <ShapeSvg kind={piece.kind || kind} style={{fill: piece.fill || color}} size={90} />
+                  </svg>
+                </div>
+                {idx < pieces.length - 1 && (
+                  <div className="text-4xl text-slate-400 font-bold">+</div>
+                )}
+              </React.Fragment>
+            ))}
+            <div className="text-4xl text-slate-400 font-bold mx-2">=</div>
+            <div className="w-24 h-24 sm:w-32 sm:h-32 flex items-center justify-center opacity-50 border-2 border-dashed border-slate-400 rounded-xl p-2">
+              <svg viewBox="0 0 100 100" className="w-full h-full">
+                <ShapeSvg kind={kind} style={{fill: color}} size={90} />
+              </svg>
+            </div>
+          </div>
+        </div>
+      );
+    }
     
     return (
       <div className="w-full flex items-center justify-center p-8 bg-slate-50/80 rounded-xl border border-slate-200">
@@ -298,6 +337,8 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
   // 27. Tangram Puzzle
   if (mode === 'tangram_puzzle') {
     const { silhouetteName, color } = visualConfig;
+    const pieces = visualConfig?.tangramPieces || (visualConfig?.tangramPiece ? [visualConfig.tangramPiece] : null);
+    
     return (
       <div className="w-full flex flex-col items-center justify-center p-4 md:p-8 bg-slate-50/80 rounded-xl border border-slate-200 gap-4">
         <div className="flex items-center gap-2 bg-indigo-100/80 text-indigo-900 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
@@ -305,12 +346,27 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
         </div>
         <div className="w-48 h-48 sm:w-60 sm:h-60 bg-white rounded-xl border-2 border-slate-300  flex items-center justify-center p-4 relative overflow-hidden">
           <svg viewBox="0 0 100 100" className="w-full h-full drop-">
-            {/* Base polygon silhouette */}
-            <polygon points="10,90 90,90 90,10 10,10" fill="none" stroke="#cbd5e1" strokeWidth="2" strokeDasharray="3,3" />
-            <polygon points="10,90 50,50 10,10" fill={color} opacity="0.85" stroke="#1e293b" strokeWidth="1.5" />
-            <polygon points="50,50 90,90 90,10" fill={color} opacity="0.7" stroke="#1e293b" strokeWidth="1.5" />
-            <polygon points="50,50 50,90 90,90" fill="#f1f5f9" stroke="#6366f1" strokeWidth="2" strokeDasharray="4,4" />
-            <text x="63" y="77" fontSize="16" fill="#6366f1" fontWeight="bold">?</text>
+            {pieces && Array.isArray(pieces) ? (
+              pieces.map((piece: any, i: number) => (
+                <polygon
+                  key={i}
+                  points={piece.points || '10,90 50,50 10,10'}
+                  fill={piece.fill || ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'][i % 5]}
+                  stroke="#334155"
+                  strokeWidth="1"
+                  transform={piece.transform || ''}
+                />
+              ))
+            ) : (
+              <>
+                {/* Base polygon silhouette */}
+                <polygon points="10,90 90,90 90,10 10,10" fill="none" stroke="#cbd5e1" strokeWidth="2" strokeDasharray="3,3" />
+                <polygon points="10,90 50,50 10,10" fill={color} opacity="0.85" stroke="#1e293b" strokeWidth="1.5" />
+                <polygon points="50,50 90,90 90,10" fill={color} opacity="0.7" stroke="#1e293b" strokeWidth="1.5" />
+                <polygon points="50,50 50,90 90,90" fill="#f1f5f9" stroke="#6366f1" strokeWidth="2" strokeDasharray="4,4" />
+                <text x="63" y="77" fontSize="16" fill="#6366f1" fontWeight="bold">?</text>
+              </>
+            )}
           </svg>
         </div>
         <span className="text-xs text-slate-500 font-medium">Noktalı boşluk alanına hangi parça tam oturur?</span>

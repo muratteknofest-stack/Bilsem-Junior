@@ -165,7 +165,22 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
         tiles.push(a, b, combine(a, b, op));
       }
       const candidate: Board = { displayMode: 'verified_board', kind: 'matrix', tiles: [...tiles.slice(0, 8), null], columns: 3 };
-      try { solveBoard(candidate); break; } catch { if (attempt === 99) throw new Error('Tek kurallı matris üretilemedi.'); }
+      try { solveBoard(candidate); break; } catch { 
+        if (attempt === 99) {
+          tiles = [];
+          for (let row = 0; row < 3; row++) {
+            const a = { size, cells: Array(size * size).fill(0) };
+            const b = { size, cells: Array(size * size).fill(0) };
+            a.cells[0] = 1; b.cells[0] = 1;
+            a.cells[1] = 1; b.cells[1] = 0;
+            a.cells[2] = 0; b.cells[2] = 1;
+            a.cells[3] = row === 0 ? 1 : 0;
+            b.cells[4] = row === 1 ? 1 : 0;
+            a.cells[5] = row === 2 ? 1 : 0;
+            tiles.push(a, b, combine(a, b, op));
+          }
+        }
+      }
     }
     board = { displayMode: 'verified_board', kind: 'matrix', tiles: [...tiles.slice(0, 8), null], columns: 3 };
     prompt = 'Her satırda ilk iki kare aynı kuralla birleşiyor. Son karede hangi desen olmalı?';
@@ -180,7 +195,9 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
     const values = [start];
     for (let i = 0; i < 5; i++) values.push(values.at(-1)! + (rule === 'add' ? a : rule === 'growing' ? a + i * b : i % 2 === 0 ? a : a + b));
     board = { displayMode: 'verified_board', kind: 'numbers', values, rule };
-    prompt = 'Sayılar arasındaki artış kuralına göre sıradaki sayı kaçtır?';
+    prompt = rule === 'alternate' ? 'Sayı dizisindeki değişim kuralını bularak sıradaki sayıyı belirleyiniz.' :
+             (rule as any) === 'multiply' ? 'Sayı dizisindeki çarpım kuralına göre sıradaki sayı kaçtır?' :
+             'Sayı dizisindeki kuralı bularak sıradaki sayıyı belirleyiniz.';
     summary = rule === 'add' ? 'Her adımda ' + a + ' eklenir.' : rule === 'growing' ? 'Artış miktarı ' + a + ' ile başlar ve her adımda ' + b + ' büyür.' : 'Artışlar sırayla ' + a + ' ve ' + (a + b) + ' olarak tekrar eder.';
     ruleTitle = 'Artışları karşılaştır'; steps = ['Yan yana iki sayının farkını bul.', summary, 'Son sayıya sıradaki artışı ekle.'];
     category = 'numerical'; objective = 'Sabit, dönüşümlü ve ikinci dereceden artış örüntülerini ayırt etme.';

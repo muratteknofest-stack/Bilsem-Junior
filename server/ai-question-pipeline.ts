@@ -111,20 +111,20 @@ async function callAiWithRetry(
 
 export function calculateQualityScore(result: Partial<PipelineResult>): number {
   let score = 0;
-  if (result.solverVerified) score += 30;
+  if (result.solverVerified) score += 35;
   if (result.generatedAnswer === result.solverAnswer) score += 20;
-  if (!result.validationErrors?.length) score += 15;
+  if (!result.validationErrors?.length) score += 10;
   
   // Grade appropriateness
-  if (!result.validationWarnings?.some(w => w.includes('Zorluk bu sınıf için yüksek'))) score += 10;
+  if (!result.validationWarnings?.some(w => w.includes('Zorluk bu sınıf için yüksek'))) score += 12;
   
   // Distractor quality
   if (result.question?.authoring?.distractorNotes && Object.keys(result.question.authoring.distractorNotes).length >= 3) {
-    score += 10;
+    score += 13;
   }
   
   // Uniqueness (assumed if no duplicate error)
-  if (!result.validationErrors?.some(e => e.includes('zaten var'))) score += 10;
+  if (!result.validationErrors?.some(e => e.includes('zaten var'))) score += 5;
   
   // Language quality (prompt length/clarity)
   const promptLen = result.question?.prompt?.length || 0;
@@ -178,7 +178,14 @@ Aşağıdaki kriterlere göre bir soru taslağı (blueprint) oluştur:
 Kategori: ${config.category || 'Herhangi'}
 Soru Tipi: ${config.questionType || 'Herhangi'}
 Hedef Sınıf: ${config.targetGrade}. Sınıf
-Zorluk: ${config.difficulty} / 6`;
+Zorluk: ${config.difficulty} / 6
+
+Yaş-Zorluk Kılavuzu:
+- 1. Sınıf (7 yaş): Somut nesneler, tek kural, 3-4 eleman. Zorluk 4+ bu sınıf için UYGUN DEĞİLDİR.
+- 2. Sınıf (8 yaş): Basit örüntüler, 2 kural, 4-5 eleman. Zorluk 5+ bu sınıf için UYGUN DEĞİLDİR.
+- 3. Sınıf (9 yaş): Soyut şekiller, çoklu dönüşümler, 5-6 eleman.
+- 4. Sınıf (10-11 yaş): Tam soyutlama, iç içe kurallar, 6-8 eleman.
+Her zaman hedef sınıfa uygun karmaşıklıkta kal.`;
 
     const plannerOutput = await callAiWithRetry(aiClient, plannerModel, plannerPrompt, plannerSchema);
     result.plannerOutput = plannerOutput;
@@ -227,7 +234,14 @@ Zorluk: ${config.difficulty} / 6`;
 Taslak: ${JSON.stringify(plannerOutput)}
 4 seçenek oluştur (A, B, C, D). Doğru cevabın hangisi olduğunu 'correctOptionId' içinde belirt.
 'distractorNotes' içine her yanlış seçeneğin (çeldiricinin) neden seçilebileceğini açıklayan notlar yaz.
-Görsel data şimdilik sadece metin tabanlı (textNumber) olarak temsil edilebilir.`;
+Görsel data şimdilik sadece metin tabanlı (textNumber) olarak temsil edilebilir.
+
+Kullanabileceğin VisualData türleri:
+- textNumber: { type: "textNumber", value: number | string }
+- shape: { type: "shape", kind: "circle"|"square"|"triangle"|"star"|"hexagon", fill: string, rotation?: number }
+- grid2D: { type: "grid2D", rows: number, cols: number, cells: { fill: string, kind: string }[] }
+- stack: { type: "stack", items: { kind: string, fill: string }[] }
+Her seçenek için MUTLAKA uygun bir VisualData türü kullan.`;
 
     const generatedRaw = await callAiWithRetry(aiClient, generatorModel, generatorPrompt, generatorSchema);
     result.rawGeneratorResponse = JSON.stringify(generatedRaw);
@@ -246,7 +260,8 @@ Görsel data şimdilik sadece metin tabanlı (textNumber) olarak temsil edilebil
     const solverPrompt = `Aşağıdaki soruyu çöz. Çözüm mantığını açıkla ve en uygun seçeneği seç.
 Soru Metni: ${generatedRaw.prompt}
 Ek Bilgi: ${generatedRaw.secondaryPrompt || ''}
-Seçenekler: ${JSON.stringify(generatedRaw.options.map((o: any) => ({ id: o.id, data: o.visualData })))}`;
+Soru Görsel Yapısı (visualConfig): ${JSON.stringify(generatedRaw.visualConfig || {})}
+Seçenekler: ${JSON.stringify(generatedRaw.options.map((o: any) => ({ id: o.id, label: o.label, data: o.visualData })))}`;
 
     const { attempts: SOLVER_ATTEMPTS, minConsensus } = getSolverConfig(config.difficulty);
     const solverPromises = Array.from({ length: SOLVER_ATTEMPTS }).map(() =>
@@ -296,7 +311,7 @@ Seçenekler: ${JSON.stringify(generatedRaw.options.map((o: any) => ({ id: o.id, 
       })),
       correctOptionId: generatedRaw.correctOptionId,
       explanation: generatedRaw.explanation,
-      estimatedSeconds: 60,
+      estimatedSeconds: Math.round(30 + (config.difficulty || 3) * 12 + ((config.targetGrade || 3) <= 2 ? 15 : 0)),
       skills: generatedRaw.skills,
       seed: Math.floor(Math.random() * 1000000),
       visualConfig: { displayMode: 'text' },
@@ -310,6 +325,14 @@ Seçenekler: ${JSON.stringify(generatedRaw.options.map((o: any) => ({ id: o.id, 
         distractorNotes: generatedRaw.distractorNotes,
       }
     };
+
+    // 4.1 Distractor Diversity Check
+    const visualDataStrings = generatedRaw.options.map((o: any) => JSON.stringify(o.visualData));
+    const uniqueVisuals = new Set(visualDataStrings);
+    if (uniqueVisuals.size < generatedRaw.options.length) {
+      result.rejectionReasons.push('Seçeneklerin görsel verileri (visualData) tamamen aynı olanlar var. Çeldiriciler birbirinden farklı olmalıdır.');
+      result.validationErrors.push('DUPLICATE_VISUAL_OPTIONS');
+    }
 
     const auditResult = auditQuestion(baseQuestion);
     result.validationErrors = auditResult.errors;

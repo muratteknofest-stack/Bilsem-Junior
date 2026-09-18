@@ -21,8 +21,18 @@ export function generateVisualSequenceQuestion(seed: number, difficulty: Difficu
 
   if (ruleType === 1) {
     // Rotation sequence
-    const shape = rng.pick(ASYMMETRIC_SHAPES);
-    const step = difficulty >= 4 ? 45 : 90;
+    let shape = rng.pick(SHAPES_POOL);
+    let step = difficulty >= 4 ? 45 : 90;
+    const SYMMETRIC_SHAPES = ['circle', 'square', 'cross', 'plus'];
+    const isRotationMeaningful = (s: string, st: number) => !(SYMMETRIC_SHAPES.includes(s) && st % 90 === 0);
+    
+    if (!isRotationMeaningful(shape, step)) {
+      if (rng.nextBool()) {
+        step = rng.pick([45, 135]);
+      } else {
+        shape = rng.pick(ASYMMETRIC_SHAPES);
+      }
+    }
     const startAngle = rng.nextInt(0, 3) * 90;
 
     ruleTitle = `${step}° Saat Yönünde Dönme Kuralı`;

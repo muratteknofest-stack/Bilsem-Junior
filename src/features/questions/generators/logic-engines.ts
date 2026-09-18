@@ -24,6 +24,14 @@ export function generateDirectionPathQuestion(seed: number, difficulty: Difficul
 
   // Generate 2 or 3 valid moves
   const numMoves = difficulty >= 3 ? 3 : 2;
+  const moves: {dx: number, dy: number, text: string}[] = [];
+  
+  const hasNetMovement = (mvs: {dx: number, dy: number}[]) => {
+    let nx = 0, ny = 0;
+    for (const m of mvs) { nx += m.dx; ny += m.dy; }
+    return nx !== 0 || ny !== 0;
+  };
+
   for (let m = 0; m < numMoves; m++) {
     const validMoves = [
       { dx: 1, dy: 0, text: '1 Adım Sağa (→)' },
@@ -33,17 +41,25 @@ export function generateDirectionPathQuestion(seed: number, difficulty: Difficul
     ].filter((mv) => curX + mv.dx >= 0 && curX + mv.dx <= 2 && curY + mv.dy >= 0 && curY + mv.dy <= 2);
 
     if (validMoves.length > 0) {
-      const chosen = rng.pick(validMoves);
+      let chosen = rng.pick(validMoves);
+      if (m === numMoves - 1 && !hasNetMovement([...moves, chosen])) {
+        const otherMoves = validMoves.filter(v => v !== chosen);
+        if (otherMoves.length > 0) {
+          chosen = rng.pick(otherMoves);
+        }
+      }
       curX += chosen.dx;
       curY += chosen.dy;
       stepList.push(chosen.text);
+      moves.push(chosen);
     }
   }
 
   // If didn't move, default move
-  if (stepList.length === 0) {
+  if (!hasNetMovement(moves)) {
     curX = 1;
     curY = 1;
+    stepList.length = 0;
     stepList.push('1 Adım Sağa (→)', '1 Adım Aşağıya (↓)');
   }
 
@@ -125,7 +141,8 @@ export function generateVisualMemoryQuestion(seed: number, difficulty: Difficult
 
   // Ask: "Aşağıdaki seçeneklerden hangisi az önce gösterilen şekillerden biridir?" or missing item
   const targetItem = memoryItems[0];
-  const distractor1: ShapeItem = { kind: shapes[0], fill: PALETTE.dark, rotation: 0, marker: 'none' };
+  const d1Fill = colors[0] === PALETTE.dark ? PALETTE.teal : PALETTE.dark;
+  const distractor1: ShapeItem = { kind: shapes[0], fill: d1Fill, rotation: 0, marker: 'none' };
   const distractor2: ShapeItem = { kind: rng.pick(SHAPES_POOL.filter((s) => !shapes.includes(s))), fill: colors[0], rotation: 0, marker: 'none' };
   const distractor3: ShapeItem = { kind: shapes[1], fill: colors[0], rotation: 0, marker: 'none' };
 
@@ -494,10 +511,21 @@ export function generateLogicalSequenceQuestion(seed: number, difficulty: Diffic
   const levels = [25, 50, 75];
   const correctLevel = 100;
 
+  const offsets = difficulty <= 2
+    ? [15, 30, 45]   // Kolay: bariz farklar
+    : difficulty <= 4
+    ? [12, 24, 38]   // Orta: yakın değerler
+    : [5, 12, 18];   // Zor: çok yakın, kafa karıştırıcı
+
+  const distractorFills = offsets.map(offset => {
+    const sign = rng.nextBool() ? 1 : -1;
+    return Math.max(5, Math.min(95, correctLevel + sign * offset));
+  });
+
   const correctChoice = { fillPercent: correctLevel, color: PALETTE.cyan };
-  const d1 = { fillPercent: 60, color: PALETTE.cyan };
-  const d2 = { fillPercent: 85, color: PALETTE.cyan };
-  const d3 = { fillPercent: 10, color: PALETTE.cyan };
+  const d1 = { fillPercent: distractorFills[0], color: PALETTE.cyan };
+  const d2 = { fillPercent: distractorFills[1], color: PALETTE.cyan };
+  const d3 = { fillPercent: distractorFills[2], color: PALETTE.cyan };
 
   const choices = [
     { item: correctChoice, isCorrect: true },
@@ -557,21 +585,28 @@ export function generateMatrix3x3Question(seed: number, difficulty: DifficultyLe
   // Row 1: [Circle, Square, Triangle]
   // Row 2: [Square, Triangle, Circle]
   // Row 3: [Triangle, Circle, (?)] -> Correct is Square!
-  const shapes = ['circle', 'square', 'triangle'] as const;
+  const SHAPE_POOLS = [
+    ['circle', 'square', 'triangle'],
+    ['hexagon', 'star', 'diamond'],
+    ['pentagon', 'arrow', 'cross'],
+    ['heart', 'crescent', 'oval'],
+  ] as const;
+  const pool = SHAPE_POOLS[rng.nextInt(0, SHAPE_POOLS.length - 1)];
   const color = PALETTE.indigo;
 
-  const correctShape = 'square';
+  const correctShape = pool[1];
   const cellGrid = [
-    ['circle', 'square', 'triangle'],
-    ['square', 'triangle', 'circle'],
-    ['triangle', 'circle', '?'],
+    [pool[0], pool[1], pool[2]],
+    [pool[1], pool[2], pool[0]],
+    [pool[2], pool[0], '?'],
   ];
 
+  const distractors = rng.shuffle(SHAPES_POOL.filter(s => s !== correctShape)).slice(0, 3);
   const choices = [
     { kind: correctShape, isCorrect: true },
-    { kind: 'circle', isCorrect: false },
-    { kind: 'triangle', isCorrect: false },
-    { kind: 'diamond', isCorrect: false },
+    { kind: distractors[0], isCorrect: false },
+    { kind: distractors[1], isCorrect: false },
+    { kind: distractors[2], isCorrect: false },
   ];
 
   const shuffled = rng.shuffle(choices);
