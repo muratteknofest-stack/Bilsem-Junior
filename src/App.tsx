@@ -60,7 +60,7 @@ export default function App() {
     if (userProfile) {
       setCurrentUser(userProfile);
       setIsAuth(true);
-      if (currentRoute === 'login' || currentRoute === 'landing') {
+      if (currentRoute === 'login' || currentRoute === 'landing' || (userProfile.role === 'admin' && currentRoute === 'dashboard')) {
         setCurrentRoute(userProfile.role === 'student' ? 'dashboard' : (userProfile.role === 'parent' ? 'parent' : 'admin'));
       }
     } else {

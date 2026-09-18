@@ -80,13 +80,57 @@ export const Navbar: React.FC<NavbarProps> = ({
             }}
           />
           {!isLanding && (
-            <span className={`hidden sm:inline-block text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border ${getRoleBg()}`}>
+            <button
+              onClick={() => {
+                if (role === 'admin') {
+                  sound.playClick();
+                  onNavigate('admin');
+                }
+              }}
+              className={`hidden sm:inline-block text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full border transition-all ${
+                role === 'admin' ? 'cursor-pointer hover:scale-105 shadow-sm' : ''
+              } ${getRoleBg()}`}
+            >
               {role === 'student' && 'Öğrenci Portalı'}
               {role === 'parent' && 'Veli Portalı'}
               {role === 'admin' && 'Admin Paneli'}
-            </span>
+            </button>
           )}
         </div>
+
+        {/* Admin Navigation Quick Switcher */}
+        {!isLanding && role === 'admin' && (
+          <div className="hidden md:flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
+            <button
+              onClick={() => {
+                sound.playClick();
+                onNavigate('admin');
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                currentRoute === 'admin'
+                  ? 'bg-purple-600 text-white shadow-md scale-102'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white dark:hover:bg-slate-700'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>Yönetici Paneli</span>
+            </button>
+            <button
+              onClick={() => {
+                sound.playClick();
+                onNavigate('dashboard');
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                currentRoute === 'dashboard'
+                  ? 'bg-indigo-600 text-white shadow-md scale-102'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white dark:hover:bg-slate-700'
+              }`}
+            >
+              <GraduationCap className="w-4 h-4" />
+              <span>Öğrenci Simülasyonu</span>
+            </button>
+          </div>
+        )}
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-4">
@@ -172,18 +216,48 @@ export const Navbar: React.FC<NavbarProps> = ({
                  <button onClick={() => { setIsMobileMenuOpen(false); onNavigate('login'); }} className="w-full py-3 text-center font-bold text-slate-700 bg-slate-50 rounded-xl">Giriş Yap</button>
                  <button onClick={() => { setIsMobileMenuOpen(false); onNavigate('login'); }} className="w-full py-3 text-center font-bold text-white bg-primary-600 rounded-xl">Ücretsiz Başla</button>
                </>
-            ) : (
-               <button 
-                 onClick={() => {
-                   setIsMobileMenuOpen(false);
-                   sound.playClick();
-                   if(onLogout) onLogout();
-                 }} 
-                 className="w-full py-3 flex items-center justify-center gap-2 font-bold text-rose-600 bg-rose-50 rounded-xl"
-               >
-                 <LogOut className="w-5 h-5" /> Çıkış Yap
-               </button>
-            )}
+             ) : (
+                <>
+                  {role === 'admin' && (
+                    <div className="flex flex-col gap-2 pb-2 border-b border-zinc-200 dark:border-slate-800">
+                      <button
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          sound.playClick();
+                          onNavigate('admin');
+                        }}
+                        className={`w-full py-2.5 px-3 rounded-xl font-black text-xs flex items-center justify-center gap-2 ${
+                          currentRoute === 'admin' ? 'bg-purple-600 text-white' : 'bg-purple-50 text-purple-700'
+                        }`}
+                      >
+                        <ShieldCheck className="w-4 h-4" /> Yönetici Paneli
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          sound.playClick();
+                          onNavigate('dashboard');
+                        }}
+                        className={`w-full py-2.5 px-3 rounded-xl font-black text-xs flex items-center justify-center gap-2 ${
+                          currentRoute === 'dashboard' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-700'
+                        }`}
+                      >
+                        <GraduationCap className="w-4 h-4" /> Öğrenci Simülasyonu
+                      </button>
+                    </div>
+                  )}
+                  <button 
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      sound.playClick();
+                      if(onLogout) onLogout();
+                    }} 
+                    className="w-full py-3 flex items-center justify-center gap-2 font-bold text-rose-600 bg-rose-50 rounded-xl"
+                  >
+                    <LogOut className="w-5 h-5" /> Çıkış Yap
+                  </button>
+                </>
+             )}
           </motion.div>
         )}
       </AnimatePresence>
