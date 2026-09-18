@@ -307,7 +307,9 @@ export const ShapeSvg: React.FC<ShapeSvgProps> = ({ kind, style = {}, cx = 50, c
       strokeDasharray={dashed ? '4 3' : undefined}
       strokeLinejoin="round"
       strokeLinecap="round"
-      style={{ filter: "drop-shadow(0px 3px 2px rgba(0,0,0,0.2)) drop-shadow(0px 6px 12px rgba(0,0,0,0.1))" }}
+      vectorEffect="non-scaling-stroke"
+      shapeRendering="geometricPrecision"
+      style={{ filter: "drop-shadow(0px 4px 3px rgba(0,0,0,0.25)) drop-shadow(0px 8px 16px rgba(0,0,0,0.15))" }}
     >
       {renderBaseShape()}
       {renderMarker()}

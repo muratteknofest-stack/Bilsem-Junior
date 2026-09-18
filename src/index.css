@@ -169,6 +169,12 @@
 html, body {
   @apply bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-300;
   -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+svg {
+  shape-rendering: geometricPrecision;
 }
 
 @media (prefers-reduced-motion: reduce) {

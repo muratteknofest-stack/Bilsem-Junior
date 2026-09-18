@@ -6,7 +6,14 @@ import { ShapeItem, SHAPES_POOL, ASYMMETRIC_SHAPES, COLORS_POOL } from './genera
 
 export function generateVisualSequenceQuestion(seed: number, difficulty: DifficultyLevel): BaseQuestion {
   const rng = new SeededRNG(seed);
-  const ruleType = rng.nextInt(1, 3); // 1: Rotation sequence, 2: Marker cycle, 3: Alternating shape/color
+  let ruleType: number;
+  if (difficulty <= 2) {
+    ruleType = rng.pick([2, 3]); // Medium: Marker cycle or Alternating shapes
+  } else if (difficulty <= 4) {
+    ruleType = 1; // Rotation sequence (with 45/90 deg)
+  } else {
+    ruleType = 4; // Expert: Progressive Multi-Rule Sequence (Rotation + Shape shift + Color cycle)
+  }
 
   const sequenceLength = difficulty <= 2 ? 3 : 4;
   const sequenceItems: ShapeItem[] = [];
@@ -40,29 +47,21 @@ export function generateVisualSequenceQuestion(seed: number, difficulty: Difficu
 
     for (let i = 0; i < sequenceLength; i++) {
       sequenceItems.push({
-        kind: shape,
-        fill: color1,
-        rotation: (startAngle + i * step) % 360,
-        marker: 'none',
+        kind: shape, fill: color1, rotation: (startAngle + i * step) % 360, marker: 'none'
       });
     }
 
     const nextAngle = (startAngle + sequenceLength * step) % 360;
-    nextItem = {
-      kind: shape,
-      fill: color1,
-      rotation: nextAngle,
-      marker: 'none',
-    };
+    nextItem = { kind: shape, fill: color1, rotation: nextAngle, marker: 'none' };
 
     // Distractors
     distractorItems = [
-      { kind: shape, fill: color1, rotation: (nextAngle + 180) % 360, marker: 'none' }, // 180 opposite
-      { kind: shape, fill: color1, rotation: (nextAngle - step + 360) % 360, marker: 'none' }, // repeated previous
-      { kind: shape, fill: color2, rotation: nextAngle, marker: 'none' }, // correct rotation but wrong color
+      { kind: shape, fill: color1, rotation: (nextAngle + 180) % 360, marker: 'none' },
+      { kind: shape, fill: color1, rotation: (nextAngle - step + 360) % 360, marker: 'none' },
+      { kind: shape, fill: color2, rotation: nextAngle, marker: 'none' },
     ];
   } else if (ruleType === 2) {
-    // Marker cycle: top -> right -> bottom -> left
+    // Marker cycle
     const shape = rng.pick(SHAPES_POOL.filter((s) => s !== 'arrow'));
     const positions: ('top' | 'right' | 'bottom' | 'left')[] = ['top', 'right', 'bottom', 'left'];
     const startIdx = rng.nextInt(0, 3);
@@ -72,26 +71,13 @@ export function generateVisualSequenceQuestion(seed: number, difficulty: Difficu
 
     for (let i = 0; i < sequenceLength; i++) {
       sequenceItems.push({
-        kind: shape,
-        fill: color1,
-        rotation: 0,
-        marker: 'dot',
-        markerPos: positions[(startIdx + i) % 4],
-        markerColor: PALETTE.white,
+        kind: shape, fill: color1, rotation: 0, marker: 'dot', markerPos: positions[(startIdx + i) % 4], markerColor: PALETTE.white
       });
     }
 
     const nextPos = positions[(startIdx + sequenceLength) % 4];
-    nextItem = {
-      kind: shape,
-      fill: color1,
-      rotation: 0,
-      marker: 'dot',
-      markerPos: nextPos,
-      markerColor: PALETTE.white,
-    };
+    nextItem = { kind: shape, fill: color1, rotation: 0, marker: 'dot', markerPos: nextPos, markerColor: PALETTE.white };
 
-    // Distractors
     const wrongPos1 = positions[(startIdx + sequenceLength + 2) % 4];
     const wrongPos2 = positions[(startIdx + sequenceLength + 1) % 4];
     distractorItems = [
@@ -99,36 +85,65 @@ export function generateVisualSequenceQuestion(seed: number, difficulty: Difficu
       { kind: shape, fill: color1, rotation: 0, marker: 'dot', markerPos: wrongPos2, markerColor: PALETTE.white },
       { kind: shape, fill: color2, rotation: 0, marker: 'dot', markerPos: nextPos, markerColor: PALETTE.white },
     ];
-  } else {
+  } else if (ruleType === 3) {
     // Alternating shapes / colors
     const shape1 = rng.pick(SHAPES_POOL);
     const shape2 = rng.pick(SHAPES_POOL.filter((s) => s !== shape1));
 
     ruleTitle = 'Ardışık Şekil ve Renk Değişimi';
-    ruleDesc = 'Şekiller ve renkler sırayla değişerek bir örüntü oluşturmaktadır.';
+    ruleDesc = 'Şekiller ve renkler sırayla değişerek ikili bir örüntü oluşturmaktadır.';
 
     for (let i = 0; i < sequenceLength; i++) {
       const isEven = i % 2 === 0;
       sequenceItems.push({
-        kind: isEven ? shape1 : shape2,
-        fill: isEven ? color1 : color2,
-        rotation: 0,
-        marker: 'none',
+        kind: isEven ? shape1 : shape2, fill: isEven ? color1 : color2, rotation: 0, marker: 'none'
       });
     }
 
     const nextIsEven = sequenceLength % 2 === 0;
-    nextItem = {
-      kind: nextIsEven ? shape1 : shape2,
-      fill: nextIsEven ? color1 : color2,
-      rotation: 0,
-      marker: 'none',
-    };
+    nextItem = { kind: nextIsEven ? shape1 : shape2, fill: nextIsEven ? color1 : color2, rotation: 0, marker: 'none' };
 
     distractorItems = [
       { kind: nextIsEven ? shape2 : shape1, fill: nextIsEven ? color2 : color1, rotation: 0, marker: 'none' },
       { kind: nextIsEven ? shape1 : shape2, fill: nextIsEven ? color2 : color1, rotation: 0, marker: 'none' },
       { kind: nextIsEven ? shape2 : shape1, fill: nextIsEven ? color1 : color2, rotation: 0, marker: 'none' },
+    ];
+  } else {
+    // Rule 4: Progressive Multi-Rule Sequence (Rotation + Shape alternating + Constant Marker)
+    const shape1 = rng.pick(ASYMMETRIC_SHAPES);
+    const shape2 = rng.pick(ASYMMETRIC_SHAPES.filter(s => s !== shape1));
+    const step = 90;
+    const startAngle = rng.nextInt(0, 3) * 90;
+    
+    ruleTitle = 'Çok Boyutlu Örüntü (Dönme ve Şekil Değişimi)';
+    ruleDesc = `Her adımda şekil ${step}° saat yönünde dönerken, sırayla iki farklı şekil (${shape1} ve ${shape2}) birbirini izlemektedir.`;
+    
+    for (let i = 0; i < sequenceLength; i++) {
+      sequenceItems.push({
+        kind: i % 2 === 0 ? shape1 : shape2,
+        fill: color1,
+        rotation: (startAngle + i * step) % 360,
+        marker: 'dot',
+        markerPos: 'center',
+        markerColor: PALETTE.white
+      });
+    }
+
+    const nextIsEven = sequenceLength % 2 === 0;
+    const nextAngle = (startAngle + sequenceLength * step) % 360;
+    
+    nextItem = {
+      kind: nextIsEven ? shape1 : shape2, fill: color1, rotation: nextAngle, marker: 'dot', markerPos: 'center', markerColor: PALETTE.white
+    };
+
+    // Partial Truth Distractors
+    distractorItems = [
+      // Correct shape, wrong rotation
+      { kind: nextItem.kind, fill: color1, rotation: (nextAngle + 90) % 360, marker: 'dot', markerPos: 'center', markerColor: PALETTE.white },
+      // Wrong shape, correct rotation
+      { kind: nextIsEven ? shape2 : shape1, fill: color1, rotation: nextAngle, marker: 'dot', markerPos: 'center', markerColor: PALETTE.white },
+      // Correct shape, correct rotation, but missing marker
+      { kind: nextItem.kind, fill: color1, rotation: nextAngle, marker: 'none' },
     ];
   }
 
