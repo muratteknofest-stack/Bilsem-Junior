@@ -55,3 +55,24 @@ export async function loadPublishedQuestions(): Promise<BaseQuestion[]> {
   const snapshot = await getDocs(query(collection(db, 'questions'), where('status', '==', 'published'), limit(200)));
   return snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as BaseQuestion).filter(q => auditQuestion(q).errors.length === 0);
 }
+
+import { writeBatch } from 'firebase/firestore';
+
+export async function clearAllFirestoreQuestions(): Promise<number> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Bu işlem için yönetici oturumu gerekli.');
+  
+  const snapshot = await getDocs(collection(db, 'questions'));
+  if (snapshot.empty) return 0;
+
+  // Firestore batch delete
+  const batch = writeBatch(db);
+  let count = 0;
+  snapshot.docs.forEach((document) => {
+    batch.delete(doc(db, 'questions', document.id));
+    count++;
+  });
+  
+  await batch.commit();
+  return count;
+}
