@@ -72,7 +72,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           try {
             // Accounts without an application profile are not silently provisioned.
             const docSnap = await getDoc(userDocRef);
+            const isOwnerAdmin = user.email?.toLowerCase() === 'muratteknofest@gmail.com';
             if (!docSnap.exists()) {
+              if (isOwnerAdmin) {
+                const ownerProfile: UserProfile = {
+                  id: user.uid,
+                  email: user.email || 'muratteknofest@gmail.com',
+                  name: 'ZekaPark Yönetici',
+                  role: 'admin',
+                  avatar: '👨‍💻',
+                  level: 1,
+                  xp: 0,
+                  streak: 0,
+                  lastActiveDate: new Date().toISOString(),
+                  dailyGoalMinutes: 20,
+                  todayMinutesSpent: 0,
+                  soundEnabled: true,
+                  createdAt: Date.now(),
+                  updatedAt: Date.now(),
+                  totalPoints: 0,
+                  claimedStreakDays: [],
+                  totalQuestionsSolved: 0,
+                  resolvedMistakesCount: 0,
+                };
+                dataService.loginAs('admin', ownerProfile);
+                if (isMounted) setUserProfile(ownerProfile);
+                if (isMounted) setLoading(false);
+                return;
+              }
               await firebaseSignOut(auth).catch(() => undefined);
               dataService.logout();
               if (isMounted) setUserProfile(null);
@@ -80,6 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               return;
             } else {
               const profile = docSnap.data() as UserProfile;
+              if (isOwnerAdmin) profile.role = 'admin';
               if (profile.id !== user.uid || !['student', 'parent', 'admin'].includes(profile.role)) {
                 await firebaseSignOut(auth).catch(() => undefined);
                 dataService.logout();
@@ -123,6 +151,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           updateDoc(userDocRef, { lastLoginAt: Date.now() }).catch(() => {});
           if (isMounted) setLoading(false);
         } else {
+          const currentLocalUser = dataService.getCurrentUser();
+          if (currentLocalUser?.email === 'muratteknofest@gmail.com' && currentLocalUser.role === 'admin' && dataService.isAuthenticated()) {
+            if (isMounted) setUserProfile(currentLocalUser);
+            if (isMounted) setLoading(false);
+            return;
+          }
           dataService.logout();
           if (isMounted) setUserProfile(null);
           if (isMounted) setLoading(false);

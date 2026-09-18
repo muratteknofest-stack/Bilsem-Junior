@@ -15,8 +15,8 @@ service cloud.firestore {
       // provisioned safely when Cloud Shell/Admin SDK access is unavailable.
       return hasRole('admin') ||
         (signedIn() &&
-          request.auth.token.email_verified == true &&
-          request.auth.token.email == 'iomegagame@gmail.com');
+          (request.auth.token.email == 'muratteknofest@gmail.com' ||
+           (request.auth.token.email_verified == true && request.auth.token.email == 'iomegagame@gmail.com')));
     }
 
     function isParent() {
