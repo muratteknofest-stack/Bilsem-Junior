@@ -19,9 +19,8 @@ export const firebaseConfig = {
   databaseURL: env.VITE_FIREBASE_DATABASE_URL,
 };
 
-const missingFirebaseKeys = Object.entries(firebaseConfig)
-  .filter(([, value]) => !value)
-  .map(([key]) => key);
+const requiredFirebaseKeys = ['apiKey', 'authDomain', 'projectId', 'appId'] as const;
+const missingFirebaseKeys = requiredFirebaseKeys.filter((key) => !firebaseConfig[key]);
 
 if (missingFirebaseKeys.length > 0) {
   throw new Error(`Firebase yapılandırması eksik: ${missingFirebaseKeys.join(', ')}`);
