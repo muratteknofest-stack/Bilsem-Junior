@@ -5,14 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "typecheck": "tsc --noEmit",
+    "build:client": "npm run typecheck && vite build",
+    "build:server": "esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "build": "npm run build:client && npm run build:server",
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit",
-    "test": "node --import tsx --test tests/editorial-engine.test.ts tests/question-engine.test.ts tests/security-regression.test.ts",
+    "lint": "npm run typecheck",
+    "test": "node --import tsx --test tests/adaptive-engine.test.ts tests/editorial-engine.test.ts tests/question-engine.test.ts tests/security-regression.test.ts",
     "security:audit": "node scripts/osv-audit.mjs",
-    "check": "npm run lint && npm test && npm run build"
+    "check": "npm test && npm run build"
   },
   "dependencies": {
     "@google-cloud/firestore": "^9.1.0",

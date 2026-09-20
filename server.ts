@@ -8,21 +8,19 @@ import parentRoutes from './server/routes/parent-routes';
 import studentAiRoutes from './server/routes/student-ai-routes';
 import adminAiRoutes from './server/routes/admin-ai-routes';
 import authRoutes from './server/routes/auth-routes';
+import adminDataRoutes from './server/routes/admin-data-routes';
+import { loadRuntimeConfig } from './server/runtime-config';
 
 dotenv.config();
 
 async function startServer() {
+  const runtime = loadRuntimeConfig();
   const app = express();
-  const PORT = Number(process.env.PORT) || 3000;
+  const PORT = runtime.port;
 
   app.disable('x-powered-by');
-  if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
-  const allowedOrigins = new Set(
-    (process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:5173,https://zekapark.muratteknofest.chatgpt.site')
-      .split(',')
-      .map((origin) => origin.trim())
-      .filter(Boolean),
-  );
+  if (runtime.production) app.set('trust proxy', 1);
+  const allowedOrigins = runtime.allowedOrigins;
   app.use('/api', (req, res, next) => {
     const origin = req.headers.origin;
     res.setHeader('Cache-Control', 'no-store');
@@ -40,7 +38,7 @@ async function startServer() {
     next();
   });
   app.use(helmet({
-    contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
+    contentSecurityPolicy: runtime.production ? {
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
@@ -64,6 +62,7 @@ async function startServer() {
   app.use('/api', parentRoutes);
   app.use('/api', studentAiRoutes);
   app.use('/api', adminAiRoutes);
+  app.use('/api', adminDataRoutes);
   app.use('/api', authRoutes);
 
   app.get('/api/health', (req, res) => {
@@ -74,7 +73,7 @@ async function startServer() {
     });
   });
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (!runtime.production) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
@@ -96,4 +95,7 @@ async function startServer() {
   });
 }
 
-startServer();
+startServer().catch((error) => {
+  console.error('ZekaPark sunucusu başlatılamadı:', error);
+  process.exit(1);
+});

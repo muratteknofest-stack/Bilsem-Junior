@@ -278,9 +278,11 @@ export function generateQuestionByType(
     if (retryCount < 3) {
       // Safe retry with salted seed
       return generateQuestionByType(type, seed + 10007, difficulty, retryCount + 1);
-    } else {
-      console.warn(`Question validation failed after 3 retries for type "${type}", seed ${seed}`, val.errors);
     }
+    throw new Error(
+      `Question generation failed quality gate for type "${type}", seed ${seed}: ` +
+      val.errors.map(error => error.code).join(', '),
+    );
   }
 
   return q;

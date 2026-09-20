@@ -344,7 +344,7 @@ export interface ShapeItemVisualData {
   markerColor?: string;
 }
 
-export type VisualData =
+type TypedVisualData =
   | NumericVisualData
   | TextVisualData
   | TileDiagramVisualData
@@ -360,8 +360,12 @@ export type VisualData =
   | LiquidVisualData
   | PaperPatternVisualData
   | Grid2DVisualData
-  | ShapeItemVisualData
-  | Record<string, unknown>;
+  | ShapeItemVisualData;
+
+// Legacy engines use heterogeneous payloads while upgraded engines expose
+// stricter contracts. The intersection keeps the documented shapes without
+// pretending that every legacy renderer has already been migrated.
+export type VisualData = TypedVisualData & Record<string, any>;
 
 // ── VisualConfig Types ──
 
@@ -404,7 +408,7 @@ export interface GenericVisualConfig {
   [key: string]: unknown;
 }
 
-export type VisualConfig =
+type TypedVisualConfig =
   | VerifiedBoardVisualConfig
   | SequenceVisualConfig
   | MatrixVisualConfig
@@ -412,9 +416,9 @@ export type VisualConfig =
   | MirrorVisualConfig
   | NumberPatternVisualConfig
   | SymbolCodingVisualConfig
-  | GenericVisualConfig
-  | Record<string, unknown>
-  | null;
+  | GenericVisualConfig;
+
+export type VisualConfig = TypedVisualConfig & Record<string, any>;
 
 export interface VisualOption {
   id: string; // 'A' | 'B' | 'C' | 'D'
@@ -454,6 +458,10 @@ export interface BaseQuestion {
   targetGrade?: 1 | 2 | 3 | 4;
   targetGrades?: (1 | 2 | 3 | 4)[];
   createdAt?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+  reviewedBy?: string;
+  revision?: number;
   isCustom?: boolean;
   status?: 'draft' | 'review' | 'published' | 'archived';
   authoring?: {
@@ -543,6 +551,11 @@ export interface SkillMastery {
   attemptCount: number;
   accuracy: number; // percentage 0 - 100
   recentTrend: 'up' | 'down' | 'neutral';
+  correctCount?: number;
+  recentResults?: boolean[];
+  lastPracticedAt?: number;
+  nextReviewAt?: number;
+  stabilityDays?: number;
 }
 
 export type BadgeTier = 'bronze' | 'silver' | 'gold' | 'diamond';

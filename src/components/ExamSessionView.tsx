@@ -268,36 +268,39 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
   const handleSelectOption = (optId: string) => {
     const q = questions[currentIndex];
     if (!q) return;
-    
-    const isCorrect = optId === q.correctOptionId;
-    if (isCorrect) {
-      sound.playSuccess();
-      try {
-        confetti({ 
-          particleCount: 150, 
-          spread: 100, 
-          origin: { y: 0.5 },
-          colors: ['#10b981', '#34d399', '#fbbf24', '#3b82f6'],
-          disableForReducedMotion: true,
-          zIndex: 9999
-        });
-      } catch {}
-    } else {
-      sound.playError();
-      setIsShaking(true);
-      setTimeout(() => setIsShaking(false), 500);
-      try {
-        confetti({
-          particleCount: 40,
-          spread: 50,
-          origin: { y: 0.7 },
-          colors: ['#ef4444', '#f87171', '#94a3b8'],
-          gravity: 1.5,
-          ticks: 100,
-          disableForReducedMotion: true,
-          zIndex: 9999
-        });
-      } catch {}
+
+    // Restricted mode must not reveal correctness before the exam ends.
+    if (!isRestrictedMode) {
+      const isCorrect = optId === q.correctOptionId;
+      if (isCorrect) {
+        sound.playSuccess();
+        try {
+          confetti({
+            particleCount: 150,
+            spread: 100,
+            origin: { y: 0.5 },
+            colors: ['#10b981', '#34d399', '#fbbf24', '#3b82f6'],
+            disableForReducedMotion: true,
+            zIndex: 9999
+          });
+        } catch {}
+      } else {
+        sound.playError();
+        setIsShaking(true);
+        setTimeout(() => setIsShaking(false), 500);
+        try {
+          confetti({
+            particleCount: 40,
+            spread: 50,
+            origin: { y: 0.7 },
+            colors: ['#ef4444', '#f87171', '#94a3b8'],
+            gravity: 1.5,
+            ticks: 100,
+            disableForReducedMotion: true,
+            zIndex: 9999
+          });
+        } catch {}
+      }
     }
 
     setAnswers((prev) => ({

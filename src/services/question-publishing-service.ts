@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, setDoc, query, where, limit, writeBatch } from 'firebase/firestore';
+import { collection, doc, getDocs, query, where, limit, runTransaction, writeBatch } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import type { BaseQuestion } from '../types';
 import { auditQuestion } from '../features/questions/quality';
@@ -13,43 +13,25 @@ export interface StoredQuestion extends BaseQuestion {
 }
 const clean = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 
-async function ensureAdminAuth(): Promise<void> {
-  if (!auth.currentUser) {
-    if ((auth as any).authStateReady) {
-      await (auth as any).authStateReady().catch(() => {});
-    }
+async function requireAdminAuth() {
+  await auth.authStateReady();
+  const user = auth.currentUser;
+  if (!user) throw new Error('Bu işlem için yönetici oturumu gerekli.');
+
+  const token = await user.getIdTokenResult();
+  if (token.claims.role !== 'admin') {
+    throw new Error('Bu işlem için doğrulanmış yönetici yetkisi gerekli.');
   }
-  if (!auth.currentUser) {
-    try {
-      const { signInWithEmailAndPassword } = await import('firebase/auth');
-      await signInWithEmailAndPassword(auth, 'muratteknofest@gmail.com', 'Mu7203397.Mu9486635.');
-    } catch {
-      try {
-        const { signInAnonymously } = await import('firebase/auth');
-        await signInAnonymously(auth);
-      } catch {}
-    }
-  }
+  return user;
 }
 
 export async function loadQuestionLibrary(): Promise<StoredQuestion[]> {
-  await ensureAdminAuth();
-
-  try {
-    const snapshot = await getDocs(collection(db, 'questions'));
-    if (!snapshot.empty) {
-      const liveDocs = snapshot.docs
-        .map(d => ({ ...d.data(), id: d.id }) as StoredQuestion)
-        .filter(q => auditQuestion(q).errors.length === 0)
-        .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
-      return liveDocs;
-    }
-  } catch (err) {
-    console.warn('Firestore library load notice:', err);
-  }
-
-  // Fallback to local question bank so editor never blocks
-  return questionBankService.getAll() as StoredQuestion[];
+  await requireAdminAuth();
+  const snapshot = await getDocs(collection(db, 'questions'));
+  return snapshot.docs
+    .map(d => ({ ...d.data(), id: d.id }) as StoredQuestion)
+    .filter(q => auditQuestion(q).errors.length === 0)
+    .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
 }
 
 export async function saveEditorialQuestion(
@@ -58,10 +40,8 @@ export async function saveEditorialQuestion(
   expectedRevision: number,
   confirmedReview: boolean,
 ): Promise<StoredQuestion> {
-  await ensureAdminAuth();
-  
-  const user = auth.currentUser;
-  const uid = user?.uid || 'admin_muratteknofest';
+  const user = await requireAdminAuth();
+  const uid = user.uid;
   const report = auditQuestion(question);
   if (report.errors.length) throw new Error(report.errors.join(' '));
   if (status === 'published' && !confirmedReview) throw new Error('Yayımlamadan önce yönerge, cevap ve görselleri inceleyip onaylayın.');
@@ -81,15 +61,19 @@ export async function saveEditorialQuestion(
 
   if (status !== 'published') delete stored.reviewedBy;
 
-  // 1. Live write to Firestore
-  try {
-    await setDoc(ref, stored, { merge: true });
-  } catch (err) {
-    console.warn('Live Firestore save notice:', err);
-  }
+  // Optimistic concurrency prevents two editors from silently overwriting
+  // one another. Firestore remains the source of truth.
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    const liveRevision = snapshot.exists() ? Number(snapshot.data().revision || 0) : 0;
+    if (liveRevision !== expectedRevision) {
+      throw new Error('EDIT_CONFLICT');
+    }
+    transaction.set(ref, stored, { merge: true });
+  });
 
-  // 2. Also update questionBankService so all admin panels stay synchronized
-  questionBankService.createCustomQuestion(stored);
+  // Keep in-memory admin panels synchronized only after the durable write.
+  questionBankService.cacheQuestion(stored);
 
   return stored;
 }
@@ -103,24 +87,24 @@ export async function loadPublishedQuestions(): Promise<BaseQuestion[]> {
   } catch (err) {
     console.warn('Firestore published load notice:', err);
   }
-  return questionBankService.getAll();
+  return questionBankService.getAll().filter(q => q.status === 'published');
 }
 
 export async function clearAllFirestoreQuestions(): Promise<number> {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Bu işlem için yönetici oturumu gerekli.');
+  await requireAdminAuth();
   
   const snapshot = await getDocs(collection(db, 'questions'));
   if (snapshot.empty) return 0;
 
-  // Firestore batch delete
-  const batch = writeBatch(db);
-  let count = 0;
-  snapshot.docs.forEach((document) => {
-    batch.delete(doc(db, 'questions', document.id));
-    count++;
-  });
-  
-  await batch.commit();
-  return count;
+  // Firestore batches are capped at 500 operations. Keep headroom for future
+  // audit writes and process large libraries safely.
+  for (let offset = 0; offset < snapshot.docs.length; offset += 450) {
+    const batch = writeBatch(db);
+    snapshot.docs.slice(offset, offset + 450).forEach((document) => {
+      batch.delete(doc(db, 'questions', document.id));
+    });
+    await batch.commit();
+  }
+
+  return snapshot.size;
 }

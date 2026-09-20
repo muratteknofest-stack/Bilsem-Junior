@@ -23,6 +23,7 @@ import {
   Minimize2,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { selectAdaptiveTarget } from '../features/adaptive/adaptive-engine';
 
 interface AdaptivePracticeViewProps {
   onNavigateHome: () => void;
@@ -30,8 +31,9 @@ interface AdaptivePracticeViewProps {
 
 export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNavigateHome }) => {
   const [masteries, setMasteries] = useState<SkillMastery[]>(() => dataService.getSkillMasteries());
+  const [adaptiveTarget, setAdaptiveTarget] = useState(() => selectAdaptiveTarget(masteries));
   const [consecutiveCorrect, setConsecutiveCorrect] = useState(0);
-  const [currentDifficulty, setCurrentDifficulty] = useState<DifficultyLevel>(3);
+  const [currentDifficulty, setCurrentDifficulty] = useState<DifficultyLevel>(adaptiveTarget.difficulty);
   const [questionCount, setQuestionCount] = useState(1);
   const [earnedXP, setEarnedXP] = useState(0);
   const [activeMilestoneStreak, setActiveMilestoneStreak] = useState<number | null>(null);
@@ -60,31 +62,10 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
-  // Pick adaptive category based on weights
-  const getAdaptiveCategory = () => {
-    const sorted = [...masteries].sort((a, b) => a.mastery - b.mastery);
-    const rand = Math.random();
-
-    // 50% weak
-    if (rand < 0.5) {
-      return sorted[0]?.category || 'matrix';
-    }
-    // 25% second weakest
-    if (rand < 0.75) {
-      return sorted[1]?.category || 'pattern';
-    }
-    // 15% medium
-    if (rand < 0.9) {
-      return sorted[Math.floor(sorted.length / 2)]?.category || 'spatial';
-    }
-    // 10% surprise
-    return sorted[Math.floor(Math.random() * sorted.length)]?.category || 'attention';
-  };
-
   const [currentQuestion, setCurrentQuestion] = useState<BaseQuestion>(() => {
     return generateQuestion({
-      category: 'matrix',
-      difficulty: 3,
+      category: adaptiveTarget.category,
+      difficulty: adaptiveTarget.difficulty,
       seed: Math.floor(Math.random() * 900000) + 100000,
     });
   });
@@ -145,10 +126,6 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
       dataService.addXP(totalXP);
       dataService.updateSkillMastery(currentQuestion.category, true, currentDifficulty);
 
-      // Adapt difficulty up if 2 correct in a row
-      if (nextConsecutive >= 2 && currentDifficulty < 6) {
-        setCurrentDifficulty((prev) => Math.min(6, prev + 1) as DifficultyLevel);
-      }
     } else {
       sound.playError();
       setConsecutiveCorrect(0);
@@ -156,23 +133,23 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
       dataService.addMistake(currentQuestion);
       dataService.updateSkillMastery(currentQuestion.category, false, currentDifficulty);
 
-      // Lower difficulty if struggling
-      if (currentDifficulty > 1) {
-        setCurrentDifficulty((prev) => Math.max(1, prev - 1) as DifficultyLevel);
-      }
     }
     setMasteries(dataService.getSkillMasteries());
   };
 
   const handleNextQuestion = () => {
     sound.playClick();
-    const nextCat = getAdaptiveCategory();
+    const latestMasteries = dataService.getSkillMasteries();
+    const nextTarget = selectAdaptiveTarget(latestMasteries);
     const nextQ = generateQuestion({
-      category: nextCat,
-      difficulty: currentDifficulty,
+      category: nextTarget.category,
+      difficulty: nextTarget.difficulty,
       seed: Math.floor(Math.random() * 900000) + 100000,
     });
 
+    setAdaptiveTarget(nextTarget);
+    setCurrentDifficulty(nextTarget.difficulty);
+    setMasteries(latestMasteries);
     setCurrentQuestion(nextQ);
     setSelectedOptionId(null);
     setIsSubmitted(false);
@@ -199,13 +176,19 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
           <ArrowLeft className="w-5 h-5" />
         </button>
 
-        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1 text-xs font-extrabold text-purple-800 bg-purple-100 px-3 py-1 rounded-full">
             <Zap className="w-3.5 h-3.5 text-purple-600" />
             <span>Akıllı Adaptif Mod • Soru {questionCount}</span>
           </div>
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${DIFFICULTY_COLORS[currentDifficulty]}`}>
             Sv. {currentDifficulty}
+          </span>
+          <span className="hidden sm:inline px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+            {adaptiveTarget.reason === 'new-skill' && 'Yeni beceri keşfi'}
+            {adaptiveTarget.reason === 'review-due' && 'Tekrar zamanı'}
+            {adaptiveTarget.reason === 'needs-practice' && 'Gelişim odağı'}
+            {adaptiveTarget.reason === 'next-challenge' && 'Yeni meydan okuma'}
           </span>
           <ComboStreakIndicator streak={consecutiveCorrect} variant="hud" />
         </div>

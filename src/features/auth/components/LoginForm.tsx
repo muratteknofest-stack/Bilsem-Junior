@@ -8,39 +8,12 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { dataService } from '../../../services/data-service';
+import { doc, getDoc } from 'firebase/firestore';
 import { sound } from '../../../lib/sound';
 import { useAuth } from '../../../contexts/AuthContext';
 import { isManagedStudentEmail, studentCodeToEmail } from '../../../lib/account-identifiers';
 import { loginSchema, formatZodError } from '../../../lib/validations';
 import { Eye, EyeOff, Lock, Mail, User, AlertCircle, ArrowRight } from 'lucide-react';
-
-const OWNER_ADMIN_EMAIL = 'muratteknofest@gmail.com';
-
-function createOwnerAdminProfile(uid: string, email: string): UserProfile {
-  const now = Date.now();
-  return {
-    id: uid,
-    email,
-    name: 'ZekaPark Yönetici',
-    role: 'admin',
-    avatar: '👨‍💻',
-    level: 1,
-    xp: 0,
-    streak: 0,
-    lastActiveDate: new Date(now).toISOString(),
-    dailyGoalMinutes: 20,
-    todayMinutesSpent: 0,
-    soundEnabled: true,
-    createdAt: now,
-    updatedAt: now,
-    totalPoints: 0,
-    claimedStreakDays: [],
-    totalQuestionsSolved: 0,
-    resolvedMistakesCount: 0,
-  };
-}
 
 interface LoginFormProps {
   selectedRole: UserRole;
@@ -96,47 +69,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         loginEmail = studentCodeToEmail(loginEmail);
       }
 
-      // Master Admin Authentication Path for Project Owner
-      if (loginEmail.toLowerCase() === OWNER_ADMIN_EMAIL.toLowerCase() && password === 'Mu7203397.Mu9486635.') {
-        let adminUid = 'admin_muratteknofest';
-        try {
-          await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
-          let cred;
-          try {
-            cred = await signInWithEmailAndPassword(auth, loginEmail, password);
-          } catch {
-            try {
-              const { createUserWithEmailAndPassword } = await import('firebase/auth');
-              cred = await createUserWithEmailAndPassword(auth, loginEmail, password);
-            } catch {
-              const { signInAnonymously } = await import('firebase/auth');
-              cred = await signInAnonymously(auth).catch(() => null);
-            }
-          }
-          if (cred?.user?.uid) {
-            adminUid = cred.user.uid;
-          }
-        } catch (e) {
-          console.warn('Admin auth session note:', e);
-        }
-
-        const ownerProfile = createOwnerAdminProfile(adminUid, OWNER_ADMIN_EMAIL);
-        try {
-          const userDocRef = doc(db, 'users', adminUid);
-          await setDoc(userDocRef, ownerProfile, { merge: true });
-        } catch {}
-
-        dataService.loginAs('admin', ownerProfile);
-        loginLocally(ownerProfile);
-        sound.playSuccess();
-        setSuccessToast('Yönetici girişi başarılı! Yönlendiriliyorsunuz...');
-        
-        setTimeout(() => {
-          onLoginSuccess('admin', ownerProfile);
-        }, 300);
-        return;
-      }
-
       await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
       
       let credential;
@@ -169,20 +101,23 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         throw new Error('ROLE_MISMATCH');
       }
       
-      // Force admin role for the owner email if not already set
-      if (signedInEmail === OWNER_ADMIN_EMAIL && loggedInProfile.role !== 'admin') {
-        loggedInProfile.role = 'admin';
-        await setDoc(userDocRef, { ...loggedInProfile, role: 'admin' }, { merge: true });
-      }
-
       if (loggedInProfile.role !== selectedRole) {
         await signOut(auth);
         throw new Error('ROLE_MISMATCH');
       }
 
-      dataService.loginAs(loggedInProfile.role, loggedInProfile);
-      dataService.hydrateUserStateFromFirebase().catch(console.error);
-      loginLocally(loggedInProfile);
+      // Privileged access is granted only by a server-issued Firebase custom
+      // claim. A Firestore profile field is presentation data, not authority.
+      if (loggedInProfile.role === 'admin') {
+        const token = await credential.user.getIdTokenResult(true);
+        if (token.claims.role !== 'admin') {
+          await signOut(auth);
+          throw new Error('ADMIN_CLAIM_REQUIRED');
+        }
+      }
+
+      await loginLocally(loggedInProfile);
+      // The provider hydrates remote state after authorizing this profile.
       sound.playSuccess();
       setSuccessToast('Giriş başarılı! Yönlendiriliyorsunuz...');
       
@@ -206,12 +141,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({
          errMsg = 'Bu hesaba ait kullanıcı profili bulunamadı. Lütfen destek ekibiyle iletişime geçin.';
       } else if (error.message === 'ROLE_MISMATCH') {
          errMsg = 'Seçtiğiniz rol bu hesapla eşleşmiyor.';
+      } else if (error.message === 'ADMIN_CLAIM_REQUIRED') {
+         errMsg = 'Bu hesap için yönetici yetkisi doğrulanamadı.';
       } else if (error.message === 'EMAIL_NOT_VERIFIED_SENT') {
          errMsg = 'E-posta adresiniz henüz doğrulanmadı. Yeni doğrulama bağlantısı gönderildi.';
       } else if (error.message === 'EMAIL_NOT_VERIFIED_UNSENT') {
          errMsg = 'E-posta adresiniz henüz doğrulanmadı. Bağlantı şu anda yeniden gönderilemedi; lütfen biraz sonra tekrar deneyin.';
-      } else if (error.message === 'ADMIN_PROFILE_PROVISION_FAILED') {
-         errMsg = 'Yönetici profili henüz etkinleştirilemedi. Lütfen kısa süre sonra tekrar deneyin.';
       }
       setErrorMessage(errMsg);
     } finally {

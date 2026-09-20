@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useAuth } from './contexts/AuthContext';
 
 import { AnimatePresence, motion } from 'motion/react';
@@ -23,6 +23,38 @@ const LeaderboardView = lazy(() => import('./components/LeaderboardView').then((
 const CognitiveGlossaryView = lazy(() => import('./components/CognitiveGlossaryView').then((m) => ({ default: m.CognitiveGlossaryView })));
 const LoginPage = lazy(() => import('./components/LoginPage').then((m) => ({ default: m.LoginPage })));
 
+const ROUTE_PATHS: Record<string, string> = {
+  landing: '/',
+  login: '/giris',
+  dashboard: '/ogrenci',
+  practice: '/pratik',
+  adaptive: '/adaptif',
+  exams: '/denemeler',
+  mistakes: '/hata-defteri',
+  achievements: '/basarilar',
+  leaderboard: '/siralamalar',
+  glossary: '/sozluk',
+  parent: '/veli',
+  admin: '/yonetim',
+};
+const PUBLIC_ROUTES = new Set(['landing', 'login', 'glossary']);
+
+function routeFromPath(pathname: string): string | null {
+  const normalized = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+  return Object.entries(ROUTE_PATHS).find(([, path]) => path === normalized)?.[0] || null;
+}
+
+function homeForRole(role?: UserRole): string {
+  return role === 'parent' ? 'parent' : role === 'admin' ? 'admin' : 'dashboard';
+}
+
+function roleCanOpen(role: UserRole, route: string): boolean {
+  if (PUBLIC_ROUTES.has(route)) return true;
+  if (role === 'parent') return route === 'parent';
+  if (role === 'admin') return route !== 'parent';
+  return !['parent', 'admin'].includes(route);
+}
+
 export default function App() {
   // Auth context
   const { currentUser: authUser, userProfile, loading: authLoading, logout: authLogout } = useAuth();
@@ -31,22 +63,14 @@ export default function App() {
   // so we can show a nice skeleton for the dashboard.
   // if (authLoading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>;
 
-  const handleLogout = async () => {
-    await authLogout();
-    setIsAuth(false);
-    setCurrentRoute('login');
-  };
-
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => dataService.getCurrentUser());
   const [isAuth, setIsAuth] = useState<boolean>(() => dataService.isAuthenticated());
   const [loginRole, setLoginRole] = useState<UserRole>('student');
   const [currentRoute, setCurrentRoute] = useState<string>(() => {
-    if (!dataService.isAuthenticated()) return 'landing';
+    const requested = typeof window !== 'undefined' ? routeFromPath(window.location.pathname) : null;
+    if (!dataService.isAuthenticated()) return requested && PUBLIC_ROUTES.has(requested) ? requested : (requested ? 'login' : 'landing');
     const u = dataService.getCurrentUser();
-    if (u?.role === 'parent') return 'parent';
-    if (u?.role === 'admin') return 'admin';
-    if (u?.role === 'student') return 'dashboard';
-    return 'landing';
+    return requested && roleCanOpen(u.role, requested) ? requested : homeForRole(u.role);
   });
   const [masteries, setMasteries] = useState<SkillMastery[]>(() => dataService.getSkillMasteries());
   const [mistakes, setMistakes] = useState<MistakeItem[]>(() => dataService.getMistakes());
@@ -55,13 +79,29 @@ export default function App() {
   const [activeAlert, setActiveAlert] = useState<ReminderAlertEvent | null>(null);
   const [showGlobalReminderModal, setShowGlobalReminderModal] = useState(false);
 
+  const commitRoute = (route: string, historyMode: 'push' | 'replace' | 'none' = 'push') => {
+    setCurrentRoute(route);
+    if (historyMode !== 'none' && typeof window !== 'undefined') {
+      const path = ROUTE_PATHS[route] || ROUTE_PATHS.landing;
+      const method = historyMode === 'replace' ? 'replaceState' : 'pushState';
+      if (window.location.pathname !== path || historyMode === 'replace') {
+        window.history[method]({ route }, '', path);
+      }
+    }
+  };
+
+  const handleLogout = async () => {
+    await authLogout();
+    setIsAuth(false);
+    commitRoute('login');
+  };
 
   useEffect(() => {
     if (userProfile) {
       setCurrentUser(userProfile);
       setIsAuth(true);
       if (currentRoute === 'login' || currentRoute === 'landing' || (userProfile.role === 'admin' && currentRoute === 'dashboard')) {
-        setCurrentRoute(userProfile.role === 'student' ? 'dashboard' : (userProfile.role === 'parent' ? 'parent' : 'admin'));
+        commitRoute(homeForRole(userProfile.role), 'replace');
       }
     } else {
       if (dataService.isAuthenticated()) {
@@ -79,7 +119,7 @@ export default function App() {
   // Subscribe to background/instant study reminder alerts
   useEffect(() => {
     const handleOpenGlossaryEvent = () => {
-      setCurrentRoute('glossary');
+      commitRoute('glossary');
     };
     window.addEventListener('open-glossary', handleOpenGlossaryEvent);
 
@@ -106,26 +146,31 @@ export default function App() {
 
   const handleNavigateToLogin = (role: UserRole) => {
     setLoginRole(role);
-    setCurrentRoute('login');
+    commitRoute('login');
   };
 
-  const navigateTo = (targetRoute: string) => {
+  const navigateTo = (targetRoute: string, historyMode: 'push' | 'replace' | 'none' = 'push') => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     if (targetRoute.startsWith('login:')) {
       const role = targetRoute.split(':')[1] as UserRole;
       setLoginRole(role);
-      setCurrentRoute('login');
+      commitRoute('login', historyMode);
       return;
     }
 
     if (targetRoute === 'login') {
-      setCurrentRoute('login');
+      commitRoute('login', historyMode);
       return;
     }
 
     if (targetRoute === 'landing') {
-      setCurrentRoute('landing');
+      commitRoute('landing', historyMode);
+      return;
+    }
+
+    if (targetRoute === 'glossary') {
+      commitRoute('glossary', historyMode);
       return;
     }
 
@@ -135,40 +180,39 @@ export default function App() {
       if (targetRoute === 'parent') setLoginRole('parent');
       else if (targetRoute === 'admin') setLoginRole('admin');
       else setLoginRole('student');
-      setCurrentRoute('login');
+      commitRoute('login', historyMode === 'none' ? 'replace' : historyMode);
       return;
     }
 
-    const u = userProfile || currentUser || dataService.getCurrentUser();
+    const u = dataService.getCurrentUser();
     if (!u) {
-      setCurrentRoute('login');
+      commitRoute('login', historyMode === 'none' ? 'replace' : historyMode);
       return;
     }
 
-    // Student trying to access parent or admin -> stay on dashboard
-    if (u.role === 'student' && (targetRoute === 'parent' || targetRoute === 'admin')) {
-      setCurrentRoute('dashboard');
+    if (!roleCanOpen(u.role, targetRoute)) {
+      commitRoute(homeForRole(u.role), historyMode === 'none' ? 'replace' : historyMode);
       syncState();
       return;
     }
 
-    // Parent can only access parent portal
-    if (u.role === 'parent' && targetRoute !== 'parent') {
-      setCurrentRoute('parent');
-      syncState();
-      return;
-    }
-
-    // Admin can only access admin panel
-    if (u.role === 'admin' && targetRoute !== 'admin') {
-      setCurrentRoute('admin');
-      syncState();
-      return;
-    }
-
-    setCurrentRoute(targetRoute);
+    commitRoute(targetRoute, historyMode);
     syncState();
   };
+
+  const navigateRef = useRef(navigateTo);
+  navigateRef.current = navigateTo;
+
+  useEffect(() => {
+    const requested = routeFromPath(window.location.pathname);
+    if (!requested || requested !== currentRoute) {
+      const canonical = ROUTE_PATHS[currentRoute] || ROUTE_PATHS.landing;
+      window.history.replaceState({ route: currentRoute }, '', canonical);
+    }
+    const handlePopState = () => navigateRef.current(routeFromPath(window.location.pathname) || 'landing', 'none');
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const isTestRoute = currentRoute === 'practice' || currentRoute === 'adaptive' || currentRoute === 'exams';
 
@@ -177,7 +221,7 @@ export default function App() {
       {/* Universal Header - hidden on mobile/tablet during tests for distraction-free full-screen test experience */}
       {!isTestRoute && (
         <Navbar
-          currentUser={currentUser}
+          currentUser={isAuth ? currentUser : null}
           onNavigateHome={() => navigateTo(isAuth ? (currentUser?.role === 'student' ? 'dashboard' : currentUser?.role === 'parent' ? 'parent' : 'admin') : 'landing')}
           onNavigate={navigateTo}
           currentRoute={currentRoute}
@@ -309,7 +353,7 @@ export default function App() {
       </main>
 
       {/* Mobile Bottom Navigation Bar - Hidden during test routes for full screen test view */}
-      {currentRoute !== 'landing' && currentRoute !== 'login' && !isTestRoute && (
+      {isAuth && currentRoute !== 'landing' && currentRoute !== 'login' && !isTestRoute && (
         <MobileBottomNav
           currentRoute={currentRoute}
           onNavigate={navigateTo}

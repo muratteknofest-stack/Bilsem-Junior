@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import { getApps, initializeApp, type App } from 'firebase-admin/app';
 import { getAppCheck } from 'firebase-admin/app-check';
 import { getAuth, type DecodedIdToken } from 'firebase-admin/auth';
@@ -71,16 +71,20 @@ export function requireVerifiedEmail(req: AuthenticatedRequest, res: Response, n
 }
 
 const roleCache = new Map<string, { role: string; expiresAt: number }>();
-const ROLE_CACHE_TTL_MS = 600_000; // 10 minutes
+const ROLE_CACHE_TTL_MS = 30_000;
 
-export function requireProfileRole(...roles: AppRole[]) {
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export type ProfileRoleGuard = RequestHandler & { requiredRoles: readonly AppRole[] };
+
+export function requireProfileRole(...roles: AppRole[]): ProfileRoleGuard {
+  const guard = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.authUser) return res.status(401).json({ error: 'Oturum doğrulaması gerekli.' });
     try {
       const uid = req.authUser.uid;
+      const tokenRole = req.authUser.role as AppRole | undefined;
       const cached = roleCache.get(uid);
       if (cached && cached.expiresAt > Date.now()) {
-        if (!roles.includes(cached.role as AppRole)) {
+        const cachedRole = cached.role as AppRole;
+        if (!roles.includes(cachedRole) || (cachedRole === 'admin' && tokenRole !== 'admin')) {
           return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmuyor.' });
         }
         return next();
@@ -88,7 +92,12 @@ export function requireProfileRole(...roles: AppRole[]) {
 
       const snapshot = await getAdminDb().doc(`users/${uid}`).get();
       const profile = snapshot.data();
-      if (!profile || profile.id !== uid || !roles.includes(profile.role)) {
+      if (
+        !profile
+        || profile.id !== uid
+        || !roles.includes(profile.role)
+        || (profile.role === 'admin' && tokenRole !== 'admin')
+      ) {
         return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmuyor.' });
       }
       
@@ -98,6 +107,7 @@ export function requireProfileRole(...roles: AppRole[]) {
       return res.status(503).json({ error: 'Hesap yetkisi şu anda doğrulanamadı.' });
     }
   };
+  return Object.assign(guard, { requiredRoles: Object.freeze([...roles]) });
 }
 
 export function requireRole(...roles: AppRole[]) {

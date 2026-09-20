@@ -7,6 +7,7 @@ import {
   normalizeStudentCode,
 } from '../security';
 import { accountSecurityLimiter } from '../rate-limiters';
+import { KVKK_POLICY_VERSION, TERMS_POLICY_VERSION } from '../../src/lib/account-policy';
 
 const authRoutes = Router();
 
@@ -14,10 +15,21 @@ const strongPassword = z.string().min(8).max(128).regex(/^(?=.*[A-Za-z])(?=.*\d)
   message: 'Şifre en az bir harf ve bir rakam içermelidir.',
 });
 
+function normalizePhone(value: string): string | null {
+  const compact = value.replace(/[\s()-]/g, '');
+  if (/^\+[1-9]\d{7,14}$/.test(compact)) return compact;
+  if (/^05\d{9}$/.test(compact)) return `+90${compact.slice(1)}`;
+  if (/^5\d{9}$/.test(compact)) return `+90${compact}`;
+  if (/^90\d{10}$/.test(compact)) return `+${compact}`;
+  return null;
+}
+
 const registerFamilySchema = z.object({
   parentEmail: z.string().email('Geçerli bir veli e-posta adresi giriniz.').toLowerCase().trim(),
   parentPassword: strongPassword,
-  parentPhone: z.string().optional(),
+  parentPhone: z.string().trim().min(8).max(24)
+    .refine((value) => normalizePhone(value) !== null, 'Geçerli bir telefon numarası giriniz.')
+    .optional(),
   studentName: z.string().min(2, 'Öğrenci adı en az 2 karakter olmalıdır.').max(50).trim(),
   studentPassword: strongPassword,
   grade: z.number().int().min(1).max(4),
@@ -39,6 +51,7 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
     grade,
     examFocus,
   } = parsed.data;
+  const normalizedParentPhone = parentPhone ? normalizePhone(parentPhone) : undefined;
 
   const adminAuth = getAdminAuth();
   const adminDb = getAdminDb();
@@ -60,7 +73,6 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
     createdParentUser = await adminAuth.createUser({
       email: parentEmail,
       password: parentPassword,
-      phoneNumber: parentPhone || undefined,
       emailVerified: false,
       displayName: `Veli (${studentName})`,
     });
@@ -108,8 +120,8 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
       consent: {
         actorRole: 'parent',
         acceptedAt: now,
-        kvkkVersion: '2026.1',
-        termsVersion: '2026.1',
+        kvkkVersion: KVKK_POLICY_VERSION,
+        termsVersion: TERMS_POLICY_VERSION,
       },
       createdAt: now,
       updatedAt: now,
@@ -122,11 +134,19 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
       role: 'parent',
       linkedStudentIds: [createdStudentUser.uid],
       avatar: '🦉',
+      level: 1,
+      xp: 0,
+      streak: 0,
+      lastActiveDate: new Date(now).toISOString(),
+      dailyGoalMinutes: 0,
+      todayMinutesSpent: 0,
+      soundEnabled: true,
+      parentPhone: normalizedParentPhone || '',
       consent: {
         actorRole: 'parent',
         acceptedAt: now,
-        kvkkVersion: '2026.1',
-        termsVersion: '2026.1',
+        kvkkVersion: KVKK_POLICY_VERSION,
+        termsVersion: TERMS_POLICY_VERSION,
       },
       createdAt: now,
       updatedAt: now,
@@ -157,7 +177,7 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
     }
 
     return res.status(500).json({
-      error: error?.message || 'Aile hesabı oluşturulurken bir hata oluştu. Lütfen tekrar deneyiniz.',
+      error: 'Aile hesabı oluşturulurken bir hata oluştu. Lütfen tekrar deneyiniz.',
     });
   }
 });

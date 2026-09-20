@@ -76,17 +76,16 @@ export function setCurrentUser(user: UserProfile) {
 
 export function isAuthenticated(): boolean {
   const current = getCurrentUser();
-  if (current?.email === 'muratteknofest@gmail.com' && current?.role === 'admin' && safeStorage.getItem(STORAGE_KEYS.AUTH_SESSION) === 'true') {
-    return true;
-  }
-  return auth.currentUser !== null && safeStorage.getItem(STORAGE_KEYS.AUTH_SESSION) === 'true';
+  return auth.currentUser !== null
+    && current.id === auth.currentUser.uid
+    && safeStorage.getItem(STORAGE_KEYS.AUTH_SESSION) === 'true';
 }
 
 export function loginAs(role: UserRole, customUser?: UserProfile): UserProfile {
   if (!customUser || customUser.role !== role) {
     throw new Error('Kimliği doğrulanmamış yerel oturum engellendi.');
   }
-  if (customUser.id !== auth.currentUser?.uid && customUser.email !== 'muratteknofest@gmail.com') {
+  if (customUser.id !== auth.currentUser?.uid) {
     throw new Error('Kimliği doğrulanmamış yerel oturum engellendi.');
   }
   const previous = safeStorage.getItem(STORAGE_KEYS.CURRENT_USER);

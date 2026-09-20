@@ -512,15 +512,15 @@ export function generateLogicalSequenceQuestion(seed: number, difficulty: Diffic
   const correctLevel = 100;
 
   const offsets = difficulty <= 2
-    ? [15, 30, 45]   // Kolay: bariz farklar
+    ? [20, 40, 60]   // Kolay: bariz farklar
     : difficulty <= 4
-    ? [12, 24, 38]   // Orta: yakın değerler
-    : [5, 12, 18];   // Zor: çok yakın, kafa karıştırıcı
+    ? [10, 25, 40]   // Orta: kademeli yakınlık
+    : [5, 12, 20];   // Zor: yakın ama yine de benzersiz
 
-  const distractorFills = offsets.map(offset => {
-    const sign = rng.nextBool() ? 1 : -1;
-    return Math.max(5, Math.min(95, correctLevel + sign * offset));
-  });
+  // The correct value is already the upper boundary (100). Adding an offset
+  // and clamping used to turn several distractors into the same 95% image.
+  // Subtracting distinct offsets guarantees four distinct visual answers.
+  const distractorFills = rng.shuffle(offsets).map(offset => correctLevel - offset);
 
   const correctChoice = { fillPercent: correctLevel, color: PALETTE.cyan };
   const d1 = { fillPercent: distractorFills[0], color: PALETTE.cyan };
@@ -613,6 +613,16 @@ export function generateMatrix3x3Question(seed: number, difficulty: DifficultyLe
   const targetColor = isComplex ? colorGrid[2][2] : PALETTE.indigo;
   const targetRotation = isComplex ? (difficulty === 6 ? 180 : 90) : 0;
 
+  const finalCellGrid = shapeGrid.map((row, rowIndex) => row.map((kind, colIndex) => (
+    rowIndex === 2 && colIndex === 2
+      ? null
+      : {
+          kind,
+          fill: isComplex ? colorGrid[rowIndex][colIndex] : PALETTE.indigo,
+          rotation: isComplex ? targetRotation : 0,
+        }
+  )));
+
   // Build distractors (Smart Partial-Truth Distractors)
   let distractors: { kind: string, fill: string, rotation: number }[] = [];
   
@@ -696,10 +706,10 @@ export function generateMatrix3x3Question(seed: number, difficulty: DifficultyLe
     skills: ['İleri Düzey Matris', 'Çift Boyutlu Muhakeme', 'Kombinatorik Düşünme'],
     seed,
     visualConfig: {
-      displayMode: 'grid_2d',
+      displayMode: 'matrix_3x3',
       rows: 3,
       cols: 3,
-      cellGrid: finalCellGrid,
+      grid: finalCellGrid,
     },
   };
 }

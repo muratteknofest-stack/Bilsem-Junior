@@ -1,9 +1,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAnalytics, isSupported } from 'firebase/analytics';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider, type AppCheck } from 'firebase/app-check';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { initializeFirestore } from 'firebase/firestore';
 import appletConfig from '../../firebase-applet-config.json';
 
 const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : ((process.env as any) || {});
@@ -37,9 +35,10 @@ if (typeof window !== 'undefined' && appCheckSiteKey) {
       isTokenAutoRefreshEnabled: true,
     });
   } catch (error) {
-    // Keep core authentication available even when App Check is not configured yet.
+    // Keep core authentication available, but protected production API calls
+    // intentionally fail closed until App Check is configured.
     if (!String(error).includes('already been initialized')) {
-      console.warn('Firebase App Check başlatılamadı; AI özelliği güvenli yedeği kullanacak.', error);
+      console.warn('Firebase App Check başlatılamadı; korumalı API özellikleri kullanılamaz.', error);
     }
   }
 }
@@ -50,9 +49,6 @@ const auth = getAuth(app);
 export const databaseId = env.VITE_FIREBASE_DATABASE_ID || appletConfig.firestoreDatabaseId || undefined;
 const db = initializeFirestore(app, {}, databaseId);
 
-const storage = getStorage(app);
-
-let analytics = null;
-isSupported().then((yes) => yes && (analytics = getAnalytics(app))).catch(() => {});
-
-export { app, appCheck, auth, db, storage, analytics };
+// Analytics is intentionally not initialized implicitly. A commercial rollout
+// must first implement an explicit consent policy suitable for children's data.
+export { app, appCheck, auth, db };

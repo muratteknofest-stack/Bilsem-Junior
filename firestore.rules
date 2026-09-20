@@ -10,13 +10,10 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      // Keep custom claims as the primary authorization path. The verified
-      // owner account is also allowlisted so the first administrator can be
-      // provisioned safely when Cloud Shell/Admin SDK access is unavailable.
-      return hasRole('admin') ||
-        (signedIn() &&
-          (request.auth.token.email == 'muratteknofest@gmail.com' ||
-           (request.auth.token.email_verified == true && request.auth.token.email == 'iomegagame@gmail.com')));
+      // Administrative authority is issued and revoked only by a trusted
+      // backend through Firebase custom claims. Email addresses are identity
+      // attributes, never authorization rules.
+      return hasRole('admin');
     }
 
     function isParent() {
@@ -108,8 +105,10 @@ service cloud.firestore {
     }
 
     match /questions/{questionId} {
-      allow read: if true;
-      allow write: if isAdmin() || (signedIn() && request.auth.token.email == 'muratteknofest@gmail.com');
+      // Signed-in student queries must include `where('status', '==', 'published')`.
+      // Draft, review and archived material is visible only to administrators.
+      allow read: if isAdmin() || (signedIn() && resource.data.status == 'published');
+      allow write: if isAdmin();
     }
 
     match /practiceSessions/{sessionId} {

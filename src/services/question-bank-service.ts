@@ -16,6 +16,8 @@ import {
   writeBatch,
   onSnapshot,
   getDocs,
+  query,
+  where,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { z } from 'zod';
@@ -92,7 +94,7 @@ class QuestionBankService {
     if (typeof window !== 'undefined') {
       try {
         onSnapshot(
-          collection(db, 'questions'),
+          query(collection(db, 'questions'), where('status', '==', 'published')),
           (snapshot) => {
             if (!snapshot.empty) {
               const liveList = snapshot.docs.map((d) => ({
@@ -134,16 +136,20 @@ class QuestionBankService {
     return [...this.questions];
   }
 
+  public getPublished(): BaseQuestion[] {
+    return this.questions.filter((question) => question.status === 'published');
+  }
+
   public getAllQuestions(): BaseQuestion[] {
     return [...this.questions];
   }
 
-  public createCustomQuestion(question: BaseQuestion): BaseQuestion {
+  public cacheQuestion(question: BaseQuestion): BaseQuestion {
     const publishedQ: BaseQuestion = {
       ...question,
       status: question.status || 'published',
       isCustom: true,
-      updatedAt: new Date().toISOString(),
+      updatedAt: question.updatedAt || new Date().toISOString(),
     };
     const existingIdx = this.questions.findIndex((q) => q.id === publishedQ.id);
     if (existingIdx !== -1) {
@@ -153,6 +159,12 @@ class QuestionBankService {
     }
     this.save();
     this.notify();
+
+    return publishedQ;
+  }
+
+  public createCustomQuestion(question: BaseQuestion): BaseQuestion {
+    const publishedQ = this.cacheQuestion(question);
 
     // Live sync to Firestore
     try {

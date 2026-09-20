@@ -41,3 +41,12 @@ export const adminAiLimiter = rateLimit({
   keyGenerator: authenticatedRateLimitKey,
   message: { error: 'AI soru motoru istek sınırına ulaşıldı.' },
 });
+
+export const adminDataLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 120,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  keyGenerator: authenticatedRateLimitKey,
+  message: { error: 'Yönetim paneli istek sınırına ulaşıldı.' },
+});
