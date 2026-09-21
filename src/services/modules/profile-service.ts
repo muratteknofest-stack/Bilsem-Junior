@@ -19,9 +19,16 @@ export async function _updateFirebaseProfile(updates: Partial<UserProfile>) {
   if (!auth.currentUser) return;
   try {
     const ref = doc(db, 'users', auth.currentUser.uid);
+    const browserMutableFields = new Set<keyof UserProfile>([
+      'name', 'grade', 'avatar', 'dailyGoalMinutes', 'dailyGoalQuestions',
+      'dailyGoalSessions', 'soundEnabled', 'reminderConfig', 'featuredBadgeIds',
+    ]);
     const definedUpdates = Object.fromEntries(
-      Object.entries(updates).filter(([, value]) => value !== undefined),
+      Object.entries(updates).filter(([key, value]) => (
+        value !== undefined && browserMutableFields.has(key as keyof UserProfile)
+      )),
     );
+    if (Object.keys(definedUpdates).length === 0) return;
     await updateDoc(ref, { ...definedUpdates, updatedAt: Date.now() });
   } catch (e) {
     console.error('Failed to update firebase', e);
@@ -59,17 +66,11 @@ export function getCurrentUser(): UserProfile {
 export function setCurrentUser(user: UserProfile) {
   safeStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
   const {
-    avatar, level, xp, streak, longestStreak, lastActiveDate, todayPracticed,
-    streakFreezeCount, claimedStreakDays, weeklyStreakHistory, dailyGoalMinutes,
-    todayMinutesSpent, dailyGoalQuestions, todayQuestionsSolved, dailyGoalSessions,
-    todaySessionsCompleted, soundEnabled, totalQuestionsSolved, resolvedMistakesCount,
+    avatar, dailyGoalMinutes, dailyGoalQuestions, dailyGoalSessions, soundEnabled,
     featuredBadgeIds, reminderConfig,
   } = user;
   void _updateFirebaseProfile({
-    avatar, level, xp, streak, longestStreak, lastActiveDate, todayPracticed,
-    streakFreezeCount, claimedStreakDays, weeklyStreakHistory, dailyGoalMinutes,
-    todayMinutesSpent, dailyGoalQuestions, todayQuestionsSolved, dailyGoalSessions,
-    todaySessionsCompleted, soundEnabled, totalQuestionsSolved, resolvedMistakesCount,
+    avatar, dailyGoalMinutes, dailyGoalQuestions, dailyGoalSessions, soundEnabled,
     featuredBadgeIds, reminderConfig,
   });
 }
@@ -108,11 +109,8 @@ export function logout(): void {
 
 export function addXP(amount: number): { newXP: number; newLevel: number; leveledUp: boolean } {
   const user = getCurrentUser();
-  const oldLevel = user.level;
-  user.xp += amount;
-  const newLevel = Math.floor(user.xp / 250) + 1;
-  const leveledUp = newLevel > oldLevel;
-  user.level = newLevel;
-  setCurrentUser(user);
-  return { newXP: user.xp, newLevel, leveledUp };
+  // XP is awarded only by trusted scoring and reward endpoints. Keep this
+  // compatibility function side-effect free so legacy UI cannot mint progress.
+  void amount;
+  return { newXP: user.xp, newLevel: user.level, leveledUp: false };
 }

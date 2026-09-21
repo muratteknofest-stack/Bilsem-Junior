@@ -1,8 +1,7 @@
-import { collection, doc, getDocs, query, where, limit, runTransaction, writeBatch } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
 import type { BaseQuestion } from '../types';
 import { auditQuestion } from '../features/questions/quality';
 import { questionBankService } from './question-bank-service';
+import { authenticatedFetch } from '../lib/api-client';
 export { parseQuestionImport, selectPublishedPool } from '../features/questions/editorial-data';
 
 export interface StoredQuestion extends BaseQuestion {
@@ -12,26 +11,32 @@ export interface StoredQuestion extends BaseQuestion {
   reviewedBy?: string;
 }
 const clean = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
+const pendingSaveRequests = new Map<string, string>();
 
-async function requireAdminAuth() {
-  await auth.authStateReady();
-  const user = auth.currentUser;
-  if (!user) throw new Error('Bu işlem için yönetici oturumu gerekli.');
-
-  const token = await user.getIdTokenResult();
-  if (token.claims.role !== 'admin') {
-    throw new Error('Bu işlem için doğrulanmış yönetici yetkisi gerekli.');
-  }
-  return user;
+async function readJson<T>(response: Response): Promise<T> {
+  const body = await response.json().catch(() => ({})) as { error?: string };
+  if (!response.ok) throw new Error(body.error || 'Soru yayınlama servisi isteği tamamlanamadı.');
+  return body as T;
 }
 
 export async function loadQuestionLibrary(): Promise<StoredQuestion[]> {
-  await requireAdminAuth();
-  const snapshot = await getDocs(collection(db, 'questions'));
-  return snapshot.docs
-    .map(d => ({ ...d.data(), id: d.id }) as StoredQuestion)
+  const questions: StoredQuestion[] = [];
+  let cursor: string | null = null;
+  do {
+    const search = new URLSearchParams({ limit: '500' });
+    if (cursor) search.set('cursor', cursor);
+    const payload = await readJson<{ questions: StoredQuestion[]; nextCursor: string | null }>(
+      await authenticatedFetch(`/api/admin/questions?${search}`),
+    );
+    questions.push(...payload.questions);
+    cursor = payload.nextCursor;
+  } while (cursor);
+
+  const audited = questions
     .filter(q => auditQuestion(q).errors.length === 0)
     .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+  questionBankService.replaceCache(audited);
+  return audited;
 }
 
 export async function saveEditorialQuestion(
@@ -40,71 +45,39 @@ export async function saveEditorialQuestion(
   expectedRevision: number,
   confirmedReview: boolean,
 ): Promise<StoredQuestion> {
-  const user = await requireAdminAuth();
-  const uid = user.uid;
   const report = auditQuestion(question);
   if (report.errors.length) throw new Error(report.errors.join(' '));
   if (status === 'published' && !confirmedReview) throw new Error('Yayımlamadan önce yönerge, cevap ve görselleri inceleyip onaylayın.');
 
-  const ref = doc(db, 'questions', question.id);
-  const now = new Date().toISOString();
-  const stored: StoredQuestion = clean({
-    ...question,
-    status,
-    revision: (expectedRevision || 0) + 1,
-    isCustom: true,
-    createdAt: question.createdAt || now,
-    updatedAt: now,
-    updatedBy: uid,
-    ...(status === 'published' ? { reviewedBy: uid } : {}),
-  });
+  const sanitized = clean(question);
+  const operationKey = JSON.stringify({ question: sanitized, status, expectedRevision, confirmedReview });
+  const requestId = pendingSaveRequests.get(operationKey) || crypto.randomUUID();
+  pendingSaveRequests.set(operationKey, requestId);
 
-  if (status !== 'published') delete stored.reviewedBy;
+  let response: Response;
+  try {
+    response = await authenticatedFetch(`/api/admin/questions/${encodeURIComponent(question.id)}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        question: sanitized,
+        status,
+        expectedRevision,
+        confirmedReview,
+        requestId,
+      }),
+    });
+  } catch (error) {
+    // Keep the same request ID for an exact retry after an ambiguous network
+    // failure so a committed write cannot be applied twice.
+    throw error;
+  }
 
-  // Optimistic concurrency prevents two editors from silently overwriting
-  // one another. Firestore remains the source of truth.
-  await runTransaction(db, async (transaction) => {
-    const snapshot = await transaction.get(ref);
-    const liveRevision = snapshot.exists() ? Number(snapshot.data().revision || 0) : 0;
-    if (liveRevision !== expectedRevision) {
-      throw new Error('EDIT_CONFLICT');
-    }
-    transaction.set(ref, stored, { merge: true });
-  });
+  if (!response.ok && response.status < 500) pendingSaveRequests.delete(operationKey);
+  const { question: stored } = await readJson<{ question: StoredQuestion }>(response);
+  pendingSaveRequests.delete(operationKey);
 
   // Keep in-memory admin panels synchronized only after the durable write.
   questionBankService.cacheQuestion(stored);
 
   return stored;
-}
-
-export async function loadPublishedQuestions(): Promise<BaseQuestion[]> {
-  try {
-    const snapshot = await getDocs(query(collection(db, 'questions'), where('status', '==', 'published'), limit(200)));
-    if (!snapshot.empty) {
-      return snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as BaseQuestion).filter(q => auditQuestion(q).errors.length === 0);
-    }
-  } catch (err) {
-    console.warn('Firestore published load notice:', err);
-  }
-  return questionBankService.getAll().filter(q => q.status === 'published');
-}
-
-export async function clearAllFirestoreQuestions(): Promise<number> {
-  await requireAdminAuth();
-  
-  const snapshot = await getDocs(collection(db, 'questions'));
-  if (snapshot.empty) return 0;
-
-  // Firestore batches are capped at 500 operations. Keep headroom for future
-  // audit writes and process large libraries safely.
-  for (let offset = 0; offset < snapshot.docs.length; offset += 450) {
-    const batch = writeBatch(db);
-    snapshot.docs.slice(offset, offset + 450).forEach((document) => {
-      batch.delete(doc(db, 'questions', document.id));
-    });
-    await batch.commit();
-  }
-
-  return snapshot.size;
 }

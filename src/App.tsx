@@ -19,6 +19,7 @@ const MistakeNotebookView = lazy(() => import('./components/MistakeNotebookView'
 const AchievementsView = lazy(() => import('./components/AchievementsView').then((m) => ({ default: m.AchievementsView })));
 const ParentPortalView = lazy(() => import('./components/ParentPortalView').then((m) => ({ default: m.ParentPortalView })));
 const AdminPanelView = lazy(() => import('./components/AdminPanelView').then((m) => ({ default: m.AdminPanelView })));
+const AdminMfaGate = lazy(() => import('./components/admin/AdminMfaGate').then((m) => ({ default: m.AdminMfaGate })));
 const LeaderboardView = lazy(() => import('./components/LeaderboardView').then((m) => ({ default: m.LeaderboardView })));
 const CognitiveGlossaryView = lazy(() => import('./components/CognitiveGlossaryView').then((m) => ({ default: m.CognitiveGlossaryView })));
 const LoginPage = lazy(() => import('./components/LoginPage').then((m) => ({ default: m.LoginPage })));
@@ -327,7 +328,11 @@ export default function App() {
             )}
 
             {currentRoute === 'admin' && (
-              <AdminPanelView />
+              authUser ? (
+                <AdminMfaGate user={authUser} onEnrollmentComplete={handleLogout}>
+                  <AdminPanelView />
+                </AdminMfaGate>
+              ) : null
             )}
 
             {currentRoute === 'login' && (

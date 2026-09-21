@@ -6,6 +6,9 @@ node_modules/
 .env.local
 .env.*
 !.env.example
+.env.production
+ops/cloud-run.env.yaml
+ops/release-evidence.json
 
 # IDE files
 .vscode/

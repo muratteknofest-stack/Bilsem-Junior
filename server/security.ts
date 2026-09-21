@@ -120,6 +120,31 @@ export function requireRole(...roles: AppRole[]) {
   };
 }
 
+/**
+ * Administrative APIs require a token minted after a successful second-factor
+ * challenge. Merely having an enrolled factor is not enough: every privileged
+ * session must actually have completed MFA.
+ */
+export function requireAdminMfa(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (!req.authUser) {
+    return res.status(401).json({ error: 'Oturum doğrulaması gerekli.' });
+  }
+
+  const firebaseClaims = req.authUser.firebase as DecodedIdToken['firebase'] & {
+    sign_in_second_factor?: string;
+  };
+  const secondFactor = firebaseClaims?.sign_in_second_factor;
+  const authMethods = Array.isArray(req.authUser.amr) ? req.authUser.amr : [];
+  if (!secondFactor && !authMethods.includes('mfa')) {
+    return res.status(403).json({
+      error: 'Yönetici işlemleri için çok faktörlü doğrulama zorunludur.',
+      code: 'ADMIN_MFA_REQUIRED',
+    });
+  }
+
+  return next();
+}
+
 export function escapeHtml(value: unknown): string {
   return String(value ?? '')
     .replaceAll('&', '&amp;')

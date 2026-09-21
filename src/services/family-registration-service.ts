@@ -11,6 +11,7 @@ export interface FamilyRegistrationInput {
   studentPassword: string;
   grade: number;
   examFocus: string;
+  guardianConsent: true;
 }
 
 export interface FamilyRegistrationResult {
@@ -18,6 +19,8 @@ export interface FamilyRegistrationResult {
   student: { id: string; code: string; email: string };
   verificationSent: boolean;
 }
+
+const pendingRegistrationRequestIds = new Map<string, string>();
 
 interface RegistrationResponse {
   success?: boolean;
@@ -36,18 +39,28 @@ export async function registerFamilyInFirebase(
   input: FamilyRegistrationInput,
 ): Promise<FamilyRegistrationResult> {
   const parentEmail = input.parentEmail.trim().toLowerCase();
-  const response = await appCheckedFetch('/api/register-family', {
-    method: 'POST',
-    body: JSON.stringify({ ...input, parentEmail }),
-  });
+  const requestKey = JSON.stringify({ ...input, parentEmail });
+  const requestId = pendingRegistrationRequestIds.get(requestKey) || crypto.randomUUID();
+  pendingRegistrationRequestIds.set(requestKey, requestId);
+  let response: Response;
+  try {
+    response = await appCheckedFetch('/api/register-family', {
+      method: 'POST',
+      body: JSON.stringify({ ...input, parentEmail, requestId }),
+    });
+  } catch (error) {
+    throw error;
+  }
 
   const payload = await response.json().catch(() => ({})) as RegistrationResponse;
   if (!response.ok) {
+    if (response.status < 500) pendingRegistrationRequestIds.delete(requestKey);
     throw new Error(payload.error || 'Aile hesabı şu anda oluşturulamadı. Lütfen tekrar deneyin.');
   }
   if (!payload.success || !payload.parentProfile || !payload.student) {
     throw new Error('Kayıt servisi beklenmeyen bir yanıt verdi. Lütfen tekrar deneyin.');
   }
+  pendingRegistrationRequestIds.delete(requestKey);
 
   let verificationSent = false;
   try {

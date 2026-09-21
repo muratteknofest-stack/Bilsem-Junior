@@ -40,6 +40,12 @@ hâle getirmez. İlk ticari yayından önce:
 
 Bu işlemler tamamlanmadan uygulama ticari kullanıma hazır kabul edilmez.
 
+Olay kapatma araçları e-posta ile hesap seçmez; doğrulanmış Firebase UID ve tam
+üretim proje/veritabanı onayı ister. Parola dosyası yalnızca sahibi tarafından
+okunabilir olmalıdır. İşlem sonrası `npm run ops:verify-admin`, claim/profil,
+TOTP kaydı, token iptal zamanı ve audit olayını birlikte doğrular. Komutların
+güvenli sırası [üretim runbook'unda](docs/PRODUCTION_RUNBOOK.md) yer alır.
+
 ## Olay müdahalesi
 
 Şüpheli erişimde sırasıyla erişimi sınırlandırın, token'ları iptal edin, ilgili

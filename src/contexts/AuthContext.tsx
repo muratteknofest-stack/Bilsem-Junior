@@ -11,6 +11,7 @@ import { auth, db } from '../lib/firebase';
 import { UserProfile, UserRole } from '../types';
 import { dataService } from '../services/data-service';
 import { userProfileUpdateSchema, formatZodError } from '../lib/validations';
+import { safeStorage } from '../lib/storage';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -98,6 +99,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             const profile = docSnap.data() as UserProfile;
             await assertAuthorizedProfile(user, profile);
+            if (profile.role !== 'admin') {
+              // Remove answer-bearing question-bank caches created by legacy
+              // releases before student delivery moved to the challenge API.
+              safeStorage.removeItem('bilsem_admin_managed_questions_v2');
+            }
             dataService.loginAs(profile.role, profile);
             await dataService.hydrateUserStateFromFirebase();
             if (isMounted) setUserProfile(profile);

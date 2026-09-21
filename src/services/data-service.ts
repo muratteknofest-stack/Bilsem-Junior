@@ -14,6 +14,7 @@ import {
 import {
   clearUserProgress, persistUserStateToFirebase, scheduleProgressPersist,
   setProgressItem, removeProgressItem, hydrateUserStateFromFirebase, loadRemoteProgressForUser
+  , cacheAuthoritativeProgress
 } from './modules/persistence-service';
 
 import {
@@ -64,6 +65,7 @@ class ZekaParkDataService {
   private async persistUserStateToFirebase() { return persistUserStateToFirebase(); }
   async hydrateUserStateFromFirebase(): Promise<void> { return hydrateUserStateFromFirebase(); }
   async loadRemoteProgressForUser(userId: string) { return loadRemoteProgressForUser(userId); }
+  cacheAuthoritativeProgress(input: { masteries?: SkillMastery[]; mistakes?: MistakeItem[] }) { return cacheAuthoritativeProgress(input); }
 
   // Profile
   syncUserFromFirebase(profile: UserProfile | null) { return syncUserFromFirebase(profile); }

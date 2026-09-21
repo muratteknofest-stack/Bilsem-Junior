@@ -18,24 +18,9 @@ export function getMistakes(): MistakeItem[] {
 }
 
 export function addMistake(question: BaseQuestion) {
-  const mistakes = getMistakes();
-  if (mistakes.some((m) => m.questionId === question.id)) return;
-
-  const item: MistakeItem = {
-    id: `mistake-${Date.now()}`,
-    questionId: question.id,
-    questionSeed: question.seed,
-    questionType: question.type,
-    difficulty: question.difficulty,
-    category: question.category,
-    prompt: question.prompt,
-    createdAt: 'Az önce',
-    reviewed: false,
-    resolved: false,
-    cachedQuestion: question,
-  };
-  mistakes.unshift(item);
-  setProgressItem(STORAGE_KEYS.MISTAKES, JSON.stringify(mistakes));
+  // Compatibility no-op. Mistakes are created by the scoring API, which stores
+  // the complete question in a server-only vault and returns redacted metadata.
+  void question;
 }
 
 export function resolveMistake(mistakeId: string): {

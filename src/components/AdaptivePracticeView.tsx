@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { BaseQuestion, SkillMastery, DifficultyLevel, DIFFICULTY_COLORS } from '../types';
-import { generateQuestion } from '../features/questions/generators';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
 import { OptionRenderer } from '../features/questions/renderers/OptionRenderer';
 import { VisualExplanationOverlay } from '../features/questions/renderers/VisualExplanationOverlay';
 import { AiHintModal } from './AiHintModal';
-import { ComboStreakIndicator, getComboTier } from './animations/ComboStreakIndicator';
+import { ComboStreakIndicator } from './animations/ComboStreakIndicator';
 import { ComboBurstOverlay } from './animations/ComboBurstOverlay';
 import { StreakFloatingFloater } from './animations/StreakFloatingFloater';
 import { dataService } from '../services/data-service';
@@ -24,6 +23,8 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { selectAdaptiveTarget } from '../features/adaptive/adaptive-engine';
+import { weeklyChallengesService } from '../services/weekly-challenges-service';
+import { answerPractice, nextAdaptiveQuestion, startPractice, type IssuedPracticeQuestion } from '../services/practice-api-service';
 
 interface AdaptivePracticeViewProps {
   onNavigateHome: () => void;
@@ -41,6 +42,11 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
   const [showFloater, setShowFloater] = useState(false);
   const [lastEarnedXP, setLastEarnedXP] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState<IssuedPracticeQuestion | null>(null);
+  const [isLoadingQuestion, setIsLoadingQuestion] = useState(true);
+  const [isAnswering, setIsAnswering] = useState(false);
+  const [practiceError, setPracticeError] = useState<string | null>(null);
 
   const toggleFullscreen = () => {
     try {
@@ -62,14 +68,6 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
-  const [currentQuestion, setCurrentQuestion] = useState<BaseQuestion>(() => {
-    return generateQuestion({
-      category: adaptiveTarget.category,
-      difficulty: adaptiveTarget.difficulty,
-      seed: Math.floor(Math.random() * 900000) + 100000,
-    });
-  });
-
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showAiHint, setShowAiHint] = useState(false);
@@ -80,83 +78,85 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
     setSelectedOptionId(optId);
   };
 
-  const handleSubmitAnswer = () => {
-    if (!selectedOptionId || isSubmitted) return;
-    const isCorrect = selectedOptionId === currentQuestion.correctOptionId;
-    setIsSubmitted(true);
-    dataService.recordQuestionSolved(isCorrect, currentQuestion.category);
-
-    if (isCorrect) {
-      const nextConsecutive = consecutiveCorrect + 1;
-      setConsecutiveCorrect(nextConsecutive);
-
-      const baseXP = 15 + currentDifficulty * 2;
-      const tier = getComboTier(nextConsecutive);
-      const multipliedXP = Math.round(baseXP * tier.multiplier);
-
-      let bonusXP = 0;
-      const milestoneStreaks = [2, 3, 5, 7, 10];
-      if (milestoneStreaks.includes(nextConsecutive)) {
-        bonusXP = 25 + nextConsecutive * 5;
-        setLastMilestoneBonus(bonusXP);
-        setActiveMilestoneStreak(nextConsecutive);
-        sound.playComboMilestone(nextConsecutive);
-      } else if (nextConsecutive >= 2) {
-        sound.playCombo(nextConsecutive);
-      } else {
-        sound.playSuccess();
-      }
-
-      const totalXP = multipliedXP + bonusXP;
-      setLastEarnedXP(totalXP);
-      setShowFloater(true);
-      setTimeout(() => setShowFloater(false), 1200);
-
-      try {
-        confetti({
-          particleCount: nextConsecutive >= 4 ? 120 : 70,
-          spread: 80,
-          origin: { y: 0.5 },
-          colors: ['#a855f7', '#ec4899', '#f59e0b', '#10b981'],
-          zIndex: 9999,
-        });
-      } catch {}
-
-      setEarnedXP((prev) => prev + totalXP);
-      dataService.addXP(totalXP);
-      dataService.updateSkillMastery(currentQuestion.category, true, currentDifficulty);
-
-    } else {
-      sound.playError();
-      setConsecutiveCorrect(0);
-      setActiveMilestoneStreak(null);
-      dataService.addMistake(currentQuestion);
-      dataService.updateSkillMastery(currentQuestion.category, false, currentDifficulty);
-
-    }
-    setMasteries(dataService.getSkillMasteries());
-  };
-
-  const handleNextQuestion = () => {
-    sound.playClick();
-    const latestMasteries = dataService.getSkillMasteries();
-    const nextTarget = selectAdaptiveTarget(latestMasteries);
-    const nextQ = generateQuestion({
-      category: nextTarget.category,
-      difficulty: nextTarget.difficulty,
-      seed: Math.floor(Math.random() * 900000) + 100000,
+  useEffect(() => {
+    let cancelled = false;
+    void startPractice({
+      context: 'adaptive', category: adaptiveTarget.category, difficulty: adaptiveTarget.difficulty, count: 1,
+    }).then((started) => {
+      if (cancelled) return;
+      setSessionId(started.sessionId);
+      setCurrentQuestion(started.questions[0]);
+      setIsLoadingQuestion(false);
+    }).catch((error) => {
+      if (cancelled) return;
+      setPracticeError(error instanceof Error ? error.message : 'Adaptif pratik başlatılamadı.');
+      setIsLoadingQuestion(false);
     });
+    return () => { cancelled = true; };
+  }, []);
 
-    setAdaptiveTarget(nextTarget);
-    setCurrentDifficulty(nextTarget.difficulty);
-    setMasteries(latestMasteries);
-    setCurrentQuestion(nextQ);
-    setSelectedOptionId(null);
-    setIsSubmitted(false);
-    setShowAiHint(false);
-    setActiveMilestoneStreak(null);
-    setQuestionCount((prev) => prev + 1);
+  const handleSubmitAnswer = async () => {
+    if (!selectedOptionId || isSubmitted || isAnswering || !currentQuestion || !sessionId) return;
+    setIsAnswering(true);
+    setPracticeError(null);
+    try {
+      const outcome = await answerPractice(sessionId, currentQuestion.challengeId, selectedOptionId);
+      setCurrentQuestion({ ...currentQuestion, correctOptionId: outcome.correctOptionId, explanation: outcome.explanation });
+      setIsSubmitted(true);
+      setConsecutiveCorrect(outcome.consecutiveCorrect);
+      setLastEarnedXP(outcome.xpAwarded);
+      setEarnedXP((previous) => previous + outcome.xpAwarded);
+      setMasteries(outcome.masteries);
+      dataService.syncUserFromFirebase(outcome.profile);
+      dataService.cacheAuthoritativeProgress({ masteries: outcome.masteries, mistakes: outcome.mistakes });
+      weeklyChallengesService.recordCategoryQuestionSolved(currentQuestion.category);
+      if (outcome.correct) {
+        if ([2, 3, 5, 7, 10].includes(outcome.consecutiveCorrect)) {
+          setLastMilestoneBonus(outcome.xpAwarded);
+          setActiveMilestoneStreak(outcome.consecutiveCorrect);
+          sound.playComboMilestone(outcome.consecutiveCorrect);
+        } else if (outcome.consecutiveCorrect >= 2) sound.playCombo(outcome.consecutiveCorrect);
+        else sound.playSuccess();
+        setShowFloater(true);
+        setTimeout(() => setShowFloater(false), 1200);
+        try { confetti({ particleCount: 80, spread: 80, origin: { y: 0.5 }, zIndex: 9999 }); } catch {}
+      } else {
+        sound.playError();
+        setActiveMilestoneStreak(null);
+      }
+    } catch (error) {
+      setPracticeError(error instanceof Error ? error.message : 'Cevap puanlanamadı.');
+      sound.playError();
+    } finally {
+      setIsAnswering(false);
+    }
   };
+
+  const handleNextQuestion = async () => {
+    if (!sessionId || isLoadingQuestion) return;
+    sound.playClick();
+    setIsLoadingQuestion(true);
+    setPracticeError(null);
+    try {
+      const next = await nextAdaptiveQuestion(sessionId);
+      setAdaptiveTarget(next.target as typeof adaptiveTarget);
+      setCurrentDifficulty(next.question.difficulty);
+      setCurrentQuestion(next.question);
+      setSelectedOptionId(null);
+      setIsSubmitted(false);
+      setShowAiHint(false);
+      setActiveMilestoneStreak(null);
+      setQuestionCount((previous) => previous + 1);
+    } catch (error) {
+      setPracticeError(error instanceof Error ? error.message : 'Yeni soru hazırlanamadı.');
+    } finally {
+      setIsLoadingQuestion(false);
+    }
+  };
+
+  if (isLoadingQuestion || !currentQuestion) {
+    return <div className="mx-auto flex min-h-[50vh] max-w-xl items-center justify-center p-6 text-sm font-bold text-slate-600">{practiceError || 'Güvenli adaptif soru hazırlanıyor…'}</div>;
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-28 md:pb-12 space-y-4">
@@ -232,22 +232,23 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
 
           {!isSubmitted && (
             <button
+              disabled
               onClick={() => {
                 sound.playClick();
                 setShowAiHint(true);
               }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-xs  transition-all cursor-pointer active:scale-95 shrink-0"
-              title="Takıldığında yapay zeka destekli adım adım ipucu al"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 font-extrabold text-xs cursor-not-allowed opacity-70 shrink-0"
+              title="Cevap anahtarı teslimden önce istemciye gönderilmez"
             >
               <Lightbulb className="w-4 h-4 text-amber-500 fill-amber-400" />
-              <span>💡 İpucu Al (AI)</span>
+              <span>💡 Teslimden sonra</span>
             </button>
           )}
         </div>
 
         {/* Question Canvas */}
         <div className="py-2">
-          <QuestionRenderer question={currentQuestion} />
+          <QuestionRenderer question={currentQuestion as unknown as BaseQuestion} />
         </div>
 
         {/* Answer Options */}
@@ -276,26 +277,27 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
 
             <button
               type="button"
+              disabled
               onClick={() => {
                 sound.playClick();
                 setShowAiHint(true);
               }}
-              className="w-full sm:w-auto px-5 py-3.5 rounded-xl bg-amber-50 hover:bg-amber-100 border-2 border-amber-300/80 text-amber-950 font-extrabold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98  shrink-0"
+              className="w-full sm:w-auto px-5 py-3.5 rounded-xl bg-amber-50 border-2 border-amber-200 text-amber-700 font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-not-allowed opacity-70 shrink-0"
             >
               <Lightbulb className="w-4 h-4 text-amber-500 fill-amber-400" />
-              <span>Takıldım, İpucu Ver!</span>
+              <span>İpucu teslimden sonra açılır</span>
             </button>
 
             <button
               onClick={handleSubmitAnswer}
-              disabled={!selectedOptionId}
+              disabled={!selectedOptionId || isAnswering}
               className={`flex-1 w-full py-3.5 rounded-xl font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2 cursor-pointer ${
                 selectedOptionId
                   ? 'bg-purple-600 hover:bg-purple-700 text-white   active:scale-98'
                   : 'bg-slate-200 text-slate-400 cursor-not-allowed'
               }`}
             >
-              <span>{selectedOptionId ? 'Cevabı Kontrol Et' : 'Bir Seçenek İşaretle'}</span>
+              <span>{isAnswering ? 'Sunucuda kontrol ediliyor…' : selectedOptionId ? 'Cevabı Kontrol Et' : 'Bir Seçenek İşaretle'}</span>
             </button>
           </div>
         ) : (
@@ -332,8 +334,8 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
             </div>
 
             <VisualExplanationOverlay
-              explanation={currentQuestion.explanation}
-              correctOptionId={currentQuestion.correctOptionId}
+              explanation={currentQuestion.explanation!}
+              correctOptionId={currentQuestion.correctOptionId!}
             />
 
             <button
@@ -348,9 +350,9 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
       </div>
 
       {/* AI Step-by-Step Hint Modal */}
-      {currentQuestion && (
+      {currentQuestion && isSubmitted && currentQuestion.correctOptionId && (
         <AiHintModal
-          question={currentQuestion}
+          question={currentQuestion as unknown as BaseQuestion}
           isOpen={showAiHint}
           onClose={() => setShowAiHint(false)}
         />

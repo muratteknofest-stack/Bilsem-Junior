@@ -1,0 +1,41 @@
+{
+  "projectId": "gen-lang-client-0426617456",
+  "databaseId": "ai-studio-zekapark-489c8194-ad28-4376-a397-80680e12a58f",
+  "adminSecurity": {
+    "adminUid": "REPLACE_WITH_ADMIN_UID",
+    "passwordRotatedAt": "2026-09-21T00:00:00.000Z",
+    "sessionsRevokedAt": "2026-09-21T00:00:00.000Z",
+    "claimVerifiedAt": "2026-09-21T00:00:00.000Z",
+    "mfaEnrolledAt": "2026-09-21T00:00:00.000Z",
+    "incidentLogReviewedAt": "2026-09-21T00:00:00.000Z"
+  },
+  "securityRules": {
+    "emulatorTestedAt": "2026-09-21T00:00:00.000Z",
+    "deployedAt": "2026-09-21T00:00:00.000Z"
+  },
+  "appCheck": {
+    "webAppRegisteredAt": "2026-09-21T00:00:00.000Z",
+    "enforcedAt": "2026-09-21T00:00:00.000Z"
+  },
+  "deployment": {
+    "cloudRunDeployedAt": "2026-09-21T00:00:00.000Z",
+    "smokeTestedAt": "2026-09-21T00:00:00.000Z"
+  },
+  "privacy": {
+    "legalReviewApprovedAt": "2026-09-21T00:00:00.000Z",
+    "reviewer": "REPLACE_WITH_COUNSEL_OR_DPO"
+  },
+  "payments": {
+    "stripeTestModeVerifiedAt": "2026-09-21T00:00:00.000Z",
+    "stripeLiveModeVerifiedAt": "2026-09-21T00:00:00.000Z",
+    "webhookVerifiedAt": "2026-09-21T00:00:00.000Z"
+  },
+  "operations": {
+    "restoreDrillAt": "2026-09-21T00:00:00.000Z",
+    "rollbackDrillAt": "2026-09-21T00:00:00.000Z",
+    "backupScheduleVerifiedAt": "2026-09-21T00:00:00.000Z",
+    "retentionJobVerifiedAt": "2026-09-21T00:00:00.000Z",
+    "alertChannelVerifiedAt": "2026-09-21T00:00:00.000Z",
+    "incidentOwner": "REPLACE_WITH_ON_CALL_OWNER"
+  }
+}

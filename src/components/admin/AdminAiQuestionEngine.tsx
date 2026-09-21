@@ -65,6 +65,7 @@ interface GeneratedQuestionResult {
   correctOptionId: string;
   explanation: { summary: string; steps: string[] };
   distractorNotes: Record<string, string>;
+  revision: number;
   rawOutput?: any;
 }
 
@@ -76,7 +77,6 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
   const [difficulty, setDifficulty] = useState<DifficultyLevel>(3);
   const [questionCount, setQuestionCount] = useState<number>(5);
   const [minQuality, setMinQuality] = useState<number>(85);
-  const [selectedAiModel, setSelectedAiModel] = useState<string>('gemini-3.1-pro');
 
   // Runtime State
   const [isApiAvailable, setIsApiAvailable] = useState<boolean>(true);
@@ -88,6 +88,8 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
 
   // Polling interval ref
   const pollingRef = useRef<number | null>(null);
+  const generationRequestIds = useRef(new Map<string, string>());
+  const reviewRequestIds = useRef(new Map<string, string>());
 
   const startPolling = useCallback((jobId: string) => {
     if (pollingRef.current) clearInterval(pollingRef.current);
@@ -100,14 +102,27 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
           return;
         }
         const data = await res.json();
-        setJobStatus(data.status);
+        const completed = Number(data.progress?.completed || 0);
+        const total = Math.max(1, Number(data.progress?.total || 1));
+        const status = data.status === 'processing' ? 'generating' : data.status;
+        setJobStatus({
+          id: data.jobId,
+          status,
+          progress: Math.round((completed / total) * 100),
+          total,
+          completed,
+          approved: Number(data.progress?.approved || 0),
+          rejected: Number(data.progress?.rejected || 0),
+          failed: Number(data.progress?.failed || 0),
+          averageQuality: Number(data.averageQuality || 0),
+        });
         if (data.results) {
           setResults(data.results);
         }
-        if (data.status.status === 'completed' || data.status.status === 'failed') {
+        if (data.status === 'completed' || data.status === 'failed') {
           clearInterval(pollingRef.current!);
           setIsGenerating(false);
-          if (data.status.status === 'completed') {
+          if (data.status === 'completed') {
             sound.playSuccess();
             confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
           } else {
@@ -144,26 +159,33 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
     });
 
     try {
-      const endpoint = questionCount > 1 ? '/api/admin/ai-bulk-generate' : '/api/admin/ai-generate-question';
-      const res = await authenticatedFetch(endpoint, {
+      const generationInput = {
+        category: selectedCategory,
+        questionType: selectedType === 'auto' ? undefined : selectedType,
+        targetGrade,
+        difficulty,
+        count: questionCount,
+        minQualityScore: minQuality,
+      };
+      const requestKey = JSON.stringify(generationInput);
+      const requestId = generationRequestIds.current.get(requestKey) || crypto.randomUUID();
+      generationRequestIds.current.set(requestKey, requestId);
+      const res = await authenticatedFetch('/api/admin/ai-bulk-generate', {
         method: 'POST',
         body: JSON.stringify({
-          category: selectedCategory,
-          type: selectedType === 'auto' ? undefined : selectedType,
-          targetGrade,
-          difficulty,
-          count: questionCount,
-          minQuality,
-          aiModel: selectedAiModel,
+          ...generationInput,
+          requestId,
         })
       });
 
       if (!res.ok) {
-        setIsApiAvailable(false);
-        throw new Error('API Bulunamadı veya Hata Döndü');
+        if (res.status < 500) generationRequestIds.current.delete(requestKey);
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload.error || 'AI üretim işi başlatılamadı.');
       }
 
       const data = await res.json();
+      generationRequestIds.current.delete(requestKey);
       const jobId = data.jobId;
       setActiveJobId(jobId);
       startPolling(jobId);
@@ -176,17 +198,47 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
   const handleReview = async (id: string, action: 'approve' | 'reject' | 'regenerate') => {
     sound.playClick();
     try {
+      const current = results.find((result) => result.id === id);
+      const expectedRevision = current?.revision || 0;
+      const requestKey = `${id}:${action}:${expectedRevision}`;
+      const requestId = reviewRequestIds.current.get(requestKey) || crypto.randomUUID();
+      reviewRequestIds.current.set(requestKey, requestId);
       const res = await authenticatedFetch('/api/admin/ai-question-review', {
         method: 'POST',
-        body: JSON.stringify({ questionId: id, action })
+        body: JSON.stringify({
+          questionId: id,
+          action,
+          expectedRevision,
+          requestId,
+        })
       });
       if (res.ok) {
+        reviewRequestIds.current.delete(requestKey);
+        const data = await res.json();
         setResults(prev => prev.map(r => {
           if (r.id === id) {
-            return { ...r, status: action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'generating' };
+            if (action === 'regenerate' && data.question) {
+              return {
+                ...r,
+                ...data.question,
+                qualityScore: Number(data.qualityScore || 0),
+                solverVerified: Boolean(data.question.aiMeta?.solverVerified),
+                validationWarnings: [],
+                distractorNotes: data.question.authoring?.distractorNotes || {},
+                revision: 0,
+                status: 'queued',
+              };
+            }
+            return {
+              ...r,
+              revision: Number(data.revision ?? r.revision),
+              status: action === 'approve' ? 'approved' : 'rejected',
+            };
           }
           return r;
         }));
+      } else if (res.status < 500) {
+        reviewRequestIds.current.delete(requestKey);
       }
     } catch (err) {
       console.error(err);
@@ -323,21 +375,6 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                   className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
                 />
               </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1.5">Yapay Zeka Motoru (2026 Dual Engine)</label>
-              <select
-                value={selectedAiModel}
-                onChange={e => setSelectedAiModel(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
-              >
-                <option value="gemini-3.1-pro">🧠 Google Gemini 3.1 Pro (Varsayılan)</option>
-                <option value="gemini-3.5-flash">⚡ Google Gemini 3.5 Flash (Çok Hızlı)</option>
-                <option value="qwen3.8-max">🔥 Qwen 3.8 Max (Gelişmiş Mantık)</option>
-                <option value="gpt-5">🤖 OpenAI GPT-5 (Yeni Nesil)</option>
-                <option value="claude-4-opus">🎯 Anthropic Claude 4 Opus</option>
-              </select>
             </div>
 
             <button

@@ -8,9 +8,6 @@ import {
   DIFFICULTY_COLORS,
   UserProfile
 } from '../types';
-import { generateQuestion } from '../features/questions/generators';
-import { usePublishedQuestions } from '../features/questions/use-published-questions';
-import { selectPublishedPool } from '../features/questions/editorial-data';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
 import { OptionRenderer } from '../features/questions/renderers/OptionRenderer';
 import { VisualExplanationOverlay } from '../features/questions/renderers/VisualExplanationOverlay';
@@ -22,6 +19,8 @@ import { ComboStreakIndicator, getComboTier } from './animations/ComboStreakIndi
 import { ComboBurstOverlay } from './animations/ComboBurstOverlay';
 import { StreakFloatingFloater } from './animations/StreakFloatingFloater';
 import { dataService } from '../services/data-service';
+import { answerPractice, startPractice, type IssuedPracticeQuestion } from '../services/practice-api-service';
+import { weeklyChallengesService } from '../services/weekly-challenges-service';
 import { sound } from '../lib/sound';
 import {
   ArrowLeft,
@@ -80,7 +79,6 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
   onNavigateHome,
   onOpenMistakes,
 }) => {
-  const publishedQuestions = usePublishedQuestions();
   // Setup phase vs active session
   const [inSetup, setInSetup] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<CognitiveCategory | 'mixed'>(initialCategory);
@@ -91,7 +89,8 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
   const [isStrictMode, setIsStrictMode] = useState<boolean>(true);
 
   // Active session state
-  const [questions, setQuestions] = useState<BaseQuestion[]>([]);
+  const [questions, setQuestions] = useState<IssuedPracticeQuestion[]>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -109,6 +108,9 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
   const [showFloater, setShowFloater] = useState(false);
   const [lastEarnedXP, setLastEarnedXP] = useState(0);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
+  const [isAnswering, setIsAnswering] = useState(false);
+  const [practiceError, setPracticeError] = useState<string | null>(null);
 
   // Timing state
   const [totalSecondsLimit, setTotalSecondsLimit] = useState(600); // 10m default
@@ -231,38 +233,34 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
     }
   };
 
-  const startSession = () => {
+  const startSession = async () => {
     sound.playClick();
-    const qList: BaseQuestion[] = [];
-    for (let i = 0; i < 10; i++) {
-      const diff: DifficultyLevel =
-        selectedDifficulty === 'adaptive'
-          ? ((i < 3 ? 2 : i < 7 ? 3 : 4) as DifficultyLevel)
-          : (selectedDifficulty as DifficultyLevel);
-
-      const q = generateQuestion({
-        category: selectedCategory,
-        difficulty: diff,
-        seed: Math.floor(Math.random() * 900000) + 100000 + i * 31,
-      });
-      qList.push(q);
+    setIsStarting(true);
+    setPracticeError(null);
+    try {
+      const started = await startPractice({ context: 'practice', category: selectedCategory, difficulty: selectedDifficulty, count: 10 });
+      const presetSecs = getPresetSeconds(timerPreset);
+      setSessionId(started.sessionId);
+      setTotalSecondsLimit(presetSecs);
+      setRemainingSeconds(presetSecs);
+      setOvertimeSeconds(0);
+      setQuestions(started.questions);
+      setCurrentIndex(0);
+      setSelectedOptionId(null);
+      setIsSubmitted(false);
+      setCorrectCount(0);
+      setWrongCount(0);
+      setEarnedXP(0);
+      setIsCompleted(false);
+      setEndedByTimeout(false);
+      setSecondsElapsed(0);
+      setInSetup(false);
+    } catch (error) {
+      setPracticeError(error instanceof Error ? error.message : 'Pratik başlatılamadı.');
+      sound.playError();
+    } finally {
+      setIsStarting(false);
     }
-
-    const presetSecs = getPresetSeconds(timerPreset);
-    setTotalSecondsLimit(presetSecs);
-    setRemainingSeconds(presetSecs);
-    setOvertimeSeconds(0);
-    setQuestions(selectPublishedPool(qList.map(q => ({ ...q, targetGrade: dataService.getCurrentUser().grade as 1 | 2 | 3 | 4 | undefined })), publishedQuestions));
-    setCurrentIndex(0);
-    setSelectedOptionId(null);
-    setIsSubmitted(false);
-    setCorrectCount(0);
-    setWrongCount(0);
-    setEarnedXP(0);
-    setIsCompleted(false);
-    setEndedByTimeout(false);
-    setSecondsElapsed(0);
-    setInSetup(false);
   };
 
   useEffect(() => {
@@ -310,88 +308,53 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
     setSelectedOptionId(optionId);
   };
 
-  const handleSubmitAnswer = () => {
-    if (!selectedOptionId || isSubmitted || !currentQuestion) return;
+  const handleSubmitAnswer = async () => {
+    if (!selectedOptionId || isSubmitted || isAnswering || !currentQuestion || !sessionId) return;
+    setIsAnswering(true);
+    setPracticeError(null);
+    try {
+      const outcome = await answerPractice(sessionId, currentQuestion.challengeId, selectedOptionId);
+      setQuestions((items) => items.map((item) => item.challengeId === currentQuestion.challengeId
+        ? { ...item, correctOptionId: outcome.correctOptionId, explanation: outcome.explanation }
+        : item));
+      setIsSubmitted(true);
+      setConsecutiveCorrectCount(outcome.consecutiveCorrect);
+      setLastEarnedXP(outcome.xpAwarded);
+      setEarnedXP((previous) => previous + outcome.xpAwarded);
+      dataService.syncUserFromFirebase(outcome.profile);
+      dataService.cacheAuthoritativeProgress({ masteries: outcome.masteries, mistakes: outcome.mistakes });
+      weeklyChallengesService.recordCategoryQuestionSolved(currentQuestion.category);
+      setUserProfile(outcome.profile);
 
-    const isCorrect = selectedOptionId === currentQuestion.correctOptionId;
-    setIsSubmitted(true);
-
-    // Update stats and persistence
-    dataService.recordQuestionSolved(isCorrect, currentQuestion.category);
-
-    if (isCorrect) {
-      setCorrectCount((prev) => prev + 1);
-      
-      const newStreak = consecutiveCorrectCount + 1;
-      setConsecutiveCorrectCount(newStreak);
-      
-      const baseXP = 10 + currentQuestion.difficulty * 2;
-      const tier = getComboTier(newStreak);
-      const multipliedXP = Math.round(baseXP * tier.multiplier);
-      
-      let bonusXP = 0;
-      const milestoneStreaks = [2, 3, 5, 7, 10, 15, 20];
-      const isMilestone = milestoneStreaks.includes(newStreak);
-
-      if (isMilestone) {
-        bonusXP = 30 + newStreak * 5;
-        setLastMilestoneBonus(bonusXP);
-        setActiveMilestoneStreak(newStreak);
-        sound.playComboMilestone(newStreak);
-      } else if (newStreak >= 2) {
-        sound.playCombo(newStreak);
+      if (outcome.correct) {
+        setCorrectCount((previous) => previous + 1);
+        if ([2, 3, 5, 7, 10, 15, 20].includes(outcome.consecutiveCorrect)) {
+          setLastMilestoneBonus(outcome.xpAwarded);
+          setActiveMilestoneStreak(outcome.consecutiveCorrect);
+          sound.playComboMilestone(outcome.consecutiveCorrect);
+        } else if (outcome.consecutiveCorrect >= 2) {
+          sound.playCombo(outcome.consecutiveCorrect);
+        } else {
+          sound.playSuccess();
+        }
+        setShowFloater(true);
+        setTimeout(() => setShowFloater(false), 1200);
+        try {
+          confetti({ particleCount: outcome.consecutiveCorrect >= 5 ? 160 : 100, spread: 90, origin: { y: 0.5 }, disableForReducedMotion: true, zIndex: 9999 });
+        } catch {}
       } else {
-        sound.playSuccess();
+        sound.playError();
+        setWrongCount((previous) => previous + 1);
+        setActiveMilestoneStreak(null);
+        setIsShaking(true);
+        setTimeout(() => setIsShaking(false), 500);
       }
-
-      const totalXPAdded = multipliedXP + bonusXP;
-      setLastEarnedXP(totalXPAdded);
-      setShowFloater(true);
-      setTimeout(() => setShowFloater(false), 1200);
-
-      // Standard correct answer confetti
-      try {
-        confetti({ 
-          particleCount: newStreak >= 5 ? 160 : 100, 
-          spread: newStreak >= 5 ? 110 : 80, 
-          origin: { y: 0.5 },
-          colors: ['#10b981', '#34d399', '#fbbf24', '#f59e0b', '#ec4899', '#8b5cf6'],
-          disableForReducedMotion: true,
-          zIndex: 9999
-        });
-      } catch {}
-
-      setEarnedXP((prev) => prev + totalXPAdded);
-      dataService.addXP(totalXPAdded);
-      dataService.updateSkillMastery(currentQuestion.category, true, currentQuestion.difficulty);
-    } else {
+    } catch (error) {
+      setPracticeError(error instanceof Error ? error.message : 'Cevap puanlanamadı.');
       sound.playError();
-      setWrongCount((prev) => prev + 1);
-      setConsecutiveCorrectCount(0); // Reset streak on mistake
-      setActiveMilestoneStreak(null);
-      
-      // Fun visual feedback for mistake (gray/red particles) & shaking
-      setIsShaking(true);
-      setTimeout(() => setIsShaking(false), 500);
-      try {
-        confetti({
-          particleCount: 40,
-          spread: 50,
-          origin: { y: 0.7 },
-          colors: ['#ef4444', '#f87171', '#94a3b8'],
-          gravity: 1.5,
-          ticks: 100,
-          disableForReducedMotion: true,
-          zIndex: 9999
-        });
-      } catch {}
-
-      dataService.addMistake(currentQuestion);
-      dataService.updateSkillMastery(currentQuestion.category, false, currentQuestion.difficulty);
+    } finally {
+      setIsAnswering(false);
     }
-    
-    // Refresh user profile for XP bar updates
-    setUserProfile(dataService.getCurrentUser());
   };
 
   const handleNextQuestion = () => {
@@ -407,7 +370,6 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
       // Complete Session
       setIsCompleted(true);
       sound.playLevelUp();
-      dataService.recordPracticeSession(Math.max(1, Math.round(secondsElapsed / 60)));
       try {
         confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
       } catch {}
@@ -475,7 +437,9 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <button
+              disabled={!isSubmitted}
               onClick={() => {
+                if (!isSubmitted) return;
                 sound.playClick();
                 setSelectedDifficulty('adaptive');
               }}
@@ -634,11 +598,13 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
         </div>
 
         {/* Start Button */}
+        {practiceError && <p className="mb-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700">{practiceError}</p>}
         <button
           onClick={startSession}
-          className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-extrabold text-base   hover:from-indigo-500 hover:to-purple-500 transition-all cursor-pointer active:scale-98 flex items-center justify-center gap-2"
+          disabled={isStarting}
+          className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-extrabold text-base hover:from-indigo-500 hover:to-purple-500 transition-all cursor-pointer active:scale-98 flex items-center justify-center gap-2 disabled:opacity-60"
         >
-          <span>Antrenmanı Başlat (10 Soru)</span>
+          <span>{isStarting ? 'Güvenli sorular hazırlanıyor…' : 'Antrenmanı Başlat (10 Soru)'}</span>
           <ArrowRight className="w-5 h-5" />
         </button>
       </div>
@@ -888,7 +854,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
                 setShowAiHint(true);
               }}
               className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl sm:rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 font-black text-xs sm:text-sm   active:scale-95 transition-all cursor-pointer border border-amber-300 shrink-0 group"
-              title="Bu soruya özel pedagojik AI ipucu al"
+              title={isSubmitted ? 'Bu soruya özel pedagojik AI ipucu al' : 'Cevap anahtarı, teslimden önce istemciye gönderilmez'}
             >
               <Lightbulb className="w-4 h-4 text-slate-950 fill-slate-950 group-hover:rotate-12 transition-transform shrink-0" />
               <span className="font-extrabold tracking-tight">İpucu Al</span>
@@ -913,13 +879,14 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
             </div>
             <button
               type="button"
+              disabled
               onClick={() => {
                 sound.playClick();
                 setShowAiHint(true);
               }}
-              className="font-extrabold text-amber-900 hover:text-amber-950 underline underline-offset-2 flex items-center gap-1 shrink-0 cursor-pointer text-xs"
+              className="font-extrabold text-amber-700 flex items-center gap-1 shrink-0 cursor-not-allowed text-xs opacity-70"
             >
-              <span>İpucu Al</span>
+              <span>Teslimden sonra</span>
               <ArrowRight className="w-3 h-3" />
             </button>
           </div>
@@ -927,7 +894,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
 
         {/* Programmatic Visual Question Canvas */}
         <div className="py-2">
-          <QuestionRenderer question={currentQuestion} />
+          <QuestionRenderer question={currentQuestion as unknown as BaseQuestion} />
         </div>
 
         {/* Answer Options Grid */}
@@ -956,27 +923,28 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
 
             <button
               type="button"
+              disabled
               onClick={() => {
                 sound.playClick();
                 setShowAiHint(true);
               }}
-              className="w-full sm:w-auto px-5 py-3.5 rounded-xl bg-gradient-to-r from-amber-100 to-orange-100 hover:from-amber-200 hover:to-orange-200 border-2 border-amber-300 text-amber-950 font-extrabold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98  shrink-0"
-              title="Cevabı vermeden zihnini yönlendiren Sokratik ipucu al"
+              className="w-full sm:w-auto px-5 py-3.5 rounded-xl bg-amber-50 border-2 border-amber-200 text-amber-700 font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-not-allowed opacity-70 shrink-0"
+              title="Güvenli puanlama için ipucu teslimden sonra açılır"
             >
               <Lightbulb className="w-4 h-4 text-amber-600 fill-amber-500" />
-              <span>💡 İpucu Al (AI Pedagojik Rehber)</span>
+              <span>💡 İpucu teslimden sonra açılır</span>
             </button>
 
             <button
               onClick={handleSubmitAnswer}
-              disabled={!selectedOptionId}
+              disabled={!selectedOptionId || isAnswering}
               className={`flex-1 w-full py-3.5 rounded-xl font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2 cursor-pointer ${
                 selectedOptionId
                   ? 'bg-indigo-600 hover:bg-indigo-700 text-white   active:scale-98'
                   : 'bg-slate-200 text-slate-400 cursor-not-allowed'
               }`}
             >
-              <span>{selectedOptionId ? 'Cevabı Kontrol Et' : 'Bir Seçenek İşaretle'}</span>
+              <span>{isAnswering ? 'Sunucuda kontrol ediliyor…' : selectedOptionId ? 'Cevabı Kontrol Et' : 'Bir Seçenek İşaretle'}</span>
             </button>
           </div>
         ) : (
@@ -1039,14 +1007,14 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
 
             {/* Step-by-step Framer Motion AI Accordion Explanation */}
             <StepByStepAiExplanation
-              question={currentQuestion}
+              question={currentQuestion as unknown as BaseQuestion}
               selectedOptionId={selectedOptionId || ''}
             />
 
             {/* Visual Explanation Overlay */}
             <VisualExplanationOverlay
-              explanation={currentQuestion.explanation}
-              correctOptionId={currentQuestion.correctOptionId}
+              explanation={currentQuestion.explanation!}
+              correctOptionId={currentQuestion.correctOptionId!}
             />
 
             {/* Next Question & AI Step Review Actions */}
@@ -1091,18 +1059,18 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
       </AnimatePresence>
 
       {/* AI Step-by-Step Hint Modal */}
-      {currentQuestion && (
+      {currentQuestion && isSubmitted && currentQuestion.correctOptionId && (
         <AiHintModal
-          question={currentQuestion}
+          question={currentQuestion as unknown as BaseQuestion}
           isOpen={showAiHint}
           onClose={() => setShowAiHint(false)}
         />
       )}
 
       {/* AI Mistake Explanation Modal ('Neden Yanlış?') */}
-      {currentQuestion && selectedOptionId && (
+      {currentQuestion && selectedOptionId && isSubmitted && currentQuestion.correctOptionId && (
         <AiMistakeModal
-          question={currentQuestion}
+          question={currentQuestion as unknown as BaseQuestion}
           selectedOptionId={selectedOptionId}
           isOpen={showAiMistakeModal}
           onClose={() => setShowAiMistakeModal(false)}

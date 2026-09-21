@@ -1,28 +1,17 @@
-import React, { useState, useMemo } from 'react';
-import { UserRole, UserProfile } from '../../../types';
-import { auth, db } from '../../../lib/firebase';
-import {
-  createUserWithEmailAndPassword,
-  browserLocalPersistence,
-  browserSessionPersistence,
-  deleteUser,
-  setPersistence,
-  signOut,
-} from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import React, { useEffect, useState, useMemo } from 'react';
+import { UserRole } from '../../../types';
+import { auth } from '../../../lib/firebase';
+import { browserLocalPersistence, setPersistence, signOut } from 'firebase/auth';
 import { dataService } from '../../../services/data-service';
 import { sound } from '../../../lib/sound';
 import { registerFamilyInFirebase } from '../../../services/family-registration-service';
-import { createConsentRecord } from '../../../lib/account-policy';
 import { FooterInfoModal, FooterModalTopic } from '../../../components/FooterInfoModal';
 import {
-  registerStudentSchema,
   registerParentSchema,
   evaluatePasswordStrength,
   formatZodError
 } from '../../../lib/validations';
 import { Sparkles, Eye, EyeOff, AlertCircle, Check } from 'lucide-react';
-import { useAuth } from '../../../contexts/AuthContext';
 
 interface RegistrationFormProps {
   selectedRole: UserRole;
@@ -42,8 +31,6 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
   setErrorMessage,
   onRegisterSuccess,
 }) => {
-  const { sendEmailVerification } = useAuth();
-
   const [regStudentName, setRegStudentName] = useState('');
   const [regGrade, setRegGrade] = useState<number>(2);
   const [regExamFocus, setRegExamFocus] = useState('Genel Zihinsel Yetenek');
@@ -61,35 +48,26 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
   const passwordStrength = useMemo(() => evaluatePasswordStrength(regPassword), [regPassword]);
 
+  useEffect(() => {
+    if (selectedRole !== 'parent') setSelectedRole('parent');
+  }, [selectedRole, setSelectedRole]);
+
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
     setErrorMessage(null);
     setFieldErrors({});
 
-    let validationResult;
-    if (selectedRole === 'student') {
-      validationResult = registerStudentSchema.safeParse({
-        studentName: regStudentName.trim(),
-        grade: regGrade,
-        examFocus: regExamFocus,
-        parentEmail: regParentEmail.trim(),
-        parentPhone: regParentPhone.trim() || undefined,
-        password: regPassword,
-        kvkkConsent: regKvkkConsent,
-      });
-    } else {
-      validationResult = registerParentSchema.safeParse({
-        parentEmail: regParentEmail.trim(),
-        parentPhone: regParentPhone.trim() || undefined,
-        studentName: regStudentName.trim(),
-        grade: regGrade,
-        examFocus: regExamFocus,
-        password: regPassword,
-        studentPassword: regStudentPassword,
-        kvkkConsent: regKvkkConsent,
-      });
-    }
+    const validationResult = registerParentSchema.safeParse({
+      parentEmail: regParentEmail.trim(),
+      parentPhone: regParentPhone.trim() || undefined,
+      studentName: regStudentName.trim(),
+      grade: regGrade,
+      examFocus: regExamFocus,
+      password: regPassword,
+      studentPassword: regStudentPassword,
+      kvkkConsent: regKvkkConsent,
+    });
 
     if (!validationResult.success) {
       sound.playError();
@@ -101,77 +79,27 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
     setIsSubmitting(true);
     try {
-      if (selectedRole === 'parent') {
-        await setPersistence(auth, browserLocalPersistence);
-        const result = await registerFamilyInFirebase({
-          parentEmail: regParentEmail.trim(),
-          parentPassword: regPassword,
-          studentPassword: regStudentPassword,
-          parentPhone: regParentPhone.trim() || undefined,
-          studentName: regStudentName.trim(),
-          grade: regGrade,
-          examFocus: regExamFocus,
-        });
-        await signOut(auth);
-        dataService.logout();
-        onRegisterSuccess({
-          identifier: regParentEmail.trim(),
-          role: 'parent',
-          createdStudentCode: result.student.code,
-          successToast: result.verificationSent
-            ? `Aile hesabı hazır. Öğrenci kodu: ${result.student.code}. Veli girişi için e-postanıza gönderilen bağlantıyı doğrulayın.`
-            : `Aile hesabı hazır. Öğrenci kodu: ${result.student.code}. Veli girişinde doğrulama bağlantısını yeniden gönderebilirsiniz.`,
-        });
-      } else {
-        const email = regParentEmail.trim().toLowerCase();
-        const pass = regPassword;
-        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-        
-        const newProfile: UserProfile = {
-          id: userCredential.user.uid,
-          email: email,
-          name: regStudentName.trim(),
-          role: 'student',
-          grade: regGrade,
-          examFocus: regExamFocus,
-          recoveryEmail: email,
-          consent: createConsentRecord('student'),
-          avatar: '🦊',
-          level: 1,
-          xp: 0,
-          streak: 0,
-          lastActiveDate: new Date().toISOString(),
-          dailyGoalMinutes: 15,
-          todayMinutesSpent: 0,
-          soundEnabled: true,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          totalPoints: 0,
-          claimedStreakDays: [],
-          totalQuestionsSolved: 0,
-          resolvedMistakesCount: 0,
-        };
-        
-        try {
-          await setDoc(doc(db, 'users', userCredential.user.uid), newProfile);
-        } catch (profileError) {
-          await deleteUser(userCredential.user);
-          throw profileError;
-        }
-        const verificationSent = await sendEmailVerification(userCredential.user)
-          .then(() => true)
-          .catch(() => false);
-        await signOut(auth);
-        dataService.logout();
-        onRegisterSuccess({
-          identifier: email,
-          role: 'student',
-          createdStudentCode: null,
-          successToast: verificationSent
-            ? 'Hesabınız oluşturuldu. Giriş yapmadan önce e-postanıza gönderilen bağlantıyı doğrulayın.'
-            : 'Hesabınız oluşturuldu. Giriş yaptığınızda doğrulama bağlantısı yeniden gönderilecek.',
-        });
-      }
+      await setPersistence(auth, browserLocalPersistence);
+      const result = await registerFamilyInFirebase({
+        parentEmail: regParentEmail.trim(),
+        parentPassword: regPassword,
+        studentPassword: regStudentPassword,
+        parentPhone: regParentPhone.trim() || undefined,
+        studentName: regStudentName.trim(),
+        grade: regGrade,
+        examFocus: regExamFocus,
+        guardianConsent: true,
+      });
+      await signOut(auth);
+      dataService.logout();
+      onRegisterSuccess({
+        identifier: regParentEmail.trim(),
+        role: 'parent',
+        createdStudentCode: result.student.code,
+        successToast: result.verificationSent
+          ? `Aile hesabı hazır. Öğrenci kodu: ${result.student.code}. Veli girişi için e-postanıza gönderilen bağlantıyı doğrulayın.`
+          : `Aile hesabı hazır. Öğrenci kodu: ${result.student.code}. Veli girişinde doğrulama bağlantısını yeniden gönderebilirsiniz.`,
+      });
 
       sound.playSuccess();
       
@@ -202,35 +130,14 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
         </p>
       </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-2" aria-label="Kayıt türü">
-        <button
-          type="button"
-          onClick={() => {
-            setSelectedRole('student');
-            setErrorMessage(null);
-            setFieldErrors({});
-          }}
-          className={`rounded-xl border px-3 py-2.5 text-sm font-bold transition-colors ${selectedRole === 'student' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-zinc-200 text-slate-600 hover:bg-slate-50'}`}
-        >
-          Bireysel Öğrenci
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setSelectedRole('parent');
-            setErrorMessage(null);
-            setFieldErrors({});
-          }}
-          className={`rounded-xl border px-3 py-2.5 text-sm font-bold transition-colors ${selectedRole === 'parent' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-zinc-200 text-slate-600 hover:bg-slate-50'}`}
-        >
-          Veli + Öğrenci
-        </button>
+      <div className="mb-4" aria-label="Kayıt türü">
+        <div className="rounded-xl border border-indigo-600 bg-indigo-50 px-3 py-2.5 text-sm font-bold text-indigo-700">
+          Veli + Öğrenci aile kaydı
+        </div>
       </div>
 
       <div className="mb-4 rounded-xl border border-sky-200 bg-sky-50 px-3.5 py-3 text-xs leading-relaxed text-sky-900">
-        {selectedRole === 'parent'
-          ? 'Veli hesabınızla birlikte öğrenciniz için ayrı bir giriş kodu ve ayrı şifre oluşturulur.'
-          : 'Bireysel öğrenci hesabı gerçek bir e-posta kullanır. Öğrenci koduyla giriş için “Veli + Öğrenci” kaydını seçin.'}
+        Veli hesabınızla birlikte öğrenciniz için ayrı bir giriş kodu ve ayrı şifre oluşturulur. Çocuk hesabı yasal veli onayı olmadan açılamaz.
       </div>
 
       <form onSubmit={handleRegisterSubmit} className="space-y-3.5" noValidate>
@@ -522,7 +429,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
               <button type="button" onClick={() => setLegalTopic('terms')} className="font-bold text-indigo-700 underline underline-offset-2">
                 Kullanım Koşulları
               </button>
-              ’nı okudum, kabul ediyorum.
+              ’nı okudum; öğrencinin yasal velisi olduğumu ve çocuk hesabının bu onayla açılmasını kabul ediyorum.
             </span>
           </label>
           {fieldErrors.kvkkConsent && (

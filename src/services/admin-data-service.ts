@@ -62,6 +62,6 @@ export async function grantStudentReward(
 ): Promise<void> {
   await readJson(await authenticatedFetch(`/api/admin/students/${encodeURIComponent(studentId)}/reward`, {
     method: 'POST',
-    body: JSON.stringify({ type, amount }),
+    body: JSON.stringify({ type, amount, requestId: crypto.randomUUID() }),
   }));
 }

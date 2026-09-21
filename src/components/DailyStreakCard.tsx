@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { UserProfile, StreakMilestone, BaseQuestion } from '../types';
 import { dataService, STREAK_MILESTONES } from '../services/data-service';
 import { sound } from '../lib/sound';
-import { generateQuestionByType } from '../features/questions/generators';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
 import { OptionRenderer } from '../features/questions/renderers/OptionRenderer';
 import {
@@ -24,6 +23,9 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { answerPractice, startPractice, type IssuedPracticeQuestion } from '../services/practice-api-service';
+import { claimProgressReward } from '../services/progress-api-service';
+import { weeklyChallengesService } from '../services/weekly-challenges-service';
 
 interface DailyStreakCardProps {
   user: UserProfile;
@@ -52,7 +54,9 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
   const [claimFeedback, setClaimFeedback] = useState<string | null>(null);
   const [showShieldInfo, setShowShieldInfo] = useState(false);
   const [showQuickChallenge, setShowQuickChallenge] = useState(false);
-  const [quickQuestion, setQuickQuestion] = useState<BaseQuestion | null>(null);
+  const [quickQuestion, setQuickQuestion] = useState<IssuedPracticeQuestion | null>(null);
+  const [quickSessionId, setQuickSessionId] = useState<string | null>(null);
+  const [quickBusy, setQuickBusy] = useState(false);
   const [selectedQuickOption, setSelectedQuickOption] = useState<string | null>(null);
   const [isQuickSubmitted, setIsQuickSubmitted] = useState(false);
   const [quickErrorFeedback, setQuickErrorFeedback] = useState<string | null>(null);
@@ -83,38 +87,47 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
   const nextMilestone = STREAK_MILESTONES.find((m) => m.day > streak);
 
   // Handle claiming a milestone
-  const handleClaim = (milestone: StreakMilestone) => {
+  const handleClaim = async (milestone: StreakMilestone) => {
     setClaimingDay(milestone.day);
-    sound.playLevelUp();
-
     try {
+      const result = await claimProgressReward('streak', String(milestone.day));
+      dataService.setCurrentUser(result.profile);
+      onUserUpdate(result.profile);
+      sound.playLevelUp();
       confetti({
         particleCount: 100,
         spread: 80,
         origin: { y: 0.6 },
         colors: ['#f59e0b', '#ef4444', '#8b5cf6', '#10b981'],
       });
-    } catch {}
-
-    const result = dataService.claimStreakReward(milestone.day);
-    if (result.success) {
-      setClaimFeedback(`Tebrikler! ${milestone.title} ödülü alındı: +${milestone.xpReward} XP!`);
+      setClaimFeedback(`Tebrikler! ${milestone.title} ödülü alındı: +${result.xpAwarded} XP!`);
       setTimeout(() => setClaimFeedback(null), 4000);
-      onUserUpdate(result.user);
+    } catch (error) {
+      setClaimFeedback(error instanceof Error ? error.message : 'Ödül doğrulanamadı.');
+      setTimeout(() => setClaimFeedback(null), 4000);
+    } finally {
+      setClaimingDay(null);
     }
-    setClaimingDay(null);
   };
 
-  const handleStartQuickChallenge = () => {
+  const handleStartQuickChallenge = async () => {
     sound.playClick();
-    const seed = Math.floor(Math.random() * 899999) + 100000;
-    // Generate a fun visual odd-one-out question
-    const q = generateQuestionByType('odd_one_out', seed, 2);
-    setQuickQuestion(q);
-    setSelectedQuickOption(null);
-    setIsQuickSubmitted(false);
+    setQuickBusy(true);
     setQuickErrorFeedback(null);
-    setShowQuickChallenge(true);
+    try {
+      const started = await startPractice({ context: 'daily', category: 'visual_perception', difficulty: 2, count: 1 });
+      setQuickSessionId(started.sessionId);
+      setQuickQuestion(started.questions[0]);
+      setSelectedQuickOption(null);
+      setIsQuickSubmitted(false);
+      setShowQuickChallenge(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Günlük soru hazırlanamadı.';
+      setQuickErrorFeedback(message);
+      setClaimFeedback(message);
+    } finally {
+      setQuickBusy(false);
+    }
   };
 
   const handleSelectQuickOption = (optionId: string) => {
@@ -124,12 +137,19 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
     setQuickErrorFeedback(null);
   };
 
-  const handleSubmitQuickChallenge = () => {
-    if (!quickQuestion || !selectedQuickOption || isQuickSubmitted) return;
-
-    if (selectedQuickOption === quickQuestion.correctOptionId) {
-      sound.playLevelUp();
+  const handleSubmitQuickChallenge = async () => {
+    if (!quickQuestion || !quickSessionId || !selectedQuickOption || isQuickSubmitted || quickBusy) return;
+    setQuickBusy(true);
+    try {
+      const outcome = await answerPractice(quickSessionId, quickQuestion.challengeId, selectedQuickOption);
+      setQuickQuestion({ ...quickQuestion, correctOptionId: outcome.correctOptionId, explanation: outcome.explanation });
+      dataService.syncUserFromFirebase(outcome.profile);
+      dataService.cacheAuthoritativeProgress({ masteries: outcome.masteries, mistakes: outcome.mistakes });
+      weeklyChallengesService.recordCategoryQuestionSolved(quickQuestion.category);
+      onUserUpdate(outcome.profile);
       setIsQuickSubmitted(true);
+      if (outcome.correct) {
+      sound.playLevelUp();
       try {
         confetti({
           particleCount: 100,
@@ -139,19 +159,20 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
         });
       } catch {}
 
-      // Record streak practice & question solved
-      dataService.recordQuestionSolved(true);
-      const result = dataService.recordPracticeSession(2);
-      onUserUpdate(result.user);
-      setClaimFeedback('Muhteşem! Doğru bildin ve bugünkü serini güvenceye aldın! 🔥 (+35 XP)');
+      setClaimFeedback(`Muhteşem! Doğru bildin ve bugünkü serini güvenceye aldın! 🔥 (+${outcome.xpAwarded} XP)`);
 
       setTimeout(() => {
         setShowQuickChallenge(false);
         setQuickQuestion(null);
       }, 1800);
-    } else {
-      sound.playError();
-      setQuickErrorFeedback('Bu seçenek doğru değil gibi, şekilleri tekrar dikkatle incele!');
+      } else {
+        sound.playError();
+        setQuickErrorFeedback(`Bu seçenek doğru değildi. Doğru seçenek: ${outcome.correctOptionId}`);
+      }
+    } catch (error) {
+      setQuickErrorFeedback(error instanceof Error ? error.message : 'Cevap puanlanamadı.');
+    } finally {
+      setQuickBusy(false);
     }
   };
 
@@ -426,10 +447,11 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
           {!todayPracticed && (
             <button
               onClick={handleStartQuickChallenge}
+              disabled={quickBusy}
               className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-extrabold  transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
             >
               <Brain className="w-3.5 h-3.5" />
-              <span>1 Hızlı Soruyla Koru</span>
+              <span>{quickBusy ? 'Hazırlanıyor…' : '1 Hızlı Soruyla Koru'}</span>
             </button>
           )}
 
@@ -485,7 +507,7 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
 
               {/* Visual Display */}
               <div className="max-h-52 overflow-hidden flex items-center justify-center">
-                <QuestionRenderer question={quickQuestion} />
+                <QuestionRenderer question={quickQuestion as unknown as BaseQuestion} />
               </div>
 
               {/* Options Grid */}
@@ -522,14 +544,14 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
 
               <button
                 onClick={handleSubmitQuickChallenge}
-                disabled={!selectedQuickOption || isQuickSubmitted}
+                disabled={!selectedQuickOption || isQuickSubmitted || quickBusy}
                 className={`px-5 py-2 rounded-xl text-xs font-extrabold  transition-all flex items-center gap-1.5 cursor-pointer ${
                   selectedQuickOption && !isQuickSubmitted
                     ? 'bg-orange-500 hover:bg-orange-600 text-white active:scale-95 '
                     : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                 }`}
               >
-                <span>Cevabı Gönder</span>
+                <span>{quickBusy ? 'Kontrol ediliyor…' : 'Cevabı Gönder'}</span>
                 <CheckCircle2 className="w-3.5 h-3.5" />
               </button>
             </div>

@@ -1,9 +1,13 @@
+import { createHash } from 'node:crypto';
 import { Router } from 'express';
 import { FieldPath } from 'firebase-admin/firestore';
 import { z } from 'zod';
+import { auditQuestion } from '../../src/features/questions/quality';
+import type { BaseQuestion } from '../../src/types';
 import {
   getAdminDb,
   requireAppCheck,
+  requireAdminMfa,
   requireFirebaseAuth,
   requireProfileRole,
   type AuthenticatedRequest,
@@ -16,6 +20,7 @@ const adminGuards = [
   requireAppCheck,
   adminDataLimiter,
   requireProfileRole('admin'),
+  requireAdminMfa,
 ] as const;
 
 const parseStored = <T>(values: Record<string, unknown>, key: string, fallback: T): T => {
@@ -23,6 +28,124 @@ const parseStored = <T>(values: Record<string, unknown>, key: string, fallback: 
   if (typeof raw !== 'string') return fallback;
   try { return JSON.parse(raw) as T; } catch { return fallback; }
 };
+
+const questionIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,200}$/);
+const editorialQuestionSchema = z.object({
+  question: z.unknown(),
+  status: z.enum(['draft', 'review', 'published', 'archived']),
+  expectedRevision: z.number().int().min(0),
+  confirmedReview: z.boolean(),
+  requestId: z.string().uuid(),
+}).strict();
+
+adminDataRoutes.get('/admin/questions', ...adminGuards, async (req, res) => {
+  const querySchema = z.object({
+    limit: z.coerce.number().int().min(1).max(500).default(200),
+    cursor: questionIdSchema.optional(),
+  });
+  const parsed = querySchema.safeParse(req.query);
+  if (!parsed.success) return res.status(400).json({ error: 'Soru listeleme parametreleri geçersiz.' });
+  try {
+    const db = getAdminDb();
+    let query = db.collection('questions').orderBy(FieldPath.documentId()).limit(parsed.data.limit);
+    if (parsed.data.cursor) {
+      const cursor = await db.doc(`questions/${parsed.data.cursor}`).get();
+      if (!cursor.exists) return res.status(400).json({ error: 'Sayfalama imleci geçersiz.' });
+      query = query.startAfter(cursor);
+    }
+    const snapshot = await query.get();
+    return res.json({
+      questions: snapshot.docs.map((document) => ({ ...document.data(), id: document.id })),
+      nextCursor: snapshot.size === parsed.data.limit ? snapshot.docs.at(-1)?.id || null : null,
+    });
+  } catch (error) {
+    console.error('[AdminData] question list error:', error);
+    return res.status(500).json({ error: 'Soru kütüphanesi alınamadı.' });
+  }
+});
+
+adminDataRoutes.post('/admin/questions/:questionId', ...adminGuards, async (req: AuthenticatedRequest, res) => {
+  const questionId = String(req.params.questionId || '');
+  const parsed = editorialQuestionSchema.safeParse(req.body);
+  if (!questionIdSchema.safeParse(questionId).success || !parsed.success || !req.authUser) {
+    return res.status(400).json({ error: 'Soru kaydetme isteği geçersiz.' });
+  }
+  if (!parsed.data.question || typeof parsed.data.question !== 'object' || Array.isArray(parsed.data.question)) {
+    return res.status(400).json({ error: 'Soru gövdesi geçersiz.' });
+  }
+  const question = parsed.data.question as BaseQuestion;
+  if (question.id !== questionId) return res.status(400).json({ error: 'Soru kimliği gövdeyle eşleşmiyor.' });
+  const report = auditQuestion(question);
+  if (report.errors.length) return res.status(422).json({ error: report.errors.join(' ') });
+  if (parsed.data.status === 'published' && !parsed.data.confirmedReview) {
+    return res.status(422).json({ error: 'Yayımlamadan önce yönerge, cevap ve görseller onaylanmalıdır.' });
+  }
+
+  try {
+    const db = getAdminDb();
+    const questionRef = db.doc(`questions/${questionId}`);
+    const operationRef = db.doc(`adminAuditLogs/question_save_${parsed.data.requestId}`);
+    const questionHash = createHash('sha256').update(JSON.stringify(question)).digest('hex');
+    const stored = await db.runTransaction(async (transaction) => {
+      const operation = await transaction.get(operationRef);
+      const current = await transaction.get(questionRef);
+      if (operation.exists) {
+        const prior = operation.data()!;
+        const sameRequest = prior.actorId === req.authUser!.uid
+          && prior.questionId === questionId
+          && prior.questionHash === questionHash
+          && prior.requestedStatus === parsed.data.status
+          && prior.expectedRevision === parsed.data.expectedRevision;
+        if (!sameRequest) throw new Error('IDEMPOTENCY_CONFLICT');
+        if (!current.exists) throw new Error('QUESTION_INTEGRITY');
+        return { ...current.data(), id: current.id };
+      }
+
+      const liveRevision = current.exists ? Number(current.data()!.revision || 0) : 0;
+      if (liveRevision !== parsed.data.expectedRevision) throw new Error('EDIT_CONFLICT');
+      const now = Date.now();
+      const nextRevision = liveRevision + 1;
+      const nextQuestion: BaseQuestion = {
+        ...question,
+        id: questionId,
+        status: parsed.data.status,
+        revision: nextRevision,
+        isCustom: true,
+        createdAt: String(current.data()?.createdAt || question.createdAt || new Date(now).toISOString()),
+        updatedAt: new Date(now).toISOString(),
+        updatedBy: req.authUser!.uid,
+        ...(parsed.data.status === 'published' ? { reviewedBy: req.authUser!.uid } : {}),
+      };
+      if (parsed.data.status !== 'published') delete nextQuestion.reviewedBy;
+      transaction.set(questionRef, nextQuestion);
+      transaction.create(operationRef, {
+        action: parsed.data.status === 'published' ? 'question_published' : current.exists ? 'question_updated' : 'question_created',
+        actorId: req.authUser!.uid,
+        requestId: parsed.data.requestId,
+        questionId,
+        questionHash,
+        requestedStatus: parsed.data.status,
+        expectedRevision: parsed.data.expectedRevision,
+        resultingRevision: nextRevision,
+        createdAt: now,
+      });
+      return nextQuestion;
+    });
+    return res.json({ question: stored });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'EDIT_CONFLICT') {
+      return res.status(409).json({ error: 'Soru başka bir yönetici tarafından değiştirilmiş. Listeyi yenileyin.' });
+    }
+    if (error instanceof Error && error.message === 'IDEMPOTENCY_CONFLICT') {
+      return res.status(409).json({ error: 'İstek kimliği farklı bir soru işlemi için kullanılmış.' });
+    }
+    if (error instanceof Error && error.message === 'QUESTION_INTEGRITY') {
+      return res.status(503).json({ error: 'Soru işlem kaydı bütünlük kontrolünü geçemedi.' });
+    }
+    console.error('[AdminData] question save error:', error);
+    return res.status(500).json({ error: 'Soru güvenli biçimde kaydedilemedi.' });
+  }
+});
 
 adminDataRoutes.get('/admin/overview', ...adminGuards, async (_req, res) => {
   try {
@@ -129,6 +252,7 @@ adminDataRoutes.get('/admin/students', ...adminGuards, async (req, res) => {
 const rewardSchema = z.object({
   type: z.enum(['xp', 'streak_freeze']),
   amount: z.number().int().min(1).max(500),
+  requestId: z.string().uuid(),
 }).strict();
 
 adminDataRoutes.post('/admin/students/:studentId/reward', ...adminGuards, async (req: AuthenticatedRequest, res) => {
@@ -144,30 +268,47 @@ adminDataRoutes.post('/admin/students/:studentId/reward', ...adminGuards, async 
   try {
     const db = getAdminDb();
     const ref = db.doc(`users/${studentId}`);
+    const operationRef = db.doc(`adminAuditLogs/student_reward_${parsed.data.requestId}`);
     const updated = await db.runTransaction(async (transaction) => {
+      const operation = await transaction.get(operationRef);
       const snapshot = await transaction.get(ref);
       const student = snapshot.data();
       if (!student || student.role !== 'student') throw new Error('STUDENT_NOT_FOUND');
+
+      if (operation.exists) {
+        const previous = operation.data()!;
+        const sameRequest = previous.actorId === req.authUser!.uid
+          && previous.studentId === studentId
+          && previous.rewardType === parsed.data.type
+          && previous.amount === parsed.data.amount;
+        if (!sameRequest) throw new Error('IDEMPOTENCY_CONFLICT');
+        return { ...student, id: studentId };
+      }
+
       const field = parsed.data.type === 'xp' ? 'xp' : 'streakFreezeCount';
       const value = Number(student[field] || 0) + parsed.data.amount;
       const changes: Record<string, number> = { [field]: value, updatedAt: Date.now() };
       if (field === 'xp') changes.level = Math.floor(value / 250) + 1;
       transaction.update(ref, changes);
+      transaction.create(operationRef, {
+        action: 'student_reward_granted',
+        requestId: parsed.data.requestId,
+        actorId: req.authUser!.uid,
+        studentId,
+        rewardType: parsed.data.type,
+        amount: parsed.data.amount,
+        resultingValue: value,
+        createdAt: Date.now(),
+      });
       return { ...student, ...changes, id: studentId };
-    });
-
-    await db.collection('adminAuditLogs').add({
-      action: 'student_reward_granted',
-      actorId: req.authUser.uid,
-      studentId,
-      rewardType: parsed.data.type,
-      amount: parsed.data.amount,
-      createdAt: Date.now(),
     });
     return res.json({ success: true, student: updated });
   } catch (error) {
     if (error instanceof Error && error.message === 'STUDENT_NOT_FOUND') {
       return res.status(404).json({ error: 'Öğrenci bulunamadı.' });
+    }
+    if (error instanceof Error && error.message === 'IDEMPOTENCY_CONFLICT') {
+      return res.status(409).json({ error: 'İstek kimliği farklı bir yönetim işlemi için kullanılmış.' });
     }
     console.error('[AdminData] reward error:', error);
     return res.status(500).json({ error: 'Ödül işlemi tamamlanamadı.' });

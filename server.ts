@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { type NextFunction, type Request, type Response } from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
@@ -9,6 +9,14 @@ import studentAiRoutes from './server/routes/student-ai-routes';
 import adminAiRoutes from './server/routes/admin-ai-routes';
 import authRoutes from './server/routes/auth-routes';
 import adminDataRoutes from './server/routes/admin-data-routes';
+import examRoutes from './server/routes/exam-routes';
+import practiceRoutes from './server/routes/practice-routes';
+import privacyRoutes from './server/routes/privacy-routes';
+import billingRoutes from './server/routes/billing-routes';
+import billingWebhookRoutes from './server/routes/billing-webhook-routes';
+import progressRoutes from './server/routes/progress-routes';
+import { randomUUID } from 'node:crypto';
+import { getAdminDb } from './server/security';
 import { loadRuntimeConfig } from './server/runtime-config';
 
 dotenv.config();
@@ -57,6 +65,28 @@ async function startServer() {
     } : false,
     crossOriginResourcePolicy: { policy: 'cross-origin' },
   }));
+  app.use((req, res, next) => {
+    const requestId = req.header('x-request-id')?.slice(0, 100) || randomUUID();
+    const startedAt = Date.now();
+    res.setHeader('X-Request-Id', requestId);
+    res.on('finish', () => {
+      console.log(JSON.stringify({
+        severity: res.statusCode >= 500 ? 'ERROR' : res.statusCode >= 400 ? 'WARNING' : 'INFO',
+        message: 'http_request',
+        requestId,
+        method: req.method,
+        // Route templates are operationally useful without placing user IDs,
+        // attempt IDs or deletion request IDs into long-lived request logs.
+        route: req.route?.path || 'unmatched',
+        status: res.statusCode,
+        latencyMs: Date.now() - startedAt,
+      }));
+    });
+    next();
+  });
+  // Stripe signature verification requires the exact raw request bytes. The
+  // request logger is installed first because it never consumes the body.
+  app.use('/api', billingWebhookRoutes);
   app.use(express.json({ limit: '256kb' }));
 
   app.use('/api', parentRoutes);
@@ -64,6 +94,11 @@ async function startServer() {
   app.use('/api', adminAiRoutes);
   app.use('/api', adminDataRoutes);
   app.use('/api', authRoutes);
+  app.use('/api', examRoutes);
+  app.use('/api', practiceRoutes);
+  app.use('/api', privacyRoutes);
+  app.use('/api', billingRoutes);
+  app.use('/api', progressRoutes);
 
   app.get('/api/health', (req, res) => {
     res.json({
@@ -73,13 +108,23 @@ async function startServer() {
     });
   });
 
+  app.get('/api/ready', async (_req, res) => {
+    try {
+      await getAdminDb().collection('_health').limit(1).get();
+      return res.json({ status: 'ready', timestamp: Date.now() });
+    } catch (error) {
+      console.error('[Readiness] Firestore unavailable:', error);
+      return res.status(503).json({ status: 'not_ready', timestamp: Date.now() });
+    }
+  });
+
   if (!runtime.production) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (process.env.SERVE_STATIC_CLIENT?.trim().toLowerCase() === 'true') {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.use('/api', (_req, res) => {
@@ -88,11 +133,42 @@ async function startServer() {
     app.use((_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
+  } else {
+    app.use('/api', (_req, res) => {
+      res.status(404).json({ error: 'API uç noktası bulunamadı.' });
+    });
+    app.use((_req, res) => {
+      res.status(404).json({ error: 'Bu servis yalnızca ZekaPark API isteklerini kabul eder.' });
+    });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  app.use((error: unknown, req: Request, res: Response, _next: NextFunction) => {
+    console.error(JSON.stringify({
+      severity: 'ERROR',
+      message: 'unhandled_request_error',
+      route: req.route?.path || 'unmatched',
+      error: error instanceof Error ? error.message : 'unknown_error',
+    }));
+    if (!res.headersSent) res.status(500).json({ error: 'Beklenmeyen bir sunucu hatası oluştu.' });
+  });
+
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
   });
+
+  const shutdown = (signal: string) => {
+    console.log(JSON.stringify({ severity: 'INFO', message: 'shutdown_started', signal }));
+    server.close((error) => {
+      if (error) {
+        console.error(JSON.stringify({ severity: 'ERROR', message: 'shutdown_failed', error: error.message }));
+        process.exitCode = 1;
+      }
+      process.exit();
+    });
+    setTimeout(() => process.exit(1), 10_000).unref();
+  };
+  process.once('SIGTERM', () => shutdown('SIGTERM'));
+  process.once('SIGINT', () => shutdown('SIGINT'));
 }
 
 startServer().catch((error) => {

@@ -1,98 +1,101 @@
 # Ticari Yayın Hazırlığı
 
-Bu belge, “çalışıyor” ile “gerçek çocuk verisiyle ticari olarak yayınlanabilir”
-arasındaki farkı görünür kılar. Puanlar kod incelemesi ve yerel kalite kapısına
-dayanır; dış servislerin gerçekten yapılandırıldığı anlamına gelmez.
+Bu değerlendirme kodun yayın kapılarını ne ölçüde uyguladığını ve canlı ortamda
+hangi kanıtların hâlâ gerekli olduğunu ayrı gösterir. Bir özelliğin kodda hazır
+olması, Firebase/GCP/Stripe veya hukuki kabulün gerçekten tamamlandığı anlamına
+gelmez.
 
-## Mevcut durum
+## Güncel skor kartı
 
-| Alan | Kod hazırlığı | Ticari yayın ölçütü |
-|---|---:|---|
-| Kimlik doğrulama ve rol güvenliği | 8.5/10 | Claim, MFA, parola döndürme ve kural dağıtımı doğrulanmalı |
-| Soru üretimi ve kalite kapısı | 8/10 | Her motor için bağımsız çözücü ve uzman içerik kabul testi tamamlanmalı |
-| Sınav deneyimi | 8/10 | E2E, cihaz matrisi, erişilebilirlik ve süre/geri yükleme testleri tamamlanmalı |
-| Adaptif öğrenme | 7.5/10 | Gerçek veriyle kalibrasyon, yanlılık ve öğrenme kazanımı analizi yapılmalı |
-| Yönetim paneli | 8/10 | Rapor iş akışı, sunucu taraflı arama ve operasyon rolleri tamamlanmalı |
-| Veli/öğrenci verisi | 6/10 | Deneme ve ilerleme kayıtları sunucu-otoriteli olmalı |
-| PWA ve dağıtım | 8/10 | Gerçek cihaz testi, izleme ve geri alma provası gerekli |
-| CI ve bağımlılık güvenliği | 8.5/10 | Dal koruması ve zorunlu başarılı kontroller GitHub'da etkinleştirilmeli |
-| Gözlemlenebilirlik ve operasyon | 4/10 | Hata izleme, metrik, alarm, yedek ve geri yükleme provası gerekli |
-| Hukuk, gizlilik ve ticari süreç | 3/10 | KVKK/çocuk verisi incelemesi, sözleşmeler ve ödeme modeli gerekli |
+| Alan | Kod hazırlığı | Canlı kanıt durumu | 10/10 için kalan |
+|---|---:|---|---|
+| Kimlik, rol ve yönetici güvenliği | 9.5/10 | Doğrulanmadı | Gerçek UID'de parola/token/MFA/claim olayı ve log incelemesi |
+| Soru üretimi ve editoryal kalite | 9.0/10 | Doğrulanmadı | Her motor için bağımsız çözücü ve uzman örnek kabulü |
+| Sınav ve pratik bütünlüğü | 9.4/10 | Doğrulanmadı | Gerçek cihaz/E2E, yük ve süre kurtarma kabulü |
+| Sunucu-otoriteli XP/ilerleme | 9.5/10 | Doğrulanmadı | Üretim tekrar/yarış koşulu ve analitik mutabakat testi |
+| Yönetim ve AI iş akışı | 9.1/10 | Doğrulanmadı | Operatör kabulü, maliyet/kota ve sağlayıcı kesinti provası |
+| Firestore ve App Check | 9.6/10 | Emulator 6/6; üretim yok | Rules dağıtımı, web app kaydı ve enforcement kanıtı |
+| KVKK ve çocuk verisi araçları | 9.0/10 | Hukuk onayı yok | Veri sorumlusu metinleri, aktarım/saklama ve silme kabulü |
+| Ödeme ve abonelik | 8.9/10 | Stripe yapılandırılmadı | Canlı merchant/Price/webhook, vergi-fatura-iade ve ürün paketi |
+| İzleme, yedek ve geri alma | 9.1/10 | GCP yapılandırılmadı | Alarm kanalı, günlük yedek, restore ve rollback provası |
+| CI ve bağımlılık güvenliği | 9.4/10 | Yerel/CI sonucu gerekli | GitHub dal koruması ve zorunlu başarılı kontroller |
+| PWA, erişilebilirlik ve cihaz | 8.5/10 | Kabul testi yok | WCAG 2.2 AA ve iOS/Android gerçek cihaz matrisi |
 
-Kod seviyesi genel hazırlık yaklaşık **7/10** düzeyindedir. Aşağıdaki dış ve
-mimari kapılar kapanmadan “10/10” veya “yayına hazır” beyanı yapılmamalıdır.
+Kod seviyesi ağırlıklı hazırlık yaklaşık **9.2/10**'dur. Canlı kanıtlar bu
+çalışma ortamında uygulanmadığı sürece toplam yayın kararı **NO-GO** kalır.
 
-## Bu sertleştirme fazında tamamlananlar
+## Tamamlanan kod kapıları
 
-- Sabit yönetici parolası, e-posta allowlist'i, anonim/yedek yönetici girişi ve
-  tarayıcıdan profil yükseltme kaldırıldı.
-- Yönetici erişimi istemcide ve API'de Firebase `role=admin` claim'i ile
-  doğrulanıyor; Firestore profili ikinci kontrol olarak kullanılıyor.
-- Aile kaydı App Check korumalı sunucu işlemine taşındı; kısmi tarayıcı hesabı
-  oluşturma yedeği kaldırıldı.
-- Yayınlanmamış sorular öğrenci sorgularından ve Firestore okuma kurallarından
-  ayrıldı; soru yayınlama iyimser revizyon kontrolü kullanıyor.
-- Mantıksal dizi seçenek çakışması giderildi; doğrulama başarısızsa jeneratör
-  artık hatalı soru döndürmek yerine kapanarak hata veriyor.
-- Kısıtlı sınav modunda soru sırasında ses, konfeti ve görsel doğruluk sızıntısı
-  kaldırıldı.
-- Adaptif hedef seçimi; zorluk, bilgi açığı, belirsizlik, yakın hata ve aralıklı
-  tekrar zamanını birlikte değerlendiriyor.
-- Yönetim özetleri ve öğrenci listesi demo verisi yerine korumalı API'den gerçek
-  Firestore verisi alıyor.
-- Öğrenci dizini 100 kayıtlık güvenli cursor sayfalamasıyla devam yükleyebiliyor.
-- Sahte rekabet sırası kaldırıldı; sunucu-otoriteli sıralama kurulana kadar yalnızca
-  kişisel ilerleme gösteriliyor.
-- Üretim yapılandırması eksik/HTTP CORS/App Check kapalı olduğunda sunucu kapanarak
-  güvenli hata veriyor.
-- TypeScript hataları kapatıldı; CI, test, üretim derlemesi, npm audit ve OSV
-  taraması eklendi.
-- PWA kabuğu API ve kimlik yanıtlarını hiçbir zaman önbelleğe almıyor.
-- 192×192 ve 512×512 maskable PNG uygulama ikonları üretildi.
+- Sabit yönetici kimlik bilgileri, e-posta allowlist'i, anonim/yedek yönetici
+  girişi ve tarayıcıdan rol yükseltme kaldırıldı.
+- Yönetici işlemleri Auth `role=admin` claim'i, eşleşen Firestore profili, yakın
+  zamanda TOTP ile açılmış oturum, App Check, hız sınırı ve audit log gerektirir.
+- UID'ye bağlı parola döndürme, claim değiştirme, bütün oturumları iptal etme,
+  TOTP proje yapılandırması ve olay sonrası otomatik doğrulama araçları eklendi.
+- Firestore tarayıcı yazmaları güvenli alanlarla sınırlandı; soru, cevap kasası,
+  sınav/pratik, entitlement, ilerleme olayı ve gizlilik iş akışları backend-only.
+- Gerçek Firestore Emulator testleri öğrenci, veli, yönetici, MFA, cevap kasası,
+  entitlement ve gizlilik negatif yetkilerini kapsıyor.
+- Sınav ve pratik soruları opak challenge ID ile, cevap/çözüm/seed/editorial
+  metadata olmadan sunuluyor. Puanlama, süre, XP, seri, ustalık ve ilerleme
+  kayıtları transaction içinde sunucuda üretiliyor.
+- Başlatma, cevap, submit, ödül, aile kaydı, soru yayınlama ve AI işlemleri
+  idempotent; istemci belirsiz ağ hatasında aynı istek kimliğini koruyor.
+- AI toplu üretim kuyruğu Firestore lease/heartbeat ile çok instance ortamında
+  devralınabilir; ham sağlayıcı yanıtları kalıcılaştırılmıyor.
+- Aile kaydı veli rızasıyla sunucuda atomik; güvenli rastgele öğrenci parolası ve
+  kodu üretiliyor, yarım hesap bırakmıyor.
+- KVKK veri dışa aktarma ve yakın giriş gerektiren silme talebi eklendi; onay ve
+  silme ayrı görevler. Silme Auth, Firestore ve Stripe kapsamını temizliyor ve
+  yalnızca takma adlandırılmış uyum kanıtı bırakıyor.
+- Saklama işçisi etkinlik, audit, AI, kayıt işlemi ve gizlilik kayıtlarını ayrı
+  sürelerle temizliyor. Günlük Scheduler, 14 haftalık günlük yedek ve restore
+  doğrulaması otomasyona bağlandı.
+- Stripe Checkout, Customer Portal, imza/timestamp doğrulamalı raw webhook,
+  tekrar teslim idempotency'si, out-of-order koruması ve abonelik yaşam döngüsü
+  entitlement'ları uygulandı. Etkin abonelikte ikinci checkout engelleniyor.
+- Cloud Run ayrı en-düşük-yetkili servis hesapları, Secret Manager, commit SHA
+  image'i, readiness/5xx/bütçe alarmı, App Check kaydı/enforcement doğrulaması,
+  smoke test ve fail-closed üretim yapılandırması otomasyona bağlandı.
+- Release validator yanlış proje/veritabanı, placeholder, eksik hukuk/ödeme
+  alanı ve tarihsiz/eskimiş kanıtlarla üretim dağıtımını durduruyor.
 
-## P0 — ticari yayından önce zorunlu
+## Canlı ortamda kapanması gereken P0 kapıları
 
-- [ ] Geçmişte istemciye yazılmış yönetici parolasını değiştir ve tüm token'ları
-  iptal et; MFA'yı etkinleştir.
-- [ ] Doğru yönetici UID'sine Admin SDK üzerinden özel claim ver; yetkisiz hesapla
-  yönetim API'sinin 403 döndürdüğünü kanıtla.
-- [ ] Güncel `firestore.rules` dosyasını üretime dağıt ve Emulator Suite ile
-  öğrenci/veli/yönetici negatif yetki testlerini çalıştır.
-- [ ] reCAPTCHA Enterprise App Check anahtarını tanımla, enforcement'ı Auth,
-  Firestore ve özel API için doğrula.
-- [ ] API'yi Cloud Run'a dağıt; kesin HTTPS CORS origin'leri, Secret Manager ve en
-  düşük yetkili servis hesabı kullan.
-- [ ] Yayınlanan soru gövdesi ile cevap/çözüm anahtarını ayır. Puanlanan sınavlarda
-  değerlendirmeyi güvenilir sunucuda yap.
-- [ ] Deneme, XP, seri, ustalık ve sıralama girdilerini değişmez sunucu olaylarından
-  üret; istemcinin yazdığı sayaçları rekabet/raporlama için güvenilir sayma.
-- [ ] KVKK, çocuk verisi/veli rızası, aydınlatma metni, kullanım koşulları, veri
-  saklama-silme ve MEB'den bağımsızlık ifadelerini hukuk uzmanına onaylat.
-- [ ] Hata izleme, güvenlik günlüğü, uptime alarmı, bütçe alarmı, günlük yedek ve
-  geri yükleme provasını tamamla.
+| Kapı | Beklenen kanıt |
+|---|---|
+| Yönetici olayı | UID, parola döndürme, token iptali, `role=admin`, TOTP ve log inceleme zamanları |
+| Kurallar | Emulator sonucu ve üretim Firestore rules/index deploy zamanı |
+| App Check | reCAPTCHA Enterprise app kaydı ve Auth/Firestore enforcement zamanı |
+| Cloud Run/Hosting | Commit SHA, revision, release ve health/readiness smoke sonucu |
+| Cevap taşıma | Dry-run, onaylı migration ve temiz ikinci dry-run çıktısı |
+| KVKK/çocuk verisi | Yetkili hukuk/DPO onayı, veri sorumlusu bilgileri ve silme kabul testi |
+| Stripe | Test ve canlı ödeme, webhook, portal iptali, iade/vergi/fatura kabulü |
+| Operasyon | Alarm kanalı testi, yedek planı, restore ve rollback prova kaydı |
+| İçerik | Pedagog/içerik uzmanı örneklemesi ve yanlış soru raporlama sorumlusu |
 
-## P1 — genel kullanıma açılmadan önce
+Bu adımların sırası ve güvenli komutları
+[üretim runbook'unda](PRODUCTION_RUNBOOK.md) tanımlıdır.
 
-- [ ] Kalan tüm soru motorlarına bağımsız çözücü/kanıtlayıcı ekle; her sınıf ve
-  zorluk için uzman örneklemesi yap.
-- [ ] “Soruyu bildir” uçtan uca akışını, SLA durumlarını ve yönetici çözümleme
-  günlüğünü tamamla.
-- [ ] Yönetim öğrenci listesine sunucu taraflı arama ve dışa aktarma yetki
-  kontrolleri ekle.
-- [ ] Playwright ile kayıt, giriş, pratik, sınav, veli ve yönetici kritik yol E2E
-  testlerini gerçek emulator üzerinde çalıştır.
-- [ ] WCAG 2.2 AA klavye, ekran okuyucu, kontrast, azaltılmış hareket ve çocuk
-  kullanılabilirlik testlerini kapat.
-- [ ] Maskable ikonları ve çevrimdışı/yenileme senaryolarını iOS ve Android gerçek
-  cihazlarda doğrula.
-- [ ] Yük, kota, yapay zekâ maliyeti, kuyruk lease/idempotency ve sağlayıcı kesinti
-  testlerini gerçekleştir.
-- [ ] Abonelik/ödeme, fatura, iptal/iade ve yetki yaşam döngüsünü seçilen ödeme
-  sağlayıcısıyla uygula; ödeme verisini uygulama sunucusunda saklama.
+## 10/10'a giden kalan ürün kalitesi
+
+- Playwright ile kayıt, giriş, MFA, pratik, sınav, veli, yönetici, KVKK ve ödeme
+  kritik yollarını Auth/Firestore emulator ve Stripe test ortamında doğrulamak
+- WCAG 2.2 AA klavye, ekran okuyucu, kontrast, odak, azaltılmış hareket ve çocuk
+  kullanılabilirlik testlerini uzmanla kapatmak
+- iOS Safari ve Android Chrome'da install/update/offline/recovery matrisini
+  gerçek cihazlarda çalıştırmak
+- Soru motorlarını bağımsız çözücü/kanıtlayıcıyla doğrulamak ve sınıf/zorluk
+  başına uzman örneklemesi yapmak
+- Cloud Run yük, kota, rate-limit, lease devralma, AI sağlayıcı kesintisi ve
+  Stripe gecikmeli webhook testlerini ölçmek
+- Premium paketin hangi özellikleri açtığını ürün kararıyla belirleyip her
+  premium API'de entitlement kontrolü uygulamak
+- GitHub `main` dalında review, zorunlu Quality Gate ve secret scanning koruması
+  açmak
 
 ## Yayın kararı
 
-Ticari **GO** kararı için bütün P0 maddeleri kanıt bağlantısıyla kapanmalı,
-`npm run check`, npm audit ve OSV taraması temiz geçmeli, üretim smoke testi
-başarılı olmalı ve geri alma sorumlusu belirlenmelidir. Herhangi bir P0 açıkken
-karar **NO-GO**'dur.
+`RELEASE_VALIDATION_PHASE=go-live npm run release:validate` başarılı olmadan,
+her P0 maddesi gerçek kanıtla kapanmadan ve hukuk/ödeme/içerik sorumluları imza
+vermeden **GO verilemez**. Kanıtlanmamış bir alan için `10/10` beyanı yapılmaz.

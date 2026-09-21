@@ -1,3 +1,4 @@
+import { createHash, randomInt } from 'node:crypto';
 import { Router } from 'express';
 import { z } from 'zod';
 import {
@@ -34,6 +35,8 @@ const registerFamilySchema = z.object({
   studentPassword: strongPassword,
   grade: z.number().int().min(1).max(4),
   examFocus: z.string().default('bilsem'),
+  guardianConsent: z.literal(true),
+  requestId: z.string().uuid(),
 }).strict();
 
 authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, async (req, res) => {
@@ -50,17 +53,55 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
     studentPassword,
     grade,
     examFocus,
+    guardianConsent,
+    requestId,
   } = parsed.data;
   const normalizedParentPhone = parentPhone ? normalizePhone(parentPhone) : undefined;
 
   const adminAuth = getAdminAuth();
   const adminDb = getAdminDb();
   const now = Date.now();
+  const operationRef = adminDb.doc(`registrationOperations/family_${requestId.replace(/-/g, '')}`);
+  const requestFingerprint = createHash('sha256').update(JSON.stringify({
+    parentEmail,
+    parentPhone: normalizedParentPhone || '',
+    studentName,
+    grade,
+    examFocus,
+    guardianConsent,
+  })).digest('hex');
 
   let createdParentUser: { uid: string } | null = null;
   let createdStudentUser: { uid: string } | null = null;
 
   try {
+    const previousOperation = await operationRef.get();
+    if (previousOperation.exists) {
+      const operation = previousOperation.data()!;
+      if (operation.requestFingerprint !== requestFingerprint) {
+        return res.status(409).json({ error: 'İstek kimliği farklı bir aile kaydı için kullanılmış.' });
+      }
+      const [parentSnapshot, studentSnapshot] = await adminDb.getAll(
+        adminDb.doc(`users/${operation.parentId}`),
+        adminDb.doc(`users/${operation.studentId}`),
+      );
+      const parentProfile = parentSnapshot.data();
+      const studentProfile = studentSnapshot.data();
+      if (!parentProfile || !studentProfile?.studentCode) {
+        return res.status(503).json({ error: 'Aile kayıt işlemi bütünlük kontrolünü geçemedi.' });
+      }
+      return res.status(200).json({
+        success: true,
+        idempotent: true,
+        parentProfile,
+        student: {
+          id: studentSnapshot.id,
+          code: studentProfile.studentCode,
+          email: studentProfile.email,
+        },
+      });
+    }
+
     try {
       const existing = await adminAuth.getUserByEmail(parentEmail);
       if (existing) {
@@ -82,7 +123,7 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
     const baseCode = normalizeStudentCode(studentName);
     
     for (let attempt = 0; attempt < 5; attempt++) {
-      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+      const randomSuffix = randomInt(1000, 10_000);
       studentCode = `${baseCode}${randomSuffix}`;
       studentEmail = `${studentCode.toLowerCase()}@zekapark.com`;
       try {
@@ -119,6 +160,7 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
       recoveryEmail: parentEmail,
       consent: {
         actorRole: 'parent',
+        guardianConfirmed: guardianConsent,
         acceptedAt: now,
         kvkkVersion: KVKK_POLICY_VERSION,
         termsVersion: TERMS_POLICY_VERSION,
@@ -144,6 +186,7 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
       parentPhone: normalizedParentPhone || '',
       consent: {
         actorRole: 'parent',
+        guardianConfirmed: guardianConsent,
         acceptedAt: now,
         kvkkVersion: KVKK_POLICY_VERSION,
         termsVersion: TERMS_POLICY_VERSION,
@@ -155,6 +198,13 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
     const batch = adminDb.batch();
     batch.set(adminDb.doc(`users/${createdStudentUser.uid}`), studentProfile);
     batch.set(adminDb.doc(`users/${createdParentUser.uid}`), parentProfile);
+    batch.create(operationRef, {
+      requestFingerprint,
+      parentId: createdParentUser.uid,
+      studentId: createdStudentUser.uid,
+      createdAt: now,
+      expiresAt: now + 30 * 24 * 60 * 60_000,
+    });
     await batch.commit();
 
     return res.status(201).json({

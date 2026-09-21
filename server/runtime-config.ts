@@ -6,6 +6,13 @@ export interface RuntimeConfig {
   allowedOrigins: ReadonlySet<string>;
 }
 
+function requireEmail(env: RuntimeEnvironment, key: string): void {
+  const value = env[key]?.trim();
+  if (!value || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+    throw new Error(`${key} geçerli bir e-posta adresi olmalıdır.`);
+  }
+}
+
 function parseOrigins(raw: string, production: boolean): Set<string> {
   const origins = new Set<string>();
   for (const value of raw.split(',').map((item) => item.trim()).filter(Boolean)) {
@@ -31,15 +38,44 @@ export function loadRuntimeConfig(env: RuntimeEnvironment = process.env): Runtim
   const missing: string[] = [];
 
   if (production) {
-    for (const key of ['FIREBASE_PROJECT_ID', 'FIREBASE_DATABASE_ID', 'APP_BASE_URL', 'CORS_ALLOWED_ORIGINS']) {
+    for (const key of [
+      'FIREBASE_PROJECT_ID',
+      'FIREBASE_DATABASE_ID',
+      'APP_BASE_URL',
+      'CORS_ALLOWED_ORIGINS',
+      'LEGAL_ENTITY_NAME',
+      'LEGAL_ENTITY_ADDRESS',
+      'PRIVACY_CONTACT_EMAIL',
+      'SUPPORT_EMAIL',
+    ]) {
       if (!env[key]?.trim()) missing.push(key);
     }
     if (missing.length) throw new Error(`Üretim yapılandırması eksik: ${missing.join(', ')}`);
     if (env.ENFORCE_APP_CHECK?.trim().toLowerCase() === 'false') {
       throw new Error('Üretimde ENFORCE_APP_CHECK=false kullanılamaz.');
     }
-    if (!env.APP_BASE_URL!.startsWith('https://')) {
-      throw new Error('Üretimde APP_BASE_URL HTTPS olmalıdır.');
+    let appBaseUrl: URL;
+    try {
+      appBaseUrl = new URL(env.APP_BASE_URL!);
+    } catch {
+      throw new Error('APP_BASE_URL geçerli bir adres olmalıdır.');
+    }
+    if (appBaseUrl.protocol !== 'https:' || appBaseUrl.origin !== env.APP_BASE_URL!.replace(/\/$/, '')) {
+      throw new Error('Üretimde APP_BASE_URL yalnızca kesin bir HTTPS origin içermelidir.');
+    }
+    requireEmail(env, 'PRIVACY_CONTACT_EMAIL');
+    requireEmail(env, 'SUPPORT_EMAIL');
+    if (env.PAYMENTS_ENABLED?.trim().toLowerCase() === 'true') {
+      for (const key of ['LEGAL_REGISTRATION_ID', 'PREMIUM_PRICE_DISPLAY', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_PRICE_ID']) {
+        if (!env[key]?.trim()) missing.push(key);
+      }
+      if (missing.length) throw new Error(`Ödeme yapılandırması eksik: ${missing.join(', ')}`);
+      if (env.STRIPE_LIVE_MODE_REQUIRED?.trim().toLowerCase() !== 'true') {
+        throw new Error('Ticari üretimde STRIPE_LIVE_MODE_REQUIRED=true olmalıdır.');
+      }
+      if (!env.STRIPE_SECRET_KEY?.trim().startsWith('sk_live_')) {
+        throw new Error('Ticari üretimde canlı Stripe gizli anahtarı kullanılmalıdır.');
+      }
     }
   }
 

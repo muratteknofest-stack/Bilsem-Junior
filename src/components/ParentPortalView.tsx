@@ -63,6 +63,7 @@ import { reminderService } from '../services/reminder-service';
 import { StudyReminderSettingsModal } from './StudyReminderSettingsModal';
 import { StudentSettingsModal } from './StudentSettingsModal';
 import { NotificationPreferences } from './NotificationPreferences';
+import { BillingCard } from './BillingCard';
 import { useAuth } from '../contexts/AuthContext';
 import { sound } from '../lib/sound';
 import { shareWeeklyReport } from '../services/weekly-report-service';
@@ -1111,12 +1112,14 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.25 }}
+              className="space-y-6"
             >
               <NotificationPreferences 
                 currentStudent={currentStudent} 
                 weeklyData={weeklyData} 
                 accuracy={accuracy} 
               />
+              <BillingCard />
             </motion.div>
           )}
         </AnimatePresence>

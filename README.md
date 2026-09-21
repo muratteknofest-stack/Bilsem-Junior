@@ -15,6 +15,7 @@ içerir.
 - Yayın öncesi soru doğrulama, kalite puanı ve tekrar kontrolü
 - Elo-benzeri beceri tahmini, zorluk seçimi ve aralıklı tekrar
 - Kısıtlı geri bildirimli deneme sınavı akışı
+- Cevap anahtarını göstermeyen, sunucu-otoriteli sınav/pratik puanlama ve XP
 - Öğrenci, veli ve özel claim korumalı yönetici rolleri
 - Sunucu kontrollü aile hesabı oluşturma ve bağlı öğrenci hesabı
 - Gerçek Firestore verisi kullanan yönetim özeti ve öğrenci görünümü
@@ -26,23 +27,26 @@ içerir.
 ```mermaid
 flowchart TD
     UI["React PWA"] --> AUTH["Firebase Auth + App Check"]
-    UI --> FS["Cloud Firestore"]
     UI --> API["Express API"]
+    UI --> FS["Sınırlı profil okuma/tercihler"]
     API --> ADMIN["Firebase Admin SDK"]
-    API --> AI["Yapay zekâ sağlayıcıları"]
     ADMIN --> FS
+    API --> AI["Yapay zekâ sağlayıcıları"]
+    API --> PAY["Stripe"]
 ```
 
-Tarayıcı yalnızca Firestore kurallarının izin verdiği kullanıcı verisine erişir.
-Aile kaydı, yönetim işlemleri, parola sıfırlama ve korumalı yapay zekâ uçları
-Express API üzerinden yürür. Üretimde API, Firebase ID token ve App Check token
-doğrulamasını birlikte uygular.
+Tarayıcı Firestore'da yalnızca yetkili profil okumaları ve sınırlı sunum/çalışma
+tercihlerine erişir. Soru teslimi ve yayınlama, aile kaydı, puanlama, XP/ilerleme,
+gizlilik, faturalandırma, yönetim ve korumalı yapay zekâ işlemleri Express API
+üzerinden yürür. Üretimde API, Firebase ID token ve App Check token doğrulamasını
+birlikte uygular; cevap anahtarı yalnızca sunucuda tutulur.
 
 ## Yerel geliştirme
 
 Gereksinimler:
 
 - Node.js 22+
+- Firestore Emulator için Java 21+
 - E-posta/şifre kimlik doğrulaması ve Cloud Firestore etkin bir Firebase projesi
 - Sunucu özellikleri için Firebase Application Default Credentials
 
@@ -68,8 +72,9 @@ npm audit --omit=dev --audit-level=high
 npm run security:audit
 ```
 
-`npm run check`; TypeScript doğrulaması, birim/regresyon testleri, 26.400
-soruluk jeneratör matrisi ve istemci/sunucu üretim derlemelerini kapsar.
+`npm run check`; TypeScript doğrulaması, birim/regresyon testleri, gerçek
+Firestore Emulator yetki testleri, 26.400 soruluk jeneratör matrisi ve
+istemci/sunucu/retention üretim derlemelerini kapsar.
 
 ## Yetkilendirme modeli
 
@@ -79,8 +84,8 @@ soruluk jeneratör matrisi ve istemci/sunucu üretim derlemelerini kapsar.
   verilmiş Firebase `role=admin` özel claim'ini gerektirir.
 - Sabit e-posta, sabit parola, anonim giriş veya yerel oturum yönetici yetkisi
   vermez.
-- Yayınlanmamış soruları yalnızca yönetici okuyabilir; öğrenciler yalnızca
-  `status == published` sorgusuyla yayınlanmış sorulara erişir.
+- Soru belgelerini yalnızca MFA'lı yönetici okuyabilir; öğrenci soruları cevap,
+  çözüm, seed ve editoryal metadata çıkarılmış biçimde challenge API'den alır.
 - Veli yalnızca kendisine bağlı öğrencinin profilini ve özel ilerleme durumunu
   okuyabilir.
 - Sunucu, ID token'ları iptal kontrolüyle doğrular; üretimde App Check zorunludur.
@@ -94,10 +99,12 @@ Yetki kaldırıldığında yenileme token'larını da iptal edin.
 Önerilen düzen, statik istemciyi Firebase Hosting'de ve API'yi Cloud Run'da aynı
 origin altındaki `/api/**` yeniden yazımıyla sunmaktır.
 
+Üretim dağıtımı elle parçalı komutlarla yapılmaz. Ön koşullar, Secret Manager,
+yönetici olay kapatma, App Check, yedek/restore, Stripe kabulü, dağıtım, smoke ve
+geri alma adımları için [üretim runbook'unu](docs/PRODUCTION_RUNBOOK.md) izleyin.
+
 ```sh
-npm run check
-gcloud run deploy zekapark-api --source . --region europe-west1 --allow-unauthenticated
-firebase deploy --only firestore:rules,hosting
+npm run deploy:production
 ```
 
 Cloud Run servisi ağ düzeyinde erişilebilir olabilir; korumalı uçlar uygulama
@@ -122,6 +129,7 @@ zaman `VITE_` önekiyle tanımlamayın; Secret Manager kullanın.
 ## Güvenlik ve yayın
 
 - Güvenlik bildirimi ve olay adımları: [SECURITY.md](SECURITY.md)
+- Üretim operasyonu ve geri alma: [docs/PRODUCTION_RUNBOOK.md](docs/PRODUCTION_RUNBOOK.md)
 - Ticari hazırlık skoru ve yayın kapıları:
   [docs/COMMERCIAL_READINESS.md](docs/COMMERCIAL_READINESS.md)
 

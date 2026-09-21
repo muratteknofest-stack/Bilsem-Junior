@@ -28,6 +28,7 @@ export interface UserProfile {
   consent?: {
     acceptedAt: number;
     actorRole: 'student' | 'parent';
+    guardianConfirmed?: boolean;
     kvkkVersion: string;
     termsVersion: string;
   };
@@ -36,6 +37,7 @@ export interface UserProfile {
   xp: number;
   streak: number;
   longestStreak?: number;
+  lastPracticeDay?: string;
   lastActiveDate: string;
   todayPracticed?: boolean;
   streakFreezeCount?: number;
@@ -50,6 +52,13 @@ export interface UserProfile {
   soundEnabled: boolean;
   totalQuestionsSolved?: number;
   resolvedMistakesCount?: number;
+  todayMistakesResolved?: number;
+  todayCategoryQuestions?: Partial<Record<CognitiveCategory, number>>;
+  progressWeekId?: string;
+  weeklyCategoryQuestions?: Partial<Record<CognitiveCategory, number>>;
+  hardCorrectCount?: number;
+  completedExamCount?: number;
+  perfectSessionCount?: number;
   featuredBadgeIds?: string[];
   reminderConfig?: StudyReminderConfig;
 }
@@ -484,6 +493,25 @@ export interface BaseQuestion {
   };
 }
 
+/** Question payload safe to expose before an answer is submitted. */
+export type PublicQuestion = Pick<
+  BaseQuestion,
+  | 'id'
+  | 'version'
+  | 'type'
+  | 'category'
+  | 'difficulty'
+  | 'ageGroup'
+  | 'prompt'
+  | 'secondaryPrompt'
+  | 'options'
+  | 'estimatedSeconds'
+  | 'skills'
+  | 'visualConfig'
+  | 'targetGrade'
+  | 'targetGrades'
+>;
+
 export interface PracticeSessionState {
   sessionId: string;
   category: CognitiveCategory | 'mixed';
@@ -503,7 +531,8 @@ export interface PracticeSessionState {
 export interface MistakeItem {
   id: string;
   questionId: string;
-  questionSeed: number;
+  /** @deprecated Legacy local-only records may contain a seed. New server records never expose it. */
+  questionSeed?: number;
   questionType: QuestionType;
   difficulty: DifficultyLevel;
   category: CognitiveCategory;
@@ -512,6 +541,7 @@ export interface MistakeItem {
   reviewed: boolean;
   resolved: boolean;
   resolvedAt?: string;
+  /** @deprecated Migrated into the server-only mistake question vault. */
   cachedQuestion?: BaseQuestion;
 }
 

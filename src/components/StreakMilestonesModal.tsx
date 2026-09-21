@@ -17,6 +17,7 @@ import {
   Gift,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { claimProgressReward } from '../services/progress-api-service';
 
 interface StreakMilestonesModalProps {
   isOpen: boolean;
@@ -37,22 +38,22 @@ export const StreakMilestonesModal: React.FC<StreakMilestonesModalProps> = ({
 
   const streak = user.streak || 0;
   const longestStreak = user.longestStreak || Math.max(streak, 7);
-  const claimedDays = user.claimedStreakDays || [3];
+  const claimedDays = user.claimedStreakDays || [];
   const streakFreezeCount = user.streakFreezeCount ?? 0;
 
-  const handleClaim = (milestone: StreakMilestone) => {
-    sound.playLevelUp();
+  const handleClaim = async (milestone: StreakMilestone) => {
     try {
+      const result = await claimProgressReward('streak', String(milestone.day));
+      dataService.setCurrentUser(result.profile);
+      onUserUpdate(result.profile);
+      sound.playLevelUp();
       confetti({
         particleCount: 90,
         spread: 70,
         origin: { y: 0.5 },
       });
-    } catch {}
-
-    const result = dataService.claimStreakReward(milestone.day);
-    if (result.success) {
-      onUserUpdate(result.user);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Ödül doğrulanamadı.');
     }
   };
 

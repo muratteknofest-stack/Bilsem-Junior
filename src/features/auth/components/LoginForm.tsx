@@ -7,6 +7,9 @@ import {
   setPersistence,
   signInWithEmailAndPassword,
   signOut,
+  getMultiFactorResolver,
+  TotpMultiFactorGenerator,
+  type MultiFactorResolver,
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { sound } from '../../../lib/sound';
@@ -40,6 +43,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,10 +77,33 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
       
       let credential;
-      try {
-        credential = await signInWithEmailAndPassword(auth, loginEmail, password);
-      } catch (signInError: any) {
-        throw signInError;
+      if (mfaResolver) {
+        const code = mfaCode.replace(/\s/g, '');
+        if (!/^\d{6}$/.test(code)) throw new Error('MFA_CODE_INVALID');
+        const hint = mfaResolver.hints.find(
+          (item) => item.factorId === TotpMultiFactorGenerator.FACTOR_ID,
+        );
+        if (!hint) throw new Error('MFA_FACTOR_UNSUPPORTED');
+        credential = await mfaResolver.resolveSignIn(
+          TotpMultiFactorGenerator.assertionForSignIn(hint.uid, code),
+        );
+        setMfaResolver(null);
+        setMfaCode('');
+      } else {
+        try {
+          credential = await signInWithEmailAndPassword(auth, loginEmail, password);
+        } catch (signInError: any) {
+          if (signInError?.code === 'auth/multi-factor-auth-required') {
+            const resolver = getMultiFactorResolver(auth, signInError);
+            if (!resolver.hints.some((item) => item.factorId === TotpMultiFactorGenerator.FACTOR_ID)) {
+              throw new Error('MFA_FACTOR_UNSUPPORTED');
+            }
+            setMfaResolver(resolver);
+            setErrorMessage('Authenticator uygulamanızdaki 6 haneli kodu girin.');
+            return;
+          }
+          throw signInError;
+        }
       }
 
       const requiresVerification = !isManagedStudentEmail(credential.user.email);
@@ -143,6 +171,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
          errMsg = 'Seçtiğiniz rol bu hesapla eşleşmiyor.';
       } else if (error.message === 'ADMIN_CLAIM_REQUIRED') {
          errMsg = 'Bu hesap için yönetici yetkisi doğrulanamadı.';
+      } else if (error.message === 'MFA_CODE_INVALID' || error.code === 'auth/invalid-verification-code') {
+         errMsg = 'Doğrulama kodu geçersiz veya süresi dolmuş.';
+      } else if (error.message === 'MFA_FACTOR_UNSUPPORTED') {
+         errMsg = 'Bu hesapta desteklenmeyen bir ikinci doğrulama yöntemi kayıtlı.';
       } else if (error.message === 'EMAIL_NOT_VERIFIED_SENT') {
          errMsg = 'E-posta adresiniz henüz doğrulanmadı. Yeni doğrulama bağlantısı gönderildi.';
       } else if (error.message === 'EMAIL_NOT_VERIFIED_UNSENT') {
@@ -287,7 +319,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                   ? 'Örn: DENIZ2026 veya deniz@zekapark.com'
                   : selectedRole === 'parent'
                   ? 'Örn: zeynep@zekapark.com'
-                  : 'Örn: zeka.kupu.test@gmail.com'
+                  : 'Örn: yonetici@kurumunuz.com'
               }
               className={`w-full pl-9.5 pr-4 py-2.5 rounded-xl border text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 transition-all ${
                 fieldErrors.identifier
@@ -303,6 +335,31 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             </p>
           )}
         </div>
+
+        {mfaResolver && (
+          <div>
+            <label htmlFor="login-mfa-code" className="block text-xs font-bold text-slate-700 mb-1.5">
+              Authenticator doğrulama kodu
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <Lock className="w-4 h-4" />
+              </div>
+              <input
+                id="login-mfa-code"
+                type="text"
+                value={mfaCode}
+                onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                placeholder="000000"
+                autoFocus
+                className="w-full pl-9.5 pr-4 py-2.5 rounded-xl border border-slate-300 text-sm font-medium tracking-[0.3em] text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+        )}
 
         <div>
           <div className="flex items-center justify-between mb-1.5">

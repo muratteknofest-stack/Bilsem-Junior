@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'motion/react';
+import { claimProgressReward } from '../services/progress-api-service';
 
 interface AchievementsViewProps {
   user?: UserProfile | null;
@@ -70,6 +71,20 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
   // Keep achievements updated if user changes
   useEffect(() => {
     setAchievements(dataService.syncBadgesWithProgress());
+    const currentDay = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Istanbul', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date());
+    const isToday = activeUser?.lastPracticeDay === currentDay;
+    const progress = {
+      m1: isToday ? Number(activeUser?.todayQuestionsSolved || 0) : 0,
+      m2: isToday ? Number(activeUser?.todayCategoryQuestions?.matrix || 0) : 0,
+      m3: isToday ? Number(activeUser?.todayMistakesResolved || 0) : 0,
+    };
+    setMissions((items) => items.map((item) => ({
+      ...item,
+      current: Math.min(item.target, progress[item.id as keyof typeof progress] || 0),
+      completed: (progress[item.id as keyof typeof progress] || 0) >= item.target,
+    })));
   }, [activeUser?.streak, activeUser?.totalQuestionsSolved, activeUser?.resolvedMistakesCount, activeUser?.xp]);
 
   const showCelebrationToast = (msg: string) => {
@@ -86,26 +101,33 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const handleClaimMissionReward = (mission: DailyMission) => {
+  const handleClaimMissionReward = async (mission: DailyMission) => {
     if (claimedMissions[mission.id] || !mission.completed) return;
-    sound.playLevelUp();
     try {
+      const result = await claimProgressReward('daily_mission', mission.id);
+      dataService.setCurrentUser(result.profile);
+      if (onUserUpdate) onUserUpdate(result.profile);
+      sound.playLevelUp();
       confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
-    } catch {}
-    const res = dataService.addXP(mission.rewardXP);
-    setClaimedMissions((prev) => ({ ...prev, [mission.id]: true }));
-    if (onUserUpdate) {
-      onUserUpdate(dataService.getCurrentUser());
+      setClaimedMissions((prev) => ({ ...prev, [mission.id]: true }));
+      showCelebrationToast(`${result.title}: +${result.xpAwarded} XP hesabına eklendi.`);
+    } catch (error) {
+      setToastMessage(error instanceof Error ? error.message : 'Görev ödülü doğrulanamadı.');
+      setTimeout(() => setToastMessage(null), 3500);
     }
   };
 
-  const handleClaimBadgeReward = (badge: Achievement) => {
+  const handleClaimBadgeReward = async (badge: Achievement) => {
     if (!badge.unlocked || badge.rewardClaimed) return;
-    const result = dataService.claimBadgeReward(badge.id);
-    if (result.success) {
-      setAchievements(dataService.getAchievements());
+    try {
+      const result = await claimProgressReward('achievement', badge.id);
+      const nextAchievements = achievements.map((item) => (
+        item.id === badge.id ? { ...item, rewardClaimed: true } : item
+      ));
+      setAchievements(nextAchievements);
+      dataService.setCurrentUser(result.profile);
       if (onUserUpdate) {
-        onUserUpdate(result.user);
+        onUserUpdate(result.profile);
       }
       
       sound.playSuccess();
@@ -121,6 +143,9 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
       } catch {}
       
       showCelebrationToast(`Tebrikler! "${badge.title}" rozet ödülü +${result.xpAwarded} XP hesabına eklendi! 🎉`);
+    } catch (error) {
+      setToastMessage(error instanceof Error ? error.message : 'Rozet ödülü doğrulanamadı.');
+      setTimeout(() => setToastMessage(null), 3500);
     }
   };
 
