@@ -114,7 +114,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
             }`}
           >
             <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
-            <span>Günün En İyileri</span>
+            <span>Bugünkü Özet</span>
           </button>
 
           <button
@@ -126,7 +126,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
             }`}
           >
             <Trophy className="w-4 h-4 text-amber-500" />
-            <span>Haftanın Çalışkanları</span>
+            <span>Toplam İlerleme</span>
           </button>
         </div>
 
@@ -190,7 +190,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               }}
               className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs   active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Sıranı Yükselt</span>
+              <span>Pratiğe Devam Et</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

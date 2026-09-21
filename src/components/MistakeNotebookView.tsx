@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { MistakeItem, BaseQuestion, CognitiveCategory } from '../types';
 import { dataService } from '../services/data-service';
-import { generateQuestionByType } from '../features/questions/generators';
+import { answerPractice, startMistakeRetry, type IssuedPracticeQuestion } from '../services/practice-api-service';
+import { weeklyChallengesService } from '../services/weekly-challenges-service';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
 import { OptionRenderer } from '../features/questions/renderers/OptionRenderer';
 import { VisualExplanationOverlay } from '../features/questions/renderers/VisualExplanationOverlay';
@@ -36,7 +37,10 @@ interface MistakeNotebookViewProps {
 export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavigateHome }) => {
   const [mistakes, setMistakes] = useState<MistakeItem[]>(() => dataService.getMistakes());
   const [activeRetryMistake, setActiveRetryMistake] = useState<MistakeItem | null>(null);
-  const [retryQuestion, setRetryQuestion] = useState<BaseQuestion | null>(null);
+  const [retryQuestion, setRetryQuestion] = useState<(IssuedPracticeQuestion & Partial<Pick<BaseQuestion, 'correctOptionId' | 'explanation'>>) | null>(null);
+  const [retrySessionId, setRetrySessionId] = useState<string | null>(null);
+  const [retryBusy, setRetryBusy] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
@@ -64,54 +68,61 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
     return true;
   });
 
-  const handleClearAllMistakes = () => {
-    sound.playLevelUp();
-    try {
-      confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
-    } catch {}
-    dataService.clearAllMistakes();
-    setMistakes(dataService.getMistakes());
-    setUnlockedNotice('Tebrikler! Hata defterindeki tüm sorular çözüldü ve "Tertemiz Defter" rozeti kazanıldı! ✨ (+150 XP)');
-  };
-
-  const startRetry = (item: MistakeItem) => {
+  const startRetry = async (item: MistakeItem) => {
     sound.playClick();
-    // Recreate the EXACT same question using its seed & difficulty!
-    const q = generateQuestionByType(item.questionType, item.questionSeed, item.difficulty);
-    setActiveRetryMistake(item);
-    setRetryQuestion(q);
-    setSelectedOptionId(null);
-    setIsSubmitted(false);
-    setIsCorrect(false);
-    setShowAiHint(false);
-    setShowAiMistakeModal(false);
+    setRetryBusy(true);
+    setRetryError(null);
+    try {
+      const started = await startMistakeRetry(item.id);
+      setActiveRetryMistake(item);
+      setRetrySessionId(started.sessionId);
+      setRetryQuestion(started.questions[0]);
+      setSelectedOptionId(null);
+      setIsSubmitted(false);
+      setIsCorrect(false);
+      setShowAiHint(false);
+      setShowAiMistakeModal(false);
+    } catch (error) {
+      setRetryError(error instanceof Error ? error.message : 'Tekrar oturumu başlatılamadı.');
+    } finally {
+      setRetryBusy(false);
+    }
   };
 
-  const handleSubmitRetry = () => {
-    if (!selectedOptionId || !retryQuestion || !activeRetryMistake || isSubmitted) return;
-
-    const correct = selectedOptionId === retryQuestion.correctOptionId;
-    setIsSubmitted(true);
-    setIsCorrect(correct);
-
-    if (correct) {
-      sound.playSuccess();
-      try {
-        confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
-      } catch {}
-      // Mark as learned in DataService!
-      dataService.resolveMistake(activeRetryMistake.id);
-      dataService.addXP(25); // Bonus XP for learning from a mistake
-      dataService.recordQuestionSolved(true);
-      setMistakes(dataService.getMistakes());
-    } else {
-      sound.playError();
+  const handleSubmitRetry = async () => {
+    if (!selectedOptionId || !retryQuestion || !retrySessionId || !activeRetryMistake || isSubmitted || retryBusy) return;
+    setRetryBusy(true);
+    setRetryError(null);
+    try {
+      const outcome = await answerPractice(retrySessionId, retryQuestion.challengeId, selectedOptionId);
+      setRetryQuestion((current) => current ? {
+        ...current,
+        correctOptionId: outcome.correctOptionId,
+        explanation: outcome.explanation,
+      } : current);
+      setIsSubmitted(true);
+      setIsCorrect(outcome.correct);
+      setMistakes(outcome.mistakes);
+      dataService.cacheAuthoritativeProgress({ masteries: outcome.masteries, mistakes: outcome.mistakes });
+      weeklyChallengesService.recordCategoryQuestionSolved(retryQuestion.category);
+      dataService.setCurrentUser(outcome.profile);
+      if (outcome.correct) {
+        sound.playSuccess();
+        try { confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } }); } catch {}
+      } else {
+        sound.playError();
+      }
+    } catch (error) {
+      setRetryError(error instanceof Error ? error.message : 'Cevap doğrulanamadı.');
+    } finally {
+      setRetryBusy(false);
     }
   };
 
   const closeRetry = () => {
     setActiveRetryMistake(null);
     setRetryQuestion(null);
+    setRetrySessionId(null);
     setShowAiHint(false);
     setShowAiMistakeModal(false);
   };
@@ -148,21 +159,18 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
 
             {!isSubmitted && (
               <button
-                onClick={() => {
-                  sound.playClick();
-                  setShowAiHint(true);
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-xs  transition-all cursor-pointer active:scale-95 shrink-0"
-                title="Takıldığında yapay zeka destekli adım adım ipucu al"
+                disabled
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-900 border border-amber-300 font-extrabold text-xs cursor-not-allowed opacity-70 shrink-0"
+                title="Cevap anahtarı teslimden önce istemciye gönderilmez"
               >
                 <Lightbulb className="w-4 h-4 text-amber-500 fill-amber-400" />
-                <span>💡 İpucu Al (AI)</span>
+                <span>💡 Teslimden sonra</span>
               </button>
             )}
           </div>
 
           <div className="py-2">
-            <QuestionRenderer question={retryQuestion} />
+            <QuestionRenderer question={retryQuestion as unknown as BaseQuestion} />
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -188,26 +196,23 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
             <div className="pt-2 flex flex-col sm:flex-row items-center gap-2.5">
               <button
                 type="button"
-                onClick={() => {
-                  sound.playClick();
-                  setShowAiHint(true);
-                }}
-                className="w-full sm:w-auto px-4 py-3.5 rounded-xl bg-amber-50 hover:bg-amber-100 border-2 border-amber-300/80 text-amber-950 font-extrabold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98  shrink-0"
+                disabled
+                className="w-full sm:w-auto px-4 py-3.5 rounded-xl bg-amber-50 border-2 border-amber-300/80 text-amber-950 font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-not-allowed opacity-70 shrink-0"
               >
                 <Lightbulb className="w-4 h-4 text-amber-500 fill-amber-400" />
-                <span>Takıldım, İpucu Ver!</span>
+                <span>İpucu teslimden sonra açılır</span>
               </button>
 
               <button
                 onClick={handleSubmitRetry}
-                disabled={!selectedOptionId}
+                disabled={!selectedOptionId || retryBusy}
                 className={`flex-1 w-full py-3.5 rounded-xl font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2 cursor-pointer ${
                   selectedOptionId
                     ? 'bg-amber-600 hover:bg-amber-700 text-white  active:scale-98'
                     : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                 }`}
               >
-                <span>{selectedOptionId ? 'Cevabı Doğrula' : 'Bir Seçenek İşaretle'}</span>
+                <span>{retryBusy ? 'Sunucuda kontrol ediliyor…' : selectedOptionId ? 'Cevabı Doğrula' : 'Bir Seçenek İşaretle'}</span>
               </button>
             </div>
           ) : (
@@ -257,8 +262,8 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
               </div>
 
               <VisualExplanationOverlay
-                explanation={retryQuestion.explanation}
-                correctOptionId={retryQuestion.correctOptionId}
+                explanation={retryQuestion.explanation!}
+                correctOptionId={retryQuestion.correctOptionId!}
               />
 
               <button
@@ -272,18 +277,18 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
         </div>
 
         {/* AI Step-by-Step Hint Modal for Retry Question */}
-        {retryQuestion && (
+        {retryQuestion && isSubmitted && retryQuestion.correctOptionId && (
           <AiHintModal
-            question={retryQuestion}
+            question={retryQuestion as unknown as BaseQuestion}
             isOpen={showAiHint}
             onClose={() => setShowAiHint(false)}
           />
         )}
 
         {/* AI Mistake Modal for Retry Question */}
-        {retryQuestion && selectedOptionId && (
+        {retryQuestion && selectedOptionId && isSubmitted && retryQuestion.correctOptionId && (
           <AiMistakeModal
-            question={retryQuestion}
+            question={retryQuestion as unknown as BaseQuestion}
             selectedOptionId={selectedOptionId}
             isOpen={showAiMistakeModal}
             onClose={() => setShowAiMistakeModal(false)}
@@ -316,18 +321,9 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
           </div>
         </div>
 
-        {/* Counters and Clear Action */}
+        {/* Server-authoritative counters */}
         <div className="flex flex-wrap items-center gap-2">
-          {unresolvedCount > 0 && (
-            <button
-              onClick={handleClearAllMistakes}
-              className="text-xs font-extrabold px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white  transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
-              title="Tüm hataları temizle ve Tertemiz Defter rozetini anında kazan"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Defteri Boşalt & Rozet Aç</span>
-            </button>
-          )}
+          {retryBusy && <span className="text-xs font-bold text-indigo-700">Güvenli tekrar hazırlanıyor…</span>}
           <span className="text-xs font-bold px-3 py-1 rounded-xl bg-amber-50 text-amber-800 border border-amber-200">
             {unresolvedCount} Bekleyen
           </span>
@@ -336,6 +332,12 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
           </span>
         </div>
       </div>
+
+      {retryError && (
+        <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm font-semibold">
+          {retryError}
+        </div>
+      )}
 
       {/* Unlocked Toast/Notice Banner */}
       {unlockedNotice && (
@@ -525,15 +527,16 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
                 </div>
 
                 <button
-                  onClick={() => startRetry(item)}
-                  className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-1.5 cursor-pointer shrink-0 transition-all ${
+                  onClick={() => { if (!item.resolved) void startRetry(item); }}
+                  disabled={item.resolved || retryBusy}
+                  className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-1.5 shrink-0 transition-all ${
                     item.resolved
-                      ? 'bg-white text-slate-700 hover:bg-slate-50'
-                      : 'bg-amber-500 hover:bg-amber-600 text-white  active:scale-98'
+                      ? 'bg-white text-emerald-700 cursor-default'
+                      : 'bg-amber-500 hover:bg-amber-600 text-white active:scale-98 cursor-pointer disabled:opacity-60'
                   }`}
                 >
                   <RotateCcw className="w-4 h-4" />
-                  <span>{item.resolved ? 'Tekrar Göz At' : 'Tekrar Dene'}</span>
+                  <span>{item.resolved ? 'Öğrenildi' : 'Tekrar Dene'}</span>
                 </button>
               </div>
             );

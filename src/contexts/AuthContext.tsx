@@ -11,6 +11,7 @@ import { auth, db } from '../lib/firebase';
 import { UserProfile, UserRole } from '../types';
 import { dataService } from '../services/data-service';
 import { userProfileUpdateSchema, formatZodError } from '../lib/validations';
+import { safeStorage } from '../lib/storage';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -18,7 +19,7 @@ interface AuthContextType {
   loading: boolean;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
-  loginLocally: (profile: UserProfile) => void;
+  loginLocally: (profile: UserProfile) => Promise<void>;
   sendEmailVerification: (user: User) => Promise<void>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
 }
@@ -29,12 +30,27 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   logout: async () => {},
   updateProfile: async () => {},
-  loginLocally: () => {},
+  loginLocally: async () => {},
   sendEmailVerification: async () => {},
   sendPasswordResetEmail: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
+
+const SUPPORTED_ROLES: UserRole[] = ['student', 'parent', 'admin'];
+
+async function assertAuthorizedProfile(user: User, profile: UserProfile): Promise<void> {
+  if (profile.id !== user.uid || !SUPPORTED_ROLES.includes(profile.role)) {
+    throw new Error('INVALID_PROFILE');
+  }
+
+  if (profile.role === 'admin') {
+    const token = await user.getIdTokenResult();
+    if (token.claims.role !== 'admin') {
+      throw new Error('ADMIN_CLAIM_REQUIRED');
+    }
+  }
+}
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -46,9 +62,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [loading, setLoading] = useState(true);
 
-  const loginLocally = (profile: UserProfile) => {
+  const loginLocally = async (profile: UserProfile) => {
+    const user = auth.currentUser;
+    if (!user) throw new Error('AUTH_REQUIRED');
+    await assertAuthorizedProfile(user, profile);
+    dataService.loginAs(profile.role, profile);
     setUserProfile(profile);
-    dataService.setCurrentUser(profile);
   };
 
   useEffect(() => {
@@ -70,69 +89,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const userDocRef = doc(db, 'users', user.uid);
           
           try {
-            // Accounts without an application profile are not silently provisioned.
+            // Accounts without an application profile are never provisioned by
+            // the browser. Administrative authority must also be present in the
+            // signed Firebase token, never inferred from an email or profile field.
             const docSnap = await getDoc(userDocRef);
-            const isOwnerAdmin = user.email?.toLowerCase() === 'muratteknofest@gmail.com';
             if (!docSnap.exists()) {
-              if (isOwnerAdmin) {
-                const ownerProfile: UserProfile = {
-                  id: user.uid,
-                  email: user.email || 'muratteknofest@gmail.com',
-                  name: 'ZekaPark Yönetici',
-                  role: 'admin',
-                  avatar: '👨‍💻',
-                  level: 1,
-                  xp: 0,
-                  streak: 0,
-                  lastActiveDate: new Date().toISOString(),
-                  dailyGoalMinutes: 20,
-                  todayMinutesSpent: 0,
-                  soundEnabled: true,
-                  createdAt: Date.now(),
-                  updatedAt: Date.now(),
-                  totalPoints: 0,
-                  claimedStreakDays: [],
-                  totalQuestionsSolved: 0,
-                  resolvedMistakesCount: 0,
-                };
-                dataService.loginAs('admin', ownerProfile);
-                if (isMounted) setUserProfile(ownerProfile);
-                if (isMounted) setLoading(false);
-                return;
-              }
-              await firebaseSignOut(auth).catch(() => undefined);
-              dataService.logout();
-              if (isMounted) setUserProfile(null);
-              if (isMounted) setLoading(false);
-              return;
-            } else {
-              const profile = docSnap.data() as UserProfile;
-              if (isOwnerAdmin) profile.role = 'admin';
-              if (profile.id !== user.uid || !['student', 'parent', 'admin'].includes(profile.role)) {
-                await firebaseSignOut(auth).catch(() => undefined);
-                dataService.logout();
-                if (isMounted) setUserProfile(null);
-                if (isMounted) setLoading(false);
-                return;
-              }
-              dataService.loginAs(profile.role, profile);
-              await dataService.hydrateUserStateFromFirebase();
-              if (isMounted) setUserProfile(profile);
+              throw new Error('PROFILE_NOT_FOUND');
             }
+
+            const profile = docSnap.data() as UserProfile;
+            await assertAuthorizedProfile(user, profile);
+            if (profile.role !== 'admin') {
+              // Remove answer-bearing question-bank caches created by legacy
+              // releases before student delivery moved to the challenge API.
+              safeStorage.removeItem('bilsem_admin_managed_questions_v2');
+            }
+            dataService.loginAs(profile.role, profile);
+            await dataService.hydrateUserStateFromFirebase();
+            if (isMounted) setUserProfile(profile);
           } catch (err) {
-            console.warn('Notice: Firestore user document fetch skipped:', err);
+            console.warn('Authenticated profile could not be authorized:', err);
+            await firebaseSignOut(auth).catch(() => undefined);
+            dataService.logout();
+            if (isMounted) setUserProfile(null);
+            if (isMounted) setLoading(false);
+            return;
           }
 
           try {
             unsubSnap = onSnapshot(
               userDocRef,
-              (snap) => {
+              async (snap) => {
                 if (snap.exists() && isMounted) {
                   const profile = snap.data() as UserProfile;
-                  if (profile.id === user.uid && ['student', 'parent', 'admin'].includes(profile.role)) {
+                  try {
+                    await assertAuthorizedProfile(user, profile);
                     setUserProfile(profile);
                     dataService.syncUserFromFirebase(profile);
-                  } else {
+                  } catch (profileError) {
+                    console.warn('Profile authorization changed; ending session:', profileError);
+                    await firebaseSignOut(auth).catch(() => undefined);
                     dataService.logout();
                     setUserProfile(null);
                   }
@@ -151,23 +147,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           updateDoc(userDocRef, { lastLoginAt: Date.now() }).catch(() => {});
           if (isMounted) setLoading(false);
         } else {
-          const currentLocalUser = dataService.getCurrentUser();
-          if (currentLocalUser?.email === 'muratteknofest@gmail.com' && currentLocalUser.role === 'admin' && dataService.isAuthenticated()) {
-            if (isMounted) setUserProfile(currentLocalUser);
-            if (isMounted) setLoading(false);
-            return;
-          }
           dataService.logout();
           if (isMounted) setUserProfile(null);
           if (isMounted) setLoading(false);
         }
       },
       (authError) => {
-        // Handle auth/network-request-failed or offline without crashing or throwing
+        // Authentication uncertainty fails closed. Firebase normally restores a
+        // cached signed-in user through the success callback when offline.
         console.warn('Firebase Auth network state notice (handled):', authError.message || authError);
-        if (dataService.isAuthenticated() && isMounted) {
-          setUserProfile(dataService.getCurrentUser());
-        }
+        dataService.logout();
+        if (isMounted) setCurrentUser(null);
+        if (isMounted) setUserProfile(null);
         if (isMounted) setLoading(false);
       }
     );

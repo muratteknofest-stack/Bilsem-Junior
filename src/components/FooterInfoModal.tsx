@@ -20,6 +20,8 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { sound } from '../lib/sound';
+import { legalConfig, mailto } from '../lib/legal-config';
+import { downloadPrivacyExport, requestPrivacyDeletion } from '../services/privacy-api-service';
 
 export type FooterModalTopic =
   | 'bilsem_guide'
@@ -42,6 +44,36 @@ export const FooterInfoModal: React.FC<FooterInfoModalProps> = ({
   onSelectTopic,
 }) => {
   const [activeTab, setActiveTab] = useState<FooterModalTopic>(topic);
+  const [privacyBusy, setPrivacyBusy] = useState<'export' | 'delete' | null>(null);
+  const [privacyMessage, setPrivacyMessage] = useState<string | null>(null);
+
+  const handlePrivacyExport = async () => {
+    setPrivacyBusy('export');
+    setPrivacyMessage(null);
+    try {
+      await downloadPrivacyExport();
+      setPrivacyMessage('Veri aktarımınız indirildi.');
+    } catch (error) {
+      setPrivacyMessage(error instanceof Error ? error.message : 'Veri aktarımı hazırlanamadı.');
+    } finally {
+      setPrivacyBusy(null);
+    }
+  };
+
+  const handlePrivacyDeletion = async () => {
+    const confirmation = window.prompt('Devam etmek için tam olarak “HESABIMI VE BAĞLI ÇOCUK VERİLERİNİ SİL” yazın.');
+    if (confirmation !== 'HESABIMI VE BAĞLI ÇOCUK VERİLERİNİ SİL') return;
+    setPrivacyBusy('delete');
+    setPrivacyMessage(null);
+    try {
+      const result = await requestPrivacyDeletion();
+      setPrivacyMessage(`Silme talebiniz alındı. Hedef tarih: ${new Date(result.dueAt).toLocaleDateString('tr-TR')}.`);
+    } catch (error) {
+      setPrivacyMessage(error instanceof Error ? error.message : 'Silme talebi oluşturulamadı.');
+    } finally {
+      setPrivacyBusy(null);
+    }
+  };
 
   const handleTabChange = (t: FooterModalTopic) => {
     sound.playClick();
@@ -254,29 +286,43 @@ export const FooterInfoModal: React.FC<FooterInfoModalProps> = ({
                 <div>
                   <h4 className="font-bold text-slate-900 mb-1">1. Veri Sorumlusu</h4>
                   <p>
-                    6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca, ZekaPark Eğitim Teknolojileri Ar-Ge Ekibi ("ZekaPark") veri sorumlusudur.
+                    6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca veri sorumlusu <strong>{legalConfig.entityName}</strong>’dır. Tebligat adresi: {legalConfig.address}. Sicil/MERSİS: {legalConfig.registrationId}.
                   </p>
                 </div>
 
                 <div>
                   <h4 className="font-bold text-slate-900 mb-1">2. Toplanan Verilerin Kapsamı</h4>
                   <p>
-                    Platformumuz yalnızca eğitsel performans ölçümü için zorunlu olan asgari verileri işler: Öğrenci rumuzu/takma adı, sınıf seviyesi (1-4), soru çözme süresi, kategori bazlı başarı yüzdeleri ve veli iletişim e-posta adresi. TC kimlik numarası, okul adı, ev adresi veya biyometrik veri kesinlikle talep edilmez ve toplanmaz.
+                    Aile hesabı kimlikleri, veli iletişim bilgileri, öğrenci adı/rumuzu ve sınıfı, veli onay kaydı, soru yanıtları, süre, XP/ustalık/ilerleme olayları, güvenlik günlükleri ve ödeme sağlayıcısındaki müşteri/abonelik referansları işlenir. TC kimlik numarası, okul adı ve biyometrik veri istenmez.
                   </p>
                 </div>
 
                 <div>
-                  <h4 className="font-bold text-slate-900 mb-1">3. Verilerin İşlenme Amacı ve Aktarım Yasağı</h4>
+                  <h4 className="font-bold text-slate-900 mb-1">3. Amaç, Hukuki Sebep ve Hizmet Sağlayıcılar</h4>
                   <p>
-                    Toplanan öğrenme verileri yalnızca öğrencinin zayıf kaldığı bilişsel kategorileri belirlemek, adaptif soru zorluğunu ayarlamak ve veliye ilerleme raporu sunmak amacıyla kullanılır. Kullanıcı verileri hiçbir şart altında üçüncü şahıslara, reklam ajanslarına veya veri simsarlarına satılamaz, devredilemez.
+                    Veriler; sözleşmenin kurulması/ifası, veli onayı, hukuki yükümlülükler ve güvenli hizmet sunma amaçlarıyla işlenir. Firebase/Google Cloud, e-posta ve etkinleştirildiğinde ödeme sağlayıcısı gibi veri işleyenlere yalnızca hizmet için gerekli kapsamda aktarım yapılabilir. Çocuk verileri reklam profilleme veya veri satışı için kullanılmaz.
                   </p>
                 </div>
 
                 <div>
                   <h4 className="font-bold text-slate-900 mb-1">4. Veri Saklama ve Silme Hakkı</h4>
                   <p>
-                    Veliler diledikleri zaman <code className="bg-slate-100 text-indigo-700 px-1.5 py-0.5 rounded font-mono font-bold">zeka.kupu.test@gmail.com</code> adresine e-posta göndererek kayıtlı öğrenci profilinin ve tüm performans geçmişinin kalıcı olarak silinmesini talep edebilirler.
+                    Etkinlik verileri varsayılan olarak 180 gün, güvenlik/denetim kayıtları 365 gün saklanır; yasal zorunluluk veya uyuşmazlık hâli ayrıca değerlendirilebilir. Veli, aşağıdaki araçlarla aile verisini dışa aktarabilir veya silme talebi oluşturabilir; ayrıca <code className="bg-slate-100 text-indigo-700 px-1.5 py-0.5 rounded font-mono font-bold">{legalConfig.privacyEmail}</code> adresine başvurabilir.
                   </p>
+                </div>
+
+                <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 space-y-3">
+                  <h4 className="font-bold text-indigo-950">Veri sahibi araçları</h4>
+                  <p className="text-xs text-indigo-800">Bu işlemler giriş ve App Check doğrulaması gerektirir. Bağlı çocuk hesabı için silme talebini veli oluşturur; silme talebinde son 10 dakika içinde yeniden giriş gerekir.</p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <button type="button" disabled={privacyBusy !== null} onClick={() => void handlePrivacyExport()} className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs disabled:opacity-60">
+                      {privacyBusy === 'export' ? 'Hazırlanıyor…' : 'Verilerimi indir'}
+                    </button>
+                    <button type="button" disabled={privacyBusy !== null} onClick={() => void handlePrivacyDeletion()} className="px-4 py-2 rounded-xl bg-rose-600 text-white font-bold text-xs disabled:opacity-60">
+                      {privacyBusy === 'delete' ? 'Talep oluşturuluyor…' : 'Hesap silme talebi'}
+                    </button>
+                  </div>
+                  {privacyMessage && <p className="text-xs font-semibold text-slate-800">{privacyMessage}</p>}
                 </div>
               </div>
             </div>
@@ -462,10 +508,10 @@ export const FooterInfoModal: React.FC<FooterInfoModalProps> = ({
                   <div>
                     <span className="text-xs text-slate-500 font-medium block">Resmi Destek E-Postası</span>
                     <a
-                      href="mailto:zeka.kupu.test@gmail.com"
+                      href={mailto(legalConfig.supportEmail)}
                       className="font-bold text-indigo-700 hover:text-indigo-900 text-sm break-all"
                     >
-                      zeka.kupu.test@gmail.com
+                      {legalConfig.supportEmail}
                     </a>
                     <span className="text-[11px] text-slate-500 block mt-0.5">
                       Ortalama yanıt süresi: &lt; 4 saat
@@ -495,10 +541,10 @@ export const FooterInfoModal: React.FC<FooterInfoModalProps> = ({
                   <div>
                     <span className="text-xs text-slate-500 font-medium block">Ar-Ge & Pedagoji Ofisi</span>
                     <span className="font-bold text-slate-900 text-sm block">
-                      ZekaPark Eğitim Teknolojileri
+                      {legalConfig.entityName}
                     </span>
                     <span className="text-[11px] text-slate-500 block mt-0.5">
-                      İTÜ Ayazağa Yerleşkesi, Teknokent ARI-3 Maslak / İstanbul
+                      {legalConfig.address}
                     </span>
                   </div>
                 </div>
@@ -510,7 +556,7 @@ export const FooterInfoModal: React.FC<FooterInfoModalProps> = ({
                   <div>
                     <span className="text-xs text-slate-500 font-medium block">Veli & Okul Danışma</span>
                     <span className="font-bold text-slate-900 text-sm block">
-                      0850 308 24 10 (Santral)
+                      {legalConfig.phone}
                     </span>
                     <span className="text-[11px] text-slate-500 block mt-0.5">
                       Tüm Türkiye'den ücretsiz arama

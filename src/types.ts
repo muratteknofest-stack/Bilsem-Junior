@@ -28,6 +28,7 @@ export interface UserProfile {
   consent?: {
     acceptedAt: number;
     actorRole: 'student' | 'parent';
+    guardianConfirmed?: boolean;
     kvkkVersion: string;
     termsVersion: string;
   };
@@ -36,6 +37,7 @@ export interface UserProfile {
   xp: number;
   streak: number;
   longestStreak?: number;
+  lastPracticeDay?: string;
   lastActiveDate: string;
   todayPracticed?: boolean;
   streakFreezeCount?: number;
@@ -50,6 +52,13 @@ export interface UserProfile {
   soundEnabled: boolean;
   totalQuestionsSolved?: number;
   resolvedMistakesCount?: number;
+  todayMistakesResolved?: number;
+  todayCategoryQuestions?: Partial<Record<CognitiveCategory, number>>;
+  progressWeekId?: string;
+  weeklyCategoryQuestions?: Partial<Record<CognitiveCategory, number>>;
+  hardCorrectCount?: number;
+  completedExamCount?: number;
+  perfectSessionCount?: number;
   featuredBadgeIds?: string[];
   reminderConfig?: StudyReminderConfig;
 }
@@ -344,7 +353,7 @@ export interface ShapeItemVisualData {
   markerColor?: string;
 }
 
-export type VisualData =
+type TypedVisualData =
   | NumericVisualData
   | TextVisualData
   | TileDiagramVisualData
@@ -360,8 +369,12 @@ export type VisualData =
   | LiquidVisualData
   | PaperPatternVisualData
   | Grid2DVisualData
-  | ShapeItemVisualData
-  | Record<string, unknown>;
+  | ShapeItemVisualData;
+
+// Legacy engines use heterogeneous payloads while upgraded engines expose
+// stricter contracts. The intersection keeps the documented shapes without
+// pretending that every legacy renderer has already been migrated.
+export type VisualData = TypedVisualData & Record<string, any>;
 
 // ── VisualConfig Types ──
 
@@ -404,7 +417,7 @@ export interface GenericVisualConfig {
   [key: string]: unknown;
 }
 
-export type VisualConfig =
+type TypedVisualConfig =
   | VerifiedBoardVisualConfig
   | SequenceVisualConfig
   | MatrixVisualConfig
@@ -412,9 +425,9 @@ export type VisualConfig =
   | MirrorVisualConfig
   | NumberPatternVisualConfig
   | SymbolCodingVisualConfig
-  | GenericVisualConfig
-  | Record<string, unknown>
-  | null;
+  | GenericVisualConfig;
+
+export type VisualConfig = TypedVisualConfig & Record<string, any>;
 
 export interface VisualOption {
   id: string; // 'A' | 'B' | 'C' | 'D'
@@ -454,6 +467,10 @@ export interface BaseQuestion {
   targetGrade?: 1 | 2 | 3 | 4;
   targetGrades?: (1 | 2 | 3 | 4)[];
   createdAt?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+  reviewedBy?: string;
+  revision?: number;
   isCustom?: boolean;
   status?: 'draft' | 'review' | 'published' | 'archived';
   authoring?: {
@@ -476,6 +493,25 @@ export interface BaseQuestion {
   };
 }
 
+/** Question payload safe to expose before an answer is submitted. */
+export type PublicQuestion = Pick<
+  BaseQuestion,
+  | 'id'
+  | 'version'
+  | 'type'
+  | 'category'
+  | 'difficulty'
+  | 'ageGroup'
+  | 'prompt'
+  | 'secondaryPrompt'
+  | 'options'
+  | 'estimatedSeconds'
+  | 'skills'
+  | 'visualConfig'
+  | 'targetGrade'
+  | 'targetGrades'
+>;
+
 export interface PracticeSessionState {
   sessionId: string;
   category: CognitiveCategory | 'mixed';
@@ -495,7 +531,8 @@ export interface PracticeSessionState {
 export interface MistakeItem {
   id: string;
   questionId: string;
-  questionSeed: number;
+  /** @deprecated Legacy local-only records may contain a seed. New server records never expose it. */
+  questionSeed?: number;
   questionType: QuestionType;
   difficulty: DifficultyLevel;
   category: CognitiveCategory;
@@ -504,6 +541,7 @@ export interface MistakeItem {
   reviewed: boolean;
   resolved: boolean;
   resolvedAt?: string;
+  /** @deprecated Migrated into the server-only mistake question vault. */
   cachedQuestion?: BaseQuestion;
 }
 
@@ -543,6 +581,11 @@ export interface SkillMastery {
   attemptCount: number;
   accuracy: number; // percentage 0 - 100
   recentTrend: 'up' | 'down' | 'neutral';
+  correctCount?: number;
+  recentResults?: boolean[];
+  lastPracticedAt?: number;
+  nextReviewAt?: number;
+  stabilityDays?: number;
 }
 
 export type BadgeTier = 'bronze' | 'silver' | 'gold' | 'diamond';

@@ -7,40 +7,16 @@ import {
   setPersistence,
   signInWithEmailAndPassword,
   signOut,
+  getMultiFactorResolver,
+  TotpMultiFactorGenerator,
+  type MultiFactorResolver,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { dataService } from '../../../services/data-service';
+import { doc, getDoc } from 'firebase/firestore';
 import { sound } from '../../../lib/sound';
 import { useAuth } from '../../../contexts/AuthContext';
 import { isManagedStudentEmail, studentCodeToEmail } from '../../../lib/account-identifiers';
 import { loginSchema, formatZodError } from '../../../lib/validations';
 import { Eye, EyeOff, Lock, Mail, User, AlertCircle, ArrowRight } from 'lucide-react';
-
-const OWNER_ADMIN_EMAIL = 'muratteknofest@gmail.com';
-
-function createOwnerAdminProfile(uid: string, email: string): UserProfile {
-  const now = Date.now();
-  return {
-    id: uid,
-    email,
-    name: 'ZekaPark Yönetici',
-    role: 'admin',
-    avatar: '👨‍💻',
-    level: 1,
-    xp: 0,
-    streak: 0,
-    lastActiveDate: new Date(now).toISOString(),
-    dailyGoalMinutes: 20,
-    todayMinutesSpent: 0,
-    soundEnabled: true,
-    createdAt: now,
-    updatedAt: now,
-    totalPoints: 0,
-    claimedStreakDays: [],
-    totalQuestionsSolved: 0,
-    resolvedMistakesCount: 0,
-  };
-}
 
 interface LoginFormProps {
   selectedRole: UserRole;
@@ -67,6 +43,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,54 +74,36 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         loginEmail = studentCodeToEmail(loginEmail);
       }
 
-      // Master Admin Authentication Path for Project Owner
-      if (loginEmail.toLowerCase() === OWNER_ADMIN_EMAIL.toLowerCase() && password === 'Mu7203397.Mu9486635.') {
-        let adminUid = 'admin_muratteknofest';
-        try {
-          await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
-          let cred;
-          try {
-            cred = await signInWithEmailAndPassword(auth, loginEmail, password);
-          } catch {
-            try {
-              const { createUserWithEmailAndPassword } = await import('firebase/auth');
-              cred = await createUserWithEmailAndPassword(auth, loginEmail, password);
-            } catch {
-              const { signInAnonymously } = await import('firebase/auth');
-              cred = await signInAnonymously(auth).catch(() => null);
-            }
-          }
-          if (cred?.user?.uid) {
-            adminUid = cred.user.uid;
-          }
-        } catch (e) {
-          console.warn('Admin auth session note:', e);
-        }
-
-        const ownerProfile = createOwnerAdminProfile(adminUid, OWNER_ADMIN_EMAIL);
-        try {
-          const userDocRef = doc(db, 'users', adminUid);
-          await setDoc(userDocRef, ownerProfile, { merge: true });
-        } catch {}
-
-        dataService.loginAs('admin', ownerProfile);
-        loginLocally(ownerProfile);
-        sound.playSuccess();
-        setSuccessToast('Yönetici girişi başarılı! Yönlendiriliyorsunuz...');
-        
-        setTimeout(() => {
-          onLoginSuccess('admin', ownerProfile);
-        }, 300);
-        return;
-      }
-
       await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
       
       let credential;
-      try {
-        credential = await signInWithEmailAndPassword(auth, loginEmail, password);
-      } catch (signInError: any) {
-        throw signInError;
+      if (mfaResolver) {
+        const code = mfaCode.replace(/\s/g, '');
+        if (!/^\d{6}$/.test(code)) throw new Error('MFA_CODE_INVALID');
+        const hint = mfaResolver.hints.find(
+          (item) => item.factorId === TotpMultiFactorGenerator.FACTOR_ID,
+        );
+        if (!hint) throw new Error('MFA_FACTOR_UNSUPPORTED');
+        credential = await mfaResolver.resolveSignIn(
+          TotpMultiFactorGenerator.assertionForSignIn(hint.uid, code),
+        );
+        setMfaResolver(null);
+        setMfaCode('');
+      } else {
+        try {
+          credential = await signInWithEmailAndPassword(auth, loginEmail, password);
+        } catch (signInError: any) {
+          if (signInError?.code === 'auth/multi-factor-auth-required') {
+            const resolver = getMultiFactorResolver(auth, signInError);
+            if (!resolver.hints.some((item) => item.factorId === TotpMultiFactorGenerator.FACTOR_ID)) {
+              throw new Error('MFA_FACTOR_UNSUPPORTED');
+            }
+            setMfaResolver(resolver);
+            setErrorMessage('Authenticator uygulamanızdaki 6 haneli kodu girin.');
+            return;
+          }
+          throw signInError;
+        }
       }
 
       const requiresVerification = !isManagedStudentEmail(credential.user.email);
@@ -169,20 +129,23 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         throw new Error('ROLE_MISMATCH');
       }
       
-      // Force admin role for the owner email if not already set
-      if (signedInEmail === OWNER_ADMIN_EMAIL && loggedInProfile.role !== 'admin') {
-        loggedInProfile.role = 'admin';
-        await setDoc(userDocRef, { ...loggedInProfile, role: 'admin' }, { merge: true });
-      }
-
       if (loggedInProfile.role !== selectedRole) {
         await signOut(auth);
         throw new Error('ROLE_MISMATCH');
       }
 
-      dataService.loginAs(loggedInProfile.role, loggedInProfile);
-      dataService.hydrateUserStateFromFirebase().catch(console.error);
-      loginLocally(loggedInProfile);
+      // Privileged access is granted only by a server-issued Firebase custom
+      // claim. A Firestore profile field is presentation data, not authority.
+      if (loggedInProfile.role === 'admin') {
+        const token = await credential.user.getIdTokenResult(true);
+        if (token.claims.role !== 'admin') {
+          await signOut(auth);
+          throw new Error('ADMIN_CLAIM_REQUIRED');
+        }
+      }
+
+      await loginLocally(loggedInProfile);
+      // The provider hydrates remote state after authorizing this profile.
       sound.playSuccess();
       setSuccessToast('Giriş başarılı! Yönlendiriliyorsunuz...');
       
@@ -206,12 +169,16 @@ export const LoginForm: React.FC<LoginFormProps> = ({
          errMsg = 'Bu hesaba ait kullanıcı profili bulunamadı. Lütfen destek ekibiyle iletişime geçin.';
       } else if (error.message === 'ROLE_MISMATCH') {
          errMsg = 'Seçtiğiniz rol bu hesapla eşleşmiyor.';
+      } else if (error.message === 'ADMIN_CLAIM_REQUIRED') {
+         errMsg = 'Bu hesap için yönetici yetkisi doğrulanamadı.';
+      } else if (error.message === 'MFA_CODE_INVALID' || error.code === 'auth/invalid-verification-code') {
+         errMsg = 'Doğrulama kodu geçersiz veya süresi dolmuş.';
+      } else if (error.message === 'MFA_FACTOR_UNSUPPORTED') {
+         errMsg = 'Bu hesapta desteklenmeyen bir ikinci doğrulama yöntemi kayıtlı.';
       } else if (error.message === 'EMAIL_NOT_VERIFIED_SENT') {
          errMsg = 'E-posta adresiniz henüz doğrulanmadı. Yeni doğrulama bağlantısı gönderildi.';
       } else if (error.message === 'EMAIL_NOT_VERIFIED_UNSENT') {
          errMsg = 'E-posta adresiniz henüz doğrulanmadı. Bağlantı şu anda yeniden gönderilemedi; lütfen biraz sonra tekrar deneyin.';
-      } else if (error.message === 'ADMIN_PROFILE_PROVISION_FAILED') {
-         errMsg = 'Yönetici profili henüz etkinleştirilemedi. Lütfen kısa süre sonra tekrar deneyin.';
       }
       setErrorMessage(errMsg);
     } finally {
@@ -352,7 +319,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                   ? 'Örn: DENIZ2026 veya deniz@zekapark.com'
                   : selectedRole === 'parent'
                   ? 'Örn: zeynep@zekapark.com'
-                  : 'Örn: zeka.kupu.test@gmail.com'
+                  : 'Örn: yonetici@kurumunuz.com'
               }
               className={`w-full pl-9.5 pr-4 py-2.5 rounded-xl border text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 transition-all ${
                 fieldErrors.identifier
@@ -368,6 +335,31 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             </p>
           )}
         </div>
+
+        {mfaResolver && (
+          <div>
+            <label htmlFor="login-mfa-code" className="block text-xs font-bold text-slate-700 mb-1.5">
+              Authenticator doğrulama kodu
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <Lock className="w-4 h-4" />
+              </div>
+              <input
+                id="login-mfa-code"
+                type="text"
+                value={mfaCode}
+                onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                placeholder="000000"
+                autoFocus
+                className="w-full pl-9.5 pr-4 py-2.5 rounded-xl border border-slate-300 text-sm font-medium tracking-[0.3em] text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+        )}
 
         <div>
           <div className="flex items-center justify-between mb-1.5">

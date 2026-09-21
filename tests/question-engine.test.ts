@@ -39,3 +39,22 @@ test('question IDs do not collide across type, difficulty and seed', () => {
   }
   assert.equal(ids.size, ALL_QUESTION_TYPES.length * difficulties.length * 25);
 });
+
+test('release matrix validates all 44 types across 100 seeds and 6 levels', () => {
+  let checked = 0;
+  for (const type of ALL_QUESTION_TYPES) {
+    for (const difficulty of difficulties) {
+      for (let seed = 1; seed <= 100; seed += 1) {
+        const question = generateQuestionByType(type, seed * 104_729, difficulty);
+        const validation = validateQuestion(question);
+        assert.equal(
+          validation.isValid,
+          true,
+          `${type} level ${difficulty} seed ${seed}: ${validation.errors.map((error) => error.code).join(', ')}`,
+        );
+        checked += 1;
+      }
+    }
+  }
+  assert.equal(checked, 26_400);
+});

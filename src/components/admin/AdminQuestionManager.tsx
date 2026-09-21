@@ -136,26 +136,6 @@ export const AdminQuestionManager: React.FC<AdminQuestionManagerProps> = ({
               <RotateCcw className="w-4 h-4" />
             </button>
 
-            <button
-              onClick={async () => {
-                if (window.confirm('DİKKAT: Veritabanındaki (Firebase) TÜM SORULARI kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz!')) {
-                  try {
-                    sound.playClick();
-                    const { clearAllFirestoreQuestions } = await import('../../services/question-publishing-service');
-                    const count = await clearAllFirestoreQuestions();
-                    alert(`Başarılı: Firebase veritabanından ${count} adet soru kalıcı olarak silindi. Sayfa yenileniyor...`);
-                    window.location.reload();
-                  } catch (e: any) {
-                    alert('Hata: ' + e.message);
-                  }
-                }
-              }}
-              className="px-3 py-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-600 hover:text-white font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer ml-4"
-              title="Firebase'deki tüm soruları kalıcı olarak siler"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Veritabanını Sıfırla (Tehlikeli)</span>
-            </button>
           </div>
         </div>
 

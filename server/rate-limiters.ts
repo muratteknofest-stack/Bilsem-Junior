@@ -41,3 +41,39 @@ export const adminAiLimiter = rateLimit({
   keyGenerator: authenticatedRateLimitKey,
   message: { error: 'AI soru motoru istek sınırına ulaşıldı.' },
 });
+
+export const adminDataLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 120,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  keyGenerator: authenticatedRateLimitKey,
+  message: { error: 'Yönetim paneli istek sınırına ulaşıldı.' },
+});
+
+export const progressLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 120,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  keyGenerator: authenticatedRateLimitKey,
+  message: { error: 'İlerleme işlemi sınırına ulaşıldı. Lütfen kısa süre sonra tekrar deneyin.' },
+});
+
+export const privacyLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  keyGenerator: authenticatedRateLimitKey,
+  message: { error: 'Gizlilik işlemi sınırına ulaşıldı.' },
+});
+
+export const billingLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 20,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  keyGenerator: authenticatedRateLimitKey,
+  message: { error: 'Ödeme işlemi sınırına ulaşıldı.' },
+});

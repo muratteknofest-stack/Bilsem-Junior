@@ -251,7 +251,9 @@ export function getLeaderboard(period: LeaderboardPeriod = 'daily', gradeFilter:
   if (gradeFilter !== 'all' && user.grade !== gradeFilter) return [];
   return [{
     id: user.id,
-    rank: 1,
+    // No competitive rank is asserted until results are calculated from
+    // server-authoritative events. Zero means "not ranked" to legacy callers.
+    rank: 0,
     anonymousAlias: `${user.name} (Sen)`,
     avatar: user.avatar || '🦊',
     grade: user.grade ?? 1,

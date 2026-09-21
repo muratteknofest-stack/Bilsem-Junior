@@ -2,13 +2,21 @@ import { CognitiveCategory, DifficultyLevel, SkillMastery } from '../../types';
 import { STORAGE_KEYS, createEmptyMasteries } from './shared';
 import { safeStorage } from '../../lib/storage';
 import { setProgressItem } from './persistence-service';
+import { calculateMasteryUpdate, normalizeSkillMastery } from '../../features/adaptive/adaptive-engine';
 
 export function getSkillMasteries(): SkillMastery[] {
   const raw = safeStorage.getItem(STORAGE_KEYS.MASTERY);
   if (raw) {
     try {
-      let parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : createEmptyMasteries();
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const defaults = createEmptyMasteries();
+        return defaults.map((fallback) => {
+          const stored = parsed.find((item) => item?.category === fallback.category);
+          return normalizeSkillMastery(stored ? { ...fallback, ...stored } : fallback);
+        });
+      }
+      return createEmptyMasteries();
     } catch {}
   }
   const initial = createEmptyMasteries();
@@ -16,16 +24,13 @@ export function getSkillMasteries(): SkillMastery[] {
   return initial;
 }
 
-export function updateSkillMastery(category: CognitiveCategory, isCorrect: boolean, difficulty: DifficultyLevel) {
+export function updateSkillMastery(category: CognitiveCategory, isCorrect: boolean, difficulty: DifficultyLevel): SkillMastery | null {
   const masteries = getSkillMasteries();
   const idx = masteries.findIndex((m) => m.category === category);
   if (idx !== -1) {
-    const item = masteries[idx];
-    item.attemptCount += 1;
-    const delta = isCorrect ? Math.max(1, Math.round(difficulty * 0.8)) : -Math.max(1, Math.round(difficulty * 0.4));
-    item.mastery = Math.min(100, Math.max(10, item.mastery + delta));
-    item.recentTrend = isCorrect ? 'up' : 'down';
-    masteries[idx] = item;
+    masteries[idx] = calculateMasteryUpdate(masteries[idx], isCorrect, difficulty);
     setProgressItem(STORAGE_KEYS.MASTERY, JSON.stringify(masteries));
+    return masteries[idx];
   }
+  return null;
 }

@@ -8,6 +8,7 @@ import { MechanicsRenderer } from './engines/MechanicsRenderer';
 import { PaperFoldRenderer } from './engines/PaperFoldRenderer';
 import { LogicGridRenderer } from './engines/LogicGridRenderer';
 import { GenericRenderer } from './engines/GenericRenderer';
+import type { Board } from '../professional-engine';
 
 interface QuestionRendererProps {
   question: BaseQuestion;
@@ -18,7 +19,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({ question }) 
   const mode = visualConfig?.displayMode || 'default';
   
   const renderEngine = () => {
-    if (mode === 'verified_board') return <ProfessionalBoard board={visualConfig} />;
+    if (mode === 'verified_board') return <ProfessionalBoard board={visualConfig as Board} />;
 
     if (['matrix_2x2', 'matrix_3x3', 'raven_matrix', 'shape_grid'].includes(mode)) {
       return <MatrixRenderer question={question} mode={mode} />;

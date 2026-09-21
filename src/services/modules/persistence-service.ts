@@ -1,37 +1,21 @@
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
 import { safeStorage } from '../../lib/storage';
 import { STORAGE_KEYS, USER_PROGRESS_KEYS, createEmptyMasteries } from './shared';
-import { ExamResult, SkillMastery } from '../../types';
-
-let persistTimer: ReturnType<typeof setTimeout> | null = null;
+import { ExamResult, MistakeItem, SkillMastery } from '../../types';
 
 export function clearUserProgress() {
   USER_PROGRESS_KEYS.forEach((key) => safeStorage.removeItem(key));
 }
 
 export async function persistUserStateToFirebase() {
-  const currentUser = auth.currentUser;
-  if (!currentUser) return;
-
-  const values = Object.fromEntries(
-    USER_PROGRESS_KEYS.map((key) => [key, safeStorage.getItem(key)]).filter(([, value]) => value !== null),
-  );
-  await setDoc(
-    doc(db, 'users', currentUser.uid, 'private', 'state'),
-    { values, updatedAt: serverTimestamp() },
-    { merge: true },
-  );
+  // Progress is server-authoritative. Local storage is a disposable UI cache;
+  // browser clients are intentionally not allowed to persist scores or XP.
 }
 
 export function scheduleProgressPersist() {
-  if (!auth.currentUser) return;
-  if (persistTimer) clearTimeout(persistTimer);
-  persistTimer = setTimeout(() => {
-    void persistUserStateToFirebase().catch((error) => {
-      console.error('Kullanıcı ilerlemesi senkronize edilemedi.', error);
-    });
-  }, 400);
+  // Kept as a compatibility no-op while remaining practice surfaces are moved
+  // to trusted scoring endpoints.
 }
 
 export function setProgressItem(key: (typeof USER_PROGRESS_KEYS)[number], value: string) {
@@ -44,6 +28,14 @@ export function removeProgressItem(key: (typeof USER_PROGRESS_KEYS)[number]) {
   scheduleProgressPersist();
 }
 
+export function cacheAuthoritativeProgress(input: { masteries?: SkillMastery[]; mistakes?: MistakeItem[] }) {
+  if (input.masteries) safeStorage.setItem(STORAGE_KEYS.MASTERY, JSON.stringify(input.masteries));
+  if (input.mistakes) {
+    const safeMistakes = input.mistakes.map(({ questionSeed: _seed, cachedQuestion: _question, ...mistake }) => mistake);
+    safeStorage.setItem(STORAGE_KEYS.MISTAKES, JSON.stringify(safeMistakes));
+  }
+}
+
 export async function hydrateUserStateFromFirebase(): Promise<void> {
   const currentUser = auth.currentUser;
   if (!currentUser) return;
@@ -54,7 +46,21 @@ export async function hydrateUserStateFromFirebase(): Promise<void> {
   if (values && typeof values === 'object') {
     USER_PROGRESS_KEYS.forEach((key) => {
       const value = (values as Record<string, unknown>)[key];
-      if (typeof value === 'string') safeStorage.setItem(key, value);
+      if (typeof value !== 'string') return;
+      if (key === STORAGE_KEYS.MISTAKES) {
+        try {
+          const parsed = JSON.parse(value) as MistakeItem[];
+          const safeMistakes = Array.isArray(parsed)
+            ? parsed.map(({ questionSeed: _seed, cachedQuestion: _question, ...mistake }) => mistake)
+            : [];
+          safeStorage.setItem(key, JSON.stringify(safeMistakes));
+          return;
+        } catch {
+          safeStorage.setItem(key, JSON.stringify([]));
+          return;
+        }
+      }
+      safeStorage.setItem(key, value);
     });
   }
 }

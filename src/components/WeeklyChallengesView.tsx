@@ -10,6 +10,8 @@ import { weeklyChallengesService } from '../services/weekly-challenges-service';
 import { sound } from '../lib/sound';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
+import { claimProgressReward } from '../services/progress-api-service';
+import { dataService } from '../services/data-service';
 import {
   Trophy,
   Award,
@@ -147,27 +149,39 @@ export const WeeklyChallengesView: React.FC<WeeklyChallengesViewProps> = ({
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  const handleClaimReward = (challengeId: string) => {
-    sound.playSuccess();
-    const result = weeklyChallengesService.claimChallengeReward(challengeId);
-    if (result.success) {
+  const handleClaimReward = async (challengeId: string) => {
+    try {
+      const verified = await claimProgressReward('weekly_category', challengeId);
+      const result = weeklyChallengesService.claimChallengeReward(challengeId);
+      if (!result.success) throw new Error('Haftalık ilerleme görünümü yenilenemedi.');
+      dataService.setCurrentUser(verified.profile);
+      sound.playSuccess();
       setChallengesState(result.state);
-      if (onUserUpdate) onUserUpdate(result.user);
-      setActiveXpGain({ amount: result.xpAwarded, title: result.badge.title });
+      if (onUserUpdate) onUserUpdate(verified.profile);
+      setActiveXpGain({ amount: verified.xpAwarded, title: result.badge.title });
       setTimeout(() => setActiveXpGain(null), 2500);
-      showCelebrationToast(`🎉 "${result.badge.title}" rozeti kazanıldı ve +${result.xpAwarded} XP eklendi!`);
+      showCelebrationToast(`🎉 "${result.badge.title}" rozeti kazanıldı ve +${verified.xpAwarded} XP eklendi!`);
+    } catch (error) {
+      setToastMessage(error instanceof Error ? error.message : 'Haftalık ödül doğrulanamadı.');
+      setTimeout(() => setToastMessage(null), 4000);
     }
   };
 
-  const handleClaimGrandChallenge = () => {
-    sound.playComboMilestone(10);
-    const result = weeklyChallengesService.claimGrandChallengeReward();
-    if (result.success) {
+  const handleClaimGrandChallenge = async () => {
+    try {
+      const verified = await claimProgressReward('weekly_grand', challengesState.grandChallenge.id);
+      const result = weeklyChallengesService.claimGrandChallengeReward();
+      if (!result.success) throw new Error('Haftalık şampiyonluk görünümü yenilenemedi.');
+      dataService.setCurrentUser(verified.profile);
+      sound.playComboMilestone(10);
       setChallengesState(result.state);
-      if (onUserUpdate) onUserUpdate(result.user);
-      setActiveXpGain({ amount: result.xpAwarded, title: result.badge.title });
+      if (onUserUpdate) onUserUpdate(verified.profile);
+      setActiveXpGain({ amount: verified.xpAwarded, title: result.badge.title });
       setTimeout(() => setActiveXpGain(null), 3000);
-      showCelebrationToast(`🏆 Efsanevi "${result.badge.title}" rozeti kazanıldı ve +${result.xpAwarded} XP eklendi!`, true);
+      showCelebrationToast(`🏆 Efsanevi "${result.badge.title}" rozeti kazanıldı ve +${verified.xpAwarded} XP eklendi!`, true);
+    } catch (error) {
+      setToastMessage(error instanceof Error ? error.message : 'Şampiyonluk ödülü doğrulanamadı.');
+      setTimeout(() => setToastMessage(null), 4000);
     }
   };
 

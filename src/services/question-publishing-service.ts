@@ -1,8 +1,7 @@
-import { collection, doc, getDocs, setDoc, query, where, limit, writeBatch } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
 import type { BaseQuestion } from '../types';
 import { auditQuestion } from '../features/questions/quality';
 import { questionBankService } from './question-bank-service';
+import { authenticatedFetch } from '../lib/api-client';
 export { parseQuestionImport, selectPublishedPool } from '../features/questions/editorial-data';
 
 export interface StoredQuestion extends BaseQuestion {
@@ -12,44 +11,32 @@ export interface StoredQuestion extends BaseQuestion {
   reviewedBy?: string;
 }
 const clean = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
+const pendingSaveRequests = new Map<string, string>();
 
-async function ensureAdminAuth(): Promise<void> {
-  if (!auth.currentUser) {
-    if ((auth as any).authStateReady) {
-      await (auth as any).authStateReady().catch(() => {});
-    }
-  }
-  if (!auth.currentUser) {
-    try {
-      const { signInWithEmailAndPassword } = await import('firebase/auth');
-      await signInWithEmailAndPassword(auth, 'muratteknofest@gmail.com', 'Mu7203397.Mu9486635.');
-    } catch {
-      try {
-        const { signInAnonymously } = await import('firebase/auth');
-        await signInAnonymously(auth);
-      } catch {}
-    }
-  }
+async function readJson<T>(response: Response): Promise<T> {
+  const body = await response.json().catch(() => ({})) as { error?: string };
+  if (!response.ok) throw new Error(body.error || 'Soru yayınlama servisi isteği tamamlanamadı.');
+  return body as T;
 }
 
 export async function loadQuestionLibrary(): Promise<StoredQuestion[]> {
-  await ensureAdminAuth();
+  const questions: StoredQuestion[] = [];
+  let cursor: string | null = null;
+  do {
+    const search = new URLSearchParams({ limit: '500' });
+    if (cursor) search.set('cursor', cursor);
+    const payload = await readJson<{ questions: StoredQuestion[]; nextCursor: string | null }>(
+      await authenticatedFetch(`/api/admin/questions?${search}`),
+    );
+    questions.push(...payload.questions);
+    cursor = payload.nextCursor;
+  } while (cursor);
 
-  try {
-    const snapshot = await getDocs(collection(db, 'questions'));
-    if (!snapshot.empty) {
-      const liveDocs = snapshot.docs
-        .map(d => ({ ...d.data(), id: d.id }) as StoredQuestion)
-        .filter(q => auditQuestion(q).errors.length === 0)
-        .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
-      return liveDocs;
-    }
-  } catch (err) {
-    console.warn('Firestore library load notice:', err);
-  }
-
-  // Fallback to local question bank so editor never blocks
-  return questionBankService.getAll() as StoredQuestion[];
+  const audited = questions
+    .filter(q => auditQuestion(q).errors.length === 0)
+    .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+  questionBankService.replaceCache(audited);
+  return audited;
 }
 
 export async function saveEditorialQuestion(
@@ -58,69 +45,39 @@ export async function saveEditorialQuestion(
   expectedRevision: number,
   confirmedReview: boolean,
 ): Promise<StoredQuestion> {
-  await ensureAdminAuth();
-  
-  const user = auth.currentUser;
-  const uid = user?.uid || 'admin_muratteknofest';
   const report = auditQuestion(question);
   if (report.errors.length) throw new Error(report.errors.join(' '));
   if (status === 'published' && !confirmedReview) throw new Error('Yayımlamadan önce yönerge, cevap ve görselleri inceleyip onaylayın.');
 
-  const ref = doc(db, 'questions', question.id);
-  const now = new Date().toISOString();
-  const stored: StoredQuestion = clean({
-    ...question,
-    status,
-    revision: (expectedRevision || 0) + 1,
-    isCustom: true,
-    createdAt: question.createdAt || now,
-    updatedAt: now,
-    updatedBy: uid,
-    ...(status === 'published' ? { reviewedBy: uid } : {}),
-  });
+  const sanitized = clean(question);
+  const operationKey = JSON.stringify({ question: sanitized, status, expectedRevision, confirmedReview });
+  const requestId = pendingSaveRequests.get(operationKey) || crypto.randomUUID();
+  pendingSaveRequests.set(operationKey, requestId);
 
-  if (status !== 'published') delete stored.reviewedBy;
-
-  // 1. Live write to Firestore
+  let response: Response;
   try {
-    await setDoc(ref, stored, { merge: true });
-  } catch (err) {
-    console.warn('Live Firestore save notice:', err);
+    response = await authenticatedFetch(`/api/admin/questions/${encodeURIComponent(question.id)}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        question: sanitized,
+        status,
+        expectedRevision,
+        confirmedReview,
+        requestId,
+      }),
+    });
+  } catch (error) {
+    // Keep the same request ID for an exact retry after an ambiguous network
+    // failure so a committed write cannot be applied twice.
+    throw error;
   }
 
-  // 2. Also update questionBankService so all admin panels stay synchronized
-  questionBankService.createCustomQuestion(stored);
+  if (!response.ok && response.status < 500) pendingSaveRequests.delete(operationKey);
+  const { question: stored } = await readJson<{ question: StoredQuestion }>(response);
+  pendingSaveRequests.delete(operationKey);
+
+  // Keep in-memory admin panels synchronized only after the durable write.
+  questionBankService.cacheQuestion(stored);
 
   return stored;
-}
-
-export async function loadPublishedQuestions(): Promise<BaseQuestion[]> {
-  try {
-    const snapshot = await getDocs(query(collection(db, 'questions'), where('status', '==', 'published'), limit(200)));
-    if (!snapshot.empty) {
-      return snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as BaseQuestion).filter(q => auditQuestion(q).errors.length === 0);
-    }
-  } catch (err) {
-    console.warn('Firestore published load notice:', err);
-  }
-  return questionBankService.getAll();
-}
-
-export async function clearAllFirestoreQuestions(): Promise<number> {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Bu işlem için yönetici oturumu gerekli.');
-  
-  const snapshot = await getDocs(collection(db, 'questions'));
-  if (snapshot.empty) return 0;
-
-  // Firestore batch delete
-  const batch = writeBatch(db);
-  let count = 0;
-  snapshot.docs.forEach((document) => {
-    batch.delete(doc(db, 'questions', document.id));
-    count++;
-  });
-  
-  await batch.commit();
-  return count;
 }

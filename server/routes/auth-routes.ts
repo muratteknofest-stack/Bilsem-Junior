@@ -1,3 +1,4 @@
+import { createHash, randomInt } from 'node:crypto';
 import { Router } from 'express';
 import { z } from 'zod';
 import {
@@ -7,6 +8,7 @@ import {
   normalizeStudentCode,
 } from '../security';
 import { accountSecurityLimiter } from '../rate-limiters';
+import { KVKK_POLICY_VERSION, TERMS_POLICY_VERSION } from '../../src/lib/account-policy';
 
 const authRoutes = Router();
 
@@ -14,14 +16,27 @@ const strongPassword = z.string().min(8).max(128).regex(/^(?=.*[A-Za-z])(?=.*\d)
   message: 'Şifre en az bir harf ve bir rakam içermelidir.',
 });
 
+function normalizePhone(value: string): string | null {
+  const compact = value.replace(/[\s()-]/g, '');
+  if (/^\+[1-9]\d{7,14}$/.test(compact)) return compact;
+  if (/^05\d{9}$/.test(compact)) return `+90${compact.slice(1)}`;
+  if (/^5\d{9}$/.test(compact)) return `+90${compact}`;
+  if (/^90\d{10}$/.test(compact)) return `+${compact}`;
+  return null;
+}
+
 const registerFamilySchema = z.object({
   parentEmail: z.string().email('Geçerli bir veli e-posta adresi giriniz.').toLowerCase().trim(),
   parentPassword: strongPassword,
-  parentPhone: z.string().optional(),
+  parentPhone: z.string().trim().min(8).max(24)
+    .refine((value) => normalizePhone(value) !== null, 'Geçerli bir telefon numarası giriniz.')
+    .optional(),
   studentName: z.string().min(2, 'Öğrenci adı en az 2 karakter olmalıdır.').max(50).trim(),
   studentPassword: strongPassword,
   grade: z.number().int().min(1).max(4),
   examFocus: z.string().default('bilsem'),
+  guardianConsent: z.literal(true),
+  requestId: z.string().uuid(),
 }).strict();
 
 authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, async (req, res) => {
@@ -38,16 +53,55 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
     studentPassword,
     grade,
     examFocus,
+    guardianConsent,
+    requestId,
   } = parsed.data;
+  const normalizedParentPhone = parentPhone ? normalizePhone(parentPhone) : undefined;
 
   const adminAuth = getAdminAuth();
   const adminDb = getAdminDb();
   const now = Date.now();
+  const operationRef = adminDb.doc(`registrationOperations/family_${requestId.replace(/-/g, '')}`);
+  const requestFingerprint = createHash('sha256').update(JSON.stringify({
+    parentEmail,
+    parentPhone: normalizedParentPhone || '',
+    studentName,
+    grade,
+    examFocus,
+    guardianConsent,
+  })).digest('hex');
 
   let createdParentUser: { uid: string } | null = null;
   let createdStudentUser: { uid: string } | null = null;
 
   try {
+    const previousOperation = await operationRef.get();
+    if (previousOperation.exists) {
+      const operation = previousOperation.data()!;
+      if (operation.requestFingerprint !== requestFingerprint) {
+        return res.status(409).json({ error: 'İstek kimliği farklı bir aile kaydı için kullanılmış.' });
+      }
+      const [parentSnapshot, studentSnapshot] = await adminDb.getAll(
+        adminDb.doc(`users/${operation.parentId}`),
+        adminDb.doc(`users/${operation.studentId}`),
+      );
+      const parentProfile = parentSnapshot.data();
+      const studentProfile = studentSnapshot.data();
+      if (!parentProfile || !studentProfile?.studentCode) {
+        return res.status(503).json({ error: 'Aile kayıt işlemi bütünlük kontrolünü geçemedi.' });
+      }
+      return res.status(200).json({
+        success: true,
+        idempotent: true,
+        parentProfile,
+        student: {
+          id: studentSnapshot.id,
+          code: studentProfile.studentCode,
+          email: studentProfile.email,
+        },
+      });
+    }
+
     try {
       const existing = await adminAuth.getUserByEmail(parentEmail);
       if (existing) {
@@ -60,7 +114,6 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
     createdParentUser = await adminAuth.createUser({
       email: parentEmail,
       password: parentPassword,
-      phoneNumber: parentPhone || undefined,
       emailVerified: false,
       displayName: `Veli (${studentName})`,
     });
@@ -70,7 +123,7 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
     const baseCode = normalizeStudentCode(studentName);
     
     for (let attempt = 0; attempt < 5; attempt++) {
-      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+      const randomSuffix = randomInt(1000, 10_000);
       studentCode = `${baseCode}${randomSuffix}`;
       studentEmail = `${studentCode.toLowerCase()}@zekapark.com`;
       try {
@@ -107,9 +160,10 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
       recoveryEmail: parentEmail,
       consent: {
         actorRole: 'parent',
+        guardianConfirmed: guardianConsent,
         acceptedAt: now,
-        kvkkVersion: '2026.1',
-        termsVersion: '2026.1',
+        kvkkVersion: KVKK_POLICY_VERSION,
+        termsVersion: TERMS_POLICY_VERSION,
       },
       createdAt: now,
       updatedAt: now,
@@ -122,11 +176,20 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
       role: 'parent',
       linkedStudentIds: [createdStudentUser.uid],
       avatar: '🦉',
+      level: 1,
+      xp: 0,
+      streak: 0,
+      lastActiveDate: new Date(now).toISOString(),
+      dailyGoalMinutes: 0,
+      todayMinutesSpent: 0,
+      soundEnabled: true,
+      parentPhone: normalizedParentPhone || '',
       consent: {
         actorRole: 'parent',
+        guardianConfirmed: guardianConsent,
         acceptedAt: now,
-        kvkkVersion: '2026.1',
-        termsVersion: '2026.1',
+        kvkkVersion: KVKK_POLICY_VERSION,
+        termsVersion: TERMS_POLICY_VERSION,
       },
       createdAt: now,
       updatedAt: now,
@@ -135,6 +198,13 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
     const batch = adminDb.batch();
     batch.set(adminDb.doc(`users/${createdStudentUser.uid}`), studentProfile);
     batch.set(adminDb.doc(`users/${createdParentUser.uid}`), parentProfile);
+    batch.create(operationRef, {
+      requestFingerprint,
+      parentId: createdParentUser.uid,
+      studentId: createdStudentUser.uid,
+      createdAt: now,
+      expiresAt: now + 30 * 24 * 60 * 60_000,
+    });
     await batch.commit();
 
     return res.status(201).json({
@@ -157,7 +227,7 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
     }
 
     return res.status(500).json({
-      error: error?.message || 'Aile hesabı oluşturulurken bir hata oluştu. Lütfen tekrar deneyiniz.',
+      error: 'Aile hesabı oluşturulurken bir hata oluştu. Lütfen tekrar deneyiniz.',
     });
   }
 });

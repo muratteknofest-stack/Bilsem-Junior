@@ -5,14 +5,32 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
-    "start": "node dist/server.cjs",
+    "typecheck": "tsc --noEmit",
+    "build:client": "npm run typecheck && vite build",
+    "build:server": "esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=build/server.cjs",
+    "build:ops": "esbuild scripts/enforce-retention.ts --bundle --platform=node --format=esm --packages=external --sourcemap --outfile=build/ops/enforce-retention.js",
+    "build": "npm run build:client && npm run build:server && npm run build:ops",
+    "start": "node build/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit",
-    "test": "node --import tsx --test tests/editorial-engine.test.ts tests/question-engine.test.ts tests/security-regression.test.ts",
+    "lint": "npm run typecheck",
+    "test": "node --import tsx --test tests/adaptive-engine.test.ts tests/editorial-engine.test.ts tests/question-engine.test.ts tests/security-regression.test.ts",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-zekapark-rules \"node --import tsx --test tests/firestore-rules.test.ts\"",
     "security:audit": "node scripts/osv-audit.mjs",
-    "check": "npm run lint && npm test && npm run build"
+    "security:audit:all": "OSV_INCLUDE_DEV=true node scripts/osv-audit.mjs",
+    "ops:secure-admin": "tsx scripts/secure-admin.ts",
+    "ops:verify-admin": "tsx scripts/verify-admin-security.ts",
+    "ops:enable-mfa": "tsx scripts/enable-totp-mfa.ts",
+    "ops:retention": "tsx scripts/enforce-retention.ts",
+    "ops:privacy-approve": "tsx scripts/approve-privacy-deletion.ts",
+    "ops:privacy-delete": "tsx scripts/process-privacy-deletion.ts",
+    "ops:migrate-answer-secrets": "tsx scripts/migrate-answer-secrets.ts",
+    "release:validate": "node scripts/validate-release-config.mjs",
+    "deploy:production": "bash scripts/deploy-production.sh",
+    "ops:configure-app-check": "bash scripts/configure-app-check.sh",
+    "ops:configure-production": "bash scripts/configure-production-ops.sh",
+    "ops:restore-drill": "bash scripts/restore-drill.sh",
+    "check": "npm test && npm run test:rules && npm run build"
   },
   "dependencies": {
     "@google-cloud/firestore": "^9.1.0",
@@ -43,11 +61,13 @@
     "zod": "^4.6.2"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.2",
     "@types/express": "^5.0.6",
     "@types/node": "^22.14.0",
     "@types/nodemailer": "^8.0.1",
     "@types/react": "^19.0.12",
     "@types/react-dom": "^19.0.4",
+    "firebase-tools": "15.30.2",
     "vite": "^6.2.3"
   },
   "overrides": {

@@ -8,7 +8,6 @@ import {
   Clock,
   ArrowRight,
   Brain,
-  CheckCircle2,
   Calendar,
   Heart,
   FileText,
@@ -18,11 +17,11 @@ import {
   Award,
   Layers,
   ChevronRight,
-  Send,
 } from 'lucide-react';
 import { sound } from '../lib/sound';
 import { FooterInfoModal, FooterModalTopic } from './FooterInfoModal';
 import { Logo } from './Logo';
+import { legalConfig, mailto } from '../lib/legal-config';
 
 interface FooterProps {
   onNavigate: (route: string) => void;
@@ -31,26 +30,10 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate, onStartDemo }) => {
   const [modalTopic, setModalTopic] = useState<FooterModalTopic | null>(null);
-  const [newsletterEmail, setNewsletterEmail] = useState('');
-  const [newsletterSuccess, setNewsletterSuccess] = useState(false);
 
   const handleOpenModal = (topic: FooterModalTopic) => {
     sound.playClick();
     setModalTopic(topic);
-  };
-
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newsletterEmail.trim() || !newsletterEmail.includes('@')) {
-      sound.playError();
-      return;
-    }
-    sound.playSuccess();
-    setNewsletterSuccess(true);
-    setTimeout(() => {
-      setNewsletterEmail('');
-      setNewsletterSuccess(false);
-    }, 4000);
   };
 
   return (
@@ -71,33 +54,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onStartDemo }) => {
             </p>
           </div>
 
-          <form onSubmit={handleNewsletterSubmit} className="w-full lg:w-auto flex flex-col sm:flex-row gap-2.5">
-            <div className="relative min-w-[280px] sm:min-w-[320px]">
-              <input
-                type="email"
-                value={newsletterEmail}
-                onChange={(e) => setNewsletterEmail(e.target.value)}
-                placeholder="Veli e-posta adresinizi girin..."
-                className="w-full px-4 py-3 rounded-xl bg-slate-800/90 border border-slate-700 text-white placeholder-slate-500 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-              />
-            </div>
-            <button
-              type="submit"
-              className="px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer   transition-all shrink-0 active:scale-98"
-            >
-              {newsletterSuccess ? (
-                <>
-                  <CheckCircle2 className="w-4 h-4 text-emerald-300" />
-                  <span>Kaydedildi!</span>
-                </>
-              ) : (
-                <>
-                  <span>Bültene Kaydol</span>
-                  <Send className="w-3.5 h-3.5" />
-                </>
-              )}
-            </button>
-          </form>
+          <div className="w-full rounded-xl border border-slate-700 bg-slate-800/70 px-5 py-3 text-center text-xs text-slate-300 lg:w-auto lg:max-w-sm">
+            E-posta bülteni henüz etkin değildir. Duyurular yalnızca uygulama
+            içinde yayımlanır; bu alanda e-posta adresi toplanmaz.
+          </div>
         </div>
       </div>
 
@@ -125,19 +85,19 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onStartDemo }) => {
               <div className="flex items-start gap-2 text-slate-400">
                 <Mail className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
                 <a
-                  href="mailto:zeka.kupu.test@gmail.com"
+                  href={mailto(legalConfig.supportEmail)}
                   className="hover:text-white transition-colors break-all"
                 >
-                  zeka.kupu.test@gmail.com
+                  {legalConfig.supportEmail}
                 </a>
               </div>
               <div className="flex items-center gap-2 text-slate-400">
                 <Phone className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>0850 308 24 10 (Danışma)</span>
+                <span>{legalConfig.phone}</span>
               </div>
               <div className="flex items-start gap-2 text-slate-400">
                 <MapPin className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
-                <span>İTÜ Teknokent ARI-3 Maslak / İstanbul</span>
+                <span>{legalConfig.address}</span>
               </div>
             </div>
 
@@ -420,7 +380,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onStartDemo }) => {
 
             <div className="mt-5 p-3 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-400 leading-normal">
               <span className="text-slate-300 font-bold block mb-1">Pedagojik Destek Hattı:</span>
-              <span>Uzman psikolojik danışmanlarımıza <a href="mailto:zeka.kupu.test@gmail.com" className="text-indigo-400 hover:underline">e-posta ile</a> soru iletebilirsiniz.</span>
+              <span>Destek ekibimize <a href={mailto(legalConfig.supportEmail)} className="text-indigo-400 hover:underline">e-posta ile</a> soru iletebilirsiniz.</span>
             </div>
           </div>
         </div>
@@ -439,7 +399,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onStartDemo }) => {
       <div className="border-t border-slate-900 bg-slate-950 py-5 px-4 sm:px-6 text-xs text-slate-400">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span>© 2026 ZekaPark Eğitim Teknolojileri A.Ş.</span>
+            <span>© 2026 {legalConfig.entityName}</span>
             <span className="text-slate-600">•</span>
             <span className="text-slate-500">Tüm Hakları Saklıdır</span>
           </div>

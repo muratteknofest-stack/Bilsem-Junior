@@ -1,80 +1,137 @@
 # ZekaPark
 
-ZekaPark is a React, TypeScript, Express and Firebase learning application with
-procedurally generated cognitive-skill questions.
+ZekaPark; BİLSEM hazırlığı için React, TypeScript, Express ve Firebase tabanlı,
+mobil öncelikli bir öğrenme uygulamasıdır. Prosedürel görsel soru üretimi,
+adaptif pratik, deneme sınavı, hata defteri, veli görünümü ve yönetim araçları
+içerir.
 
-## Local setup
+> **Yayın durumu:** Kod tabanı ticari yayın için sertleştirilmiştir; ancak
+> [ticari hazırlık kapıları](docs/COMMERCIAL_READINESS.md) tamamlanmadan gerçek
+> öğrenci verisiyle üretime açılmamalıdır.
 
-Prerequisites: Node.js 22+, a Firebase project with Email/Password Authentication
-and Cloud Firestore enabled, and Application Default Credentials for server-side
-Firebase Admin operations.
+## Temel yetenekler
 
-1. Copy `.env.example` to `.env.local` and fill in the values.
-2. Install the locked dependencies with `npm ci`.
-3. Run `npm run dev`.
-4. Before a release, run `npm run check`.
+- Deterministik tohumla görsel ve mantıksal soru üretimi
+- Yayın öncesi soru doğrulama, kalite puanı ve tekrar kontrolü
+- Elo-benzeri beceri tahmini, zorluk seçimi ve aralıklı tekrar
+- Kısıtlı geri bildirimli deneme sınavı akışı
+- Cevap anahtarını göstermeyen, sunucu-otoriteli sınav/pratik puanlama ve XP
+- Öğrenci, veli ve özel claim korumalı yönetici rolleri
+- Sunucu kontrollü aile hesabı oluşturma ve bağlı öğrenci hesabı
+- Gerçek Firestore verisi kullanan yönetim özeti ve öğrenci görünümü
+- PWA manifesti, güvenli çevrimdışı statik kabuk ve derin bağlantılar
+- TypeScript, test, üretim derlemesi ve bağımlılık taraması içeren CI kapısı
 
-The Express server hosts both `/api/*` and the Vite application. AI endpoints use
-the procedural fallback when `GEMINI_API_KEY` is not configured. Weekly email
-reports require the SMTP variables.
+## Mimari
 
-## Sites mode
-
-The static Sites deployment keeps Firebase Authentication and Firestore in the
-browser. Family registration creates the parent and linked student as two separate
-Firebase accounts without exposing an admin credential. Deploy `firestore.rules`
-before accepting registrations.
-
-Real-email student and parent accounts must verify their email before the first
-login. Code-based child accounts are managed through the linked parent profile.
-The parent password-reset action uses the authenticated API endpoint
-`POST /api/parent/reset-student-password`; it verifies the family link, requires a
-verified parent email, changes the password, revokes the child's other sessions,
-and records a security event. Set `VITE_API_BASE_URL` to the deployed API origin
-when the frontend is hosted as a static Site.
-
-AI hints first use the configured server API, then Firebase AI Logic, and finally
-the deterministic pedagogical engine. To enable Firebase AI Logic for production,
-enable it in the Firebase console and set up App Check with
-`VITE_FIREBASE_APPCHECK_SITE_KEY`. Weekly reports can be shared through the device's
-share sheet or opened as a pre-filled email without sending student data through a
-third-party mail server.
-
-If an external API service is deployed, set `VITE_API_BASE_URL` when building the
-frontend and add the Sites origin to `CORS_ALLOWED_ORIGINS` on the server.
-
-## Authorization model
-
-- Browser clients can create only their own non-admin profile.
-- Parent/child account pairs use separate Firebase Auth sessions and passwords;
-  the rules accept a parent link only after the student profile points back to it.
-- Admin access normally requires an `admin` Firebase custom claim. The initial
-  verified owner account (`iomegagame@gmail.com`) is explicitly allowlisted in
-  Firestore rules so it can bootstrap administration when Admin SDK access is not
-  available. A profile document alone never grants admin access.
-- User progress is stored under `users/{uid}/private/state`; linked parents have
-  read-only access to their child's profile and progress.
-
-Deploy `firestore.rules` before enabling real accounts. Existing admin accounts
-must receive their matching custom claim through a trusted admin script or the
-Firebase Admin SDK.
-
-## Deployment
-
-Build and deploy the API container to Cloud Run, granting the service account
-Firebase access and supplying server-only secrets there:
-
-```sh
-gcloud run deploy zekapark-api --source . --region europe-west1 --allow-unauthenticated
+```mermaid
+flowchart TD
+    UI["React PWA"] --> AUTH["Firebase Auth + App Check"]
+    UI --> API["Express API"]
+    UI --> FS["Sınırlı profil okuma/tercihler"]
+    API --> ADMIN["Firebase Admin SDK"]
+    ADMIN --> FS
+    API --> AI["Yapay zekâ sağlayıcıları"]
+    API --> PAY["Stripe"]
 ```
 
-The service itself is public so the app can reach it, while protected endpoints
-verify Firebase ID tokens. Then deploy the static site and Firestore rules:
+Tarayıcı Firestore'da yalnızca yetkili profil okumaları ve sınırlı sunum/çalışma
+tercihlerine erişir. Soru teslimi ve yayınlama, aile kaydı, puanlama, XP/ilerleme,
+gizlilik, faturalandırma, yönetim ve korumalı yapay zekâ işlemleri Express API
+üzerinden yürür. Üretimde API, Firebase ID token ve App Check token doğrulamasını
+birlikte uygular; cevap anahtarı yalnızca sunucuda tutulur.
+
+## Yerel geliştirme
+
+Gereksinimler:
+
+- Node.js 22+
+- Firestore Emulator için Java 21+
+- E-posta/şifre kimlik doğrulaması ve Cloud Firestore etkin bir Firebase projesi
+- Sunucu özellikleri için Firebase Application Default Credentials
+
+Kurulum:
+
+```sh
+cp .env.example .env.local
+npm ci
+npm run dev
+```
+
+`.env.local` içindeki istemci Firebase alanlarını doldurun. Yerel API'de App
+Check'i geçici olarak kapatmanız gerekiyorsa yalnızca yerel ortamda
+`ENFORCE_APP_CHECK=false` kullanın. Üretim başlatıcısı bu değeri reddeder.
+
+## Kalite kapısı
+
+Her pull request ve `main` güncellemesinde aşağıdaki kapı çalışır:
 
 ```sh
 npm run check
-firebase deploy --only firestore:rules,hosting
+npm audit --omit=dev --audit-level=high
+npm run security:audit
 ```
 
-`firebase.json` routes `/api/**` to the `zekapark-api` Cloud Run service and all
-remaining routes to the single-page application.
+`npm run check`; TypeScript doğrulaması, birim/regresyon testleri, gerçek
+Firestore Emulator yetki testleri, 26.400 soruluk jeneratör matrisi ve
+istemci/sunucu/retention üretim derlemelerini kapsar.
+
+## Yetkilendirme modeli
+
+- Tarayıcı kendi hesabı için yalnızca `student` veya `parent` profili
+  oluşturabilir; yönetici profili üretemez.
+- Yönetici erişimi hem Firestore profil rolünü hem de güvenilir sunucudan
+  verilmiş Firebase `role=admin` özel claim'ini gerektirir.
+- Sabit e-posta, sabit parola, anonim giriş veya yerel oturum yönetici yetkisi
+  vermez.
+- Soru belgelerini yalnızca MFA'lı yönetici okuyabilir; öğrenci soruları cevap,
+  çözüm, seed ve editoryal metadata çıkarılmış biçimde challenge API'den alır.
+- Veli yalnızca kendisine bağlı öğrencinin profilini ve özel ilerleme durumunu
+  okuyabilir.
+- Sunucu, ID token'ları iptal kontrolüyle doğrular; üretimde App Check zorunludur.
+
+İlk yönetici, ayrıcalıklı ve denetlenen bir ortamda Firebase Admin SDK ile UID
+üzerinden özel claim almalıdır. Yönetici yetkisi e-posta adresinden türetilmez.
+Yetki kaldırıldığında yenileme token'larını da iptal edin.
+
+## Üretim dağıtımı
+
+Önerilen düzen, statik istemciyi Firebase Hosting'de ve API'yi Cloud Run'da aynı
+origin altındaki `/api/**` yeniden yazımıyla sunmaktır.
+
+Üretim dağıtımı elle parçalı komutlarla yapılmaz. Ön koşullar, Secret Manager,
+yönetici olay kapatma, App Check, yedek/restore, Stripe kabulü, dağıtım, smoke ve
+geri alma adımları için [üretim runbook'unu](docs/PRODUCTION_RUNBOOK.md) izleyin.
+
+```sh
+npm run deploy:production
+```
+
+Cloud Run servisi ağ düzeyinde erişilebilir olabilir; korumalı uçlar uygulama
+düzeyinde Firebase ID token, App Check, rol denetimi ve hız sınırlaması uygular.
+
+Üretimde en az şu sunucu değişkenleri gereklidir:
+
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_DATABASE_ID`
+- `APP_BASE_URL` (HTTPS)
+- `CORS_ALLOWED_ORIGINS` (yalnızca kesin HTTPS origin'leri)
+- `ENFORCE_APP_CHECK=true`
+
+İstemci ve API farklı origin'lerdeyse derleme sırasında `VITE_API_BASE_URL`
+ayarlanmalıdır. Yalnızca statik Vercel dağıtımı `/api` işlevlerini sağlamaz;
+ayrı API origin'i zorunludur.
+
+Dağıtımdan önce App Check reCAPTCHA Enterprise anahtarını,
+`VITE_FIREBASE_APPCHECK_SITE_KEY` ile istemciye verin. Sunucu sırlarını hiçbir
+zaman `VITE_` önekiyle tanımlamayın; Secret Manager kullanın.
+
+## Güvenlik ve yayın
+
+- Güvenlik bildirimi ve olay adımları: [SECURITY.md](SECURITY.md)
+- Üretim operasyonu ve geri alma: [docs/PRODUCTION_RUNBOOK.md](docs/PRODUCTION_RUNBOOK.md)
+- Ticari hazırlık skoru ve yayın kapıları:
+  [docs/COMMERCIAL_READINESS.md](docs/COMMERCIAL_READINESS.md)
+
+ZekaPark, MEB'in resmî uygulaması değildir; mağaza metinleri ve yasal belgeler
+bu bağımsızlığı açıkça belirtmelidir.

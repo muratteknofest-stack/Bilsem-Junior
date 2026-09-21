@@ -12,7 +12,8 @@ export function getAchievements(): Achievement[] {
     try {
       const stored: Achievement[] = JSON.parse(raw);
       let changed = false;
-      INITIAL_ACHIEVEMENTS.forEach((initAch) => {
+      const lockedDefinitions = createLockedAchievements();
+      lockedDefinitions.forEach((initAch) => {
         const exists = stored.find((s) => s.id === initAch.id);
         if (!exists) {
           stored.push({ ...initAch });

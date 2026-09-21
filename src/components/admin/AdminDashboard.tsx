@@ -1,52 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { dataService } from '../../services/data-service';
-import { questionBankService } from '../../services/question-bank-service';
 import { 
   BarChart3, 
   Layers, 
-  Target, 
   AlertTriangle, 
   CheckCircle2, 
-  FileText, 
-  Activity,
   Users,
   Clock,
-  ArrowRight
 } from 'lucide-react';
 import { COGNITIVE_CATEGORY_LABELS, CognitiveCategory } from '../../types';
+import { loadAdminOverview, type AdminOverview } from '../../services/admin-data-service';
 
 export const AdminDashboard: React.FC = () => {
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<AdminOverview | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Generate mock stats for now, later hook into services
-    const pool = questionBankService.getAll();
-    
-    // Calculate category counts
-    const categoryCounts: Record<string, number> = {};
-    pool.forEach(q => {
-      categoryCounts[q.category] = (categoryCounts[q.category] || 0) + 1;
-    });
-
-    setStats({
-      totalQuestions: pool.length,
-      publishedQuestions: pool.length,
-      draftQuestions: 0,
-      reportedQuestions: 3, // Mock
-      targetQuestions: 500, // Mock
-      activeTests: 12, // Mock
-      recentActivities: [
-        { id: 1, action: "Yeni soru eklendi (Görsel Algı)", time: "10 dk önce" },
-        { id: 2, action: "Soru havuzu güncellendi (Sınıf 2)", time: "1 saat önce" },
-        { id: 3, action: "Raporlanan soru incelendi", time: "3 saat önce" }
-      ],
-      categoryCounts
-    });
+    let active = true;
+    loadAdminOverview()
+      .then((value) => active && setStats(value))
+      .catch((reason) => active && setError(reason instanceof Error ? reason.message : 'Yönetim özeti alınamadı.'));
+    return () => { active = false; };
   }, []);
 
-  if (!stats) return <div className="p-8 text-center">Yükleniyor...</div>;
+  if (error) return <div role="alert" className="p-6 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 font-semibold">{error}</div>;
+  if (!stats) return <div className="p-8 text-center" role="status">Canlı veriler yükleniyor...</div>;
 
   const progress = Math.min(100, Math.round((stats.totalQuestions / stats.targetQuestions) * 100));
+  const categoryTarget = Math.max(1, Math.ceil(stats.targetQuestions / Object.keys(COGNITIVE_CATEGORY_LABELS).length));
 
   return (
     <div className="space-y-6">
@@ -75,7 +55,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="flex justify-between items-start">
             <div>
               <p className="text-xs font-bold text-slate-500 uppercase">Yayınlanan / Taslak</p>
-              <h3 className="text-2xl font-black text-emerald-600 mt-1">{stats.publishedQuestions} <span className="text-sm font-bold text-slate-400">/ {stats.draftQuestions}</span></h3>
+              <h3 className="text-2xl font-black text-emerald-600 mt-1">{stats.statusCounts.published} <span className="text-sm font-bold text-slate-400">/ {stats.statusCounts.draft + stats.statusCounts.review}</span></h3>
             </div>
             <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
               <CheckCircle2 className="w-5 h-5" />
@@ -87,7 +67,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="flex justify-between items-start">
             <div>
               <p className="text-xs font-bold text-slate-500 uppercase">Raporlanan</p>
-              <h3 className="text-2xl font-black text-rose-600 mt-1">{stats.reportedQuestions}</h3>
+              <h3 className="text-2xl font-black text-rose-600 mt-1">{stats.openReports}</h3>
             </div>
             <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600">
               <AlertTriangle className="w-5 h-5" />
@@ -99,14 +79,14 @@ export const AdminDashboard: React.FC = () => {
         <div className="bg-white p-5 rounded-xl  border border-zinc-200">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-xs font-bold text-slate-500 uppercase">Aktif Testler</p>
-              <h3 className="text-2xl font-black text-amber-600 mt-1">{stats.activeTests}</h3>
+              <p className="text-xs font-bold text-slate-500 uppercase">Kayıtlı Öğrenci</p>
+              <h3 className="text-2xl font-black text-amber-600 mt-1">{stats.registeredStudents}</h3>
             </div>
             <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
-              <Activity className="w-5 h-5" />
+              <Users className="w-5 h-5" />
             </div>
           </div>
-          <p className="text-xs text-amber-600 font-medium mt-2">Devam eden öğrenci oturumları</p>
+          <p className="text-xs text-amber-600 font-medium mt-2">Firebase üzerinde doğrulanmış öğrenci profilleri</p>
         </div>
       </div>
 
@@ -124,7 +104,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="space-y-4">
             {Object.keys(COGNITIVE_CATEGORY_LABELS).map(cat => {
               const count = stats.categoryCounts[cat] || 0;
-              const target = 50; // Mock target per category
+              const target = categoryTarget;
               const catProgress = Math.min(100, Math.round((count / target) * 100));
               
               return (
@@ -153,21 +133,23 @@ export const AdminDashboard: React.FC = () => {
           </div>
           
           <div className="space-y-4">
-            {stats.recentActivities.map((act: any) => (
+            {stats.recentActivities.map((act) => (
               <div key={act.id} className="flex gap-3">
                 <div className="w-2 h-2 rounded-full bg-indigo-500 mt-2 shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-slate-800">{act.action}</p>
-                  <p className="text-xs text-slate-500">{act.time}</p>
+                  <p className="text-sm font-medium text-slate-800">
+                    {act.action === 'student_reward_granted' ? 'Öğrenci ödülü tanımlandı' : (act.action || 'Yönetim işlemi')}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {act.createdAt ? new Date(act.createdAt).toLocaleString('tr-TR') : 'Zaman bilgisi yok'}
+                  </p>
                 </div>
               </div>
             ))}
+            {stats.recentActivities.length === 0 && (
+              <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">Henüz kayıtlı bir yönetim işlemi yok.</p>
+            )}
           </div>
-          
-          <button className="w-full mt-6 py-2 rounded-xl bg-slate-50 text-slate-600 text-sm font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-2">
-            İşlem Geçmişi
-            <ArrowRight className="w-4 h-4" />
-          </button>
         </div>
       </div>
     </div>

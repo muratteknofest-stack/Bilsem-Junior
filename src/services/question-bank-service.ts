@@ -7,20 +7,7 @@ import {
 } from '../types';
 import { generateQuestionByType, CATEGORY_TYPES_MAP } from '../features/questions/generators';
 import { GRADE_CONFIGS, ALL_GRADES } from '../features/questions/grade-config';
-import { safeStorage } from '../lib/storage';
-import {
-  collection,
-  doc,
-  setDoc,
-  deleteDoc,
-  writeBatch,
-  onSnapshot,
-  getDocs,
-} from 'firebase/firestore';
-import { db } from '../lib/firebase';
 import { z } from 'zod';
-
-const STORAGE_KEY = 'bilsem_admin_managed_questions_v2';
 
 export interface QuestionFilter {
   grade?: 1 | 2 | 3 | 4 | 'all';
@@ -73,77 +60,35 @@ class QuestionBankService {
 
   private init() {
     if (this.initialized) return;
-
-    try {
-      const stored = safeStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          this.questions = parsed;
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to parse questions from safeStorage', e);
-    }
-
     this.initialized = true;
-
-    // Real-time live Firestore synchronization
-    if (typeof window !== 'undefined') {
-      try {
-        onSnapshot(
-          collection(db, 'questions'),
-          (snapshot) => {
-            if (!snapshot.empty) {
-              const liveList = snapshot.docs.map((d) => ({
-                ...(d.data() as BaseQuestion),
-                id: d.id,
-              }));
-              this.questions = liveList;
-              this.save();
-              this.notify();
-            } else if (snapshot.empty && this.questions.length > 0) {
-              this.questions = [];
-              this.save();
-              this.notify();
-            }
-          },
-          (err) => {
-            console.warn('Firestore live sync notice (fallback to local cache):', err);
-          }
-        );
-      } catch (err) {
-        console.warn('Firestore snapshot setup skipped:', err);
-      }
-    }
   }
 
   private buildInitialQuestionPool(): BaseQuestion[] {
     return [];
   }
 
-  private save() {
-    try {
-      safeStorage.setItem(STORAGE_KEY, JSON.stringify(this.questions));
-    } catch (e) {
-      console.warn('Failed to save questions to safeStorage', e);
-    }
-  }
+  // This service is an in-memory authoring cache only. Durable question
+  // mutations must pass through the audited, MFA-protected admin API.
+  private save() {}
 
   public getAll(): BaseQuestion[] {
     return [...this.questions];
+  }
+
+  public getPublished(): BaseQuestion[] {
+    return this.questions.filter((question) => question.status === 'published');
   }
 
   public getAllQuestions(): BaseQuestion[] {
     return [...this.questions];
   }
 
-  public createCustomQuestion(question: BaseQuestion): BaseQuestion {
+  public cacheQuestion(question: BaseQuestion): BaseQuestion {
     const publishedQ: BaseQuestion = {
       ...question,
       status: question.status || 'published',
       isCustom: true,
-      updatedAt: new Date().toISOString(),
+      updatedAt: question.updatedAt || new Date().toISOString(),
     };
     const existingIdx = this.questions.findIndex((q) => q.id === publishedQ.id);
     if (existingIdx !== -1) {
@@ -154,14 +99,16 @@ class QuestionBankService {
     this.save();
     this.notify();
 
-    // Live sync to Firestore
-    try {
-      setDoc(doc(db, 'questions', publishedQ.id), publishedQ).catch((err) => {
-        console.warn('Live Firestore sync error (createCustomQuestion):', err);
-      });
-    } catch {}
-
     return publishedQ;
+  }
+
+  public replaceCache(questions: BaseQuestion[]): void {
+    this.questions = questions.map((question) => ({ ...question }));
+    this.notify();
+  }
+
+  public createCustomQuestion(question: BaseQuestion): BaseQuestion {
+    return this.cacheQuestion(question);
   }
 
   public getFiltered(filter?: QuestionFilter): BaseQuestion[] {
@@ -231,13 +178,6 @@ class QuestionBankService {
     this.save();
     this.notify();
 
-    // Live Sync to Firebase Firestore
-    try {
-      setDoc(doc(db, 'questions', newQuestion.id), newQuestion).catch((err) => {
-        console.warn('Live Firestore sync error (addQuestion):', err);
-      });
-    } catch {}
-
     return newQuestion;
   }
 
@@ -256,24 +196,6 @@ class QuestionBankService {
     this.questions.unshift(...preparedQuestions);
     this.save();
     this.notify();
-
-    // Live Batch Sync to Firebase Firestore
-    if (typeof window !== 'undefined') {
-      try {
-        for (let i = 0; i < preparedQuestions.length; i += 400) {
-          const chunk = preparedQuestions.slice(i, i + 400);
-          const batch = writeBatch(db);
-          chunk.forEach((q) => {
-            batch.set(doc(db, 'questions', q.id), q);
-          });
-          batch.commit().catch((err) => {
-            console.warn('Live Firestore batch sync error (addBulkQuestions):', err);
-          });
-        }
-      } catch (e) {
-        console.warn('Firebase batch error:', e);
-      }
-    }
 
     return preparedQuestions.length;
   }
@@ -294,13 +216,6 @@ class QuestionBankService {
     this.save();
     this.notify();
 
-    // Live Sync update to Firebase Firestore
-    try {
-      setDoc(doc(db, 'questions', id), updated, { merge: true }).catch((err) => {
-        console.warn('Live Firestore update error:', err);
-      });
-    } catch {}
-
     return updated;
   }
 
@@ -310,13 +225,6 @@ class QuestionBankService {
     if (this.questions.length !== initialLen) {
       this.save();
       this.notify();
-
-      // Live delete from Firebase Firestore
-      try {
-        deleteDoc(doc(db, 'questions', id)).catch((err) => {
-          console.warn('Live Firestore delete error:', err);
-        });
-      } catch {}
 
       return true;
     }
@@ -330,24 +238,6 @@ class QuestionBankService {
     this.questions = this.questions.filter((q) => !idSet.has(q.id));
     this.save();
     this.notify();
-
-    // Live Batch Delete from Firebase Firestore
-    if (typeof window !== 'undefined') {
-      try {
-        for (let i = 0; i < ids.length; i += 400) {
-          const chunk = ids.slice(i, i + 400);
-          const batch = writeBatch(db);
-          chunk.forEach((id) => {
-            batch.delete(doc(db, 'questions', id));
-          });
-          batch.commit().catch((err) => {
-            console.warn('Live Firestore batch delete error:', err);
-          });
-        }
-      } catch (e) {
-        console.warn('Firebase batch delete error:', e);
-      }
-    }
 
     return initialLen - this.questions.length;
   }
@@ -376,35 +266,13 @@ class QuestionBankService {
     this.save();
     this.notify();
 
-    // Live Sync clone to Firebase Firestore
-    try {
-      setDoc(doc(db, 'questions', clone.id), clone).catch((err) => {
-        console.warn('Live Firestore duplicate error:', err);
-      });
-    } catch {}
-
     return clone;
   }
 
   public resetToDefaults(): BaseQuestion[] {
-    const existingIds = this.questions.map((q) => q.id);
     this.questions = [];
     this.save();
     this.notify();
-
-    // Live Wipe from Firebase Firestore
-    if (typeof window !== 'undefined' && existingIds.length > 0) {
-      try {
-        getDocs(collection(db, 'questions')).then((snapshot) => {
-          if (!snapshot.empty) {
-            const batch = writeBatch(db);
-            snapshot.docs.forEach((d) => batch.delete(d.ref));
-            batch.commit().catch(console.warn);
-          }
-        }).catch(console.warn);
-      } catch {}
-    }
-
     return [];
   }
 

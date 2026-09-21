@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { BaseQuestion, ExamResult, CognitiveCategory, DifficultyLevel } from '../types';
-import { generateQuestion, generateQuestionForGrade } from '../features/questions/generators';
-import { usePublishedQuestions } from '../features/questions/use-published-questions';
-import { selectPublishedPool } from '../features/questions/editorial-data';
+import { BaseQuestion, ExamResult, CognitiveCategory, PublicQuestion } from '../types';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
 import { OptionRenderer } from '../features/questions/renderers/OptionRenderer';
 import { VisualCountdownTimer } from './VisualCountdownTimer';
 import { dataService } from '../services/data-service';
+import { startExam, submitExam } from '../services/exam-api-service';
+import { weeklyChallengesService } from '../services/weekly-challenges-service';
 import { sound } from '../lib/sound';
 import {
   Trophy,
@@ -89,9 +88,9 @@ const EXAM_MODES: ExamMode[] = [
 ];
 
 export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome }) => {
-  const publishedQuestions = usePublishedQuestions();
   const [inExam, setInExam] = useState(false);
-  const [questions, setQuestions] = useState<BaseQuestion[]>([]);
+  const [questions, setQuestions] = useState<PublicQuestion[]>([]);
+  const [attemptId, setAttemptId] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [flags, setFlags] = useState<Record<string, boolean>>({});
@@ -104,7 +103,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
   
   // Duration & Strict Mode settings
   const [isStrictMode, setIsStrictMode] = useState<boolean>(true);
-  const [isRestrictedMode, setIsRestrictedMode] = useState<boolean>(false);
+  const [isRestrictedMode] = useState<boolean>(true);
 
   // Timer & pacing state
   const [totalSeconds, setTotalSeconds] = useState<number>(20 * 60);
@@ -116,6 +115,9 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   const [examResult, setExamResult] = useState<ExamResult | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+  const [isSubmittingExam, setIsSubmittingExam] = useState(false);
+  const [examError, setExamError] = useState<string | null>(null);
 
   const toggleFullscreen = () => {
     try {
@@ -142,7 +144,8 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
   // Check if an active exam was stored in LocalStorage
   useEffect(() => {
     const saved = dataService.getActiveExam();
-    if (saved && saved.status === 'in_progress' && saved.questions?.length > 0) {
+    if (saved && saved.status === 'in_progress' && saved.attemptId && saved.questions?.length > 0) {
+      setAttemptId(saved.attemptId);
       setQuestions(saved.questions);
       setCurrentIndex(saved.currentIndex || 0);
       setAnswers(saved.answers || {});
@@ -159,6 +162,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
     if (inExam && !examResult && questions.length > 0) {
       dataService.saveActiveExam({
         status: 'in_progress',
+        attemptId,
         questions,
         currentIndex,
         answers,
@@ -167,7 +171,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
         remainingSeconds,
       });
     }
-  }, [inExam, examResult, questions, currentIndex, answers, flags, totalSeconds, remainingSeconds]);
+  }, [inExam, examResult, attemptId, questions, currentIndex, answers, flags, totalSeconds, remainingSeconds]);
 
   // Countdown timer with Strict Mode support
   useEffect(() => {
@@ -177,7 +181,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
           if (prev <= 1) {
             if (isStrictMode) {
               clearInterval(timerRef.current);
-              finishExam(true);
+              void finishExam(true);
               return 0;
             } else {
               setOvertimeSeconds((ot) => ot + 1);
@@ -201,104 +205,50 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
     setInExam(false);
     setExamResult(null);
     setQuestions([]);
+    setAttemptId(null);
     setCurrentIndex(0);
     setAnswers({});
     setFlags({});
     setShowFinishConfirm(false);
   };
 
-  const startNewExam = (mode?: any) => {
+  const startNewExam = async (mode?: any) => {
     sound.playClick();
     const targetMode: ExamMode = (mode && typeof mode === 'object' && typeof mode.qCount === 'number')
       ? mode
       : (selectedMode || EXAM_MODES[0]);
 
-    setSelectedMode(targetMode);
-    setCurrentExamTitle(targetMode.title);
-    const categories: CognitiveCategory[] = [
-      'pattern',
-      'matrix',
-      'spatial',
-      'logic',
-      'attention',
-      'visual_perception',
-      'numerical',
-      'memory',
-    ];
-
-    const qList: BaseQuestion[] = [];
-    const count = targetMode.qCount || 10;
-    for (let i = 0; i < count; i++) {
-      if (targetMode.category) {
-        const diff = Math.min(6, Math.floor(i / (count / 4)) + 2) as DifficultyLevel;
-        qList.push(generateQuestion({
-          category: targetMode.category,
-          difficulty: diff,
-          seed: 700000 + Date.now() + i * 997,
-        }));
-      } else if (targetMode.grade) {
-        const diff = Math.min(6, Math.floor(i / (count / 4)) + 2) as DifficultyLevel;
-        qList.push(generateQuestionForGrade(targetMode.grade as any, 700000 + Date.now() + i * 997, undefined, diff));
-      } else {
-        const cat = categories[i % categories.length];
-        const diff = Math.min(6, Math.floor(i / (count / 4)) + 2) as DifficultyLevel;
-        const q = generateQuestion({
-          category: cat,
-          difficulty: diff,
-          seed: 700000 + Date.now() + i * 997,
-        });
-        qList.push(q);
-      }
+    setIsStarting(true);
+    setExamError(null);
+    try {
+      const started = await startExam(targetMode.id);
+      setSelectedMode(targetMode);
+      setCurrentExamTitle(started.title);
+      setAttemptId(started.attemptId);
+      setTotalSeconds(started.durationSeconds);
+      setRemainingSeconds(started.durationSeconds);
+      setOvertimeSeconds(0);
+      setEndedByTimeout(false);
+      setQuestions(started.questions);
+      setCurrentIndex(0);
+      setAnswers({});
+      setFlags({});
+      setExamResult(null);
+      setShowFinishConfirm(false);
+      setInExam(true);
+    } catch (error) {
+      setExamError(error instanceof Error ? error.message : 'Sınav başlatılamadı.');
+      sound.playError();
+    } finally {
+      setIsStarting(false);
     }
-
-    const initialSecs = (targetMode.mins || 15) * 60;
-    setTotalSeconds(initialSecs);
-    setRemainingSeconds(initialSecs);
-    setOvertimeSeconds(0);
-    setEndedByTimeout(false);
-    setQuestions(selectPublishedPool(qList, publishedQuestions));
-    setCurrentIndex(0);
-    setAnswers({});
-    setFlags({});
-    setExamResult(null);
-    setShowFinishConfirm(false);
-    setInExam(true);
   };
 
   const handleSelectOption = (optId: string) => {
     const q = questions[currentIndex];
     if (!q) return;
-    
-    const isCorrect = optId === q.correctOptionId;
-    if (isCorrect) {
-      sound.playSuccess();
-      try {
-        confetti({ 
-          particleCount: 150, 
-          spread: 100, 
-          origin: { y: 0.5 },
-          colors: ['#10b981', '#34d399', '#fbbf24', '#3b82f6'],
-          disableForReducedMotion: true,
-          zIndex: 9999
-        });
-      } catch {}
-    } else {
-      sound.playError();
-      setIsShaking(true);
-      setTimeout(() => setIsShaking(false), 500);
-      try {
-        confetti({
-          particleCount: 40,
-          spread: 50,
-          origin: { y: 0.7 },
-          colors: ['#ef4444', '#f87171', '#94a3b8'],
-          gravity: 1.5,
-          ticks: 100,
-          disableForReducedMotion: true,
-          zIndex: 9999
-        });
-      } catch {}
-    }
+
+    sound.playClick();
 
     setAnswers((prev) => ({
       ...prev,
@@ -316,88 +266,31 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
     }));
   };
 
-  const finishExam = (timeoutTriggered = false) => {
-    sound.playLevelUp();
-    dataService.clearActiveExam();
+  const finishExam = async (timeoutTriggered = false) => {
+    if (!attemptId || isSubmittingExam) return;
+    setIsSubmittingExam(true);
+    setExamError(null);
 
     if (timeoutTriggered) {
       setEndedByTimeout(true);
     }
 
     try {
-      confetti({
-        particleCount: 200,
-        spread: 120,
-        origin: { y: 0.4 },
-        colors: ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'],
-        disableForReducedMotion: true,
-        zIndex: 9999
+      const submitted = await submitExam(attemptId, answers);
+      dataService.clearActiveExam();
+      Object.entries(submitted.result.categoryBreakdown).forEach(([category, counts]) => {
+        if (counts.total > 0) weeklyChallengesService.recordCategoryQuestionSolved(category as CognitiveCategory, counts.total);
       });
-    } catch {}
-
-    let correctCount = 0;
-    let wrongCount = 0;
-    let blankCount = 0;
-
-    const breakdown: Record<CognitiveCategory, { total: number; correct: number }> = {
-      visual_perception: { total: 0, correct: 0 },
-      pattern: { total: 0, correct: 0 },
-      matrix: { total: 0, correct: 0 },
-      spatial: { total: 0, correct: 0 },
-      logic: { total: 0, correct: 0 },
-      attention: { total: 0, correct: 0 },
-      memory: { total: 0, correct: 0 },
-      numerical: { total: 0, correct: 0 },
-        verbal: { total: 0, correct: 0 },
-        coding: { total: 0, correct: 0 },
-    };
-
-    questions.forEach((q) => {
-      const userChoice = answers[q.id];
-      const cat = q.category;
-      if (!breakdown[cat]) breakdown[cat] = { total: 0, correct: 0 };
-      breakdown[cat].total += 1;
-
-      if (!userChoice) {
-        blankCount += 1;
-      } else if (userChoice === q.correctOptionId) {
-        correctCount += 1;
-        breakdown[cat].correct += 1;
-        dataService.recordQuestionSolved(true, cat);
-        dataService.updateSkillMastery(cat, true, q.difficulty);
-      } else {
-        wrongCount += 1;
-        dataService.recordQuestionSolved(false, cat);
-        dataService.addMistake(q);
-        dataService.updateSkillMastery(cat, false, q.difficulty);
-      }
-    });
-
-    const scorePercentage = Math.round((correctCount / questions.length) * 100);
-    const xpReward = correctCount * 15 + 50; // Exam completion bonus
-    dataService.addXP(xpReward);
-    dataService.recordPracticeSession(Math.max(5, Math.round((totalSeconds - remainingSeconds + overtimeSeconds) / 60)));
-
-    const result: ExamResult = {
-      examId: `exam-${Date.now()}`,
-      title: currentExamTitle,
-      date: new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }),
-      totalQuestions: questions.length,
-      correctAnswers: correctCount,
-      wrongAnswers: wrongCount,
-      blankAnswers: blankCount,
-      scorePercentage,
-      totalTimeSeconds: Math.max(1, totalSeconds - remainingSeconds + overtimeSeconds),
-      categoryBreakdown: breakdown,
-    };
-
-    dataService.saveExamResult(result);
-    setExamResult(result);
-    setShowFinishConfirm(false);
-
-    try {
-      confetti({ particleCount: 100, spread: 80, origin: { y: 0.5 } });
-    } catch {}
+      setExamResult(submitted.result);
+      setShowFinishConfirm(false);
+      sound.playLevelUp();
+      try { confetti({ particleCount: 100, spread: 80, origin: { y: 0.5 } }); } catch {}
+    } catch (error) {
+      setExamError(error instanceof Error ? error.message : 'Sınav puanlanamadı.');
+      sound.playError();
+    } finally {
+      setIsSubmittingExam(false);
+    }
   };
 
   const formatTime = (secs: number) => {
@@ -480,6 +373,11 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
           </div>
 
           {/* Exam Mode Selection Grid */}
+          {examError && (
+            <div className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-sm font-semibold text-rose-800">
+              {examError}
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {EXAM_MODES.filter((mode) => {
               if (activeFilter === 'all') return true;
@@ -495,6 +393,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
                 <button
                   key={mode.id}
                   onClick={() => startNewExam(mode)}
+                  disabled={isStarting}
                   className={`relative p-5 rounded-xl bg-gradient-to-br ${mode.color} text-left overflow-hidden  hover:scale-105 active:scale-95 transition-all cursor-pointer group flex flex-col justify-between min-h-[160px]`}
                 >
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700" />
@@ -509,7 +408,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
                   </div>
                   
                   <div className="relative z-10 mt-4">
-                    <h3 className="text-lg font-black text-white drop-">{mode.title}</h3>
+                    <h3 className="text-lg font-black text-white drop-">{isStarting ? 'Güvenli sınav hazırlanıyor…' : mode.title}</h3>
                     <p className="text-xs text-white/80 font-medium mt-1">{mode.desc}</p>
                   </div>
                 </button>
@@ -534,16 +433,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
                   : 'Serbest mod: Seçim yaptıktan sonra anında doğru/yanlış bildirimi gösterilir.'}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                sound.playClick();
-                setIsRestrictedMode(!isRestrictedMode);
-              }}
-              className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
-                isRestrictedMode ? 'bg-indigo-500' : 'bg-white/30'
-              }`}
-            >
+            <button type="button" disabled aria-label="Kısıtlı sınav modu zorunlu" className="relative inline-flex h-7 w-14 shrink-0 rounded-full border-2 border-transparent bg-indigo-500">
               <span className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white ring-0 transition duration-200 ease-in-out ${
                 isRestrictedMode ? 'translate-x-7' : 'translate-x-0'
               }`} />
@@ -931,7 +821,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
 
           {/* Visual Question Area */}
           <div className="py-2">
-            <QuestionRenderer question={currentQ} />
+            <QuestionRenderer question={currentQ as BaseQuestion} />
           </div>
 
           {/* Answer Options Grid (CONFIDENTIAL: No immediate feedback!) */}
@@ -1012,9 +902,10 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
               </button>
               <button
                 onClick={() => finishExam()}
-                className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs  cursor-pointer"
+                disabled={isSubmittingExam}
+                className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs cursor-pointer disabled:opacity-60"
               >
-                Evet, Bitir
+                {isSubmittingExam ? 'Sunucuda puanlanıyor…' : 'Evet, Bitir'}
               </button>
             </div>
           </div>
