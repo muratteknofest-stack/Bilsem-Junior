@@ -12,7 +12,17 @@
     "lint": "tsc --noEmit",
     "test": "node --import tsx --test tests/editorial-engine.test.ts tests/question-engine.test.ts tests/security-regression.test.ts",
     "security:audit": "node scripts/osv-audit.mjs",
-    "check": "npm run lint && npm test && npm run build"
+    "security:audit:all": "npm audit --audit-level=high",
+    "check": "npm run lint && npm test && npm run build",
+    "ops:enable-mfa": "node scripts/ops-cli.js ops:enable-mfa",
+    "ops:secure-admin": "node scripts/ops-cli.js ops:secure-admin",
+    "ops:verify-admin": "node scripts/ops-cli.js ops:verify-admin",
+    "ops:configure-production": "node scripts/ops-cli.js ops:configure-production",
+    "ops:restore-drill": "node scripts/ops-cli.js ops:restore-drill",
+    "ops:migrate-answer-secrets": "node scripts/ops-cli.js ops:migrate-answer-secrets",
+    "ops:privacy-approve": "node scripts/ops-cli.js ops:privacy-approve",
+    "ops:privacy-delete": "node scripts/ops-cli.js ops:privacy-delete",
+    "release:validate": "node scripts/ops-cli.js release:validate"
   },
   "dependencies": {
     "@google-cloud/firestore": "^9.1.0",
