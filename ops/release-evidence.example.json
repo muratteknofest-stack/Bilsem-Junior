@@ -1,0 +1,104 @@
+{
+  "releaseCommit": "",
+  "releaseTimestamp": "",
+  "cloudRunRevision": "",
+  "hostingRelease": "",
+  "stripeWebhookTarget": "",
+  "rollbackOwner": "",
+  "validationPhases": {
+    "predeploy": {
+      "completed": false,
+      "timestamp": "",
+      "operator": "",
+      "evidence": []
+    },
+    "qualityGate": {
+      "completed": false,
+      "timestamp": "",
+      "operator": "",
+      "npmCheckOutput": "",
+      "npmAuditOutput": "",
+      "securityAuditOutput": ""
+    },
+    "adminSecurityRotation": {
+      "completed": false,
+      "timestamp": "",
+      "operator": "",
+      "adminUid": "",
+      "passwordRotated": false,
+      "mfaEnabled": false,
+      "tokensRevoked": false
+    },
+    "opsConfiguration": {
+      "completed": false,
+      "timestamp": "",
+      "operator": "",
+      "serviceAccountsCreated": [],
+      "backupScheduleConfigured": false,
+      "alertsConfigured": false,
+      "budgetAlertsConfigured": false
+    },
+    "restoreDrill": {
+      "completed": false,
+      "timestamp": "",
+      "operator": "",
+      "backupId": "",
+      "restoreDatabaseId": "",
+      "verificationEvidence": ""
+    },
+    "answerSecretMigration": {
+      "completed": false,
+      "timestamp": "",
+      "operator": "",
+      "dryRunAffectedUsers": null,
+      "executeAffectedUsers": null
+    },
+    "stripeLivePayment": {
+      "completed": false,
+      "timestamp": "",
+      "operator": "",
+      "testModeScenariosVerified": [],
+      "liveTransactionVerified": false,
+      "webhookEventsConfigured": []
+    },
+    "deployment": {
+      "completed": false,
+      "timestamp": "",
+      "operator": "",
+      "commitSha": "",
+      "containerImage": ""
+    },
+    "smokeTests": {
+      "completed": false,
+      "timestamp": "",
+      "operator": "",
+      "healthCheckPassed": false,
+      "readyCheckPassed": false,
+      "appCheckEnforcementVerified": false,
+      "unauthorizedUserBlocked": false,
+      "mfaEnforcementVerified": false,
+      "studentPracticeWorks": false,
+      "idempotentSubmitVerified": false,
+      "parentIsolationVerified": false,
+      "dataExportSafe": false,
+      "deletionFlowWorks": false,
+      "stripeCheckoutVerified": false,
+      "alertsDelivered": false
+    },
+    "privacyOperations": {
+      "completed": false,
+      "timestamp": "",
+      "operator": "",
+      "retentionJobRunning": false
+    },
+    "legalContentPaymentApproval": {
+      "completed": false,
+      "timestamp": "",
+      "legalApprover": "",
+      "contentApprover": "",
+      "paymentApprover": ""
+    }
+  },
+  "goNoGoDecision": "NO-GO",
+  "finalApprovers": []
+}
