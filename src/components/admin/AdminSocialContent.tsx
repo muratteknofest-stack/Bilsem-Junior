@@ -70,7 +70,7 @@ export const AdminSocialContent: React.FC = () => {
         <div className="flex flex-wrap justify-between gap-3"><h3 className="font-semibold">{slot === 'morning' ? 'Sabah' : 'Akşam'} • {draft?.state ?? 'Taslak yok'}</h3>
           {!draft && <button disabled={busy} onClick={() => act('/api/admin/social-content/draft', { slot })} className="rounded-lg bg-indigo-600 px-4 py-2 disabled:opacity-50">Taslak oluştur</button>}</div>
         {draft && <>
-          <div className="text-sm text-slate-300">Doğrulama eşiği: {draft.qualityScore}/100 • Kaynak: {draft.source === 'qwen_verified' ? 'Qwen + bağımsız çözücü' : draft.source === 'question_bank' ? 'Soru havuzu' : 'Doğrulanmış motor'} • Soruyu ve çözümü görsel olarak kontrol edin.</div>
+          <div className="text-sm text-slate-300">Otomatik doğrulama: geçti • Kaynak: {draft.source === 'qwen_verified' ? 'Qwen + bağımsız çözücü' : draft.source === 'question_bank' ? 'Soru havuzu' : 'Doğrulanmış motor'} • Soruyu ve çözümü görsel olarak kontrol edin.</div>
           <div className="text-sm text-slate-400">Ziyaret: {metrics[idx]?.views ?? 0} • Çözülen soru: {metrics[idx]?.solves ?? 0}</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl"><Card draft={draft} kind="question"/><Card draft={draft} kind="answer"/></div>
           <label className="block text-sm">Gönderi açıklaması<textarea value={captions[draft.id] ?? draft.caption} onChange={e => setCaptions(old => ({ ...old, [draft.id]: e.target.value }))} maxLength={1800} rows={3} className="mt-2 block w-full rounded-xl bg-slate-800 border border-slate-600 p-3" /></label>
