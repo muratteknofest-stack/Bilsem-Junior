@@ -27,7 +27,7 @@ export function socialQuestionRejection(question: BaseQuestion, minQuality = 90)
     return 'Dört farklı seçenek gerekli.';
   }
   if (!question.options.some(option => option.id === question.correctOptionId)) return 'Doğru seçenek bulunamadı.';
-  if (new Set(question.options.map(o => o.fingerprint || JSON.stringify(o.visualData))).size !== 4) {
+  if (new Set(question.options.map(o => JSON.stringify(o.visualData))).size !== 4) {
     return 'Birbirinden farklı dört görsel seçenek gerekli.';
   }
   return null;
