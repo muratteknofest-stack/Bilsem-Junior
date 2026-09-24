@@ -8,6 +8,7 @@ import parentRoutes from './server/routes/parent-routes';
 import studentAiRoutes from './server/routes/student-ai-routes';
 import adminAiRoutes from './server/routes/admin-ai-routes';
 import authRoutes from './server/routes/auth-routes';
+import socialContentRoutes from './server/routes/social-content-routes';
 
 dotenv.config();
 
@@ -65,6 +66,7 @@ async function startServer() {
   app.use('/api', studentAiRoutes);
   app.use('/api', adminAiRoutes);
   app.use('/api', authRoutes);
+  app.use('/api', socialContentRoutes);
 
   app.get('/api/health', (req, res) => {
     res.json({
