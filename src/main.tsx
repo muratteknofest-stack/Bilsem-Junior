@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { SocialChallenge } from './components/SocialChallenge';
 import './index.css';
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -22,8 +23,8 @@ if (typeof window !== 'undefined') {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
+    {window.location.pathname.startsWith('/soru-gunu/')
+      ? <SocialChallenge />
+      : <AuthProvider><App /></AuthProvider>}
   </StrictMode>,
 );

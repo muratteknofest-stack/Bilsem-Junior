@@ -1,5 +1,7 @@
 # ZekaPark
 
+Sosyal görsel soru otomasyonu kurulumu: [docs/social-content.md](docs/social-content.md).
+
 ZekaPark is a React, TypeScript, Express and Firebase learning application with
 procedurally generated cognitive-skill questions.
 

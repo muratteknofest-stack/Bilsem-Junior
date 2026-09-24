@@ -1,4 +1,6 @@
 import type { BaseQuestion } from '../src/types';
+import { auditQuestion } from '../src/features/questions/quality';
+import { renderSocialCard, supportsSocialCard } from './social-card';
 
 export type SocialSlot = 'morning' | 'evening';
 
@@ -17,9 +19,11 @@ export function socialSlotId(date: string, slot: SocialSlot): string {
   return `${date}_${slot}`;
 }
 
-export function socialQuestionRejection(question: BaseQuestion, minQuality = 90): string | null {
-  if (question.status !== 'published') return 'Soru yayımlanmış değil.';
-  if (!question.aiMeta?.solverVerified || (question.aiMeta.qualityScore ?? 0) < minQuality) {
+export function socialQuestionRejection(question: BaseQuestion, minQuality = 90, generated = false): string | null {
+  if (!generated && question.status !== 'published') return 'Soru yayımlanmış değil.';
+  const report = auditQuestion(question);
+  if (report.errors.length || !report.solverVerified ||
+      (question.aiMeta && (!question.aiMeta.solverVerified || (question.aiMeta.qualityScore ?? 0) < minQuality))) {
     return 'Bağımsız çözüm veya kalite doğrulaması yetersiz.';
   }
   if (!question.prompt?.trim() || !question.explanation?.summary?.trim()) return 'Soru veya çözüm eksik.';
@@ -30,5 +34,8 @@ export function socialQuestionRejection(question: BaseQuestion, minQuality = 90)
   if (new Set(question.options.map(o => JSON.stringify(o.visualData))).size !== 4) {
     return 'Birbirinden farklı dört görsel seçenek gerekli.';
   }
+  if (!supportsSocialCard(question)) return 'Soru kartı tipi desteklenmiyor.';
+  try { renderSocialCard(question, 'question'); renderSocialCard(question, 'answer'); }
+  catch { return 'Soru veya çözüm görsel karta sığmıyor.'; }
   return null;
 }

@@ -70,12 +70,14 @@ import { AdminBulkQuestionGenerator } from './admin/AdminBulkQuestionGenerator';
 import { CreateQuestionWizard } from './CreateQuestionWizard';
 import { QuestionAuthoringWorkbench } from './admin/QuestionAuthoringWorkbench';
 import { AdminAiQuestionEngine } from './admin/AdminAiQuestionEngine';
+import { AdminSocialContent } from './admin/AdminSocialContent';
 
 type AdminTab =
   | 'dashboard'
   | 'questions'
   | 'bulk_generator'
   | 'ai_engine'
+  | 'social_content'
   | 'studio'
   | 'analytics'
   | 'curriculum'
@@ -177,6 +179,7 @@ export const AdminPanelView: React.FC = () => {
     { id: 'questions', label: 'Soru Bankası & Yönetim', icon: FileQuestion, badge: 'Havuz' },
     { id: 'bulk_generator', label: 'Toplu Soru Motoru', icon: Zap, badge: 'Turbo' },
     { id: 'ai_engine', label: 'Yapay Zeka Soru Üret', icon: Sparkles, badge: 'AI' },
+    { id: 'social_content', label: 'Sosyal İçerik', icon: Layers },
     { id: 'studio', label: 'Soru Tasarım Stüdyosu', icon: Cpu, badge: 'Canlı' },
     { id: 'analytics', label: 'Bilişsel Analitik', icon: BarChart4 },
     { id: 'curriculum', label: 'BİLSEM Müfredat Matrisi', icon: Compass },
@@ -429,6 +432,7 @@ export const AdminPanelView: React.FC = () => {
               {activeTab === 'ai_engine' && (
                 <AdminAiQuestionEngine />
               )}
+              {activeTab === 'social_content' && <AdminSocialContent />}
 
               {/* TAB 3: QUESTION STUDIO */}
               {activeTab === 'studio' && (
