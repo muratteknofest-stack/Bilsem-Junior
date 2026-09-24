@@ -2,7 +2,7 @@
 
 ## Çalışan akış
 
-`Sosyal İçerik` yönetici sekmesi sabah ve akşam taslaklarını üretir, iki JPEG kartı gösterir, açıklamayı düzenletir ve onay/reddet işlemi yapar. Soru seçimi sunucuda Firestore'daki `published` sorulardan yapılır. Uygun soru yoksa sunucuda çalışan `verified-2` motoru tek doğru cevabı programatik olarak doğrulanmış yeni bir taslak oluşturur. Yalnızca `verified_board` içindeki matris/dönüşüm ve sayı örüntüsü kartları bu sürümde desteklenir. Üretilen soru başka bir koleksiyonda otomatik yayımlanmaz. Firestore'daki `social_content`, `social_question_usage`, `social_publications` ve `social_metrics` kayıtlarını yalnızca Admin SDK yazar; mevcut Firestore kuralları bu koleksiyonları istemciye kapatır.
+`Sosyal İçerik` yönetici sekmesi sabah ve akşam taslaklarını üretir, iki JPEG kartı gösterir, açıklamayı düzenletir ve onay/reddet işlemi yapar. Varsayılan kapalı otomatik onay ayarı açıldığında zamanlayıcının hazırladığı doğrulanmış yeni taslaklar yayın saatinde bağlı platformlara gönderilir. Soru seçimi sunucuda Firestore'daki `published` sorulardan yapılır. Uygun soru yoksa sunucuda çalışan `verified-2` motoru tek doğru cevabı programatik olarak doğrulanmış yeni bir taslak oluşturur. Yalnızca `verified_board` içindeki matris/dönüşüm ve sayı örüntüsü kartları bu sürümde desteklenir. Üretilen soru başka bir koleksiyonda otomatik yayımlanmaz. Firestore'daki `social_content`, `social_question_usage`, `social_publications`, `social_settings` ve `social_metrics` kayıtlarını yalnızca Admin SDK yazar; mevcut Firestore kuralları bu koleksiyonları istemciye kapatır.
 
 Kartlar sunucuda 1080×1350 JPEG'e dönüştürülür. Yönetici ön izlemesi kimlik doğrulamalıdır. `/api/social/media/:id/:kind.jpg` yalnızca onaylanan içerik için herkese açıktır. Sosyal ağın içeriği alabilmesi için görsel URL'si gerçek bir HTTPS API adresinde erişilebilir olmalıdır.
 
@@ -40,7 +40,7 @@ gcloud scheduler jobs create http zekapark-social --location=europe-west1 \
 
 ## Sınırlar ve doğrulama
 
-- İlk sürümde yönetici onayı zorunludur; iki günlük paylaşım, yöneticinin uygun taslakları zamanında onaylamasına bağlıdır.
+- Otomatik onay varsayılan kapalıdır. Açıldığında pedagojik gözden geçirme atlanır; programatik doğruluk tek başına eğitimsel uygunluğu garanti etmez. Önce taslakları inceleyip örnekleri doğrulayın.
 - `social_metrics` ziyaret ve çözüm sayısını toplulaştırır; bot trafiğini ve tekil ziyaretçileri ayırmaz. Ebeveyn kayıt dönüşümü henüz ayrı ölçülmez.
 - Instagram profil bağlantısını hesabınızda `PUBLIC_SITE_BASE_URL` ile yönetmeniz gerekir; açıklamadaki bağlantı tıklanabilir varsayılmamalıdır.
 - Gerçek Meta API çağrısı hesabın ve izinlerin yokluğunda yerel testte yapılmaz. Entegrasyonu önce test hesabında doğrulayın. Facebook fotoğraf ve Instagram karusel izinleri hesap türü/sürümüne göre değişebilir.

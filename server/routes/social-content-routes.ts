@@ -28,17 +28,31 @@ router.get('/admin/social-content', ...guard, async (_req, res) => {
     const publicationRefs = refs.flatMap(ref => ['instagram', 'facebook'].map(platform => db.collection('social_publications').doc(`${ref.id}_${platform}`)));
     const publications = await db.getAll(...publicationRefs);
     const metrics = await db.getAll(...refs.map(ref => db.collection('social_metrics').doc(ref.id)));
+    const settings = await db.collection('social_settings').doc('main').get();
     return res.json({ date, slots: snapshots.map(snapshot => snapshot.exists ? snapshot.data() : null),
       platforms: { instagram: platformReady('instagram'), facebook: platformReady('facebook') },
       publications: publications.filter(s => s.exists).map(s => s.data()),
-      metrics: metrics.map(s => s.exists ? s.data() : null) });
+      metrics: metrics.map(s => s.exists ? s.data() : null),
+      settings: { autoApprove: settings.data()?.autoApprove === true } });
   } catch {
     return res.status(503).json({ error: 'Sosyal içerik taslakları alınamadı.' });
   }
 });
 
+router.post('/admin/social-content/settings', ...guard, async (req: AuthenticatedRequest, res) => {
+  const input = z.object({ autoApprove: z.boolean() }).strict().safeParse(req.body);
+  if (!input.success || !req.authUser) return res.sendStatus(400);
+  try {
+    await getAdminDb().collection('social_settings').doc('main').set({ autoApprove: input.data.autoApprove,
+      updatedBy: req.authUser.uid, updatedAt: new Date().toISOString() }, { merge: true });
+    return res.json({ autoApprove: input.data.autoApprove });
+  } catch { return res.status(503).json({ error: 'Ayar kaydedilemedi.' }); }
+});
+
 async function createDraft(slot: 'morning' | 'evening', actor: string) {
   const db = getAdminDb();
+  const settings = await db.collection('social_settings').doc('main').get();
+  const autoApprove = actor === 'scheduler' && settings.data()?.autoApprove === true;
   const date = istanbulDate(new Date());
   const key = socialSlotId(date, slot);
   const draftRef = db.collection('social_content').doc(key);
@@ -63,7 +77,7 @@ async function createDraft(slot: 'morning' | 'evening', actor: string) {
       question: JSON.parse(JSON.stringify(question)) as BaseQuestion,
       qualityScore: question.aiMeta?.qualityScore ?? 100, solverVerified: true,
       caption: 'Günün Zekapark sorusunu çözebilir misiniz? Cevap ve açıklama ikinci görselde. #BİLSEM #Zekapark',
-      state: 'awaiting_approval', createdBy: actor, createdAt: new Date().toISOString(),
+      state: autoApprove ? 'approved' : 'awaiting_approval', createdBy: actor, createdAt: new Date().toISOString(),
     };
     const created = await db.runTransaction(async transaction => {
       const [current, used] = await Promise.all([transaction.get(draftRef), transaction.get(usageRef)]);

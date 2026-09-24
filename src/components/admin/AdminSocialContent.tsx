@@ -39,8 +39,9 @@ export const AdminSocialContent: React.FC = () => {
   const [platforms, setPlatforms] = useState({ instagram: false, facebook: false });
   const [publications, setPublications] = useState<Array<{ contentId: string; platform: string; state: string; errorCode?: string }>>([]);
   const [metrics, setMetrics] = useState<Array<{ views?: number; solves?: number } | null>>([]);
+  const [autoApprove, setAutoApprove] = useState(false);
   const refresh = useCallback(async () => {
-    try { const data = await request('/api/admin/social-content'); setDate(data.date); setSlots(data.slots); setPlatforms(data.platforms); setPublications(data.publications); setMetrics(data.metrics); setError(''); }
+    try { const data = await request('/api/admin/social-content'); setDate(data.date); setSlots(data.slots); setPlatforms(data.platforms); setPublications(data.publications); setMetrics(data.metrics); setAutoApprove(data.settings?.autoApprove === true); setError(''); }
     catch (e) { setError(e instanceof Error ? e.message : 'İçerik yüklenemedi.'); }
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
@@ -55,6 +56,10 @@ export const AdminSocialContent: React.FC = () => {
       <h2 className="text-xl font-bold">Sosyal soru içerikleri</h2>
       <p className="text-sm text-slate-400 mt-2">{date} • Her gün sabah ve akşam için ayrı taslak. İncelemeden otomatik paylaşım yapılmaz.</p>
       <p className="text-sm text-slate-400 mt-2">Instagram: {platforms.instagram ? 'Yapılandırıldı' : 'Hesap bağlantısı gerekli'} · Facebook: {platforms.facebook ? 'Yapılandırıldı' : 'Sayfa bağlantısı gerekli'}</p>
+      <label className="mt-4 flex items-center gap-3 text-sm"><input type="checkbox" checked={autoApprove} disabled={busy}
+        onChange={e => act('/api/admin/social-content/settings', { autoApprove: e.target.checked })} />
+        Doğrulanmış soruları zamanlayıcıda otomatik onayla ve bağlı platformlarda paylaş</label>
+      <p className="text-xs text-slate-400 mt-1">Varsayılan kapalıdır. Açıldığında yeni taslaklar yönetici incelemesi beklemeden yayın saatinde gönderilir.</p>
       {error && <p role="alert" className="mt-3 text-red-300">{error}</p>}
     </div>
     {(['morning', 'evening'] as const).map((slot, idx) => {
