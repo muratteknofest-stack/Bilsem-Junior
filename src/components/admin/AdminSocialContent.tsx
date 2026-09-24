@@ -37,11 +37,12 @@ export const AdminSocialContent: React.FC = () => {
   const [error, setError] = useState('');
   const [captions, setCaptions] = useState<Record<string, string>>({});
   const [platforms, setPlatforms] = useState({ instagram: false, facebook: false });
+  const [qwen, setQwen] = useState<{ status: 'configured' | 'incomplete' | 'absent'; model: string | null }>({ status: 'absent', model: null });
   const [publications, setPublications] = useState<Array<{ contentId: string; platform: string; state: string; errorCode?: string }>>([]);
   const [metrics, setMetrics] = useState<Array<{ views?: number; solves?: number } | null>>([]);
   const [autoApprove, setAutoApprove] = useState(false);
   const refresh = useCallback(async () => {
-    try { const data = await request('/api/admin/social-content'); setDate(data.date); setSlots(data.slots); setPlatforms(data.platforms); setPublications(data.publications); setMetrics(data.metrics); setAutoApprove(data.settings?.autoApprove === true); setError(''); }
+    try { const data = await request('/api/admin/social-content'); setDate(data.date); setSlots(data.slots); setPlatforms(data.platforms); setQwen(data.qwen); setPublications(data.publications); setMetrics(data.metrics); setAutoApprove(data.settings?.autoApprove === true); setError(''); }
     catch (e) { setError(e instanceof Error ? e.message : 'İçerik yüklenemedi.'); }
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
@@ -56,6 +57,7 @@ export const AdminSocialContent: React.FC = () => {
       <h2 className="text-xl font-bold">Sosyal soru içerikleri</h2>
       <p className="text-sm text-slate-400 mt-2">{date} • Her gün sabah ve akşam için ayrı taslak. İncelemeden otomatik paylaşım yapılmaz.</p>
       <p className="text-sm text-slate-400 mt-2">Instagram: {platforms.instagram ? 'Yapılandırıldı' : 'Hesap bağlantısı gerekli'} · Facebook: {platforms.facebook ? 'Yapılandırıldı' : 'Sayfa bağlantısı gerekli'}</p>
+      <p className="text-sm text-slate-400 mt-2">Qwen: {qwen.status === 'configured' ? `${qwen.model} etkin` : qwen.status === 'incomplete' ? 'Yapılandırma eksik' : 'Ayarlı değil; doğrulanmış soru havuzu kullanılır'}</p>
       <label className="mt-4 flex items-center gap-3 text-sm"><input type="checkbox" checked={autoApprove} disabled={busy}
         onChange={e => act('/api/admin/social-content/settings', { autoApprove: e.target.checked })} />
         Doğrulanmış soruları zamanlayıcıda otomatik onayla ve bağlı platformlarda paylaş</label>
@@ -68,7 +70,7 @@ export const AdminSocialContent: React.FC = () => {
         <div className="flex flex-wrap justify-between gap-3"><h3 className="font-semibold">{slot === 'morning' ? 'Sabah' : 'Akşam'} • {draft?.state ?? 'Taslak yok'}</h3>
           {!draft && <button disabled={busy} onClick={() => act('/api/admin/social-content/draft', { slot })} className="rounded-lg bg-indigo-600 px-4 py-2 disabled:opacity-50">Taslak oluştur</button>}</div>
         {draft && <>
-          <div className="text-sm text-slate-300">Kalite: {draft.qualityScore}/100 • Kaynak: {draft.source} • Soruyu ve çözümü görsel olarak kontrol edin.</div>
+          <div className="text-sm text-slate-300">Doğrulama eşiği: {draft.qualityScore}/100 • Kaynak: {draft.source === 'qwen_verified' ? 'Qwen + bağımsız çözücü' : draft.source === 'question_bank' ? 'Soru havuzu' : 'Doğrulanmış motor'} • Soruyu ve çözümü görsel olarak kontrol edin.</div>
           <div className="text-sm text-slate-400">Ziyaret: {metrics[idx]?.views ?? 0} • Çözülen soru: {metrics[idx]?.solves ?? 0}</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl"><Card draft={draft} kind="question"/><Card draft={draft} kind="answer"/></div>
           <label className="block text-sm">Gönderi açıklaması<textarea value={captions[draft.id] ?? draft.caption} onChange={e => setCaptions(old => ({ ...old, [draft.id]: e.target.value }))} maxLength={1800} rows={3} className="mt-2 block w-full rounded-xl bg-slate-800 border border-slate-600 p-3" /></label>

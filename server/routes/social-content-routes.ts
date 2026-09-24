@@ -10,6 +10,7 @@ import { getAdminDb, requireAppCheck, requireFirebaseAuth, requireProfileRole, t
 import { istanbulDate, socialQuestionRejection, socialSlotId } from '../social-draft-core';
 import { renderSocialCard } from '../social-card';
 import { platformReady, publishApproved } from '../social-publish';
+import { createQwenSocialCandidate, qwenSocialStatus } from '../social-qwen';
 
 const router = Router();
 const draftInput = z.object({ slot: z.enum(['morning', 'evening']) }).strict();
@@ -31,6 +32,7 @@ router.get('/admin/social-content', ...guard, async (_req, res) => {
     const settings = await db.collection('social_settings').doc('main').get();
     return res.json({ date, slots: snapshots.map(snapshot => snapshot.exists ? snapshot.data() : null),
       platforms: { instagram: platformReady('instagram'), facebook: platformReady('facebook') },
+      qwen: { status: qwenSocialStatus(), model: qwenSocialStatus() === 'configured' ? process.env.QWEN_MODEL : null },
       publications: publications.filter(s => s.exists).map(s => s.data()),
       metrics: metrics.map(s => s.exists ? s.data() : null),
       settings: { autoApprove: settings.data()?.autoApprove === true } });
@@ -57,17 +59,26 @@ async function createDraft(slot: 'morning' | 'evening', actor: string) {
   const key = socialSlotId(date, slot);
   const draftRef = db.collection('social_content').doc(key);
   if ((await draftRef.get()).exists) return { code: 409, message: 'Bu dilim için taslak zaten oluşturulmuş.' };
-  const questions = await db.collection('questions').where('status', '==', 'published').limit(100).get();
-  const eligible: { id: string; question: BaseQuestion; source: string }[] = questions.docs
-    .filter(doc => !socialQuestionRejection(doc.data() as BaseQuestion))
-    .map(doc => ({ id: doc.id, question: doc.data() as BaseQuestion, source: 'question_bank' }));
-  const seed = [...key].reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) >>> 0, 1);
-  for (let i = 0; i < 16; i++) {
+  const qwenStatus = qwenSocialStatus();
+  if (qwenStatus === 'incomplete') return { code: 503, message: 'Qwen için API anahtarı, model ve bölgeye uygun temel URL ayarlanmalı.' };
+  const eligible: { id: string; question: BaseQuestion; source: string; caption?: string }[] = [];
+  if (qwenStatus === 'configured') {
     try {
-      const type = i % 3 === 0 ? 'matrix_2x2' : i % 3 === 1 ? 'visual_sequence' : 'number_pattern';
-      const question = generateProfessionalQuestion(type, seed + i + 1, 2);
-      if (!socialQuestionRejection(question, 90, true)) eligible.push({ id: question.id, question, source: 'procedural' });
-    } catch { /* Invalid seeds are skipped. */ }
+      const generated = await createQwenSocialCandidate(key);
+      eligible.push({ id: generated.question.id, question: generated.question, source: 'qwen_verified', caption: generated.caption });
+    } catch { return { code: 503, message: 'Qwen sorusu üretilemedi veya doğrulanamadı; taslak ve paylaşım oluşturulmadı.' }; }
+  } else {
+    const questions = await db.collection('questions').where('status', '==', 'published').limit(100).get();
+    eligible.push(...questions.docs.filter(doc => !socialQuestionRejection(doc.data() as BaseQuestion))
+      .map(doc => ({ id: doc.id, question: doc.data() as BaseQuestion, source: 'question_bank' })));
+    const seed = [...key].reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) >>> 0, 1);
+    for (let i = 0; i < 16; i++) {
+      try {
+        const type = i % 3 === 0 ? 'matrix_2x2' : i % 3 === 1 ? 'visual_sequence' : 'number_pattern';
+        const question = generateProfessionalQuestion(type, seed + i + 1, 2);
+        if (!socialQuestionRejection(question, 90, true)) eligible.push({ id: question.id, question, source: 'procedural' });
+      } catch { /* Invalid seeds are skipped. */ }
+    }
   }
   for (const candidate of eligible) {
     const question = candidate.question;
@@ -76,7 +87,7 @@ async function createDraft(slot: 'morning' | 'evening', actor: string) {
       id: key, date, slot, timezone: 'Europe/Istanbul', questionId: candidate.id, source: candidate.source,
       question: JSON.parse(JSON.stringify(question)) as BaseQuestion,
       qualityScore: question.aiMeta?.qualityScore ?? 100, solverVerified: true,
-      caption: 'Günün Zekapark sorusunu çözebilir misiniz? Cevap ve açıklama ikinci görselde. #BİLSEM #Zekapark',
+      caption: candidate.caption ?? 'Günün Zekapark sorusunu çözebilir misiniz? Cevap ve açıklama ikinci görselde. #BİLSEM #Zekapark',
       state: autoApprove ? 'approved' : 'awaiting_approval', createdBy: actor, createdAt: new Date().toISOString(),
     };
     const created = await db.runTransaction(async transaction => {
@@ -89,7 +100,7 @@ async function createDraft(slot: 'morning' | 'evening', actor: string) {
     if (created) return { code: 201, draft };
     if ((await draftRef.get()).exists) return { code: 409, message: 'Bu dilim için taslak zaten oluşturulmuş.' };
   }
-  return { code: 422, message: 'Kullanılmamış ve doğrulanmış soru bulunamadı.' };
+  return { code: 422, message: qwenStatus === 'configured' ? 'Qwen sorusu önceden kullanılmış; daha sonra tekrar deneyin.' : 'Kullanılmamış ve doğrulanmış soru bulunamadı.' };
 }
 
 router.post('/admin/social-content/draft', ...guard, async (req: AuthenticatedRequest, res) => {
@@ -110,7 +121,7 @@ router.post('/admin/social-content/:id/review', ...guard, async (req: Authentica
       const doc = await transaction.get(ref);
       if (!doc.exists || doc.data()?.state !== 'awaiting_approval') return null;
       const data = doc.data()!;
-      if (input.data.action === 'approve' && socialQuestionRejection(data.question as BaseQuestion, 90, data.source === 'procedural')) return null;
+      if (input.data.action === 'approve' && socialQuestionRejection(data.question as BaseQuestion, 90, ['procedural', 'qwen_verified'].includes(data.source))) return null;
       const next = input.data.action === 'approve' ? 'approved' : 'rejected';
       transaction.update(ref, { state: next, caption: input.data.caption ?? data.caption,
         reviewedBy: req.authUser!.uid, reviewedAt: new Date().toISOString() });
