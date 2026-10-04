@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { QuestionType, DifficultyLevel, QUESTION_TYPE_LABELS } from '../../types';
 import { ALL_QUESTION_TYPES, generateQuestionByType } from '../../features/questions/generators';
 import { validateQuestion } from '../../features/questions/validator';
+import { runMultiPassQuestionTests } from '../../features/questions/verifier';
+import { solveQuestion } from '../../features/questions/universal-solver';
 import { sound } from '../../lib/sound';
 import {
   Cpu,
@@ -85,17 +87,21 @@ export const AdminStressTest: React.FC<AdminStressTestProps> = ({ onInspectType 
         try {
           const q = generateQuestionByType(type, seed, diff);
           entry.category = q.category;
-          const validation = validateQuestion(q);
+          const report = runMultiPassQuestionTests(q);
+          const solverRes = solveQuestion(q);
           const qElapsed = performance.now() - qStart;
           entry.time += qElapsed;
 
-          if (validation.isValid) {
+          if (report.isVerified && (!solverRes.canSolve || solverRes.isMatch)) {
             entry.passed++;
             passedTotal++;
           } else {
             entry.failed++;
             failedTotal++;
-            validation.errors.forEach((e) => entry.errors.push(e.message));
+            report.errors.forEach((e) => entry.errors.push(e));
+            if (solverRes.canSolve && !solverRes.isMatch) {
+              entry.errors.push(`Çözücü uyuşmazlığı: Beklenen [${solverRes.expectedAnswerId}] !== Doğru [${q.correctOptionId}]`);
+            }
           }
         } catch (err: any) {
           entry.failed++;

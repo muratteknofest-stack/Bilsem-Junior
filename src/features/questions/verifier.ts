@@ -1,6 +1,7 @@
 import { BaseQuestion, QuestionType, VisualOption } from '../../types';
 import { ALL_QUESTION_TYPES } from './generators';
 import { validateQuestion } from './validator';
+import { solveQuestion } from './universal-solver';
 
 export interface VerificationStageResult {
   stageNumber: number;
@@ -190,10 +191,27 @@ export function runMultiPassQuestionTests(question: BaseQuestion): QuestionVerif
   });
 
   // -------------------------------------------------------------
-  // PASS 4: Çözücü ve Mantıksal Çözüm Tutarlılığı (Solver & Explanation Consistency Pass)
+  // PASS 4: Bağımsız Çözücü ve Mantıksal Çözüm Tutarlılığı (Universal Solver Pass)
   // -------------------------------------------------------------
   let pass4 = true;
   const p4Details: Record<string, unknown> = {};
+
+  // Execute Universal Cognitive Solver
+  const solverRes = solveQuestion(question);
+  p4Details.solverMethod = solverRes.solverMethod;
+  p4Details.proofSteps = solverRes.proofSteps;
+  p4Details.confidence = solverRes.confidence;
+
+  if (solverRes.canSolve && !solverRes.isMatch) {
+    pass4 = false;
+    errors.push(
+      `Bağımsız matematiksel/bilişsel çözücü [${solverRes.expectedAnswerId}] sonucunu buldu, ancak sorunun belirlenen doğru cevabı [${question.correctOptionId}]! (SOLVER_ANSWER_MISMATCH)`
+    );
+  }
+
+  if (solverRes.ambiguityDetected) {
+    warnings.push('Çözücü tarafından soru kökünde veya seçeneklerde olası çift anlamlılık tespit edildi.');
+  }
 
   if (!question.explanation || !Array.isArray(question.explanation.steps) || question.explanation.steps.length === 0) {
     warnings.push('Soru çözümünde adım adım pedagojik basamaklar eksik; özet açıklamaya başvuruldu.');
@@ -219,10 +237,10 @@ export function runMultiPassQuestionTests(question: BaseQuestion): QuestionVerif
 
   stages.push({
     stageNumber: 4,
-    name: 'Çözücü ve Mantıksal Çözüm Tutarlılığı',
+    name: 'Bağımsız Çözücü ve Mantıksal Çözüm Tutarlılığı',
     passed: pass4,
     message: pass4
-      ? 'Çözücü doğrulaması ve adım adım pedagojik analiz %100 uyumlu.'
+      ? `Bağımsız çözücü (${solverRes.solverMethod}) doğruladı: Doğru cevap [${question.correctOptionId}] kesin ve tartışmasız.`
       : 'Çözücü veya standart kalite kontrollerinde tutarsızlık bulundu.',
     details: p4Details,
   });

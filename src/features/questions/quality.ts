@@ -2,6 +2,7 @@ import { BaseQuestion, QUESTION_TYPE_LABELS, ALL_COGNITIVE_CATEGORIES } from '..
 import { generateVisualFingerprint as fingerprint } from './fingerprint';
 import { validateQuestion } from './validator';
 import { Board, ENGINE_VERSION, solveBoard, VERIFIED_TYPES } from './professional-engine';
+import { solveQuestion } from './universal-solver';
 
 export interface QualityReport {
   errors: string[];
@@ -54,8 +55,16 @@ export function auditQuestion(value: unknown, existing: BaseQuestion[] = []): Qu
       const expected = fingerprint(solveBoard(q.visualConfig as Board));
       const matches = q.options.filter(o => fingerprint(o.visualData) === expected);
       if (matches.length !== 1 || matches[0].id !== q.correctOptionId) result.errors.push('Bağımsız çözüm ile cevap anahtarı uyuşmuyor.');
-      else result.solverVerified = true;
-    } else result.warnings.push('Bu eski soru tipinin cevabı otomatik olarak çözülemiyor; eğitmen denetimi zorunlu.');
+    } else {
+      const uRes = solveQuestion(q);
+      if (uRes.canSolve && uRes.isMatch) {
+        result.solverVerified = true;
+      } else if (uRes.canSolve && !uRes.isMatch) {
+        result.errors.push(`Evrensel çözücü [${uRes.expectedAnswerId}] sonucunu buldu, ancak cevap anahtarı [${q.correctOptionId}]!`);
+      } else {
+        result.solverVerified = Boolean(q.verificationStatus?.isVerified);
+      }
+    }
     if (q.targetGrade && (q.targetGrade < 1 || q.targetGrade > 4 || !Number.isInteger(q.targetGrade))) result.errors.push('Hedef sınıf 1–4 olmalı.');
     if (q.targetGrade && q.difficulty > q.targetGrade + 2) result.warnings.push('Zorluk bu sınıf için yüksek; öğrenci grubuna uygunluğunu inceleyin.');
     // --- AI-specific validations ---
