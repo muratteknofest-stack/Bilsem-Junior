@@ -57,7 +57,8 @@ import {
   Compass,
   Copy,
   Zap,
-  Award
+  Award,
+  GraduationCap
 } from 'lucide-react';
 import { reminderService } from '../services/reminder-service';
 import { StudyReminderSettingsModal } from './StudyReminderSettingsModal';
@@ -76,23 +77,27 @@ interface ParentPortalViewProps {
 }
 
 export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: parentOrStudent, masteries, onNavigate }) => {
-  const [currentStudent, setCurrentStudent] = useState<UserProfile>({
-    id: 'pending',
-    name: 'Öğrenci',
-    level: 1,
-    avatar: '🦊',
-    role: 'student',
-    xp: 0,
-    streak: 0,
-    streakFreezeCount: 0,
-    dailyGoalMinutes: 15,
-    todayMinutesSpent: 0,
-    totalQuestionsSolved: 0,
-    todayQuestionsSolved: 0,
-    soundEnabled: true,
-    lastActiveDate: ''
+  const [currentStudent, setCurrentStudent] = useState<UserProfile>(() => {
+    return parentOrStudent || dataService.getCurrentUser() || {
+      id: 'pending',
+      name: 'Öğrenci',
+      level: 1,
+      avatar: '🦊',
+      role: 'student',
+      xp: 0,
+      streak: 0,
+      streakFreezeCount: 0,
+      dailyGoalMinutes: 15,
+      todayMinutesSpent: 0,
+      totalQuestionsSolved: 0,
+      todayQuestionsSolved: 0,
+      soundEnabled: true,
+      lastActiveDate: ''
+    };
   });
-  const [displayMasteries, setDisplayMasteries] = useState<SkillMastery[]>(masteries);
+  const [displayMasteries, setDisplayMasteries] = useState<SkillMastery[]>(() => {
+    return (masteries && masteries.length > 0) ? masteries : dataService.getSkillMasteries();
+  });
 
   const [isLoadingStudent, setIsLoadingStudent] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'preferences'>('overview');
@@ -114,32 +119,49 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
   const [reportSendStatus, setReportSendStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   useEffect(() => {
+    let isSubscribed = true;
     const fetchStudent = async () => {
-      if (!parentOrStudent) return;
+      const activeUser = parentOrStudent || dataService.getCurrentUser();
+      if (!activeUser) return;
       
-      if (parentOrStudent.role === 'parent' && parentOrStudent.linkedStudentIds && parentOrStudent.linkedStudentIds.length > 0) {
+      if (activeUser.role === 'parent' && activeUser.linkedStudentIds && activeUser.linkedStudentIds.length > 0) {
         setIsLoadingStudent(true);
         try {
-          const docRef = doc(db, 'users', parentOrStudent.linkedStudentIds[0]);
+          const docRef = doc(db, 'users', activeUser.linkedStudentIds[0]);
           const snap = await getDoc(docRef);
-          if (snap.exists()) {
+          if (snap.exists() && isSubscribed) {
             const child = snap.data() as UserProfile;
             setCurrentStudent(child);
             const progress = await dataService.loadRemoteProgressForUser(child.id);
-            setDisplayMasteries(progress.masteries);
-            setWeeklyData(dataService.getWeeklyQuestionProgressData(child, progress.weeklyQuestions));
+            if (isSubscribed) {
+              const childMasteries = progress.masteries && progress.masteries.length > 0 ? progress.masteries : dataService.getSkillMasteries();
+              setDisplayMasteries(childMasteries);
+              setWeeklyData(dataService.getWeeklyQuestionProgressData(child, progress.weeklyQuestions));
+              return;
+            }
           }
         } catch(e) {
-          console.error(e);
+          console.error('Error loading linked student data in ParentPortalView:', e);
         } finally {
-          setIsLoadingStudent(false);
+          if (isSubscribed) {
+            setIsLoadingStudent(false);
+          }
         }
-      } else if (parentOrStudent.role === 'student') {
-        setCurrentStudent(parentOrStudent as UserProfile);
-        setDisplayMasteries(masteries);
+      }
+      
+      // Fallback: single-user / student view or parent without distinct remote linked account
+      if (isSubscribed) {
+        setCurrentStudent(activeUser);
+        const effectiveMasteries = (masteries && masteries.length > 0) ? masteries : dataService.getSkillMasteries();
+        setDisplayMasteries(effectiveMasteries);
+        setWeeklyData(dataService.getWeeklyQuestionProgressData(activeUser));
       }
     };
     fetchStudent();
+
+    return () => {
+      isSubscribed = false;
+    };
   }, [parentOrStudent, masteries]);
 
   useEffect(() => {
@@ -152,12 +174,12 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
 
   // Sort masteries
   const sorted = useMemo(() => {
-    return [...displayMasteries].sort((a, b) => b.mastery - a.mastery);
+    return [...(displayMasteries || [])].sort((a, b) => (b.mastery || 0) - (a.mastery || 0));
   }, [displayMasteries]);
 
   const strengths = useMemo(() => sorted.slice(0, 3), [sorted]);
   const needsAttention = useMemo(() => sorted.slice(-3).reverse(), [sorted]);
-  const accuracy = strengths.length > 0 ? strengths[0].accuracy : 0;
+  const accuracy = strengths.length > 0 ? (strengths[0].accuracy ?? 0) : 0;
 
   // Activity is sourced from the linked student's persisted progress.
   const weekDays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
@@ -166,11 +188,11 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
 
   // Radar Data for 8 Cognitive Dimensions
   const radarData = useMemo(() => {
-    return displayMasteries.map((m) => ({
-      category: m.categoryName.split(' ')[0], // short label
-      fullName: m.categoryName,
-      mastery: m.mastery,
-      accuracy: m.accuracy,
+    return (displayMasteries || []).map((m) => ({
+      category: (m.categoryName || '').split(' ')[0], // short label
+      fullName: m.categoryName || '',
+      mastery: m.mastery || 0,
+      accuracy: m.accuracy || 0,
       fullMark: 100
     }));
   }, [displayMasteries]);

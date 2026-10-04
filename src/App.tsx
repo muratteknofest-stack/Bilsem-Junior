@@ -25,7 +25,7 @@ const LoginPage = lazy(() => import('./components/LoginPage').then((m) => ({ def
 
 export default function App() {
   // Auth context
-  const { currentUser: authUser, userProfile, loading: authLoading, logout: authLogout } = useAuth();
+  const { currentUser: authUser, userProfile, loading: authLoading, logout: authLogout, switchRole: authSwitchRole } = useAuth();
   
   // We don't block the entire app while auth is loading anymore
   // so we can show a nice skeleton for the dashboard.
@@ -150,6 +150,7 @@ export default function App() {
       const updated = { ...u, role: 'parent' as UserRole };
       setCurrentUser(updated);
       dataService.switchRole('parent');
+      if (authSwitchRole) authSwitchRole('parent');
       setCurrentRoute('parent');
       syncState();
       return;
@@ -159,6 +160,7 @@ export default function App() {
       const updated = { ...u, role: 'student' as UserRole };
       setCurrentUser(updated);
       dataService.switchRole('student');
+      if (authSwitchRole) authSwitchRole('student');
       setCurrentRoute('dashboard');
       syncState();
       return;
@@ -170,6 +172,7 @@ export default function App() {
         const updated = { ...u, role: 'student' as UserRole };
         setCurrentUser(updated);
         dataService.switchRole('student');
+        if (authSwitchRole) authSwitchRole('student');
       }
       setCurrentRoute(targetRoute);
       syncState();
@@ -192,6 +195,7 @@ export default function App() {
     const updated = { ...currentUser, role: newRole };
     setCurrentUser(updated);
     dataService.switchRole(newRole);
+    if (authSwitchRole) authSwitchRole(newRole);
     if (newRole === 'parent') {
       setCurrentRoute('parent');
     } else if (newRole === 'student') {
