@@ -142,7 +142,7 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
     'memory',
   ]);
   const [difficultyStrategy, setDifficultyStrategy] = useState<DifficultyStrategy>('gauss');
-  const [autoSaveToBank, setAutoSaveToBank] = useState<boolean>(false);
+  const [autoSaveToBank, setAutoSaveToBank] = useState<boolean>(true);
   const [saltSeedBase, setSaltSeedBase] = useState<number>(() => Math.floor(Math.random() * 800000) + 100000);
 
   // State: Generator Runtime

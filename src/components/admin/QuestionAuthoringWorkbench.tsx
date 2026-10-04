@@ -186,8 +186,28 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
     </header>
     <nav aria-label="Soru atölyesi bölümleri" className="flex flex-wrap gap-2">
       <button className={button + (section === 'compose' ? ' bg-indigo-600 text-white' : ' bg-slate-800 text-slate-200')} onClick={() => setSection('compose')}><WandSparkles size={17} />Üretim ve taslaklar {batch.length > 0 && '(' + batch.length + ')'}</button>
-      <button className={button + (section === 'library' ? ' bg-indigo-600 text-white' : ' bg-slate-800 text-slate-200')} onClick={() => setSection('library')}><FolderOpen size={17} />Bulut kütüphanesi ({library.length})</button>
-      {!!batch.length && <button className={button + ' border border-slate-600 text-slate-100'} disabled={saving || running || !cloudReady} onClick={() => void saveBatch()}><Save size={16} />Taslakları toplu kaydet</button>}
+      {!!batch.length && (
+        <>
+          <button
+            className={button + ' bg-emerald-600 text-white hover:bg-emerald-500'}
+            onClick={() => {
+              const count = questionBankService.addBulkQuestions(batch);
+              setNotice(`${count} taslak başarıyla Soru Havuzu'na aktarıldı!`);
+            }}
+          >
+            <Save size={16} />
+            Havuza Aktar ({batch.length})
+          </button>
+          <button
+            className={button + ' border border-slate-600 text-slate-100'}
+            disabled={saving || running || !cloudReady}
+            onClick={() => void saveBatch()}
+          >
+            <Save size={16} />
+            Buluta Kaydet
+          </button>
+        </>
+      )}
     </nav>
     {cloudError && <div role="alert" className="rounded-xl bg-amber-50 border border-amber-300 p-4 text-sm text-amber-950 flex flex-wrap gap-3 items-center"><p className="flex-1 min-w-48">{cloudError}</p><button onClick={() => void refresh()} disabled={loading} className={button + ' border border-amber-400'}><RefreshCw size={16} />Tekrar dene</button></div>}
     {notice && <p role="status" className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-950">{notice}</p>}
@@ -252,6 +272,10 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
           {report.warnings.map((w, i) => <p key={i} className="text-sm text-amber-900">{w}</p>)}
           <fieldset className="space-y-3 border-t pt-3" disabled={saving}><legend className="text-sm font-semibold pt-3">Eğitmen incelemesi</legend>{checks.map((label, i) => <label key={label} className="flex items-start gap-3 text-sm leading-6 cursor-pointer"><input className="mt-1 w-4 h-4 accent-indigo-600" type="checkbox" checked={review[i]} onChange={e => setReview(previous => previous.map((v, n) => n === i ? e.target.checked : v))} />{label}</label>)}</fieldset>
           <div className="flex flex-wrap gap-2 pt-2">
+            <button className={button + ' bg-emerald-600 text-white hover:bg-emerald-500'} disabled={saving || !active} onClick={() => {
+              questionBankService.createCustomQuestion(active);
+              setNotice('Soru yerel havuza başarıyla eklendi!');
+            }}><Save size={16} />Havuza Ekle</button>
             <button className={button + ' bg-slate-900 text-white'} disabled={saving || !cloudReady || !!report.errors.length} onClick={() => void save('draft')}><Save size={16} />Taslağı kaydet</button>
             <button className={button + ' border text-slate-700'} disabled={saving || !cloudReady || !!report.errors.length} onClick={() => void save('review')}>İncelemeye al</button>
             <button className={button + ' bg-indigo-600 text-white hover:bg-indigo-700'} disabled={saving || !cloudReady || !!report.errors.length || !review.every(Boolean)} onClick={() => void save('published')}>{saving ? <LoaderCircle size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}Onayla ve yayımla</button>

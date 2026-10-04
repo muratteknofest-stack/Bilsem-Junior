@@ -86,6 +86,11 @@ class QuestionBankService {
       console.warn('Failed to parse questions from safeStorage', e);
     }
 
+    if (!this.questions || this.questions.length === 0) {
+      this.questions = this.buildInitialQuestionPool();
+      this.save();
+    }
+
     this.initialized = true;
 
     // Real-time live Firestore synchronization
@@ -102,10 +107,6 @@ class QuestionBankService {
               this.questions = liveList;
               this.save();
               this.notify();
-            } else if (snapshot.empty && this.questions.length > 0) {
-              this.questions = [];
-              this.save();
-              this.notify();
             }
           },
           (err) => {
@@ -119,7 +120,50 @@ class QuestionBankService {
   }
 
   private buildInitialQuestionPool(): BaseQuestion[] {
-    return [];
+    const starterPool: BaseQuestion[] = [];
+    const gradePlan: { grade: 1 | 2 | 3 | 4; types: QuestionType[] }[] = [
+      { grade: 1, types: ['visual_sequence', 'figure_rotation', 'odd_one_out', 'shape_counting', 'shadow_matching', 'direction_path'] },
+      { grade: 2, types: ['matrix_2x2', 'visual_sequence', 'figure_rotation', 'mirror_reflection', 'shape_counting', 'visual_analogy'] },
+      { grade: 3, types: ['matrix_3x3', 'figure_rotation', 'number_pattern', 'operation_machine', 'symbol_coding', 'logic_grid'] },
+      { grade: 4, types: ['raven_matrix', 'matrix_3x3', 'cube_counting', 'paper_folding', 'balance_scale', 'operation_machine'] },
+    ];
+
+    for (const item of gradePlan) {
+      item.types.forEach((t, i) => {
+        try {
+          const diff = Math.min(6, item.grade + (i % 2)) as DifficultyLevel;
+          const seed = 50000 + item.grade * 1000 + i * 149;
+          const q = generateQuestionByType(t, seed, diff);
+          q.id = `q_bilsem_g${item.grade}_${t}_${i + 1}`;
+          q.targetGrade = item.grade;
+          q.targetGrades = [item.grade];
+          q.ageGroup = item.grade <= 2 ? '1-2' : '3-4';
+          q.status = 'published';
+          q.isCustom = true;
+          starterPool.push(q);
+        } catch {
+          try {
+            const fallback = generateQuestionByType('visual_sequence', 20000 + i, 2);
+            fallback.id = `q_bilsem_g${item.grade}_seq_${i + 1}`;
+            fallback.targetGrade = item.grade;
+            fallback.targetGrades = [item.grade];
+            fallback.status = 'published';
+            fallback.isCustom = true;
+            starterPool.push(fallback);
+          } catch {}
+        }
+      });
+    }
+
+    return starterPool;
+  }
+
+  public seedDefaultPool(): number {
+    const starter = this.buildInitialQuestionPool();
+    this.questions = starter;
+    this.save();
+    this.notify();
+    return starter.length;
   }
 
   private save() {

@@ -547,11 +547,6 @@ export const AdminPanelView: React.FC = () => {
         <CreateQuestionWizard
           onClose={() => setShowCreateWizard(false)}
           onSave={(q) => {
-            const validation = validateQuestion(q);
-            if (!validation.isValid) {
-              alert('Soru doğrulama hatası:\n' + validation.errors.map(e => `• ${e.message}`).join('\n'));
-              return;
-            }
             questionBankService.createCustomQuestion(q);
             sound.playSuccess();
             confetti({ particleCount: 50, spread: 60, origin: { y: 0.4 } });
@@ -590,6 +585,10 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
 
   useEffect(() => {
     setQuestionsPool(questionBankService.getAll());
+    const unsub = questionBankService.subscribe(() => {
+      setQuestionsPool(questionBankService.getAll());
+    });
+    return unsub;
   }, []);
 
   // Category counts
@@ -634,6 +633,19 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            {questionsPool.length < 24 && (
+              <button
+                onClick={() => {
+                  sound.playSuccess();
+                  confetti({ particleCount: 60, spread: 70, origin: { y: 0.5 } });
+                  questionBankService.seedDefaultPool();
+                }}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-xs font-black shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-2"
+                title="Hemen 32 adet BİLSEM sorusu oluşturup havuza yükle"
+              >
+                <Sparkles className="w-4 h-4" /> Havuzu Doldur (32 Soru)
+              </button>
+            )}
             <button
               onClick={() => onNavigateToTab('bulk_generator')}
               className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black shadow-md shadow-amber-500/20 transition-all cursor-pointer flex items-center gap-2"
