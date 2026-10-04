@@ -278,14 +278,14 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             
             {/* Student Info & Level Progress */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 w-full lg:w-auto">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full lg:w-auto">
               
               {/* Animated 3D-Feel Floating Avatar */}
               <motion.div 
                 whileHover={{ scale: 1.08, rotate: [0, -3, 3, 0] }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleAvatarClick}
-                className="relative w-22 h-22 rounded-3xl bg-gradient-to-br from-indigo-50 via-indigo-100/70 to-indigo-200/50 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center text-5xl shadow-md border-2 border-indigo-200/60 dark:border-indigo-500/20 shrink-0 cursor-pointer group select-none"
+                className="relative w-18 h-18 sm:w-22 sm:h-22 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-50 via-indigo-100/70 to-indigo-200/50 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center text-4xl sm:text-5xl shadow-md border-2 border-indigo-200/60 dark:border-indigo-500/20 shrink-0 cursor-pointer group select-none"
               >
                 <motion.span 
                   animate={{ y: [0, -4, 0] }}
@@ -303,7 +303,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight font-['Outfit',sans-serif]">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight font-['Outfit',sans-serif]">
                     {greeting.text}, {activeUser.name?.split(' ')[0] || 'Zeka Şampiyonu'} {greeting.emoji}
                   </h1>
                   <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-800/50">
@@ -316,7 +316,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 </p>
 
                 {/* XP & Next Level Bar */}
-                <div className="mt-4 max-w-md">
+                <div className="mt-3 sm:mt-4 max-w-md w-full">
                   <div className="flex justify-between text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">
                     <span className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-bold">
                       <Zap className="w-3.5 h-3.5 fill-current" /> Seviye {activeUser.level || 1}
@@ -376,23 +376,23 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
             </div>
             
             {/* Quick Interactive Stat Cards */}
-            <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full lg:w-auto">
+            <div className="grid grid-cols-2 sm:flex sm:flex-nowrap items-center gap-2.5 sm:gap-3 w-full lg:w-auto">
               
               {/* Streak Pill */}
               <motion.button 
                 whileHover={{ scale: 1.04, y: -2 }}
                 whileTap={{ scale: 0.96 }}
                 onClick={handleStreakBadgeClick}
-                className="flex-1 sm:flex-none flex items-center gap-3.5 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-zinc-800/90 dark:to-zinc-800/40 border border-amber-200/60 dark:border-amber-500/20 rounded-2xl p-4 cursor-pointer shadow-xs text-left group"
+                className="flex-1 sm:flex-none flex items-center gap-2.5 sm:gap-3.5 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-zinc-800/90 dark:to-zinc-800/40 border border-amber-200/60 dark:border-amber-500/20 rounded-2xl p-3 sm:p-4 cursor-pointer shadow-xs text-left group"
               >
-                <div className="w-12 h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20 shrink-0 group-hover:scale-110 transition-transform">
-                  <Flame className="w-6 h-6 animate-pulse fill-current" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20 shrink-0 group-hover:scale-110 transition-transform">
+                  <Flame className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse fill-current" />
                 </div>
                 <div>
-                  <div className="text-xl font-black text-amber-950 dark:text-amber-400 leading-tight flex items-center gap-1">
+                  <div className="text-base sm:text-xl font-black text-amber-950 dark:text-amber-400 leading-tight flex items-center gap-1">
                     {activeUser.streak || 0} Gün
                   </div>
-                  <div className="text-xs font-semibold text-amber-700 dark:text-amber-500/80 flex items-center gap-1">
+                  <div className="text-[11px] sm:text-xs font-semibold text-amber-700 dark:text-amber-500/80 flex items-center gap-1">
                     <Shield className="w-3 h-3 text-indigo-500" /> {activeUser.streakFreezeCount || 0} Kalkan
                   </div>
                 </div>
@@ -406,17 +406,17 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                   sound.playClick();
                   onNavigate('leaderboard');
                 }}
-                className="flex-1 sm:flex-none flex items-center gap-3.5 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-zinc-800/90 dark:to-zinc-800/40 border border-indigo-200/60 dark:border-indigo-500/20 rounded-2xl p-4 cursor-pointer shadow-xs text-left group"
+                className="flex-1 sm:flex-none flex items-center gap-2.5 sm:gap-3.5 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-zinc-800/90 dark:to-zinc-800/40 border border-indigo-200/60 dark:border-indigo-500/20 rounded-2xl p-3 sm:p-4 cursor-pointer shadow-xs text-left group"
               >
-                <div className="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0 group-hover:scale-110 transition-transform">
-                  <Trophy className="w-6 h-6 fill-current" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0 group-hover:scale-110 transition-transform">
+                  <Trophy className="w-5 h-5 sm:w-6 sm:h-6 fill-current" />
                 </div>
                 <div>
-                  <div className="text-xl font-black text-indigo-950 dark:text-indigo-400 leading-tight">
+                  <div className="text-base sm:text-xl font-black text-indigo-950 dark:text-indigo-400 leading-tight">
                     {activeUser.xp || 0} XP
                   </div>
-                  <div className="text-xs font-semibold text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
-                    İlerleme Özeti <ChevronRight className="w-3 h-3" />
+                  <div className="text-[11px] sm:text-xs font-semibold text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
+                    İlerleme <ChevronRight className="w-3 h-3 hidden sm:inline" />
                   </div>
                 </div>
               </motion.button>
@@ -466,7 +466,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                   sound.playClick();
                   onStartPractice(weakestSkill.category);
                 }}
-                className="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs sm:text-sm shadow-md shadow-amber-500/25 flex items-center gap-2 transition-all cursor-pointer shrink-0"
+                className="w-full sm:w-auto px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs sm:text-sm shadow-md shadow-amber-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0"
               >
                 <Play className="w-4 h-4 fill-current" />
                 {weakestSkill.categoryName.split(' ')[0]} Antrenmanına Başla
@@ -626,7 +626,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         sound.playClick();
                         onStartAdaptive();
                       }}
-                      className="group relative p-6 rounded-3xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-700 text-white text-left shadow-lg shadow-indigo-500/20 overflow-hidden cursor-pointer flex flex-col justify-between h-52 border border-indigo-400/30"
+                      className="group relative p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-700 text-white text-left shadow-lg shadow-indigo-500/20 overflow-hidden cursor-pointer flex flex-col justify-between h-auto min-h-[180px] sm:h-52 border border-indigo-400/30"
                     >
                       <div className="absolute top-0 right-0 w-36 h-36 bg-white/10 rounded-full blur-2xl" />
                       
@@ -658,7 +658,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         sound.playClick();
                         onStartExam();
                       }}
-                      className="group relative p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-amber-400 dark:hover:border-amber-500/50 transition-all cursor-pointer flex flex-col justify-between h-52"
+                      className="group relative p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-amber-400 dark:hover:border-amber-500/50 transition-all cursor-pointer flex flex-col justify-between h-auto min-h-[180px] sm:h-52"
                     >
                       <div className="flex items-start justify-between w-full">
                         <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center border border-amber-200/50 dark:border-amber-800/50 group-hover:scale-110 transition-transform">
@@ -688,7 +688,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         sound.playClick();
                         onStartPractice('mixed');
                       }}
-                      className="group relative p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-emerald-400 dark:hover:border-emerald-500/50 transition-all cursor-pointer flex flex-col justify-between h-52"
+                      className="group relative p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-emerald-400 dark:hover:border-emerald-500/50 transition-all cursor-pointer flex flex-col justify-between h-auto min-h-[180px] sm:h-52"
                     >
                       <div className="flex items-start justify-between w-full">
                         <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 flex items-center justify-center border border-emerald-200/50 dark:border-emerald-800/50 group-hover:scale-110 transition-transform">
@@ -718,7 +718,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         sound.playClick();
                         onOpenMistakes();
                       }}
-                      className="group relative p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-rose-400 dark:hover:border-rose-500/50 transition-all cursor-pointer flex flex-col justify-between h-52"
+                      className="group relative p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-rose-400 dark:hover:border-rose-500/50 transition-all cursor-pointer flex flex-col justify-between h-auto min-h-[180px] sm:h-52"
                     >
                       <div className="flex items-start justify-between w-full">
                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform ${

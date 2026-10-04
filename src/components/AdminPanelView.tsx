@@ -14,6 +14,7 @@ import {
   Search,
   Plus,
   MoreVertical,
+  Menu,
   Filter,
   ChevronDown,
   Eye,
@@ -216,20 +217,31 @@ export const AdminPanelView: React.FC = () => {
       <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-slate-900/95 backdrop-blur-2xl border-r border-slate-800/80 transform transition-transform duration-300 md:relative md:translate-x-0 flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         
         {/* Brand Header */}
-        <div className="p-6 border-b border-slate-800/60">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-sm font-black tracking-wider uppercase text-white font-['Outfit',sans-serif] flex items-center gap-1.5">
-                <span>ZekaPark</span>
-                <span className="text-[10px] px-1.5 py-0.2 bg-indigo-500/20 text-indigo-400 rounded-md border border-indigo-500/30 font-mono">
-                  OS
-                </span>
+        <div className="p-5 sm:p-6 border-b border-slate-800/60">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 shrink-0">
+                <ShieldCheck className="w-5 h-5" />
               </div>
-              <p className="text-[11px] text-slate-400 font-medium">BİLSEM Yönetim Merkezi</p>
+              <div>
+                <div className="text-sm font-black tracking-wider uppercase text-white font-['Outfit',sans-serif] flex items-center gap-1.5">
+                  <span>ZekaPark</span>
+                  <span className="text-[10px] px-1.5 py-0.2 bg-indigo-500/20 text-indigo-400 rounded-md border border-indigo-500/30 font-mono">
+                    OS
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 font-medium">BİLSEM Yönetim Merkezi</p>
+              </div>
             </div>
+
+            {/* Mobile Sidebar Close Button */}
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              className="md:hidden p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              aria-label="Menüyü Kapat"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Online Health Badge */}
@@ -305,32 +317,33 @@ export const AdminPanelView: React.FC = () => {
       <main className="flex-1 flex flex-col min-w-0 z-10">
         
         {/* Sticky Executive Top Bar */}
-        <header className="bg-slate-900/80 backdrop-blur-xl border-b border-slate-800/80 px-6 py-4 flex items-center justify-between sticky top-0 z-40">
-          <div className="flex items-center gap-4">
+        <header className="bg-slate-900/80 backdrop-blur-xl border-b border-slate-800/80 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between sticky top-0 z-40">
+          <div className="flex items-center gap-3 min-w-0">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="md:hidden p-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700"
+              className="md:hidden p-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer shrink-0"
+              aria-label="Menüyü Aç"
             >
-              <MoreVertical className="w-5 h-5" />
+              <Menu className="w-5 h-5" />
             </button>
-            <div>
-              <h1 className="text-lg font-black text-white font-['Outfit',sans-serif] tracking-tight">
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-black text-white font-['Outfit',sans-serif] tracking-tight truncate">
                 {tabs.find(t => t.id === activeTab)?.label}
               </h1>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-400 hidden sm:block truncate">
                 Sistem Yönetimi, BİLSEM Motoru ve Analitik Kontrol Paneli
               </p>
             </div>
           </div>
           
           {/* Top Quick Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             
             {/* System Snapshot Backup */}
             <button 
               onClick={handleExportSystemBackup}
               title="Tüm sistem verisini JSON olarak yedekle"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700/70 transition-all cursor-pointer"
+              className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700/70 transition-all cursor-pointer"
             >
               <Download className="w-3.5 h-3.5 text-slate-400" />
               <span>Yedek Al</span>
@@ -356,10 +369,10 @@ export const AdminPanelView: React.FC = () => {
                 setActiveTab('bulk_generator');
               }}
               title="Toplu Soru Oluşturma Motoru"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500/20 to-indigo-500/20 hover:from-amber-500/30 hover:to-indigo-500/30 text-amber-300 text-xs font-bold border border-amber-500/40 transition-all cursor-pointer shadow-sm shadow-amber-500/10"
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500/20 to-indigo-500/20 hover:from-amber-500/30 hover:to-indigo-500/30 text-amber-300 text-xs font-bold border border-amber-500/40 transition-all cursor-pointer shadow-sm shadow-amber-500/10"
             >
-              <Zap className="w-3.5 h-3.5 text-amber-400" />
-              <span>Toplu Üret</span>
+              <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span className="hidden xs:inline">Toplu Üret</span>
             </button>
 
             {/* New Question Wizard Button */}
@@ -370,9 +383,9 @@ export const AdminPanelView: React.FC = () => {
                 sound.playClick();
                 setShowCreateWizard(true);
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-xl text-xs font-black shadow-md shadow-indigo-600/30 transition-all cursor-pointer"
+              className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-xl text-xs font-black shadow-md shadow-indigo-600/30 transition-all cursor-pointer shrink-0"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 shrink-0" />
               <span>Yeni Soru</span>
             </motion.button>
 
@@ -632,7 +645,7 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
             {questionsPool.length < 24 && (
               <button
                 onClick={() => {
@@ -640,7 +653,7 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
                   confetti({ particleCount: 60, spread: 70, origin: { y: 0.5 } });
                   questionBankService.seedDefaultPool();
                 }}
-                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-xs font-black shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-2"
+                className="col-span-2 sm:col-span-1 px-3 sm:px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-xs font-black shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center justify-center gap-2"
                 title="Hemen 32 adet BİLSEM sorusu oluşturup havuza yükle"
               >
                 <Sparkles className="w-4 h-4" /> Havuzu Doldur (32 Soru)
@@ -648,19 +661,19 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
             )}
             <button
               onClick={() => onNavigateToTab('bulk_generator')}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black shadow-md shadow-amber-500/20 transition-all cursor-pointer flex items-center gap-2"
+              className="px-3 sm:px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black shadow-md shadow-amber-500/20 transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <Zap className="w-4 h-4" /> Toplu Soru Motoru
             </button>
             <button
               onClick={onNewQuestion}
-              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black shadow-md shadow-indigo-600/30 transition-all cursor-pointer flex items-center gap-2"
+              className="px-3 sm:px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black shadow-md shadow-indigo-600/30 transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <Plus className="w-4 h-4" /> Yeni Soru
             </button>
             <button
               onClick={onOpenDiagnostics}
-              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition-all cursor-pointer flex items-center gap-2"
+              className="col-span-2 sm:col-span-1 px-3 sm:px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <Cpu className="w-4 h-4 text-emerald-400" /> Motor Tanısı
             </button>
@@ -669,7 +682,7 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
       </motion.div>
 
       {/* KPI Bento Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
         
         {/* Metric 1: Question Pool */}
         <motion.div 
@@ -800,7 +813,7 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
           {ALL_COGNITIVE_CATEGORIES.map((catKey) => {
             const count = categoryBreakdown[catKey] || 0;
             const targetCat = 60;
@@ -817,7 +830,7 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
                 key={catKey}
                 whileHover={{ y: -3, scale: 1.01 }}
                 onClick={() => onNavigateToTab('questions')}
-                className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 hover:border-slate-600 transition-all cursor-pointer group"
+                className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-800/60 border border-slate-700/60 hover:border-slate-600 transition-all cursor-pointer group"
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className={`w-9 h-9 rounded-xl ${cfg.bg} ${cfg.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>

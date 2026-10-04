@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Compass, AlertCircle, Award, Target, Book, ShieldCheck } from 'lucide-react';
+import { Home, Compass, AlertCircle, Award, Target, Book, ShieldCheck, GraduationCap, Users } from 'lucide-react';
 import { sound } from '../lib/sound';
 import { UserRole } from '../types';
 
@@ -66,7 +66,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   };
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-xl border-t border-zinc-200 z-50 pb-safe">
+    <div className="md:hidden fixed bottom-0 left-0 w-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border-t border-zinc-200 dark:border-zinc-800 z-50 pb-safe">
       <div className="flex items-center justify-around px-2 py-1 h-16">
         
         {userRole === 'student' && (
@@ -82,12 +82,14 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         {userRole === 'parent' && (
           <>
             <NavItem id="parent" icon={Home} label="Veli Portalı" />
+            <NavItem id="dashboard" icon={GraduationCap} label="Öğrenci Paneli" />
           </>
         )}
 
         {userRole === 'admin' && (
           <>
-            <NavItem id="admin" icon={ShieldCheck} label="Admin Portal" />
+            <NavItem id="admin" icon={ShieldCheck} label="Admin Paneli" />
+            <NavItem id="dashboard" icon={GraduationCap} label="Öğrenci Görünümü" />
           </>
         )}
       </div>

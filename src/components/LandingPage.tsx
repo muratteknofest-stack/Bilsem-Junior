@@ -366,15 +366,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-gradient-to-b from-indigo-100/40 via-purple-100/20 to-transparent blur-3xl pointer-events-none -z-10" />
 
       {/* TOP LIVE STREAM & SOUND TOGGLE BAR */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 px-4 py-2 text-xs">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 px-3 sm:px-4 py-2 text-xs">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
           {/* Animated Marquee Indicator */}
-          <div className="flex items-center gap-2 overflow-hidden text-slate-700">
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-hidden text-slate-700 min-w-0 flex-1">
             <span className="flex h-2 w-2 relative shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
-            <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100/80 shrink-0">
+            <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-50 px-1.5 sm:px-2 py-0.5 rounded border border-indigo-100/80 shrink-0">
               Canlı
             </span>
             <AnimatePresence mode="wait">
@@ -384,12 +384,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.3 }}
-                className="truncate font-medium text-xs flex items-center gap-1.5"
+                className="truncate font-medium text-xs flex items-center gap-1.5 min-w-0"
               >
-                <strong className="text-slate-900 font-semibold">{activityItems[activeStreamIdx].student}</strong>
-                <span className="text-slate-400">({activityItems[activeStreamIdx].city}):</span>
+                <strong className="text-slate-900 font-semibold shrink-0">{activityItems[activeStreamIdx].student}</strong>
+                <span className="text-slate-400 hidden sm:inline">({activityItems[activeStreamIdx].city}):</span>
                 <span className="text-slate-600 truncate">{activityItems[activeStreamIdx].action}</span>
-                <span className="font-extrabold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px] border border-emerald-100 shrink-0">
+                <span className="font-extrabold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px] border border-emerald-100 shrink-0 hidden md:inline-flex">
                   {activityItems[activeStreamIdx].badge}
                 </span>
               </motion.div>
@@ -397,11 +397,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Sound & Direct Role Action */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <button
               onClick={toggleSound}
               title={soundActive ? 'Ses Efektleri Açık' : 'Ses Efektleri Kapalı'}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer bg-slate-100 hover:bg-slate-200/70 text-slate-700"
+              className="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer bg-slate-100 hover:bg-slate-200/70 text-slate-700"
             >
               {soundActive ? (
                 <>
@@ -418,7 +418,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             <button
               onClick={() => onNavigateToLogin('student')}
-              className="bg-slate-900 hover:bg-slate-800 text-white px-3 py-1 rounded-lg font-bold text-xs transition-transform active:scale-95 shadow-sm cursor-pointer flex items-center gap-1"
+              className="bg-slate-900 hover:bg-slate-800 text-white px-2.5 sm:px-3 py-1 rounded-lg font-bold text-xs transition-transform active:scale-95 shadow-sm cursor-pointer flex items-center gap-1 shrink-0"
             >
               <span>Giriş Yap</span>
               <ArrowRight className="w-3 h-3" />
@@ -455,29 +455,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </p>
 
             {/* TRUST METRICS ROW */}
-            <div className="grid grid-cols-3 gap-3 py-3 border-y border-slate-200">
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-3 py-3 border-y border-slate-200">
               <div className="text-center lg:text-left">
-                <div className="text-2xl sm:text-3xl font-black text-slate-900 font-['Outfit',sans-serif]">
+                <div className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 font-['Outfit',sans-serif]">
                   %91.4
                 </div>
-                <div className="text-[11px] sm:text-xs text-slate-500 font-medium">1. Aşama Başarısı</div>
+                <div className="text-[10px] sm:text-xs text-slate-500 font-medium">1. Aşama Başarısı</div>
               </div>
-              <div className="text-center lg:text-left border-x border-slate-200 px-2 sm:px-4">
-                <div className="text-2xl sm:text-3xl font-black text-indigo-600 font-['Outfit',sans-serif]">
+              <div className="text-center lg:text-left border-x border-slate-200 px-1 sm:px-4">
+                <div className="text-xl sm:text-2xl md:text-3xl font-black text-indigo-600 font-['Outfit',sans-serif]">
                   40+
                 </div>
-                <div className="text-[11px] sm:text-xs text-slate-500 font-medium">Bilişsel Soru Motoru</div>
+                <div className="text-[10px] sm:text-xs text-slate-500 font-medium">Bilişsel Soru Motoru</div>
               </div>
               <div className="text-center lg:text-left">
-                <div className="text-2xl sm:text-3xl font-black text-emerald-600 font-['Outfit',sans-serif]">
+                <div className="text-xl sm:text-2xl md:text-3xl font-black text-emerald-600 font-['Outfit',sans-serif]">
                   4.9 / 5
                 </div>
-                <div className="text-[11px] sm:text-xs text-slate-500 font-medium">Veli Memnuniyeti</div>
+                <div className="text-[10px] sm:text-xs text-slate-500 font-medium">Veli Memnuniyeti</div>
               </div>
             </div>
 
             {/* PRIMARY CTAS */}
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-1">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-3 pt-1">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -485,7 +485,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   sound.playLevelUp();
                   onNavigateToLogin('student');
                 }}
-                className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[48px]"
               >
                 <span>Öğrenci Olarak Başla</span>
                 <ArrowRight className="w-4 h-4" />
@@ -500,7 +500,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   const el = document.getElementById('hizli-isinma');
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white border border-slate-200 text-slate-800 font-bold text-sm hover:bg-slate-50 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white border border-slate-200 text-slate-800 font-bold text-sm hover:bg-slate-50 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs min-h-[48px]"
               >
                 <Gamepad2 className="w-4 h-4 text-indigo-600" />
                 <span>60 Sn Hızlı Deneme</span>
@@ -508,7 +508,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             {/* ROLE PORTAL SHORTCUTS */}
-            <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-2 text-xs font-semibold text-slate-600">
+            <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-1.5 sm:gap-2 text-xs font-semibold text-slate-600">
               <span className="text-slate-400 font-medium">Giriş:</span>
               <button
                 onClick={() => onNavigateToLogin('student')}
@@ -689,17 +689,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       correctOptionId={sampleQuestion.correctOptionId}
                     />
 
-                    <div className="flex gap-2 pt-1">
+                    <div className="flex flex-col sm:flex-row gap-2 pt-1">
                       <button
                         onClick={handleNextSampleQuestion}
-                        className="flex-1 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="flex-1 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer min-h-[44px]"
                       >
                         <span>Sıradaki Soruyu Dene</span>
                         <ArrowRight className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => onNavigateToLogin('student')}
-                        className="px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm cursor-pointer shadow-sm"
+                        className="px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm cursor-pointer shadow-sm min-h-[44px] text-center"
                       >
                         Tam Sınavı Çöz →
                       </button>
@@ -829,7 +829,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             {/* Right: Dynamic Computed Metrics with Animated Digits */}
-            <div className="lg:col-span-6 grid grid-cols-2 gap-4">
+            <div className="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <motion.div
                 key={`q-${currentEst.monthlyQuestions}`}
                 initial={{ scale: 0.95, opacity: 0.8 }}
@@ -1037,12 +1037,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Segmented Control */}
-          <div className="flex justify-center mb-8">
-            <div className="inline-flex p-1.5 rounded-2xl bg-slate-100 border border-slate-200 relative">
+          <div className="flex justify-center mb-8 px-2">
+            <div className="inline-flex max-w-full overflow-x-auto p-1 sm:p-1.5 rounded-2xl bg-slate-100 border border-slate-200 relative scrollbar-none">
               {[
                 { id: 'student', label: 'Öğrenci Portalı', color: 'bg-indigo-600' },
                 { id: 'parent', label: 'Veli Portalı', color: 'bg-emerald-600' },
-                { id: 'admin', label: 'Eğitmen & Soru Stüdyosu', color: 'bg-purple-600' },
+                { id: 'admin', label: 'Eğitmen & Stüdyo', color: 'bg-purple-600' },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -1050,7 +1050,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     sound.playClick();
                     setActiveRoleTab(tab.id as any);
                   }}
-                  className={`relative px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-colors cursor-pointer z-10 ${
+                  className={`relative px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-colors cursor-pointer z-10 whitespace-nowrap ${
                     activeRoleTab === tab.id ? 'text-white' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >

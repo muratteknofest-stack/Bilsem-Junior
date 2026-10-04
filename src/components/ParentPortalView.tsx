@@ -368,7 +368,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
           </div>
 
           {/* Action Hub */}
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full md:w-auto justify-start md:justify-end">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-2.5 w-full md:w-auto justify-start md:justify-end">
             {onNavigate && (
               <button
                 type="button"
@@ -376,7 +376,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                   sound.playClick();
                   onNavigate('dashboard');
                 }}
-                className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center justify-center gap-2 text-sm shadow-xs transition-colors cursor-pointer"
+                className="col-span-2 sm:col-span-1 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center justify-center gap-2 text-xs sm:text-sm shadow-xs transition-colors cursor-pointer min-h-[42px]"
               >
                 <GraduationCap className="w-4 h-4" />
                 <span>Öğrenci Paneline Geç</span>
@@ -387,7 +387,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               whileTap={{ scale: 0.98 }}
               onClick={handleSendWeeklyReport}
               disabled={isSendingReport || !weeklyData}
-              className={`px-4 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 text-sm shadow-sm border transition-all cursor-pointer ${
+              className={`px-3 sm:px-4 py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm shadow-sm border transition-all cursor-pointer min-h-[42px] ${
                 reportSendStatus === 'success' 
                   ? 'bg-emerald-500 text-white border-emerald-600' 
                   : reportSendStatus === 'error' 
@@ -402,7 +402,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               ) : (
                 <Mail className="w-4 h-4" />
               )}
-              {isSendingReport ? 'Hazırlanıyor...' : reportSendStatus === 'success' ? 'Rapor Hazır!' : 'Haftalık Raporu E-postala'}
+              <span className="truncate">{isSendingReport ? 'Hazırlanıyor...' : reportSendStatus === 'success' ? 'Rapor Hazır!' : 'Rapor E-postala'}</span>
             </motion.button>
 
             <motion.button 
@@ -412,10 +412,10 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                 sound.playClick();
                 setShowStudentSettingsModal(true);
               }}
-              className="px-4 py-2.5 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl font-semibold flex items-center justify-center gap-2 text-sm shadow-sm border border-zinc-200 dark:border-zinc-700 cursor-pointer"
+              className="px-3 sm:px-4 py-2.5 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl font-semibold flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm shadow-sm border border-zinc-200 dark:border-zinc-700 cursor-pointer min-h-[42px]"
             >
               <KeyRound className="w-4 h-4 text-indigo-500" />
-              Giriş Bilgileri
+              <span>Giriş Bilgileri</span>
             </motion.button>
 
             <motion.button 
@@ -425,10 +425,10 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                 sound.playClick();
                 setShowReminderModal(true);
               }}
-              className="px-4 py-2.5 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl font-semibold flex items-center justify-center gap-2 text-sm shadow-sm border border-zinc-200 dark:border-zinc-700 cursor-pointer"
+              className="col-span-2 sm:col-span-1 px-3 sm:px-4 py-2.5 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl font-semibold flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm shadow-sm border border-zinc-200 dark:border-zinc-700 cursor-pointer min-h-[42px]"
             >
               <Settings className="w-4 h-4 text-amber-500" />
-              Hatırlatıcı
+              <span>Hatırlatıcı</span>
             </motion.button>
           </div>
 
@@ -439,13 +439,13 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
       <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-12 pt-8 space-y-8 relative z-10">
         
         {/* Modern Fluid Segmented Tabs */}
-        <div className="flex p-1.5 bg-zinc-200/60 dark:bg-zinc-900/80 rounded-2xl w-fit border border-zinc-200/70 dark:border-zinc-800/80 backdrop-blur-md shadow-inner gap-1">
+        <div className="flex p-1.5 bg-zinc-200/60 dark:bg-zinc-900/80 rounded-2xl w-full max-w-full overflow-x-auto whitespace-nowrap scrollbar-none border border-zinc-200/70 dark:border-zinc-800/80 backdrop-blur-md shadow-inner gap-1 md:w-fit">
           <button 
             onClick={() => {
               sound.playClick();
               setActiveTab('overview');
             }}
-            className={`relative px-5 py-2 rounded-xl text-sm font-bold transition-colors cursor-pointer ${
+            className={`relative px-3.5 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors cursor-pointer shrink-0 ${
               activeTab === 'overview' ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
             }`}
           >
@@ -456,7 +456,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                 transition={{ type: "spring", stiffness: 450, damping: 35 }}
               />
             )}
-            <span className="relative z-10 flex items-center gap-2">
+            <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
               <BarChart2 className="w-4 h-4" /> Gelişim Analizi & Bilişsel Radar
             </span>
           </button>
@@ -466,7 +466,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               sound.playClick();
               setActiveTab('skills');
             }}
-            className={`relative px-5 py-2 rounded-xl text-sm font-bold transition-colors cursor-pointer ${
+            className={`relative px-3.5 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors cursor-pointer shrink-0 ${
               activeTab === 'skills' ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
             }`}
           >
@@ -477,7 +477,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                 transition={{ type: "spring", stiffness: 450, damping: 35 }}
               />
             )}
-            <span className="relative z-10 flex items-center gap-2">
+            <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
               <Brain className="w-4 h-4" /> 8 Bilişsel Boyut Haritası
             </span>
           </button>
@@ -487,7 +487,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               sound.playClick();
               setActiveTab('preferences');
             }}
-            className={`relative px-5 py-2 rounded-xl text-sm font-bold transition-colors cursor-pointer ${
+            className={`relative px-3.5 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors cursor-pointer shrink-0 ${
               activeTab === 'preferences' ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
             }`}
           >
@@ -498,7 +498,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                 transition={{ type: "spring", stiffness: 450, damping: 35 }}
               />
             )}
-            <span className="relative z-10 flex items-center gap-2">
+            <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
               <Bell className="w-4 h-4" /> Bildirim & E-posta
             </span>
           </button>
@@ -515,7 +515,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               className="space-y-8"
             >
               {/* Bento KPI Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 
                 {/* 1. Bugünkü Çalışma & Dairesel İlerleme */}
                 <motion.div 
@@ -683,7 +683,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                     </div>
 
                     {/* Chart Container */}
-                    <div className="h-[320px] w-full flex items-center justify-center">
+                    <div className="h-[270px] sm:h-[320px] w-full flex items-center justify-center">
                       <AnimatePresence mode="wait">
                         {chartViewMode === 'radar' ? (
                           <motion.div 
