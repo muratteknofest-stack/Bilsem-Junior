@@ -31,7 +31,7 @@ export const CubeRenderer: React.FC<EngineProps> = ({ question, mode }) => {
     const shadowGradId = `cubeGround_${reactId}`;
 
     return (
-      <div className="w-full flex flex-col items-center justify-center p-4 md:p-8 bg-slate-50/90 rounded-2xl border-2 border-slate-200/80 shadow-inner">
+      <div className="w-full flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 bg-gradient-to-b from-slate-50 to-slate-100/90 rounded-3xl border-2 border-slate-200/90 shadow-inner">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500 bg-white/80 px-2.5 py-1 rounded-full border border-slate-200 shadow-sm">
             🧊 3B İzometrik Yapı
@@ -40,7 +40,7 @@ export const CubeRenderer: React.FC<EngineProps> = ({ question, mode }) => {
 
         <svg
           viewBox="0 0 240 220"
-          className="w-56 h-56 sm:w-64 sm:h-64 select-none"
+          className="w-full max-w-[280px] sm:max-w-[360px] md:max-w-[440px] aspect-[240/220] h-auto select-none"
           shapeRendering="geometricPrecision"
         >
           <defs>
@@ -166,7 +166,7 @@ export const CubeRenderer: React.FC<EngineProps> = ({ question, mode }) => {
           </span>
         </div>
 
-        <div className="relative w-52 h-68 sm:w-64 sm:h-84 select-none">
+        <div className="relative w-64 h-84 sm:w-76 sm:h-[380px] md:w-84 md:h-[420px] select-none">
           {positions.map((pos, i) => {
             const size = 25; // percentage
             const isTarget = i === targetIdx;
@@ -218,7 +218,7 @@ export const CubeRenderer: React.FC<EngineProps> = ({ question, mode }) => {
     const rightGradId = `multiRight_${reactId}`;
 
     return (
-      <div className="w-full flex flex-col items-center justify-center p-4 md:p-8 bg-slate-50/90 rounded-2xl border-2 border-slate-200/80 gap-3 shadow-inner">
+      <div className="w-full flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 bg-gradient-to-b from-slate-50 to-slate-100/90 rounded-3xl border-2 border-slate-200/90 gap-3 shadow-inner">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full shadow-sm">
             📐 3B Perspektif & Üstten Bakış
@@ -227,7 +227,7 @@ export const CubeRenderer: React.FC<EngineProps> = ({ question, mode }) => {
 
         <svg
           viewBox="0 0 240 220"
-          className="w-56 h-56 sm:w-64 sm:h-64 select-none"
+          className="w-full max-w-[280px] sm:max-w-[360px] md:max-w-[440px] aspect-[240/220] h-auto select-none"
           shapeRendering="geometricPrecision"
         >
           <defs>
@@ -312,14 +312,14 @@ export const CubeRenderer: React.FC<EngineProps> = ({ question, mode }) => {
     ];
 
     return (
-      <div className="w-full flex flex-col items-center justify-center p-4 md:p-8 bg-slate-50/90 rounded-2xl border-2 border-slate-200/80 shadow-inner">
+      <div className="w-full flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 bg-gradient-to-b from-slate-50 to-slate-100/90 rounded-3xl border-2 border-slate-200/90 shadow-inner">
         <div className="flex items-center gap-2 mb-3">
           <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full shadow-sm">
             📦 Uzamsal Origami ve Katlama
           </span>
         </div>
 
-        <div className="relative w-52 h-68 sm:w-64 sm:h-84 select-none">
+        <div className="relative w-64 h-84 sm:w-76 sm:h-[380px] md:w-84 md:h-[420px] select-none">
           {positions.map((pos) => {
             const sym = faces[pos.idx];
             const isTarget = sym === targetFace;
@@ -361,11 +361,11 @@ export const CubeRenderer: React.FC<EngineProps> = ({ question, mode }) => {
     const stack = visualConfig.stack || [];
 
     return (
-      <div className="w-full flex flex-col items-center justify-center p-4 md:p-6 bg-slate-50/90 rounded-2xl border-2 border-slate-200/80 gap-3 shadow-inner">
+      <div className="w-full flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 bg-gradient-to-b from-slate-50 to-slate-100/90 rounded-3xl border-2 border-slate-200/90 gap-3 shadow-inner">
         <span className="text-xs font-bold text-indigo-700 bg-indigo-100/90 border border-indigo-200 px-3.5 py-1 rounded-full uppercase tracking-wider shadow-sm">
           📐 3B Katmanlı Şekil Dizilimi (Üst Üste)
         </span>
-        <div className="w-36 h-36 sm:w-44 sm:h-44 bg-white rounded-2xl border-2 border-slate-300 shadow-[0_6px_0_0_#cbd5e1] flex items-center justify-center p-3 relative">
+        <div className="w-48 h-48 sm:w-60 sm:h-60 md:w-72 md:h-72 bg-white rounded-3xl border-2 border-slate-300 shadow-[0_8px_0_0_#cbd5e1] flex items-center justify-center p-4 relative">
           <svg viewBox="0 0 100 100" className="w-full h-full select-none" shapeRendering="geometricPrecision">
             {stack.map((item: any, idx: number) => (
               <ShapeSvg
@@ -373,7 +373,7 @@ export const CubeRenderer: React.FC<EngineProps> = ({ question, mode }) => {
                 kind={item.kind}
                 cx={50}
                 cy={50}
-                size={item.size || 64 - idx * 14}
+                size={item.size ? item.size * 1.35 : 82 - idx * 16}
                 style={{
                   fill: item.fill,
                   stroke: '#0f172a',

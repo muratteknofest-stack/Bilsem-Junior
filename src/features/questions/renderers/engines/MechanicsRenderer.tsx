@@ -19,14 +19,14 @@ export const MechanicsRenderer: React.FC<EngineProps> = ({ question, mode }) => 
     const totalGears = gears.length;
 
     return (
-      <div className="w-full flex flex-col items-center justify-center p-4 md:p-8 bg-slate-50/90 rounded-2xl border-2 border-slate-200/90 shadow-inner select-none">
+      <div className="w-full flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 bg-gradient-to-b from-slate-50 to-slate-100/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
         <div className="flex items-center gap-2 mb-4">
           <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 px-3.5 py-1 rounded-full shadow-sm">
             ⚙️ 3B Mekanik Dişli Çark Düzeneği
           </span>
         </div>
 
-        <div className="flex items-center justify-center gap-1 sm:gap-2 flex-wrap">
+        <div className="flex items-center justify-center gap-1 sm:gap-3 flex-wrap">
           {gears.map((g: any, idx: number) => {
             const teeth = 8;
             const r = Math.max(30, Math.min(48, (g.size || 35) * 1.1));
@@ -61,7 +61,7 @@ export const MechanicsRenderer: React.FC<EngineProps> = ({ question, mode }) => 
                 style={{ zIndex: 10 + (idx % 2 === 0 ? 2 : 1) }}
               >
                 <div
-                  className="w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center"
+                  className="w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 flex items-center justify-center"
                   style={{
                     filter: 'drop-shadow(0px 4px 6px rgba(15,23,42,0.18))',
                   }}
@@ -153,20 +153,20 @@ export const MechanicsRenderer: React.FC<EngineProps> = ({ question, mode }) => 
   if (mode === 'operation_machine') {
     const pairs = visualConfig.pairs || [];
     return (
-      <div className="w-full flex flex-col items-center justify-center p-4 md:p-8 bg-slate-50/90 rounded-2xl border-2 border-slate-200/90 shadow-inner select-none">
+      <div className="w-full flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 bg-gradient-to-b from-slate-50 to-slate-100/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
         <div className="flex items-center gap-2 mb-5">
           <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 px-3.5 py-1 rounded-full shadow-sm">
             ⚡ 3B Matematiksel İşlem Makinesi
           </span>
         </div>
 
-        <div className="w-full max-w-md flex flex-col gap-4 relative">
+        <div className="w-full max-w-lg flex flex-col gap-4 relative">
           {/* Machine Vertical Conveyor Beam */}
-          <div className="absolute top-0 bottom-0 left-1/2 w-18 bg-gradient-to-b from-slate-200 to-slate-300 -translate-x-1/2 rounded-3xl z-0 border-2 border-slate-300 shadow-inner" />
+          <div className="absolute top-0 bottom-0 left-1/2 w-20 bg-gradient-to-b from-slate-200 to-slate-300 -translate-x-1/2 rounded-3xl z-0 border-2 border-slate-300 shadow-inner" />
 
           {/* Central Processor Unit */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-b from-slate-900 to-slate-950 text-white px-5 py-4 rounded-2xl z-20 shadow-[0_8px_0_0_#0f172a] border-2 border-slate-700 flex flex-col items-center gap-1 min-w-[100px]">
-            <Cpu className="w-7 h-7 text-indigo-400 animate-pulse" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-b from-slate-900 to-slate-950 text-white px-6 py-4.5 rounded-3xl z-20 shadow-[0_8px_0_0_#0f172a] border-2 border-slate-700 flex flex-col items-center gap-1 min-w-[110px]">
+            <Cpu className="w-8 h-8 text-indigo-400 animate-pulse" />
             <span className="text-[10px] font-black tracking-widest uppercase text-indigo-300">
               KURAL [ f(x) ]
             </span>
@@ -178,27 +178,27 @@ export const MechanicsRenderer: React.FC<EngineProps> = ({ question, mode }) => 
             return (
               <div key={i} className="flex justify-between items-center w-full relative z-10 py-1">
                 {/* Input Cassette */}
-                <div className="w-24 sm:w-28 h-16 bg-white border-2 border-slate-300 rounded-2xl shadow-[0_5px_0_0_#cbd5e1] flex items-center justify-center text-xl sm:text-2xl font-black text-slate-800">
+                <div className="w-28 sm:w-36 h-18 sm:h-20 bg-white border-2 border-slate-300 rounded-3xl shadow-[0_6px_0_0_#cbd5e1] flex items-center justify-center text-2xl sm:text-3xl font-black text-slate-800">
                   {p.in}
                 </div>
 
                 <div className="flex items-center text-indigo-500 font-bold">
-                  <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <ArrowRight className="w-5 h-5 sm:w-7 sm:h-7" />
                 </div>
 
                 {/* Invisible Spacer for Central Core */}
-                <div className="w-20 h-10 opacity-0" />
+                <div className="w-24 h-10 opacity-0" />
 
                 <div className="flex items-center text-indigo-500 font-bold">
-                  <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <ArrowRight className="w-5 h-5 sm:w-7 sm:h-7" />
                 </div>
 
                 {/* Output Cassette */}
                 <div
-                  className={`w-24 sm:w-28 h-16 border-2 rounded-2xl flex items-center justify-center text-xl sm:text-2xl font-black ${
+                  className={`w-28 sm:w-36 h-18 sm:h-20 border-2 rounded-3xl flex items-center justify-center text-2xl sm:text-3xl font-black ${
                     isMystery
-                      ? 'bg-indigo-50 border-indigo-400 text-indigo-700 shadow-[0_5px_0_0_#6366f1] ring-2 ring-indigo-400/40 animate-pulse'
-                      : 'bg-white border-slate-300 text-indigo-900 shadow-[0_5px_0_0_#cbd5e1]'
+                      ? 'bg-indigo-50 border-indigo-400 text-indigo-700 shadow-[0_6px_0_0_#6366f1] ring-2 ring-indigo-400/40 animate-pulse'
+                      : 'bg-white border-slate-300 text-indigo-900 shadow-[0_6px_0_0_#cbd5e1]'
                   }`}
                 >
                   {p.out}

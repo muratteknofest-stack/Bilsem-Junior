@@ -17,10 +17,10 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
   if (mode === 'single_target') {
     const target = visualConfig.targetItem;
     return (
-      <div className="w-full flex flex-col items-center justify-center p-4 md:p-8 bg-slate-50/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
-        <div className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 bg-white rounded-3xl border-2 border-slate-300 shadow-[0_8px_0_0_#cbd5e1] flex items-center justify-center p-4">
+      <div className="w-full flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 bg-gradient-to-b from-slate-50 to-slate-100/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
+        <div className="w-44 h-44 sm:w-56 sm:h-56 md:w-68 md:h-68 bg-white rounded-3xl border-2 border-slate-300 shadow-[0_8px_0_0_#cbd5e1] flex items-center justify-center p-4 transition-transform hover:scale-[1.02]">
           <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
-            <ShapeSvg kind={target.kind} style={target} size={70} />
+            <ShapeSvg kind={target.kind} style={target} size={80} />
           </svg>
         </div>
         <div className="mt-4 flex items-center gap-2 text-xs sm:text-sm font-black text-indigo-700 bg-indigo-50 px-4 py-1.5 rounded-full border border-indigo-200/80 shadow-sm">
@@ -40,30 +40,30 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
   if (mode === 'mirror_target') {
     const base = visualConfig.baseItem;
     return (
-      <div className="w-full flex items-center justify-center p-4 md:p-8 bg-slate-50/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
-        <div className="flex items-center gap-4 sm:gap-6">
+      <div className="w-full flex items-center justify-center p-3 sm:p-6 md:p-8 bg-gradient-to-b from-slate-50 to-slate-100/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
+        <div className="flex items-center gap-3 sm:gap-6 md:gap-8">
           {/* Base Item */}
-          <div className="w-24 h-24 sm:w-32 sm:h-32 bg-white rounded-2xl border-2 border-slate-300 shadow-[0_6px_0_0_#cbd5e1] flex items-center justify-center p-3">
+          <div className="w-28 h-28 sm:w-36 sm:h-36 md:w-48 md:h-48 bg-white rounded-3xl border-2 border-slate-300 shadow-[0_6px_0_0_#cbd5e1] flex items-center justify-center p-3">
             <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
-              <ShapeSvg kind={base.kind} style={base} size={65} />
+              <ShapeSvg kind={base.kind} style={base} size={78} />
             </svg>
           </div>
 
           {/* 3D Glass Mirror Axis Line */}
           <div className="flex flex-col items-center justify-center">
-            <div className="w-1.5 h-32 bg-gradient-to-b from-indigo-300 via-indigo-600 to-indigo-300 rounded-full flex flex-col justify-between py-1 shadow-md">
-              <div className="w-3 h-3 bg-indigo-700 rounded-full -ml-0.5 border border-white shadow-sm" />
-              <div className="w-3 h-3 bg-indigo-700 rounded-full -ml-0.5 border border-white shadow-sm" />
+            <div className="w-2 h-36 sm:h-48 bg-gradient-to-b from-indigo-300 via-indigo-600 to-indigo-300 rounded-full flex flex-col justify-between py-1 shadow-md">
+              <div className="w-3.5 h-3.5 bg-indigo-700 rounded-full -ml-[3px] border border-white shadow-sm" />
+              <div className="w-3.5 h-3.5 bg-indigo-700 rounded-full -ml-[3px] border border-white shadow-sm" />
             </div>
-            <span className="text-[10px] font-black text-indigo-700 mt-1.5 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+            <span className="text-[10px] font-black text-indigo-700 mt-2 uppercase tracking-widest bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200 shadow-xs">
               AYNA
             </span>
           </div>
 
           {/* Mirror Target Missing Box */}
-          <div className="w-24 h-24 sm:w-32 sm:h-32 bg-indigo-50/80 rounded-2xl border-2 border-dashed border-indigo-400 shadow-[0_6px_0_0_#c7d2fe] flex flex-col items-center justify-center gap-1">
-            <HelpCircle className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-600 animate-pulse drop-shadow-sm" />
-            <span className="text-[9px] font-bold text-indigo-500 uppercase tracking-wider">YANSIMA</span>
+          <div className="w-28 h-28 sm:w-36 sm:h-36 md:w-48 md:h-48 bg-indigo-50/80 rounded-3xl border-3 border-dashed border-indigo-400 shadow-[0_6px_0_0_#c7d2fe] flex flex-col items-center justify-center gap-1">
+            <HelpCircle className="w-10 h-10 sm:w-14 sm:h-14 text-indigo-600 animate-pulse drop-shadow-sm" />
+            <span className="text-[10px] sm:text-xs font-black text-indigo-500 uppercase tracking-wider">YANSIMA</span>
           </div>
         </div>
       </div>
@@ -77,20 +77,20 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
     const shape = visualConfig.halfShape;
     const color = visualConfig.color;
     return (
-      <div className="w-full flex items-center justify-center p-4 md:p-8 bg-slate-50/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
-        <div className="w-56 h-36 sm:w-64 sm:h-44 bg-white rounded-3xl border-2 border-slate-300 shadow-[0_8px_0_0_#cbd5e1] flex items-center relative overflow-hidden">
+      <div className="w-full flex items-center justify-center p-3 sm:p-6 md:p-8 bg-gradient-to-b from-slate-50 to-slate-100/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
+        <div className="w-68 h-44 sm:w-80 sm:h-52 md:w-96 md:h-60 bg-white rounded-3xl border-2 border-slate-300 shadow-[0_8px_0_0_#cbd5e1] flex items-center relative overflow-hidden">
           {/* Left half with actual shape */}
           <div className="w-1/2 h-full flex items-center justify-end pr-0.5 overflow-hidden">
-            <svg viewBox="0 0 100 100" className="w-36 h-36 transform translate-x-1/2" shapeRendering="geometricPrecision">
-              <ShapeSvg kind={shape} style={{ fill: color, stroke: '#0f172a', strokeWidth: 2 }} size={78} />
+            <svg viewBox="0 0 100 100" className="w-44 h-44 sm:w-52 sm:h-52 transform translate-x-1/2" shapeRendering="geometricPrecision">
+              <ShapeSvg kind={shape} style={{ fill: color, stroke: '#0f172a', strokeWidth: 2 }} size={84} />
             </svg>
           </div>
           {/* Center symmetry dotted line */}
-          <div className="w-1 h-full bg-indigo-500/20 border-r-2 border-dashed border-indigo-600 z-10" />
+          <div className="w-1.5 h-full bg-indigo-500/20 border-r-2 border-dashed border-indigo-600 z-10" />
           {/* Right missing half */}
-          <div className="w-1/2 h-full bg-indigo-50/60 flex flex-col items-center justify-center gap-1">
-            <span className="text-3xl font-black text-indigo-600 animate-pulse drop-shadow-sm">?</span>
-            <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Diğer Yarısı</span>
+          <div className="w-1/2 h-full bg-indigo-50/60 flex flex-col items-center justify-center gap-1.5">
+            <span className="text-4xl font-black text-indigo-600 animate-pulse drop-shadow-sm">?</span>
+            <span className="text-[10px] sm:text-xs font-black text-indigo-400 uppercase tracking-wider">Diğer Yarısı</span>
           </div>
         </div>
       </div>
@@ -104,14 +104,14 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
     const mainShape = visualConfig.mainShape;
     const color = visualConfig.color;
     return (
-      <div className="w-full flex items-center justify-center p-4 md:p-8 bg-slate-50/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
-        <div className="w-40 h-40 sm:w-48 sm:h-48 bg-white rounded-3xl border-2 border-slate-300 shadow-[0_8px_0_0_#cbd5e1] flex items-center justify-center p-4 relative">
+      <div className="w-full flex items-center justify-center p-3 sm:p-6 md:p-8 bg-gradient-to-b from-slate-50 to-slate-100/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
+        <div className="w-48 h-48 sm:w-60 sm:h-60 md:w-72 md:h-72 bg-white rounded-3xl border-2 border-slate-300 shadow-[0_8px_0_0_#cbd5e1] flex items-center justify-center p-4 relative">
           <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
-            <ShapeSvg kind={mainShape} style={{ fill: color, stroke: '#0f172a', strokeWidth: 2 }} size={78} />
+            <ShapeSvg kind={mainShape} style={{ fill: color, stroke: '#0f172a', strokeWidth: 2 }} size={84} />
           </svg>
           {/* Missing cut overlay badge */}
-          <div className="absolute top-4 right-4 w-12 h-12 bg-indigo-50 border-2 border-dashed border-indigo-500 rounded-2xl flex items-center justify-center shadow-md animate-pulse">
-            <span className="text-lg font-black text-indigo-600">?</span>
+          <div className="absolute top-4 right-4 w-14 h-14 sm:w-16 sm:h-16 bg-indigo-50 border-3 border-dashed border-indigo-500 rounded-2xl flex items-center justify-center shadow-md animate-pulse">
+            <span className="text-xl sm:text-2xl font-black text-indigo-600">?</span>
           </div>
         </div>
       </div>
@@ -124,18 +124,18 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
   if (mode === 'analogy_pairs') {
     const { pairA, pairB, pairC } = visualConfig;
     return (
-      <div className="w-full flex flex-wrap items-center justify-center gap-3 sm:gap-4 p-4 md:p-8 bg-slate-50/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
+      <div className="w-full flex flex-wrap items-center justify-center gap-3 sm:gap-5 p-3 sm:p-6 md:p-8 bg-gradient-to-b from-slate-50 to-slate-100/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
         {/* Pair 1: A -> B */}
-        <div className="flex items-center gap-2.5 bg-white px-4 py-3 rounded-2xl border-2 border-slate-200 shadow-[0_4px_0_0_#cbd5e1]">
-          <div className="w-14 h-14 md:w-16 md:h-16 flex items-center justify-center">
+        <div className="flex items-center gap-3 bg-white px-5 py-3.5 rounded-2xl border-2 border-slate-200 shadow-[0_5px_0_0_#cbd5e1]">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center">
             <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
-              <ShapeSvg kind={pairA.kind} style={pairA} size={65} />
+              <ShapeSvg kind={pairA.kind} style={pairA} size={74} />
             </svg>
           </div>
-          <ArrowRight className="w-5 h-5 text-indigo-500 font-bold" />
-          <div className="w-14 h-14 md:w-16 md:h-16 flex items-center justify-center">
+          <ArrowRight className="w-6 h-6 text-indigo-500 font-bold" />
+          <div className="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center">
             <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
-              <ShapeSvg kind={pairB.kind} style={pairB} size={65} />
+              <ShapeSvg kind={pairB.kind} style={pairB} size={74} />
             </svg>
           </div>
         </div>
@@ -143,15 +143,15 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
         <span className="text-2xl font-black text-indigo-400 px-1">::</span>
 
         {/* Pair 2: C -> ? */}
-        <div className="flex items-center gap-2.5 bg-white px-4 py-3 rounded-2xl border-2 border-slate-200 shadow-[0_4px_0_0_#cbd5e1]">
-          <div className="w-14 h-14 md:w-16 md:h-16 flex items-center justify-center">
+        <div className="flex items-center gap-3 bg-white px-5 py-3.5 rounded-2xl border-2 border-slate-200 shadow-[0_5px_0_0_#cbd5e1]">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center">
             <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
-              <ShapeSvg kind={pairC.kind} style={pairC} size={65} />
+              <ShapeSvg kind={pairC.kind} style={pairC} size={74} />
             </svg>
           </div>
-          <ArrowRight className="w-5 h-5 text-indigo-500 font-bold" />
-          <div className="w-14 h-14 md:w-16 md:h-16 bg-indigo-50 border-2 border-dashed border-indigo-400 rounded-xl flex items-center justify-center shadow-sm">
-            <span className="text-xl font-black text-indigo-600 animate-pulse">?</span>
+          <ArrowRight className="w-6 h-6 text-indigo-500 font-bold" />
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-indigo-50 border-3 border-dashed border-indigo-500 rounded-2xl flex items-center justify-center shadow-sm">
+            <span className="text-2xl font-black text-indigo-600 animate-pulse">?</span>
           </div>
         </div>
       </div>
@@ -164,8 +164,8 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
   if (mode === 'scatter_counting') {
     const { shape, color, coords = [] } = visualConfig;
     return (
-      <div className="w-full flex items-center justify-center p-3 md:p-6 bg-slate-50/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
-        <div className="w-72 h-52 sm:w-88 sm:h-60 md:w-[420px] md:h-68 bg-white rounded-3xl border-2 border-slate-300 shadow-[0_8px_0_0_#cbd5e1] relative overflow-hidden p-3">
+      <div className="w-full flex items-center justify-center p-3 sm:p-6 md:p-8 bg-gradient-to-b from-slate-50 to-slate-100/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
+        <div className="w-full max-w-[340px] sm:max-w-md md:max-w-xl h-64 sm:h-76 md:h-84 bg-white rounded-3xl border-2 border-slate-300 shadow-[0_8px_0_0_#cbd5e1] relative overflow-hidden p-3.5">
           <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
             {coords.map((pt: { x: number; y: number }, idx: number) => (
               <ShapeSvg
@@ -173,7 +173,7 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
                 kind={shape}
                 cx={pt.x}
                 cy={pt.y}
-                size={18}
+                size={20}
                 style={{ fill: color, stroke: '#0f172a', strokeWidth: 1.5 }}
               />
             ))}
@@ -189,15 +189,15 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
   if (mode === 'shape_equation') {
     const equations = visualConfig.equations || [];
     return (
-      <div className="w-full flex flex-col items-center justify-center gap-3 sm:gap-4 p-4 md:p-8 bg-slate-50/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
+      <div className="w-full flex flex-col items-center justify-center gap-3 sm:gap-4 p-3 sm:p-6 md:p-8 bg-gradient-to-b from-slate-50 to-slate-100/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
         {equations.map((eq: any, idx: number) => (
           <div
             key={idx}
-            className="flex items-center gap-2 sm:gap-4 text-xl sm:text-2xl font-black font-mono text-slate-800 bg-white px-5 py-3 rounded-2xl border-2 border-slate-200 shadow-[0_4px_0_0_#cbd5e1]"
+            className="flex items-center gap-2 sm:gap-4 text-xl sm:text-2xl font-black font-mono text-slate-800 bg-white px-5 py-3 sm:px-7 sm:py-4 rounded-3xl border-2 border-slate-200 shadow-[0_6px_0_0_#cbd5e1]"
           >
             {eq.left.map((item: any, i: number) => (
               <React.Fragment key={i}>
-                <div className="w-11 h-11 sm:w-13 sm:h-13 flex items-center justify-center">
+                <div className="w-13 h-13 sm:w-16 sm:h-16 flex items-center justify-center">
                   <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
                     <ShapeSvg kind={item.shape} style={{ fill: item.fill, stroke: '#0f172a', strokeWidth: 2 }} size={78} />
                   </svg>
@@ -209,7 +209,7 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
             <span
               className={
                 eq.right === '?'
-                  ? 'text-indigo-600 bg-indigo-50 border-2 border-indigo-400 border-dashed px-3 py-1 rounded-xl animate-pulse font-black'
+                  ? 'text-indigo-600 bg-indigo-50 border-3 border-indigo-500 border-dashed px-4 py-1.5 rounded-2xl animate-pulse font-black shadow-sm'
                   : 'text-slate-900 font-black'
               }
             >
@@ -227,8 +227,8 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
   if (mode === 'stack_target') {
     const stack = visualConfig.stack || [];
     return (
-      <div className="w-full flex flex-col items-center justify-center p-4 md:p-8 bg-slate-50/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
-        <div className="w-36 h-36 sm:w-44 sm:h-44 md:w-52 md:h-52 bg-white rounded-3xl border-2 border-slate-300 shadow-[0_8px_0_0_#cbd5e1] flex items-center justify-center p-4 relative">
+      <div className="w-full flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 bg-gradient-to-b from-slate-50 to-slate-100/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
+        <div className="w-48 h-48 sm:w-60 sm:h-60 md:w-72 md:h-72 bg-white rounded-3xl border-2 border-slate-300 shadow-[0_8px_0_0_#cbd5e1] flex items-center justify-center p-4 relative">
           <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
             {stack.map((item: any, idx: number) => (
               <ShapeSvg
@@ -236,7 +236,7 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
                 kind={item.kind}
                 cx={50}
                 cy={50}
-                size={item.size}
+                size={item.size ? item.size * 1.3 : 76}
                 style={{ fill: item.fill, stroke: '#0f172a', strokeWidth: 2, rotation: item.rotation || 0 }}
               />
             ))}
@@ -253,16 +253,16 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
     const { leftSet, rightSet } = visualConfig;
     const MAX_ITEMS = 3;
     return (
-      <div className="w-full flex items-center justify-center p-4 md:p-8 bg-slate-50/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
-        <div className="relative w-72 h-44 sm:w-88 sm:h-52 flex items-center justify-center">
+      <div className="w-full flex items-center justify-center p-3 sm:p-6 md:p-8 bg-gradient-to-b from-slate-50 to-slate-100/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
+        <div className="relative w-80 h-52 sm:w-96 sm:h-64 md:w-[440px] md:h-72 flex items-center justify-center">
           {/* Left Translucent Acrylic Disc */}
           <div
-            className="absolute left-0 w-44 h-44 sm:w-52 sm:h-52 rounded-full flex items-center justify-start p-4 shadow-lg border-2 border-indigo-400/40"
+            className="absolute left-0 w-52 h-52 sm:w-60 sm:h-60 md:w-68 md:h-68 rounded-full flex items-center justify-start p-4 shadow-lg border-2 border-indigo-400/40"
             style={{ backgroundColor: leftSet.color, opacity: 0.85 }}
           >
             <div className="flex flex-col gap-2 ml-4">
               {leftSet.items.slice(0, MAX_ITEMS).map((k: any, i: number) => (
-                <div key={i} className="w-8 h-8 bg-white rounded-xl shadow-md p-1 border border-slate-200">
+                <div key={i} className="w-9 h-9 sm:w-10 sm:h-10 bg-white rounded-xl shadow-md p-1 border border-slate-200">
                   <svg viewBox="0 0 100 100"><ShapeSvg kind={k} size={75} style={{ fill: '#0f172a' }} /></svg>
                 </div>
               ))}
@@ -271,12 +271,12 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
 
           {/* Right Translucent Acrylic Disc */}
           <div
-            className="absolute right-0 w-44 h-44 sm:w-52 sm:h-52 rounded-full flex items-center justify-end p-4 shadow-lg border-2 border-rose-400/40"
+            className="absolute right-0 w-52 h-52 sm:w-60 sm:h-60 md:w-68 md:h-68 rounded-full flex items-center justify-end p-4 shadow-lg border-2 border-rose-400/40"
             style={{ backgroundColor: rightSet.color, opacity: 0.85 }}
           >
             <div className="flex flex-col gap-2 mr-4">
               {rightSet.items.slice(0, MAX_ITEMS).map((k: any, i: number) => (
-                <div key={i} className="w-8 h-8 bg-white rounded-xl shadow-md p-1 border border-slate-200">
+                <div key={i} className="w-9 h-9 sm:w-10 sm:h-10 bg-white rounded-xl shadow-md p-1 border border-slate-200">
                   <svg viewBox="0 0 100 100"><ShapeSvg kind={k} size={75} style={{ fill: '#0f172a' }} /></svg>
                 </div>
               ))}
@@ -284,7 +284,7 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
           </div>
 
           {/* Center (Intersection) Indicator */}
-          <div className="absolute z-20 font-black text-4xl text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] animate-pulse">
+          <div className="absolute z-20 font-black text-4xl sm:text-5xl text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] animate-pulse">
             ?
           </div>
         </div>
@@ -300,11 +300,11 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
     const pieces = visualConfig?.tangramPieces || (visualConfig?.tangramPiece ? [visualConfig.tangramPiece] : null);
 
     return (
-      <div className="w-full flex flex-col items-center justify-center p-4 md:p-8 bg-slate-50/90 rounded-3xl border-2 border-slate-200/90 gap-4 shadow-inner select-none">
+      <div className="w-full flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 bg-gradient-to-b from-slate-50 to-slate-100/90 rounded-3xl border-2 border-slate-200/90 gap-4 shadow-inner select-none">
         <div className="flex items-center gap-2 bg-indigo-100 text-indigo-900 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-sm border border-indigo-200">
           🧩 Tangram Hedef Silüeti: {silhouetteName || 'Şekil'}
         </div>
-        <div className="w-52 h-52 sm:w-64 sm:h-64 bg-white rounded-3xl border-2 border-slate-300 shadow-[0_8px_0_0_#cbd5e1] flex items-center justify-center p-4 relative overflow-hidden">
+        <div className="w-60 h-60 sm:w-72 sm:h-72 md:w-84 md:h-84 bg-white rounded-3xl border-2 border-slate-300 shadow-[0_8px_0_0_#cbd5e1] flex items-center justify-center p-4 relative overflow-hidden">
           <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
             {pieces && Array.isArray(pieces) ? (
               pieces.map((piece: any, i: number) => (
@@ -339,10 +339,10 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
   if (visualConfig?.targetItem) {
     const item = visualConfig.targetItem;
     return (
-      <div className="w-full flex items-center justify-center p-4 md:p-8 bg-slate-50/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
-        <div className="w-32 h-32 sm:w-40 sm:h-40 bg-white rounded-3xl border-2 border-slate-300 shadow-[0_8px_0_0_#cbd5e1] flex items-center justify-center p-4">
+      <div className="w-full flex items-center justify-center p-3 sm:p-6 md:p-8 bg-gradient-to-b from-slate-50 to-slate-100/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
+        <div className="w-44 h-44 sm:w-56 sm:h-56 md:w-68 md:h-68 bg-white rounded-3xl border-2 border-slate-300 shadow-[0_8px_0_0_#cbd5e1] flex items-center justify-center p-4">
           <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
-            <ShapeSvg kind={item.kind} style={item} size={70} />
+            <ShapeSvg kind={item.kind} style={item} size={80} />
           </svg>
         </div>
       </div>

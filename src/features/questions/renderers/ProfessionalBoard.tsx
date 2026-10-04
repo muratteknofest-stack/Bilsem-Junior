@@ -17,7 +17,7 @@ export function TileDiagram({ tile }: { tile: Tile }) {
       viewBox="0 0 100 100"
       role="img"
       aria-label={`${size} çarpı ${size} 3B desen matrisi`}
-      className="w-full h-full max-h-32 select-none"
+      className="w-full h-full select-none"
       shapeRendering="geometricPrecision"
       style={{
         filter: 'drop-shadow(0px 3px 4px rgba(15,23,42,0.1))',
@@ -109,7 +109,7 @@ export function TileDiagram({ tile }: { tile: Tile }) {
 
 export function ProfessionalBoard({ board }: { board: Board }) {
   return (
-    <div className="rounded-3xl border-2 border-slate-200 bg-white p-4 sm:p-6 text-slate-900 space-y-5 shadow-[0_8px_0_0_#e2e8f0] select-none">
+    <div className="w-full rounded-3xl border-2 border-slate-300/80 bg-gradient-to-b from-white to-slate-50/80 p-3 sm:p-6 text-slate-900 space-y-4 sm:space-y-6 shadow-[0_8px_0_0_#cbd5e1] select-none">
       {board.tiles && (
         <>
           {board.kind === 'transform' && !board.sequence && board.tiles.length === 2 && (
@@ -124,7 +124,7 @@ export function ProfessionalBoard({ board }: { board: Board }) {
             </div>
           )}
           <div
-            className="grid gap-3 sm:gap-5 mx-auto max-w-lg"
+            className="grid gap-3 sm:gap-6 mx-auto w-full max-w-md sm:max-w-xl md:max-w-2xl"
             style={{
               gridTemplateColumns: `repeat(${Math.min(board.columns || 2, board.tiles.length)}, minmax(0, 1fr))`,
             }}
@@ -132,7 +132,7 @@ export function ProfessionalBoard({ board }: { board: Board }) {
             {board.tiles.map((tile, i) => (
               <div
                 key={i}
-                className="aspect-square p-2 sm:p-3 rounded-2xl border-2 border-slate-200/90 flex items-center justify-center bg-slate-50/80 shadow-[0_4px_0_0_#cbd5e1] hover:border-indigo-300 transition-all"
+                className="aspect-square p-2.5 sm:p-4 rounded-2xl sm:rounded-3xl border-2 border-slate-300/90 flex items-center justify-center bg-white shadow-[0_6px_0_0_#cbd5e1] hover:border-indigo-400 transition-all"
               >
                 {tile ? (
                   <TileDiagram tile={tile} />

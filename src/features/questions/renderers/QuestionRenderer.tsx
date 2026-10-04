@@ -48,8 +48,10 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({ question }) 
   };
 
   return (
-    <div className="w-full max-w-[560px] mx-auto overflow-hidden flex items-center justify-center p-1 sm:p-3 select-none touch-manipulation">
-      {renderEngine()}
+    <div className="w-full max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto flex items-center justify-center p-0.5 sm:p-2 md:p-3 select-none touch-manipulation">
+      <div className="w-full flex items-center justify-center">
+        {renderEngine()}
+      </div>
     </div>
   );
 };

@@ -81,25 +81,25 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
 
       return (
         <div className="flex flex-col items-center justify-center w-full py-1 gap-1.5 select-none">
-          <svg viewBox="0 0 100 100" className="w-16 h-16 sm:w-20 sm:h-20" shapeRendering="geometricPrecision">
-            <g style={{ filter: 'drop-shadow(0px 3px 4px rgba(15,23,42,0.18))' }}>
+          <svg viewBox="0 0 100 100" className="w-18 h-18 sm:w-22 sm:h-22" shapeRendering="geometricPrecision">
+            <g style={{ filter: 'drop-shadow(0px 4px 6px rgba(15,23,42,0.22))' }}>
               {piece === 'large_triangle_1' && (
-                <polygon points="15,85 85,85 15,15" fill={color} stroke="#0f172a" strokeWidth="2" strokeLinejoin="round" />
+                <polygon points="15,85 85,85 15,15" fill={color} stroke="#0f172a" strokeWidth="2.5" strokeLinejoin="round" />
               )}
               {piece === 'large_triangle_2' && (
-                <polygon points="15,15 85,15 85,85" fill={color} stroke="#0f172a" strokeWidth="2" strokeLinejoin="round" />
+                <polygon points="15,15 85,15 85,85" fill={color} stroke="#0f172a" strokeWidth="2.5" strokeLinejoin="round" />
               )}
               {piece === 'medium_triangle' && (
-                <polygon points="25,75 75,75 25,25" fill={color} stroke="#0f172a" strokeWidth="2" strokeLinejoin="round" />
+                <polygon points="25,75 75,75 25,25" fill={color} stroke="#0f172a" strokeWidth="2.5" strokeLinejoin="round" />
               )}
               {(piece === 'small_triangle' || piece === 'small_triangle_1' || piece === 'small_triangle_2') && (
-                <polygon points="30,70 70,70 30,30" fill={color} stroke="#0f172a" strokeWidth="2" strokeLinejoin="round" />
+                <polygon points="30,70 70,70 30,30" fill={color} stroke="#0f172a" strokeWidth="2.5" strokeLinejoin="round" />
               )}
               {piece === 'square' && (
-                <rect x="25" y="25" width="50" height="50" rx="4" fill={color} stroke="#0f172a" strokeWidth="2" strokeLinejoin="round" />
+                <rect x="25" y="25" width="50" height="50" rx="6" fill={color} stroke="#0f172a" strokeWidth="2.5" strokeLinejoin="round" />
               )}
               {piece === 'parallelogram' && (
-                <polygon points="20,75 60,75 80,25 40,25" fill={color} stroke="#0f172a" strokeWidth="2" strokeLinejoin="round" />
+                <polygon points="20,75 60,75 80,25 40,25" fill={color} stroke="#0f172a" strokeWidth="2.5" strokeLinejoin="round" />
               )}
             </g>
           </svg>
@@ -131,37 +131,37 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
 
       return (
         <div className="w-full flex items-center justify-center py-1">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-indigo-50/80 border-2 border-slate-300 rounded-xl  relative overflow-hidden flex items-center justify-center">
+          <div className="w-18 h-18 sm:w-22 sm:h-22 bg-indigo-50/90 border-2 border-slate-300 rounded-2xl shadow-[0_3px_0_0_#cbd5e1] relative overflow-hidden flex items-center justify-center">
             {/* Folding axes */}
-            <div className="w-1/2 h-full absolute left-0 border-r border-dashed border-indigo-400" />
+            <div className="w-1/2 h-full absolute left-0 border-r-2 border-dashed border-indigo-400" />
             {foldType !== 'horizontal_half' && (
-              <div className="w-full h-1/2 absolute top-0 border-b border-dashed border-indigo-400" />
+              <div className="w-full h-1/2 absolute top-0 border-b-2 border-dashed border-indigo-400" />
             )}
 
             {/* Holes representation */}
             {count === 1 && (
-              <div className="w-3.5 h-3.5 bg-slate-800 rounded-full " />
+              <div className="w-4 h-4 bg-slate-900 rounded-full shadow-inner" />
             )}
             {count === 2 && (
               <div className="flex justify-around w-full px-2">
-                <div className="w-3 h-3 bg-slate-800 rounded-full " />
-                <div className="w-3 h-3 bg-slate-800 rounded-full " />
+                <div className="w-3.5 h-3.5 bg-slate-900 rounded-full shadow-inner" />
+                <div className="w-3.5 h-3.5 bg-slate-900 rounded-full shadow-inner" />
               </div>
             )}
             {count === 4 && punchType !== 'corner_cut' && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="w-2.5 h-2.5 bg-slate-800 rounded-full " />
-                <div className="w-2.5 h-2.5 bg-slate-800 rounded-full " />
-                <div className="w-2.5 h-2.5 bg-slate-800 rounded-full " />
-                <div className="w-2.5 h-2.5 bg-slate-800 rounded-full " />
+              <div className="grid grid-cols-2 gap-4 sm:gap-5">
+                <div className="w-3 h-3 bg-slate-900 rounded-full shadow-inner" />
+                <div className="w-3 h-3 bg-slate-900 rounded-full shadow-inner" />
+                <div className="w-3 h-3 bg-slate-900 rounded-full shadow-inner" />
+                <div className="w-3 h-3 bg-slate-900 rounded-full shadow-inner" />
               </div>
             )}
             {punchType === 'corner_cut' && (
               <>
-                <div className="w-3 h-3 bg-slate-800 rounded-full  absolute top-1.5 left-1.5" />
-                <div className="w-3 h-3 bg-slate-800 rounded-full  absolute top-1.5 right-1.5" />
-                <div className="w-3 h-3 bg-slate-800 rounded-full  absolute bottom-1.5 left-1.5" />
-                <div className="w-3 h-3 bg-slate-800 rounded-full  absolute bottom-1.5 right-1.5" />
+                <div className="w-3.5 h-3.5 bg-slate-900 rounded-full shadow-inner absolute top-1.5 left-1.5" />
+                <div className="w-3.5 h-3.5 bg-slate-900 rounded-full shadow-inner absolute top-1.5 right-1.5" />
+                <div className="w-3.5 h-3.5 bg-slate-900 rounded-full shadow-inner absolute bottom-1.5 left-1.5" />
+                <div className="w-3.5 h-3.5 bg-slate-900 rounded-full shadow-inner absolute bottom-1.5 right-1.5" />
               </>
             )}
           </div>
@@ -173,12 +173,12 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
     if (vd.baseShape) {
       const isDiff = vd.isDifferent;
       return (
-        <svg viewBox="0 0 100 100" className="w-full h-20 md:h-24">
+        <svg viewBox="0 0 100 100" className="w-full h-22 sm:h-24 md:h-26" shapeRendering="geometricPrecision">
           <ShapeSvg
             kind={vd.baseShape as ShapeKind}
             cx={50}
             cy={50}
-            size={60}
+            size={68}
             style={{
               fill: vd.color || '#6366f1',
               stroke: '#1e293b',
@@ -198,14 +198,14 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
       const profile = matrix[0] || [1, 3, 1];
 
       return (
-        <div className="flex items-end justify-center gap-2 h-18 sm:h-20 py-2 w-full">
+        <div className="flex items-end justify-center gap-2 h-20 sm:h-24 py-2 w-full">
           {profile.map((height: number, idx: number) => (
             <div key={idx} className="flex flex-col items-center">
               <div
-                className="w-5 sm:w-7 bg-indigo-500 border-2 border-indigo-700 rounded-t-md "
-                style={{ height: `${Math.max(height * 16, 8)}px` }}
+                className="w-6 sm:w-8 bg-gradient-to-t from-indigo-600 to-indigo-500 border-2 border-indigo-700 rounded-t-lg shadow-sm"
+                style={{ height: `${Math.max(height * 18, 10)}px` }}
               />
-              <span className="text-[11px] font-bold text-slate-500 mt-0.5">{height}</span>
+              <span className="text-xs font-black text-slate-600 mt-1">{height}</span>
             </div>
           ))}
         </div>
@@ -216,26 +216,26 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
     if (vd.ravenRule || vd.optId) {
       const optId = vd.optId;
       return (
-        <div className="flex items-center justify-center w-full h-18 sm:h-20">
-          <svg viewBox="0 0 100 100" className="w-16 h-16">
+        <div className="flex items-center justify-center w-full h-20 sm:h-24">
+          <svg viewBox="0 0 100 100" className="w-18 h-18 sm:w-20 sm:h-20" shapeRendering="geometricPrecision">
             {optId === 'correct' ? (
               <g>
-                <rect x="25" y="25" width="50" height="50" rx="4" fill="none" stroke="#4f46e5" strokeWidth="3" />
-                <circle cx="50" cy="50" r="12" fill="#6366f1" />
+                <rect x="25" y="25" width="50" height="50" rx="6" fill="none" stroke="#4f46e5" strokeWidth="3.5" />
+                <circle cx="50" cy="50" r="14" fill="#6366f1" />
               </g>
             ) : optId === 'wrong_rotation' ? (
               <g transform="rotate(45 50 50)">
-                <rect x="25" y="25" width="50" height="50" rx="4" fill="none" stroke="#64748b" strokeWidth="3" />
-                <circle cx="50" cy="50" r="12" fill="#94a3b8" />
+                <rect x="25" y="25" width="50" height="50" rx="6" fill="none" stroke="#64748b" strokeWidth="3.5" />
+                <circle cx="50" cy="50" r="14" fill="#94a3b8" />
               </g>
             ) : optId === 'wrong_addition' ? (
               <g>
-                <rect x="25" y="25" width="50" height="50" rx="4" fill="none" stroke="#64748b" strokeWidth="3" strokeDasharray="4,4" />
+                <rect x="25" y="25" width="50" height="50" rx="6" fill="none" stroke="#64748b" strokeWidth="3.5" strokeDasharray="5,5" />
               </g>
             ) : (
               <g>
-                <rect x="25" y="25" width="50" height="50" rx="4" fill="#6366f1" stroke="#312e81" strokeWidth="3" />
-                <circle cx="50" cy="50" r="12" fill="#ffffff" />
+                <rect x="25" y="25" width="50" height="50" rx="6" fill="#6366f1" stroke="#312e81" strokeWidth="3.5" />
+                <circle cx="50" cy="50" r="14" fill="#ffffff" />
               </g>
             )}
           </svg>
@@ -268,14 +268,14 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
     // 10. Stack view (spatial 3D stack / balance scale / shadow matching)
     if (vd.stack && Array.isArray(vd.stack)) {
       return (
-        <svg viewBox="0 0 100 100" className="w-full h-20 md:h-24">
+        <svg viewBox="0 0 100 100" className="w-full h-22 sm:h-24 md:h-26" shapeRendering="geometricPrecision">
           {vd.stack.map((item: any, idx: number) => (
             <ShapeSvg
               key={idx}
               kind={item?.kind || item?.shape || 'circle'}
               cx={item?.cx !== undefined ? item.cx : 50}
               cy={item?.cy !== undefined ? item.cy : 50}
-              size={item?.size || 50}
+              size={item?.size || 58}
               style={{
                 fill: item?.fill || '#6366f1',
                 stroke: item?.stroke || '#1e293b',
@@ -296,7 +296,7 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
       const pct = vd.fillPercent;
       const fillHeight = (70 * pct) / 100;
       return (
-        <svg viewBox="0 0 100 100" className="w-full h-20 md:h-24 select-none" shapeRendering="geometricPrecision">
+        <svg viewBox="0 0 100 100" className="w-full h-22 sm:h-24 md:h-26 select-none" shapeRendering="geometricPrecision">
           <defs>
             <linearGradient id={`liqGrad_${id}`} x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="#06b6d4" />
@@ -310,27 +310,27 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
             </linearGradient>
           </defs>
           {/* Glass beaker body */}
-          <rect x="25" y="15" width="50" height="70" rx="6" fill="#f8fafc" stroke="#334155" strokeWidth="2.5" />
+          <rect x="23" y="12" width="54" height="74" rx="8" fill="#f8fafc" stroke="#334155" strokeWidth="2.5" />
           {/* Liquid fill */}
           <rect
-            x="27"
-            y={83 - fillHeight}
-            width="46"
+            x="25"
+            y={84 - fillHeight}
+            width="50"
             height={fillHeight}
-            rx="2"
+            rx="3"
             fill={`url(#liqGrad_${id})`}
             opacity={0.92}
           />
           {/* Liquid Meniscus Curve */}
           {fillHeight > 2 && (
-            <ellipse cx="50" cy={83 - fillHeight} rx="23" ry="3" fill="#22d3ee" opacity="0.8" />
+            <ellipse cx="50" cy={84 - fillHeight} rx="25" ry="3.5" fill="#22d3ee" opacity="0.85" />
           )}
           {/* Glass Reflection Overlay */}
-          <rect x="26" y="16" width="48" height="68" rx="5" fill={`url(#beakerGlass_${id})`} pointerEvents="none" />
+          <rect x="24" y="13" width="52" height="72" rx="7" fill={`url(#beakerGlass_${id})`} pointerEvents="none" />
           {/* Beaker ticks */}
-          <line x1="25" y1="32" x2="33" y2="32" stroke="#64748b" strokeWidth="2" strokeLinecap="round" />
-          <line x1="25" y1="50" x2="36" y2="50" stroke="#64748b" strokeWidth="2.2" strokeLinecap="round" />
-          <line x1="25" y1="68" x2="33" y2="68" stroke="#64748b" strokeWidth="2" strokeLinecap="round" />
+          <line x1="23" y1="30" x2="32" y2="30" stroke="#64748b" strokeWidth="2" strokeLinecap="round" />
+          <line x1="23" y1="49" x2="35" y2="49" stroke="#64748b" strokeWidth="2.2" strokeLinecap="round" />
+          <line x1="23" y1="68" x2="32" y2="68" stroke="#64748b" strokeWidth="2" strokeLinecap="round" />
         </svg>
       );
     }
@@ -338,36 +338,36 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
     // 12. Paper folding pattern
     if (vd.paperPattern) {
       return (
-        <div className="w-full flex items-center justify-center h-20 md:h-24">
-          <div className="w-16 h-16 bg-indigo-50 border-2 border-slate-300 shadow relative">
-            <div className="w-1/2 h-full absolute left-0 border-r border-dashed border-slate-300" />
-            <div className="w-full h-1/2 absolute top-0 border-b border-dashed border-slate-300" />
+        <div className="w-full flex items-center justify-center h-22 sm:h-24 md:h-26">
+          <div className="w-18 h-18 sm:w-20 sm:h-20 bg-indigo-50/90 border-2 border-slate-300 rounded-2xl shadow-[0_3px_0_0_#cbd5e1] relative overflow-hidden">
+            <div className="w-1/2 h-full absolute left-0 border-r-2 border-dashed border-indigo-400" />
+            <div className="w-full h-1/2 absolute top-0 border-b-2 border-dashed border-indigo-400" />
 
             {/* Draw Holes */}
             {vd.paperPattern.includes('center') && (
               <>
-                <div className="w-3 h-3 bg-white rounded-full border border-slate-300  absolute top-1/2 left-1/4 -translate-y-1/2 -translate-x-1/2" />
-                <div className="w-3 h-3 bg-white rounded-full border border-slate-300  absolute top-1/2 left-3/4 -translate-y-1/2 -translate-x-1/2" />
+                <div className="w-3.5 h-3.5 bg-slate-900 rounded-full shadow-inner absolute top-1/2 left-1/4 -translate-y-1/2 -translate-x-1/2" />
+                <div className="w-3.5 h-3.5 bg-slate-900 rounded-full shadow-inner absolute top-1/2 left-3/4 -translate-y-1/2 -translate-x-1/2" />
               </>
             )}
             {vd.paperPattern.includes('top_left') && (
               <>
-                <div className="w-3 h-3 bg-white rounded-full border border-slate-300  absolute top-2 left-2" />
-                <div className="w-3 h-3 bg-white rounded-full border border-slate-300  absolute top-2 right-2" />
+                <div className="w-3.5 h-3.5 bg-slate-900 rounded-full shadow-inner absolute top-2 left-2" />
+                <div className="w-3.5 h-3.5 bg-slate-900 rounded-full shadow-inner absolute top-2 right-2" />
               </>
             )}
             {vd.paperPattern.includes('bottom_right') && (
               <>
-                <div className="w-3 h-3 bg-white rounded-full border border-slate-300  absolute bottom-2 right-2" />
-                <div className="w-3 h-3 bg-white rounded-full border border-slate-300  absolute bottom-2 left-2" />
+                <div className="w-3.5 h-3.5 bg-slate-900 rounded-full shadow-inner absolute bottom-2 right-2" />
+                <div className="w-3.5 h-3.5 bg-slate-900 rounded-full shadow-inner absolute bottom-2 left-2" />
               </>
             )}
             {vd.paperPattern.includes('corner') && (
               <>
-                <div className="w-3 h-3 bg-white rounded-full border border-slate-300  absolute top-2 left-2" />
-                <div className="w-3 h-3 bg-white rounded-full border border-slate-300  absolute top-2 right-2" />
-                <div className="w-3 h-3 bg-white rounded-full border border-slate-300  absolute bottom-2 left-2" />
-                <div className="w-3 h-3 bg-white rounded-full border border-slate-300  absolute bottom-2 right-2" />
+                <div className="w-3.5 h-3.5 bg-slate-900 rounded-full shadow-inner absolute top-2 left-2" />
+                <div className="w-3.5 h-3.5 bg-slate-900 rounded-full shadow-inner absolute top-2 right-2" />
+                <div className="w-3.5 h-3.5 bg-slate-900 rounded-full shadow-inner absolute bottom-2 left-2" />
+                <div className="w-3.5 h-3.5 bg-slate-900 rounded-full shadow-inner absolute bottom-2 right-2" />
               </>
             )}
           </div>
@@ -381,13 +381,13 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
       const is2D = Array.isArray(grid[0]);
       const size = is2D ? grid.length : Math.sqrt(grid.length) || 3;
       return (
-        <div className="flex items-center justify-center w-full h-20 md:h-24">
+        <div className="flex items-center justify-center w-full h-22 sm:h-24 md:h-26">
           <div
-            className="grid gap-1 border-2 border-slate-300 bg-slate-100 p-1 rounded "
+            className="grid gap-1.5 border-2 border-slate-300 bg-slate-100 p-1.5 rounded-xl shadow-inner"
             style={{
               gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
-              width: size === 3 ? '4rem' : '5rem',
-              height: size === 3 ? '4rem' : '5rem',
+              width: size === 3 ? '4.8rem' : '5.8rem',
+              height: size === 3 ? '4.8rem' : '5.8rem',
             }}
           >
             {is2D
@@ -395,7 +395,7 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
                   row.map((cell: number, x: number) => (
                     <div
                       key={`${x}-${y}`}
-                      className={`rounded-md transition-all ${
+                      className={`rounded-lg transition-all ${
                         cell === 1
                           ? 'bg-gradient-to-b from-indigo-500 to-indigo-600 shadow-[0_2px_0_0_#3730a3] border border-indigo-400'
                           : 'bg-white border border-slate-200 shadow-inner'
@@ -406,7 +406,7 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
               : grid.map((cell: number, idx: number) => (
                   <div
                     key={idx}
-                    className={`rounded-md transition-all ${
+                    className={`rounded-lg transition-all ${
                       cell === 1
                         ? 'bg-gradient-to-b from-indigo-500 to-indigo-600 shadow-[0_2px_0_0_#3730a3] border border-indigo-400'
                         : 'bg-white border border-slate-200 shadow-inner'
@@ -422,12 +422,12 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
     const shapeItem = vd.kind ? vd : vd.item?.kind ? vd.item : vd.shape ? { ...vd, kind: vd.shape } : null;
     if (shapeItem && shapeItem.kind) {
       return (
-        <svg viewBox="0 0 100 100" className="w-full h-20 md:h-24">
+        <svg viewBox="0 0 100 100" className="w-full h-22 sm:h-24 md:h-26" shapeRendering="geometricPrecision">
           <ShapeSvg
             kind={shapeItem.kind}
             cx={shapeItem.cx !== undefined ? shapeItem.cx : 50}
             cy={shapeItem.cy !== undefined ? shapeItem.cy : 50}
-            size={shapeItem.size || 60}
+            size={shapeItem.size || 68}
             style={{
               fill: shapeItem.fill || '#6366f1',
               stroke: shapeItem.stroke || '#1e293b',
@@ -494,12 +494,12 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
       aria-pressed={isSelected}
       aria-disabled={disabled}
       aria-label={optionLabelText}
-      className={`relative flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer text-left w-full min-h-[110px] md:min-h-[130px] min-w-[52px] touch-manipulation focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/50 ${cardStyle} ${disabled && !showCorrect ? 'opacity-70 pointer-events-none shadow-none translate-y-1' : ''}`}
+      className={`relative flex flex-col items-center justify-center p-3 sm:p-5 rounded-2xl sm:rounded-3xl border-2 transition-all duration-200 cursor-pointer text-left w-full min-h-[120px] sm:min-h-[140px] md:min-h-[155px] min-w-[56px] touch-manipulation focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/50 ${cardStyle} ${disabled && !showCorrect ? 'opacity-70 pointer-events-none shadow-none translate-y-1' : ''}`}
     >
       {/* Option Identifier Badge */}
       <span
         aria-hidden="true"
-        className={`absolute top-2.5 left-2.5 flex items-center justify-center w-7 h-7 rounded-xl text-sm font-bold border transition-colors ${badgeStyle}`}
+        className={`absolute top-2.5 left-2.5 sm:top-3 sm:left-3 flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-black border transition-colors ${badgeStyle}`}
       >
         {id}
       </span>

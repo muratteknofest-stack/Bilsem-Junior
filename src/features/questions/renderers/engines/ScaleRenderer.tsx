@@ -18,7 +18,7 @@ export const ScaleRenderer: React.FC<EngineProps> = ({ question, mode }) => {
   if (mode === 'liquid_levels') {
     const levels = visualConfig.levels || [];
     return (
-      <div className="w-full flex flex-col items-center justify-center p-4 md:p-8 bg-slate-50/90 rounded-2xl border-2 border-slate-200/90 shadow-inner select-none">
+      <div className="w-full flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 bg-gradient-to-b from-slate-50 to-slate-100/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
         <div className="flex items-center gap-2 mb-4">
           <span className="text-xs font-bold uppercase tracking-wider text-cyan-800 bg-cyan-50 border border-cyan-200 px-3.5 py-1 rounded-full shadow-sm">
             🧪 3B Sıvı Seviyesi & Hacim Karşılaştırma
@@ -35,7 +35,7 @@ export const ScaleRenderer: React.FC<EngineProps> = ({ question, mode }) => {
               <React.Fragment key={idx}>
                 <div className="flex flex-col items-center gap-2">
                   <div
-                    className="w-20 h-28 sm:w-24 sm:h-32 bg-white rounded-2xl border-2 border-slate-300 shadow-[0_5px_0_0_#cbd5e1] p-2 flex items-center justify-center"
+                    className="w-24 h-36 sm:w-32 sm:h-44 md:w-36 md:h-52 bg-white rounded-3xl border-2 border-slate-300 shadow-[0_6px_0_0_#cbd5e1] p-3 flex items-center justify-center"
                   >
                     <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
                       <defs>
@@ -79,22 +79,22 @@ export const ScaleRenderer: React.FC<EngineProps> = ({ question, mode }) => {
                       <line x1="22" y1="70" x2="32" y2="70" stroke="#64748b" strokeWidth="2" strokeLinecap="round" />
                     </svg>
                   </div>
-                  <span className="text-xs font-black text-slate-700 bg-white px-2.5 py-0.5 rounded-full border border-slate-200 shadow-sm">
+                  <span className="text-xs sm:text-sm font-black text-slate-700 bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm">
                     %{lvl}
                   </span>
                 </div>
-                <ArrowRight className="w-5 h-5 text-indigo-400 font-bold" />
+                <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400 font-bold" />
               </React.Fragment>
             );
           })}
 
           {/* Missing Target Container */}
           <div className="flex flex-col items-center gap-2">
-            <div className="w-20 h-28 sm:w-24 sm:h-32 bg-indigo-50/80 border-2 border-dashed border-indigo-400 rounded-2xl shadow-[0_5px_0_0_#c7d2fe] flex flex-col items-center justify-center gap-1">
-              <span className="text-3xl font-black text-indigo-600 animate-pulse">?</span>
-              <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">HEDEF</span>
+            <div className="w-24 h-36 sm:w-32 sm:h-44 md:w-36 md:h-52 bg-indigo-50/80 border-3 border-dashed border-indigo-400 rounded-3xl shadow-[0_6px_0_0_#c7d2fe] flex flex-col items-center justify-center gap-1.5">
+              <span className="text-4xl font-black text-indigo-600 animate-pulse">?</span>
+              <span className="text-[10px] sm:text-xs font-black text-indigo-500 uppercase tracking-wider">HEDEF</span>
             </div>
-            <span className="text-xs font-black text-indigo-600">Sırada ?</span>
+            <span className="text-xs sm:text-sm font-black text-indigo-600">Sırada ?</span>
           </div>
         </div>
       </div>
@@ -110,7 +110,7 @@ export const ScaleRenderer: React.FC<EngineProps> = ({ question, mode }) => {
     const panGradId = `panGrad_${reactId}`;
 
     return (
-      <div className="w-full flex flex-col items-center justify-center gap-6 p-4 md:p-8 bg-slate-50/90 rounded-2xl border-2 border-slate-200/90 shadow-inner select-none">
+      <div className="w-full flex flex-col items-center justify-center gap-6 p-3 sm:p-6 md:p-8 bg-gradient-to-b from-slate-50 to-slate-100/90 rounded-3xl border-2 border-slate-200/90 shadow-inner select-none">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 px-3.5 py-1 rounded-full shadow-sm">
             ⚖️ 3B Hassas Denge Terazisi
@@ -118,18 +118,18 @@ export const ScaleRenderer: React.FC<EngineProps> = ({ question, mode }) => {
         </div>
 
         {scales.map((scale: any, idx: number) => (
-          <div key={idx} className="flex flex-col items-center w-full max-w-md relative bg-white/60 p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+          <div key={idx} className="flex flex-col items-center w-full max-w-lg md:max-w-xl relative bg-white/80 p-4 sm:p-6 rounded-3xl border-2 border-slate-200 shadow-sm">
             {/* Shapes on the left and right pans */}
             <div className="flex items-end justify-between w-full px-6 relative z-10 pb-1">
               {/* Left Pan Shapes */}
-              <div className="flex items-center justify-center gap-1.5 min-w-[70px]">
+              <div className="flex items-center justify-center gap-1.5 min-w-[80px] sm:min-w-[110px]">
                 {scale.left === '?' ? (
-                  <span className="text-3xl font-black text-indigo-600 mb-1 animate-pulse">?</span>
+                  <span className="text-4xl font-black text-indigo-600 mb-1 animate-pulse">?</span>
                 ) : (
                   (scale.left as any[]).map((item, i) => (
-                    <div key={i} className="w-9 h-9 sm:w-11 sm:h-11">
+                    <div key={i} className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16">
                       <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
-                        <ShapeSvg kind={item.kind} style={{ fill: item.fill, stroke: '#0f172a', strokeWidth: 2 }} size={78} />
+                        <ShapeSvg kind={item.kind} style={{ fill: item.fill, stroke: '#0f172a', strokeWidth: 2 }} size={84} />
                       </svg>
                     </div>
                   ))
@@ -137,14 +137,14 @@ export const ScaleRenderer: React.FC<EngineProps> = ({ question, mode }) => {
               </div>
 
               {/* Right Pan Shapes */}
-              <div className="flex items-center justify-center gap-1.5 min-w-[70px]">
+              <div className="flex items-center justify-center gap-1.5 min-w-[80px] sm:min-w-[110px]">
                 {scale.right === '?' ? (
-                  <span className="text-3xl font-black text-indigo-600 mb-1 animate-pulse">?</span>
+                  <span className="text-4xl font-black text-indigo-600 mb-1 animate-pulse">?</span>
                 ) : (
                   (scale.right as any[]).map((item, i) => (
-                    <div key={i} className="w-9 h-9 sm:w-11 sm:h-11">
+                    <div key={i} className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16">
                       <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
-                        <ShapeSvg kind={item.kind} style={{ fill: item.fill, stroke: '#0f172a', strokeWidth: 2 }} size={78} />
+                        <ShapeSvg kind={item.kind} style={{ fill: item.fill, stroke: '#0f172a', strokeWidth: 2 }} size={84} />
                       </svg>
                     </div>
                   ))
@@ -153,7 +153,7 @@ export const ScaleRenderer: React.FC<EngineProps> = ({ question, mode }) => {
             </div>
 
             {/* 3D Mechanical Brass Balance Beam SVG */}
-            <svg viewBox="0 0 240 60" className="w-full h-14 sm:h-16 select-none" shapeRendering="geometricPrecision">
+            <svg viewBox="0 0 240 60" className="w-full h-18 sm:h-22 select-none" shapeRendering="geometricPrecision">
               <defs>
                 <linearGradient id={beamGradId} x1="0%" y1="0%" x2="0%" y2="100%">
                   <stop offset="0%" stopColor="#f8fafc" />
@@ -198,32 +198,32 @@ export const ScaleRenderer: React.FC<EngineProps> = ({ question, mode }) => {
   if (mode === 'weight_comparison') {
     const { comparisons } = visualConfig;
     return (
-      <div className="w-full flex flex-col items-center justify-center p-4 md:p-8 bg-slate-50/90 rounded-2xl border-2 border-slate-200/90 gap-4 shadow-inner select-none">
+      <div className="w-full flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 bg-gradient-to-b from-slate-50 to-slate-100/90 rounded-3xl border-2 border-slate-200/90 gap-4 shadow-inner select-none">
         <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 px-3.5 py-1 rounded-full shadow-sm">
           ⚖️ Ağır - Hafif Kıyaslama İfadeleri
         </span>
 
-        <div className="flex flex-col gap-3 w-full max-w-sm">
+        <div className="flex flex-col gap-3 w-full max-w-md sm:max-w-lg">
           {comparisons?.map((c: any, idx: number) => (
             <div
               key={idx}
-              className="flex items-center justify-between p-3.5 bg-white rounded-2xl border-2 border-slate-200 shadow-[0_4px_0_0_#cbd5e1]"
+              className="flex items-center justify-between p-3.5 sm:p-5 bg-white rounded-3xl border-2 border-slate-300 shadow-[0_6px_0_0_#cbd5e1]"
             >
-              <div className="w-12 h-12 flex items-center justify-center">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center">
                 <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
-                  <ShapeSvg kind={c.heavy.kind} style={{ fill: c.heavy.fill, stroke: '#0f172a' }} size={70} />
+                  <ShapeSvg kind={c.heavy.kind} style={{ fill: c.heavy.fill, stroke: '#0f172a', strokeWidth: 2 }} size={82} />
                 </svg>
               </div>
 
               <div className="flex flex-col items-center">
-                <span className="text-xs font-black text-rose-600 bg-rose-50 border border-rose-200 px-3 py-1 rounded-full">
+                <span className="text-xs sm:text-sm font-black text-rose-600 bg-rose-50 border border-rose-200 px-3.5 py-1.5 rounded-full shadow-xs">
                   Daha Ağır &gt;
                 </span>
               </div>
 
-              <div className="w-12 h-12 flex items-center justify-center">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center">
                 <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
-                  <ShapeSvg kind={c.light.kind} style={{ fill: c.light.fill, stroke: '#0f172a' }} size={70} />
+                  <ShapeSvg kind={c.light.kind} style={{ fill: c.light.fill, stroke: '#0f172a', strokeWidth: 2 }} size={82} />
                 </svg>
               </div>
             </div>
