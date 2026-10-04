@@ -18,7 +18,7 @@ import {
 
 import {
   syncUserFromFirebase, _updateFirebaseProfile, getCurrentUser,
-  setCurrentUser, isAuthenticated, loginAs, logout, addXP
+  setCurrentUser, isAuthenticated, loginAs, logout, addXP, switchActiveRole
 } from './modules/profile-service';
 
 import {
@@ -52,7 +52,7 @@ import {
 export {
   STREAK_MILESTONES, STORAGE_KEYS, USER_PROGRESS_KEYS, INITIAL_SKILL_MASTERIES,
   INITIAL_ACHIEVEMENTS, INITIAL_MISSIONS, INITIAL_MISTAKES,
-  createEmptyMasteries, createLockedAchievements
+  createEmptyMasteries, createLockedAchievements, switchActiveRole
 };
 
 class ZekaParkDataService {
@@ -72,6 +72,7 @@ class ZekaParkDataService {
   setCurrentUser(user: UserProfile) { return setCurrentUser(user); }
   isAuthenticated(): boolean { return isAuthenticated(); }
   loginAs(role: UserRole, customUser?: UserProfile): UserProfile { return loginAs(role, customUser); }
+  switchRole(role: UserRole): UserProfile { return switchActiveRole(role); }
   logout(): void { return logout(); }
   addXP(amount: number) { return addXP(amount); }
 

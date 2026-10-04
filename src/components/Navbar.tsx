@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile } from '../types';
+import { UserProfile, UserRole } from '../types';
 import {
   Zap, User, LogOut, Settings, Award, 
-  Menu, X, Volume2, VolumeX, ShieldCheck, GraduationCap, LayoutDashboard, KeyRound
+  Menu, X, Volume2, VolumeX, ShieldCheck, GraduationCap, LayoutDashboard, KeyRound, Users
 } from 'lucide-react';
 import { sound } from '../lib/sound';
 import { motion, AnimatePresence } from 'motion/react';
@@ -15,6 +15,7 @@ interface NavbarProps {
   currentRoute: string;
   onOpenReminderSettings: () => void;
   onLogout?: () => void;
+  onSwitchRole?: (role: UserRole) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -22,7 +23,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNavigateHome,
   onNavigate,
   currentRoute,
-  onLogout
+  onLogout,
+  onSwitchRole
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [soundOn, setSoundOn] = useState(sound.enabled === true);
@@ -47,30 +49,24 @@ export const Navbar: React.FC<NavbarProps> = ({
   const role = currentUser?.role || 'student';
 
   // Role based visual theme
-  const getRoleTheme = () => {
-    if (role === 'admin') return 'text-admin-600 dark:text-admin-400';
-    if (role === 'parent') return 'text-parent-600 dark:text-parent-400';
-    return 'text-primary-600 dark:text-primary-400';
-  };
-
   const getRoleBg = () => {
     if (role === 'admin') return 'bg-admin-50 text-admin-700 dark:bg-admin-900/30 dark:text-admin-300 border-admin-200 dark:border-admin-800';
-    if (role === 'parent') return 'bg-parent-50 text-parent-700 dark:bg-parent-900/30 dark:text-parent-300 border-parent-200 dark:border-parent-800';
-    return 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 border-primary-200 dark:border-primary-800';
+    if (role === 'parent') return 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800';
+    return 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800';
   };
 
   return (
     <header 
       className={`sticky top-0 z-50 w-full transition-all duration-300 ${
         isScrolled 
-          ? 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-zinc-200 dark:border-slate-800  py-2' 
+          ? 'bg-white/85 dark:bg-slate-900/85 backdrop-blur-lg border-b border-zinc-200 dark:border-slate-800 py-2.5 shadow-xs' 
           : 'bg-transparent py-4'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
         
         {/* Logo */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Logo 
             size="sm" 
             showTagline={isLanding}
@@ -80,23 +76,51 @@ export const Navbar: React.FC<NavbarProps> = ({
             }}
           />
           {!isLanding && (
-            <button
-              onClick={() => {
-                if (role === 'admin') {
-                  sound.playClick();
-                  onNavigate('admin');
-                }
-              }}
-              className={`hidden sm:inline-block text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full border transition-all ${
-                role === 'admin' ? 'cursor-pointer hover:scale-105 shadow-sm' : ''
-              } ${getRoleBg()}`}
-            >
-              {role === 'student' && 'Öğrenci Portalı'}
+            <span className={`hidden sm:inline-block text-[11px] font-bold px-2.5 py-1 rounded-full border transition-all ${getRoleBg()}`}>
+              {role === 'student' && 'Öğrenci Paneli'}
               {role === 'parent' && 'Veli Portalı'}
-              {role === 'admin' && 'Admin Paneli'}
-            </button>
+              {role === 'admin' && 'Yönetici Paneli'}
+            </span>
           )}
         </div>
+
+        {/* Family Two-Way Role Switcher (Öğrenci <-> Veli) */}
+        {!isLanding && role !== 'admin' && (
+          <div className="hidden sm:flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
+            <button
+              type="button"
+              onClick={() => {
+                sound.playClick();
+                if (onSwitchRole) onSwitchRole('student');
+                else onNavigate('dashboard');
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                role === 'student'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white dark:hover:bg-slate-700'
+              }`}
+            >
+              <GraduationCap className="w-3.5 h-3.5" />
+              <span>Öğrenci Paneli</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                sound.playClick();
+                if (onSwitchRole) onSwitchRole('parent');
+                else onNavigate('parent');
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                role === 'parent'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white dark:hover:bg-slate-700'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>Veli Portalı</span>
+            </button>
+          </div>
+        )}
 
         {/* Admin Navigation Quick Switcher */}
         {!isLanding && role === 'admin' && (
@@ -108,7 +132,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }}
               className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
                 currentRoute === 'admin'
-                  ? 'bg-purple-600 text-white shadow-md scale-102'
+                  ? 'bg-purple-600 text-white shadow-md'
                   : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white dark:hover:bg-slate-700'
               }`}
             >
@@ -122,34 +146,34 @@ export const Navbar: React.FC<NavbarProps> = ({
               }}
               className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
                 currentRoute === 'dashboard'
-                  ? 'bg-indigo-600 text-white shadow-md scale-102'
+                  ? 'bg-indigo-600 text-white shadow-md'
                   : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white dark:hover:bg-slate-700'
               }`}
             >
               <GraduationCap className="w-4 h-4" />
-              <span>Öğrenci Simülasyonu</span>
+              <span>Öğrenci Görünümü</span>
             </button>
           </div>
         )}
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden md:flex items-center gap-3">
           
           {/* Audio Toggle */}
           <button 
             onClick={toggleSound}
             aria-label={soundOn ? 'Sesi kapat' : 'Sesi aç'}
-            className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-zinc-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors "
+            className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-zinc-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-xs"
           >
             {soundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </button>
 
           {!isLanding && currentUser && (
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border font-bold text-sm ${getRoleBg()}`}>
-              <User className="w-4 h-4" />
-              <span>{currentUser?.name}</span>
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border font-bold text-xs ${getRoleBg()}`}>
+              <User className="w-3.5 h-3.5" />
+              <span>{currentUser?.name || 'Kullanıcı'}</span>
               {role === 'student' && currentUser.studentCode && (
-                <span className="ml-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-white/80 dark:bg-black/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200/50 flex items-center gap-1" title="Öğrenci Kodu">
+                <span className="ml-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-white/80 dark:bg-black/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200/50 flex items-center gap-1" title="Öğrenci Kodu">
                   <KeyRound className="w-3 h-3 text-indigo-500" />
                   {currentUser.studentCode}
                 </span>
@@ -164,7 +188,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 if(onLogout) onLogout();
               }}
               aria-label="Çıkış yap"
-              className="p-2.5 rounded-xl bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors border border-rose-200 dark:border-rose-900/50 "
+              className="p-2.5 rounded-xl bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors border border-rose-200 dark:border-rose-900/50 cursor-pointer shadow-xs"
+              title="Güvenli Çıkış"
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -172,26 +197,26 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {(isLanding || !currentUser) && (
             <div className="flex gap-2">
-              <button onClick={() => onNavigate('login')} className="px-5 py-2.5 font-bold text-slate-700 hover:bg-slate-100 rounded-xl transition-colors">
+              <button onClick={() => onNavigate('login')} className="px-4 py-2 font-bold text-xs text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer">
                 Giriş Yap
               </button>
-              <button onClick={() => onNavigate('login')} className="px-5 py-2.5 font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl  transition-all">
-                Ücretsiz Başla
+              <button onClick={() => onNavigate('login')} className="px-4 py-2 font-bold text-xs text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-all cursor-pointer shadow-xs">
+                Kayıt Ol
               </button>
             </div>
           )}
         </div>
 
         {/* Mobile Menu Button */}
-        <div className="md:hidden">
-           <button 
-             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-             aria-label={isMobileMenuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
-             aria-expanded={isMobileMenuOpen}
-             className="p-2 text-slate-600 dark:text-slate-400"
-           >
-             {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-           </button>
+        <div className="md:hidden flex items-center gap-2">
+          <button 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label={isMobileMenuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
+            aria-expanded={isMobileMenuOpen}
+            className="p-2 rounded-xl border border-slate-200 text-slate-700 bg-white"
+          >
+            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
       </div>
 
@@ -202,22 +227,59 @@ export const Navbar: React.FC<NavbarProps> = ({
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="absolute top-full left-0 w-full bg-white dark:bg-slate-900 border-b border-zinc-200 dark:border-slate-800  p-4 flex flex-col gap-3 md:hidden z-50"
+            className="absolute top-full left-0 w-full bg-white dark:bg-slate-900 border-b border-zinc-200 dark:border-slate-800 p-4 flex flex-col gap-3 md:hidden z-50 shadow-lg"
           >
             <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-slate-800">
-               <button onClick={toggleSound} aria-label={soundOn ? 'Sesi kapat' : 'Sesi aç'} className="flex items-center gap-2 text-slate-600 dark:text-slate-400 font-medium">
-                 {soundOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+               <button onClick={toggleSound} aria-label={soundOn ? 'Sesi kapat' : 'Sesi aç'} className="flex items-center gap-2 text-slate-600 dark:text-slate-400 font-medium text-xs">
+                 {soundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
                  Ses {soundOn ? 'Açık' : 'Kapalı'}
                </button>
+               {currentUser && (
+                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                   {currentUser.name}
+                 </span>
+               )}
             </div>
             
             {isLanding ? (
                <>
-                 <button onClick={() => { setIsMobileMenuOpen(false); onNavigate('login'); }} className="w-full py-3 text-center font-bold text-slate-700 bg-slate-50 rounded-xl">Giriş Yap</button>
-                 <button onClick={() => { setIsMobileMenuOpen(false); onNavigate('login'); }} className="w-full py-3 text-center font-bold text-white bg-primary-600 rounded-xl">Ücretsiz Başla</button>
+                 <button onClick={() => { setIsMobileMenuOpen(false); onNavigate('login'); }} className="w-full py-2.5 text-center font-bold text-xs text-slate-700 bg-slate-50 rounded-xl">Giriş Yap</button>
+                 <button onClick={() => { setIsMobileMenuOpen(false); onNavigate('login'); }} className="w-full py-2.5 text-center font-bold text-xs text-white bg-slate-900 rounded-xl">Kayıt Ol</button>
                </>
              ) : (
                 <>
+                  {/* Mobile Role Switcher for Family Accounts */}
+                  {role !== 'admin' && (
+                    <div className="grid grid-cols-2 gap-2 pb-2 border-b border-zinc-200 dark:border-slate-800">
+                      <button
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          sound.playClick();
+                          if (onSwitchRole) onSwitchRole('student');
+                          else onNavigate('dashboard');
+                        }}
+                        className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 ${
+                          role === 'student' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        <GraduationCap className="w-4 h-4" /> Öğrenci Paneli
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          sound.playClick();
+                          if (onSwitchRole) onSwitchRole('parent');
+                          else onNavigate('parent');
+                        }}
+                        className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 ${
+                          role === 'parent' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        <Users className="w-4 h-4" /> Veli Portalı
+                      </button>
+                    </div>
+                  )}
+
                   {role === 'admin' && (
                     <div className="flex flex-col gap-2 pb-2 border-b border-zinc-200 dark:border-slate-800">
                       <button
@@ -242,7 +304,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           currentRoute === 'dashboard' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-700'
                         }`}
                       >
-                        <GraduationCap className="w-4 h-4" /> Öğrenci Simülasyonu
+                        <GraduationCap className="w-4 h-4" /> Öğrenci Görünümü
                       </button>
                     </div>
                   )}
@@ -252,9 +314,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                       sound.playClick();
                       if(onLogout) onLogout();
                     }} 
-                    className="w-full py-3 flex items-center justify-center gap-2 font-bold text-rose-600 bg-rose-50 rounded-xl"
+                    className="w-full py-2.5 flex items-center justify-center gap-2 font-bold text-xs text-rose-600 bg-rose-50 rounded-xl cursor-pointer"
                   >
-                    <LogOut className="w-5 h-5" /> Çıkış Yap
+                    <LogOut className="w-4 h-4" /> Çıkış Yap
                   </button>
                 </>
              )}

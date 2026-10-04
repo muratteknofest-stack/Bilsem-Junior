@@ -35,7 +35,8 @@ import {
   ChevronRight,
   Lightbulb,
   CheckCircle2,
-  Lock
+  Lock,
+  Users
 } from 'lucide-react';
 import { sound } from '../lib/sound';
 import { dataService } from '../services/data-service';
@@ -338,9 +339,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                   </div>
                 </div>
 
-                {/* Student Code Badge */}
-                {studentCodeDisplay && (
-                  <div className="mt-3">
+                {/* Student Code Badge & Parent Portal Switcher */}
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {studentCodeDisplay && (
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
@@ -356,8 +357,20 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         <Copy className="w-3 h-3 text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-200" />
                       )}
                     </motion.button>
-                  </div>
-                )}
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.playClick();
+                      onNavigate('parent');
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100/80 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/80 text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                    title="Veli Raporları ve Gelişim Portalına Geç"
+                  >
+                    <Users className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Veli Portalı</span>
+                  </button>
+                </div>
 
               </div>
             </div>

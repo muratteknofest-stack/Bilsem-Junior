@@ -145,28 +145,60 @@ export default function App() {
       return;
     }
 
-    // Student trying to access parent or admin -> stay on dashboard
-    if (u.role === 'student' && (targetRoute === 'parent' || targetRoute === 'admin')) {
-      setCurrentRoute('dashboard');
-      syncState();
-      return;
-    }
-
-    // Parent can only access parent portal
-    if (u.role === 'parent' && targetRoute !== 'parent') {
+    // Bidirectional switching between student and parent:
+    if (targetRoute === 'parent') {
+      const updated = { ...u, role: 'parent' as UserRole };
+      setCurrentUser(updated);
+      dataService.switchRole('parent');
       setCurrentRoute('parent');
       syncState();
       return;
     }
 
-    // Admin can only access admin panel
-    if (u.role === 'admin' && targetRoute !== 'admin') {
-      setCurrentRoute('admin');
+    if (targetRoute === 'dashboard') {
+      const updated = { ...u, role: 'student' as UserRole };
+      setCurrentUser(updated);
+      dataService.switchRole('student');
+      setCurrentRoute('dashboard');
+      syncState();
+      return;
+    }
+
+    // If parent navigates to student test/practice/achievements, allow it in student role
+    if (['practice', 'adaptive', 'exams', 'mistakes', 'achievements', 'leaderboard', 'glossary'].includes(targetRoute)) {
+      if (u.role === 'parent') {
+        const updated = { ...u, role: 'student' as UserRole };
+        setCurrentUser(updated);
+        dataService.switchRole('student');
+      }
+      setCurrentRoute(targetRoute);
+      syncState();
+      return;
+    }
+
+    // Admin route protection
+    if (targetRoute === 'admin' && u.role !== 'admin' && u.email !== 'muratteknofest@gmail.com') {
+      setCurrentRoute(u.role === 'parent' ? 'parent' : 'dashboard');
       syncState();
       return;
     }
 
     setCurrentRoute(targetRoute);
+    syncState();
+  };
+
+  const handleSwitchRole = (newRole: UserRole) => {
+    sound.playClick();
+    const updated = { ...currentUser, role: newRole };
+    setCurrentUser(updated);
+    dataService.switchRole(newRole);
+    if (newRole === 'parent') {
+      setCurrentRoute('parent');
+    } else if (newRole === 'student') {
+      setCurrentRoute('dashboard');
+    } else if (newRole === 'admin') {
+      setCurrentRoute('admin');
+    }
     syncState();
   };
 
@@ -178,8 +210,9 @@ export default function App() {
       {!isTestRoute && (
         <Navbar
           currentUser={currentUser}
-          onNavigateHome={() => navigateTo(isAuth ? (currentUser?.role === 'student' ? 'dashboard' : currentUser?.role === 'parent' ? 'parent' : 'admin') : 'landing')}
+          onNavigateHome={() => navigateTo(isAuth ? (currentUser?.role === 'parent' ? 'parent' : currentUser?.role === 'admin' ? 'admin' : 'dashboard') : 'landing')}
           onNavigate={navigateTo}
+          onSwitchRole={handleSwitchRole}
           currentRoute={currentRoute}
           onOpenReminderSettings={() => setShowGlobalReminderModal(true)}
           onLogout={handleLogout}
@@ -279,6 +312,7 @@ export default function App() {
               <ParentPortalView
                 student={currentUser}
                 masteries={masteries}
+                onNavigate={navigateTo}
               />
             )}
 

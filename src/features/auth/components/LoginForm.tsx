@@ -269,20 +269,58 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         await setDoc(userDocRef, { ...loggedInProfile, role: 'admin' }, { merge: true }).catch(() => {});
       }
 
-      // Seamless role adaptation if profile role exists and differs from selected tab
-      const effectiveRole = loggedInProfile.role || selectedRole;
-      if (effectiveRole !== selectedRole) {
-        setSelectedRole(effectiveRole);
+      // Respect the user's selected role: allow student and parent to use the same family email
+      let activeProfile: UserProfile;
+
+      if (selectedRole === 'student') {
+        // If the account was registered as parent, check if there's a linked student document
+        let studentData = loggedInProfile;
+        if (loggedInProfile.role === 'parent' && loggedInProfile.linkedStudentIds && loggedInProfile.linkedStudentIds.length > 0) {
+          try {
+            const studentDocRef = doc(db, 'users', loggedInProfile.linkedStudentIds[0]);
+            const studentSnap = await getDoc(studentDocRef);
+            if (studentSnap.exists()) {
+              studentData = studentSnap.data() as UserProfile;
+            }
+          } catch {}
+        }
+
+        activeProfile = {
+          ...studentData,
+          role: 'student',
+          name: studentData.role === 'student' && studentData.name !== 'Veli' ? studentData.name : (loggedInProfile.studentName || 'Öğrenci'),
+          avatar: studentData.avatar || '🦊',
+          email: credential.user.email || loginEmail,
+        };
+      } else if (selectedRole === 'parent') {
+        activeProfile = {
+          ...loggedInProfile,
+          role: 'parent',
+          avatar: loggedInProfile.avatar || '👨‍👩‍👧',
+          email: credential.user.email || loginEmail,
+        };
+      } else {
+        activeProfile = {
+          ...loggedInProfile,
+          role: 'admin',
+          avatar: '👨‍💻',
+        };
       }
 
-      dataService.loginAs(effectiveRole, loggedInProfile);
+      dataService.loginAs(selectedRole, activeProfile);
       dataService.hydrateUserStateFromFirebase().catch(console.error);
-      loginLocally(loggedInProfile);
+      loginLocally(activeProfile);
       sound.playSuccess();
-      setSuccessToast('Giriş başarılı! Yönlendiriliyorsunuz...');
+      setSuccessToast(
+        selectedRole === 'student'
+          ? 'Öğrenci girişi başarılı! Yönlendiriliyorsunuz...'
+          : selectedRole === 'parent'
+          ? 'Veli girişi başarılı! Yönlendiriliyorsunuz...'
+          : 'Yönetici girişi başarılı! Yönlendiriliyorsunuz...'
+      );
       
       setTimeout(() => {
-        onLoginSuccess(effectiveRole, loggedInProfile);
+        onLoginSuccess(selectedRole, activeProfile);
       }, 400);
       
     } catch (error: any) {

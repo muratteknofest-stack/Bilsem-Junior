@@ -19,6 +19,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
   loginLocally: (profile: UserProfile) => void;
+  switchRole: (role: UserRole) => void;
   sendEmailVerification: (user: User) => Promise<void>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
 }
@@ -30,6 +31,7 @@ const AuthContext = createContext<AuthContextType>({
   logout: async () => {},
   updateProfile: async () => {},
   loginLocally: () => {},
+  switchRole: () => {},
   sendEmailVerification: async () => {},
   sendPasswordResetEmail: async () => {},
 });
@@ -49,6 +51,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginLocally = (profile: UserProfile) => {
     setUserProfile(profile);
     dataService.setCurrentUser(profile);
+  };
+
+  const switchRole = (role: UserRole) => {
+    if (!userProfile) return;
+    const updated = { ...userProfile, role };
+    setUserProfile(updated);
+    dataService.switchRole(role);
   };
 
   useEffect(() => {
@@ -115,9 +124,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (isMounted) setLoading(false);
                 return;
               }
-              dataService.loginAs(profile.role, profile);
+              const localUser = dataService.getCurrentUser();
+              const activeRole = (localUser?.role === 'student' || localUser?.role === 'parent') ? localUser.role : profile.role;
+              const activeProfile: UserProfile = { ...profile, role: activeRole };
+              dataService.loginAs(activeRole, activeProfile);
               await dataService.hydrateUserStateFromFirebase();
-              if (isMounted) setUserProfile(profile);
+              if (isMounted) setUserProfile(activeProfile);
             }
           } catch (err) {
             console.warn('Notice: Firestore user document fetch skipped:', err);
@@ -130,8 +142,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (snap.exists() && isMounted) {
                   const profile = snap.data() as UserProfile;
                   if (profile.id === user.uid && ['student', 'parent', 'admin'].includes(profile.role)) {
-                    setUserProfile(profile);
-                    dataService.syncUserFromFirebase(profile);
+                    const localUser = dataService.getCurrentUser();
+                    const activeRole = (localUser?.role === 'student' || localUser?.role === 'parent') ? localUser.role : profile.role;
+                    const activeProfile: UserProfile = { ...profile, role: activeRole };
+                    setUserProfile(activeProfile);
+                    dataService.syncUserFromFirebase(activeProfile);
                   } else {
                     dataService.logout();
                     setUserProfile(null);
@@ -234,6 +249,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logout, 
       updateProfile,
       loginLocally,
+      switchRole,
       sendEmailVerification,
       sendPasswordResetEmail
     }}>
