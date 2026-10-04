@@ -105,6 +105,7 @@ export const AdminPanelView: React.FC = () => {
   };
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showCreateWizard, setShowCreateWizard] = useState(false);
+  const [questionsSubSection, setQuestionsSubSection] = useState<'manager' | 'workbench'>('manager');
   const [showDiagnosticsModal, setShowDiagnosticsModal] = useState(false);
   const [toastNotification, setToastNotification] = useState<string | null>(null);
 
@@ -367,7 +368,7 @@ export const AdminPanelView: React.FC = () => {
               whileTap={{ scale: 0.97 }}
               onClick={() => {
                 sound.playClick();
-                setActiveTab('studio');
+                setShowCreateWizard(true);
               }}
               className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-xl text-xs font-black shadow-md shadow-indigo-600/30 transition-all cursor-pointer"
             >
@@ -410,19 +411,79 @@ export const AdminPanelView: React.FC = () => {
                     sound.playClick();
                     setActiveTab(tab);
                   }}
-                  onNewQuestion={() => setActiveTab('studio')}
+                  onNewQuestion={() => setShowCreateWizard(true)}
                   onOpenDiagnostics={() => setShowDiagnosticsModal(true)}
                 />
               )}
 
               {/* TAB 2: QUESTIONS MANAGER & STUDIO */}
               {activeTab === 'questions' && (
-                <QuestionAuthoringWorkbench initialSection="library" onPendingChanges={onPendingQuestions} />
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 p-2 rounded-2xl border border-slate-800">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => {
+                          sound.playClick();
+                          setQuestionsSubSection('manager');
+                        }}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                          questionsSubSection === 'manager'
+                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                        }`}
+                      >
+                        <FileQuestion className="w-4 h-4" />
+                        <span>Soru Havuzu & Yönetim (MEB BİLSEM)</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          sound.playClick();
+                          setQuestionsSubSection('workbench');
+                        }}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                          questionsSubSection === 'workbench'
+                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                        }`}
+                      >
+                        <HardDrive className="w-4 h-4" />
+                        <span>Editoryal Atölye & Bulut Kütüphanesi</span>
+                      </button>
+                    </div>
+
+                    <button
+                      onClick={() => setShowCreateWizard(true)}
+                      className="px-3.5 py-1.5 rounded-xl bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-600/30 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Soru Sihirbazını Aç</span>
+                    </button>
+                  </div>
+
+                  {questionsSubSection === 'manager' ? (
+                    <AdminQuestionManager
+                      onInspectInStudio={handleInspectInStudio}
+                      onNavigateToAnalytics={() => setActiveTab('analytics')}
+                      onNavigateToBulkGenerator={() => setActiveTab('bulk_generator')}
+                    />
+                  ) : (
+                    <QuestionAuthoringWorkbench
+                      initialSection="library"
+                      onPendingChanges={onPendingQuestions}
+                    />
+                  )}
+                </div>
               )}
 
               {/* TAB: BULK QUESTION GENERATOR ENGINE */}
               {activeTab === 'bulk_generator' && (
-                <QuestionAuthoringWorkbench initialCount={20} onPendingChanges={onPendingQuestions} />
+                <AdminBulkQuestionGenerator
+                  onInspectInStudio={handleInspectInStudio}
+                  onNavigateToQuestionBank={() => {
+                    setQuestionsSubSection('manager');
+                    setActiveTab('questions');
+                  }}
+                />
               )}
 
               {/* TAB: AI QUESTION ENGINE */}
@@ -432,7 +493,17 @@ export const AdminPanelView: React.FC = () => {
 
               {/* TAB 3: QUESTION STUDIO */}
               {activeTab === 'studio' && (
-                <QuestionAuthoringWorkbench initialType={studioType} onPendingChanges={onPendingQuestions} />
+                <AdminQuestionStudio
+                  selectedType={studioType}
+                  onTypeChange={setStudioType}
+                  seed={studioSeed}
+                  onSeedChange={setStudioSeed}
+                  difficulty={studioDifficulty}
+                  onDifficultyChange={setStudioDifficulty}
+                  generatedQuestion={studioGeneratedQuestion}
+                  onGenerate={handleStudioGenerate}
+                  onOpenWizard={() => setShowCreateWizard(true)}
+                />
               )}
 
               {/* TAB 4: DEEP ANALYTICS */}

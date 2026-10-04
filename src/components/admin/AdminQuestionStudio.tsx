@@ -1,11 +1,19 @@
-import React, { useState } from 'react';
-import { QuestionType, DifficultyLevel, BaseQuestion, QUESTION_TYPE_LABELS, DIFFICULTY_LABELS } from '../../types';
+import React, { useState, useEffect } from 'react';
+import {
+  QuestionType,
+  DifficultyLevel,
+  BaseQuestion,
+  QUESTION_TYPE_LABELS,
+  DIFFICULTY_LABELS,
+} from '../../types';
 import { generateQuestionByType, ALL_QUESTION_TYPES } from '../../features/questions/generators';
 import { validateQuestion, QuestionValidationResult } from '../../features/questions/validator';
 import { GRADE_CONFIGS, ALL_GRADES, GradeLevelConfig } from '../../features/questions/grade-config';
 import { QuestionRenderer } from '../../features/questions/renderers/QuestionRenderer';
 import { OptionRenderer } from '../../features/questions/renderers/OptionRenderer';
 import { VisualExplanationOverlay } from '../../features/questions/renderers/VisualExplanationOverlay';
+import { questionBankService } from '../../services/question-bank-service';
+import confetti from 'canvas-confetti';
 import { sound } from '../../lib/sound';
 import {
   Sparkles,
@@ -24,6 +32,11 @@ import {
   Clock,
   Target,
   GraduationCap,
+  Save,
+  Wand2,
+  Edit3,
+  RotateCcw,
+  Zap,
 } from 'lucide-react';
 
 interface AdminQuestionStudioProps {
@@ -35,6 +48,7 @@ interface AdminQuestionStudioProps {
   onDifficultyChange: (diff: DifficultyLevel) => void;
   generatedQuestion: BaseQuestion;
   onGenerate: (type?: QuestionType, seed?: number, diff?: DifficultyLevel) => void;
+  onOpenWizard?: () => void;
 }
 
 export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
@@ -46,10 +60,34 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
   onDifficultyChange,
   generatedQuestion,
   onGenerate,
+  onOpenWizard,
 }) => {
   const [copiedJson, setCopiedJson] = useState(false);
   const [activeCanvasBg, setActiveCanvasBg] = useState<'white' | 'slate' | 'grid'>('white');
   const [viewMode, setViewMode] = useState<'visual' | 'json'>('visual');
+  const [saveToast, setSaveToast] = useState<string | null>(null);
+
+  // Interactive Student Solve Simulation Mode
+  const [testMode, setTestMode] = useState<boolean>(false);
+  const [testSelectedOption, setTestSelectedOption] = useState<string | null>(null);
+  const [testShowAnswer, setTestShowAnswer] = useState<boolean>(false);
+
+  // Custom Prompt & Explanation Inline Editor
+  const [isEditingInline, setIsEditingInline] = useState<boolean>(false);
+  const [customPrompt, setCustomPrompt] = useState<string>(generatedQuestion.prompt);
+  const [customSecondary, setCustomSecondary] = useState<string>(generatedQuestion.secondaryPrompt || '');
+  const [customRuleTitle, setCustomRuleTitle] = useState<string>(generatedQuestion.explanation?.ruleTitle || '');
+  const [customSummary, setCustomSummary] = useState<string>(generatedQuestion.explanation?.summary || '');
+
+  // Keep editor state in sync when generated question changes
+  useEffect(() => {
+    setCustomPrompt(generatedQuestion.prompt);
+    setCustomSecondary(generatedQuestion.secondaryPrompt || '');
+    setCustomRuleTitle(generatedQuestion.explanation?.ruleTitle || '');
+    setCustomSummary(generatedQuestion.explanation?.summary || '');
+    setTestSelectedOption(null);
+    setTestShowAnswer(false);
+  }, [generatedQuestion.id]);
 
   // Find initial grade from difficulty & type
   const detectGrade = (): 1 | 2 | 3 | 4 => {
@@ -61,8 +99,20 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
 
   const [selectedGrade, setSelectedGrade] = useState<1 | 2 | 3 | 4 | 'custom'>(detectGrade());
 
+  // Active question combined with inline edits
+  const activeQuestion: BaseQuestion = {
+    ...generatedQuestion,
+    prompt: customPrompt.trim() !== '' ? customPrompt : generatedQuestion.prompt,
+    secondaryPrompt: customSecondary.trim() !== '' ? customSecondary : undefined,
+    explanation: {
+      ...generatedQuestion.explanation,
+      ruleTitle: customRuleTitle.trim() !== '' ? customRuleTitle : generatedQuestion.explanation?.ruleTitle,
+      summary: customSummary.trim() !== '' ? customSummary : generatedQuestion.explanation?.summary,
+    },
+  };
+
   // Real-time validation audit
-  const validationResult: QuestionValidationResult = validateQuestion(generatedQuestion);
+  const validationResult: QuestionValidationResult = validateQuestion(activeQuestion);
 
   const handleSelectGrade = (g: 1 | 2 | 3 | 4) => {
     sound.playClick();
@@ -93,9 +143,26 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
     onGenerate(selectedType, s, difficulty);
   };
 
+  const handleSaveToBank = () => {
+    sound.playSuccess();
+    confetti({ particleCount: 50, spread: 65, origin: { y: 0.5 } });
+    const targetG = selectedGrade !== 'custom' ? selectedGrade : (generatedQuestion.targetGrade || 2);
+    const toSave: BaseQuestion = {
+      ...activeQuestion,
+      targetGrade: targetG,
+      targetGrades: [targetG],
+      isCustom: true,
+      status: 'published',
+      updatedAt: new Date().toISOString(),
+    };
+    questionBankService.createCustomQuestion(toSave);
+    setSaveToast(`Soru Soru Bankası'na başarıyla kaydedildi! (ID: ${toSave.id})`);
+    setTimeout(() => setSaveToast(null), 3500);
+  };
+
   const copyJsonToClipboard = () => {
     sound.playClick();
-    const jsonStr = JSON.stringify(generatedQuestion, null, 2);
+    const jsonStr = JSON.stringify(activeQuestion, null, 2);
     navigator.clipboard.writeText(jsonStr);
     setCopiedJson(true);
     setTimeout(() => setCopiedJson(false), 2000);
@@ -103,12 +170,12 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
 
   const downloadJsonFile = () => {
     sound.playClick();
-    const jsonStr = JSON.stringify(generatedQuestion, null, 2);
+    const jsonStr = JSON.stringify(activeQuestion, null, 2);
     const blob = new Blob([jsonStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `question_${generatedQuestion.type}_seed_${generatedQuestion.seed}.json`;
+    a.download = `question_${activeQuestion.type}_seed_${activeQuestion.seed}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -126,33 +193,41 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Toast Alert */}
+      {saveToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-emerald-600 text-white font-bold text-xs px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+          <CheckCircle2 className="w-4 h-4" />
+          <span>{saveToast}</span>
+        </div>
+      )}
+
       {/* Studio Top Control Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Parameter Configuration & Quality Auditor */}
         <div className="lg:col-span-4 space-y-4">
-          <div className="bg-white rounded-xl p-5 border border-zinc-200  space-y-4">
+          <div className="bg-slate-900 rounded-2xl p-5 border border-slate-800 space-y-4 shadow-sm text-slate-100">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-purple-600" />
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-purple-400" />
                 <span>Parametre Kontrolleri</span>
               </h3>
-              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
-                18 Motor
+              <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                {ALL_QUESTION_TYPES.length} BİLSEM Motoru
               </span>
             </div>
 
             {/* Grade Level Selector & Grouping */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <GraduationCap className="w-3.5 h-3.5 text-purple-600" />
+                <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                  <GraduationCap className="w-3.5 h-3.5 text-purple-400" />
                   <span>Hedef Sınıf Düzeyi</span>
                 </label>
-                <span className="text-[10px] font-bold text-purple-700">
+                <span className="text-[10px] font-bold text-purple-400">
                   {selectedGrade !== 'custom' ? GRADE_CONFIGS[selectedGrade].title : 'Serbest'}
                 </span>
               </div>
-              <div className="grid grid-cols-4 gap-1">
+              <div className="grid grid-cols-4 gap-1.5">
                 {ALL_GRADES.map((g) => {
                   const cfg = GRADE_CONFIGS[g];
                   const isSelected = selectedGrade === g;
@@ -160,10 +235,10 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
                     <button
                       key={g}
                       onClick={() => handleSelectGrade(g)}
-                      className={`py-1.5 px-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer text-center flex flex-col items-center gap-0.5 ${
+                      className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all cursor-pointer text-center flex flex-col items-center gap-0.5 ${
                         isSelected
-                          ? `${cfg.badgeBg} ${cfg.badgeColor} border-current  scale-102`
-                          : 'bg-slate-50 text-slate-700 border-zinc-200 hover:bg-slate-100'
+                          ? 'bg-purple-600 text-white border-purple-500 shadow-md shadow-purple-600/30'
+                          : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'
                       }`}
                     >
                       <span className="text-sm">{cfg.icon}</span>
@@ -175,14 +250,14 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
 
               {/* Active Grade Pedagogical Overview */}
               {activeGradeConfig && (
-                <div className={`mt-2 p-2.5 rounded-xl ${activeGradeConfig.badgeBg} border ${activeGradeConfig.cardBorder} space-y-1 text-xs`}>
+                <div className="mt-2.5 p-3 rounded-xl bg-purple-950/30 border border-purple-800/30 space-y-1 text-xs">
                   <div className="flex items-center justify-between font-bold">
-                    <span className={activeGradeConfig.badgeColor}>{activeGradeConfig.stageName}</span>
-                    <span className="text-[10px] font-mono bg-white/80 px-1.5 py-0.5 rounded-md text-slate-700">
+                    <span className="text-purple-300">{activeGradeConfig.stageName}</span>
+                    <span className="text-[10px] font-mono bg-purple-900/60 px-1.5 py-0.5 rounded-md text-purple-200">
                       Süre: {activeGradeConfig.timeLimitSeconds}sn
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-600 leading-snug">
+                  <p className="text-[11px] text-slate-300 leading-snug">
                     {activeGradeConfig.pedagogicalFocus}
                   </p>
                 </div>
@@ -191,8 +266,8 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
 
             {/* Question Type Selector with Grade Recommendations */}
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                Soru Türü & Motor
+              <label className="text-xs font-bold text-slate-300 block mb-1.5">
+                Soru Türü & Motor ({ALL_QUESTION_TYPES.length} Tip)
               </label>
               <select
                 value={selectedType}
@@ -201,7 +276,7 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
                   onTypeChange(t);
                   onGenerate(t, seed, difficulty);
                 }}
-                className="w-full p-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm font-semibold bg-white text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+                className="w-full p-2.5 rounded-xl border border-slate-700 text-xs sm:text-sm font-semibold bg-slate-950 text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
               >
                 {activeGradeConfig ? (
                   <>
@@ -235,7 +310,7 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
             {/* Seed Input & Randomize */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-bold text-slate-700">
+                <label className="text-xs font-bold text-slate-300">
                   Deterministik Tohum (Seed)
                 </label>
                 <span className="text-[10px] text-slate-400 font-mono">RNG Sabiti</span>
@@ -249,12 +324,12 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
                     onSeedChange(num);
                     onGenerate(selectedType, num, difficulty);
                   }}
-                  className="flex-1 p-2.5 rounded-xl border border-slate-300 font-mono text-sm text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+                  className="flex-1 p-2.5 rounded-xl border border-slate-700 font-mono text-sm bg-slate-950 text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
                 />
                 <button
                   onClick={handleRandomize}
                   title="Rastgele Tohum Üret"
-                  className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-700 hover:bg-purple-100 cursor-pointer transition-colors"
+                  className="p-2.5 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-300 hover:bg-purple-500/30 cursor-pointer transition-colors"
                 >
                   <Shuffle className="w-4 h-4" />
                 </button>
@@ -269,7 +344,7 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
                     className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold border transition-colors cursor-pointer text-center truncate ${
                       seed === sp.seed
                         ? 'bg-purple-600 text-white border-purple-600'
-                        : 'bg-slate-50 text-slate-600 border-zinc-200 hover:bg-slate-100'
+                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
                     }`}
                   >
                     {sp.label}
@@ -281,10 +356,8 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
             {/* Difficulty Level (1-6) */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-bold text-slate-700">
-                  Zorluk Derecesi
-                </label>
-                <span className="text-xs font-bold text-purple-700">
+                <label className="text-xs font-bold text-slate-300">Zorluk Derecesi</label>
+                <span className="text-xs font-bold text-purple-400">
                   Seviye {difficulty}: {DIFFICULTY_LABELS[difficulty]}
                 </span>
               </div>
@@ -298,8 +371,8 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
                     }}
                     className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                       difficulty === lvl
-                        ? 'bg-purple-600 text-white border-purple-600  scale-105'
-                        : 'bg-slate-50 text-slate-700 border-zinc-200 hover:bg-slate-100'
+                        ? 'bg-purple-600 text-white border-purple-600 shadow-sm scale-105'
+                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
                     }`}
                   >
                     {lvl}
@@ -308,61 +381,75 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
               </div>
             </div>
 
-            {/* Generate & Re-render Action */}
-            <button
-              onClick={() => {
-                sound.playClick();
-                onGenerate();
-              }}
-              className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm  transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
-            >
-              <Play className="w-4 h-4 fill-white" />
-              <span>Yeniden Üret ve Doğrula</span>
-            </button>
+            {/* Action Buttons: Generate & Launch Wizard */}
+            <div className="space-y-2 pt-1">
+              <button
+                onClick={() => {
+                  sound.playClick();
+                  onGenerate();
+                }}
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-purple-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+              >
+                <Play className="w-3.5 h-3.5 fill-white" />
+                <span>Yeniden Üret ve Doğrula</span>
+              </button>
+
+              {onOpenWizard && (
+                <button
+                  onClick={() => {
+                    sound.playClick();
+                    onOpenWizard();
+                  }}
+                  className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Wand2 className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>4 Adımlı Sihirbazı Başlat</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Real-time Quality Gate Validation Audit Card */}
-          <div className="bg-white rounded-xl p-5 border border-zinc-200  space-y-3 text-xs">
+          <div className="bg-slate-900 rounded-2xl p-5 border border-slate-800 space-y-3 text-xs text-slate-300">
             <div className="flex items-center justify-between">
-              <h4 className="font-bold text-slate-900 flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <h4 className="font-bold text-white flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
                 <span>Kanonik Kural Denetimi</span>
               </h4>
               <span
                 className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                   validationResult.isValid
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-rose-100 text-rose-800'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
                 }`}
               >
                 {validationResult.isValid ? 'Tam Uyumlu (%100)' : 'Uyarı Tespit Edildi'}
               </span>
             </div>
 
-            <div className="space-y-1.5 font-medium text-slate-600">
-              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50">
+            <div className="space-y-1.5 font-medium">
+              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800/80">
                 <span>Deterministik Tohum & ID Bütünlüğü</span>
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
               </div>
-              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50">
+              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800/80">
                 <span>Seçenek Benzersizliği (Parmak İzi)</span>
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
               </div>
-              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50">
-                <span>Tekil Doğru Cevap ({generatedQuestion.correctOptionId})</span>
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800/80">
+                <span>Tekil Doğru Cevap ({activeQuestion.correctOptionId})</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
               </div>
-              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50">
-                <span>Pedagojik Çözüm Adımları ({generatedQuestion.explanation.steps.length} adım)</span>
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800/80">
+                <span>Pedagojik Çözüm ({activeQuestion.explanation?.steps?.length || 0} Adım)</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
               </div>
             </div>
 
-            {/* Any validation errors */}
             {!validationResult.isValid && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 space-y-1">
+              <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-800/40 text-rose-300 space-y-1">
                 <div className="flex items-center gap-1.5 font-bold">
-                  <AlertTriangle className="w-4 h-4 text-rose-600" />
+                  <AlertTriangle className="w-4 h-4 text-rose-400" />
                   <span>Kural İhlali Tespit Edildi:</span>
                 </div>
                 {validationResult.errors.map((err, idx) => (
@@ -373,55 +460,32 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
               </div>
             )}
           </div>
-
-          {/* Technical Metadata Card */}
-          <div className="bg-white rounded-xl p-5 border border-zinc-200  space-y-2 text-xs">
-            <h4 className="font-bold text-slate-900">Teknik Üretim Detayları</h4>
-            <div className="space-y-1 font-mono text-[11px] text-slate-600">
-              <div className="flex justify-between border-b border-zinc-200 pb-1">
-                <span>Soru ID:</span>
-                <span className="text-purple-700 font-bold truncate max-w-[170px]">{generatedQuestion.id}</span>
-              </div>
-              <div className="flex justify-between border-b border-zinc-200 py-1">
-                <span>Bilişsel Kategori:</span>
-                <span className="text-indigo-700 font-bold">{generatedQuestion.category}</span>
-              </div>
-              <div className="flex justify-between border-b border-zinc-200 py-1">
-                <span>Doğru Seçenek:</span>
-                <span className="text-emerald-700 font-bold">Seçenek {generatedQuestion.correctOptionId}</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span>Display Modu:</span>
-                <span className="text-slate-800 font-bold">{generatedQuestion.visualConfig?.displayMode || 'canvas'}</span>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Right Column: Live SVG Rendering Canvas & JSON Inspector */}
         <div className="lg:col-span-8 space-y-4">
-          <div className="bg-white rounded-xl p-6 border border-zinc-200  space-y-4">
+          <div className="bg-slate-900 rounded-2xl p-6 border border-slate-800 space-y-4 shadow-sm text-slate-100">
             {/* View Mode & Canvas Controls Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-zinc-200">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
               {/* Tab: Visual vs JSON */}
-              <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl">
+              <div className="flex items-center gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800">
                 <button
                   onClick={() => setViewMode('visual')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                     viewMode === 'visual'
-                      ? 'bg-white text-purple-700 '
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <Eye className="w-3.5 h-3.5" />
-                  <span>Görsel SVG İnceleme</span>
+                  <span>Görsel İnceleme</span>
                 </button>
                 <button
                   onClick={() => setViewMode('json')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                     viewMode === 'json'
-                      ? 'bg-white text-purple-700 '
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <Code className="w-3.5 h-3.5" />
@@ -429,37 +493,79 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
                 </button>
               </div>
 
-              {/* Canvas Background and Export Actions */}
-              <div className="flex items-center gap-2">
+              {/* Action Buttons: Save to Bank, Edit, Test Mode */}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Save to Bank Primary Button */}
+                <button
+                  onClick={handleSaveToBank}
+                  className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                  title="Soruyu Soru Bankası Havuzuna Kaydet"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Havuza Kaydet</span>
+                </button>
+
+                {/* Test Mode Toggle */}
+                <button
+                  onClick={() => {
+                    sound.playClick();
+                    setTestMode(!testMode);
+                    setTestSelectedOption(null);
+                  }}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-colors flex items-center gap-1 cursor-pointer ${
+                    testMode
+                      ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                      : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
+                  }`}
+                  title="Öğrenci gibi çözerek test et"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>Test Modu</span>
+                </button>
+
+                {/* Inline Edit Toggle */}
+                <button
+                  onClick={() => setIsEditingInline(!isEditingInline)}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-colors flex items-center gap-1 cursor-pointer ${
+                    isEditingInline
+                      ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'
+                      : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
+                  }`}
+                  title="Yönerge ve Açıklamayı Özelleştir"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Düzenle</span>
+                </button>
+
+                {/* Canvas Background Buttons */}
                 {viewMode === 'visual' && (
-                  <div className="flex items-center gap-1 text-xs">
-                    <span className="text-slate-400 font-medium text-[11px] hidden sm:inline">Tuval:</span>
+                  <div className="hidden sm:flex items-center gap-1 text-xs bg-slate-950 p-1 rounded-xl border border-slate-800">
                     <button
                       onClick={() => setActiveCanvasBg('white')}
-                      className={`px-2 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-colors cursor-pointer ${
                         activeCanvasBg === 'white'
-                          ? 'bg-white border-purple-500 text-purple-700'
-                          : 'bg-slate-50 border-zinc-200 text-slate-600'
+                          ? 'bg-slate-800 text-white'
+                          : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      Beyaz
+                      Açık
                     </button>
                     <button
                       onClick={() => setActiveCanvasBg('slate')}
-                      className={`px-2 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-colors cursor-pointer ${
                         activeCanvasBg === 'slate'
-                          ? 'bg-slate-100 border-purple-500 text-purple-700'
-                          : 'bg-slate-50 border-zinc-200 text-slate-600'
+                          ? 'bg-slate-800 text-white'
+                          : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      Gri
+                      Koyu
                     </button>
                     <button
                       onClick={() => setActiveCanvasBg('grid')}
-                      className={`px-2 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer flex items-center gap-1 ${
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-colors cursor-pointer flex items-center gap-1 ${
                         activeCanvasBg === 'grid'
-                          ? 'bg-purple-50 border-purple-500 text-purple-700'
-                          : 'bg-slate-50 border-zinc-200 text-slate-600'
+                          ? 'bg-slate-800 text-white'
+                          : 'text-slate-400 hover:text-white'
                       }`}
                     >
                       <Grid className="w-3 h-3" />
@@ -470,109 +576,218 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
 
                 <button
                   onClick={copyJsonToClipboard}
-                  className="px-2.5 py-1.5 rounded-xl border border-zinc-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 hover:text-white text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
                   title="JSON Kopyala"
                 >
-                  {copiedJson ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedJson ? 'Kopyalandı' : 'Kopyala'}</span>
+                  {copiedJson ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 </button>
 
                 <button
                   onClick={downloadJsonFile}
-                  className="px-2.5 py-1.5 rounded-xl border border-zinc-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 hover:text-white text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
                   title="JSON İndir"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">İndir</span>
                 </button>
               </div>
             </div>
 
+            {/* Inline Customization Accordion */}
+            {isEditingInline && (
+              <div className="p-4 rounded-2xl bg-slate-950 border border-indigo-500/30 space-y-3 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                    <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Yönerge & Çözüm Metinlerini Özelleştir</span>
+                  </span>
+                  <button
+                    onClick={() => {
+                      setCustomPrompt(generatedQuestion.prompt);
+                      setCustomSecondary(generatedQuestion.secondaryPrompt || '');
+                      setCustomRuleTitle(generatedQuestion.explanation?.ruleTitle || '');
+                      setCustomSummary(generatedQuestion.explanation?.summary || '');
+                    }}
+                    className="text-[11px] font-bold text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3 h-3" /> Varsayılana Dön
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-300">Ana Yönerge Metni</label>
+                    <input
+                      type="text"
+                      value={customPrompt}
+                      onChange={(e) => setCustomPrompt(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 focus:outline-hidden focus:border-indigo-500"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-300">İkincil Yönerge (Opsiyonel)</label>
+                    <input
+                      type="text"
+                      value={customSecondary}
+                      onChange={(e) => setCustomSecondary(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 focus:outline-hidden focus:border-indigo-500"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-300">Kural Başlığı</label>
+                    <input
+                      type="text"
+                      value={customRuleTitle}
+                      onChange={(e) => setCustomRuleTitle(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 focus:outline-hidden focus:border-indigo-500"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-300">Çözüm Özeti</label>
+                    <input
+                      type="text"
+                      value={customSummary}
+                      onChange={(e) => setCustomSummary(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 focus:outline-hidden focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Test Mode Alert Banner */}
+            {testMode && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-300">
+                <span className="font-bold flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Öğrenci Test Çözüm Modu Aktif. Seçeneklere tıklayarak test edin.</span>
+                </span>
+                <button
+                  onClick={() => setTestShowAnswer(!testShowAnswer)}
+                  className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 font-bold transition-colors cursor-pointer"
+                >
+                  {testShowAnswer ? 'Cevabı Gizle' : 'Doğru Cevabı Göster'}
+                </button>
+              </div>
+            )}
+
             {viewMode === 'visual' ? (
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {/* Prompt & Category Header */}
                 <div className="text-center max-w-xl mx-auto">
                   <div className="flex flex-wrap items-center justify-center gap-1.5 mb-2">
                     {activeGradeConfig && (
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border ${activeGradeConfig.badgeBg} ${activeGradeConfig.badgeColor}`}>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
                         <span>{activeGradeConfig.icon}</span>
                         <span>{activeGradeConfig.title} Seviyesi</span>
                       </span>
                     )}
-                    <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-purple-50 text-purple-800 text-xs font-bold border border-purple-200">
-                      <Layers className="w-3.5 h-3.5 text-purple-600" />
-                      <span>{QUESTION_TYPE_LABELS[generatedQuestion.type]}</span>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold border border-indigo-500/30">
+                      <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>{QUESTION_TYPE_LABELS[activeQuestion.type]}</span>
                     </div>
                   </div>
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900">
-                    {generatedQuestion.prompt}
+                  <h3 className="text-base sm:text-lg font-bold text-white">
+                    {activeQuestion.prompt}
                   </h3>
-                  {generatedQuestion.secondaryPrompt && (
-                    <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                      {generatedQuestion.secondaryPrompt}
+                  {activeQuestion.secondaryPrompt && (
+                    <p className="text-xs sm:text-sm text-slate-400 mt-1">
+                      {activeQuestion.secondaryPrompt}
                     </p>
                   )}
                 </div>
 
-                {/* Question Visual Canvas with Custom Background */}
+                {/* Question Visual Canvas */}
                 <div
-                  className={`p-4 rounded-xl transition-colors border ${
+                  className={`p-6 rounded-2xl transition-colors border flex items-center justify-center ${
                     activeCanvasBg === 'white'
-                      ? 'bg-white border-zinc-200'
+                      ? 'bg-white text-slate-900 border-slate-200 shadow-inner'
                       : activeCanvasBg === 'slate'
-                      ? 'bg-slate-100 border-slate-300'
-                      : 'bg-slate-50 border-purple-200 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:16px_16px]'
+                      ? 'bg-slate-950 border-slate-800'
+                      : 'bg-slate-950 border-slate-800 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:16px_16px]'
                   }`}
                 >
-                  <QuestionRenderer question={generatedQuestion} />
+                  <QuestionRenderer question={activeQuestion} />
                 </div>
 
-                {/* Options Preview */}
+                {/* Options Preview with Interactive Click in Test Mode */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      Üretilen Seçenekler & Görsel Parmak İzi
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      Seçenekler {testMode && '(Tıklanabilir)'}
                     </span>
-                    <span className="text-xs text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
-                      Doğru Cevap: {generatedQuestion.correctOptionId}
+                    <span className="text-xs text-emerald-400 font-bold bg-emerald-950/40 px-2.5 py-0.5 rounded-lg border border-emerald-800/40 font-mono">
+                      Doğru Cevap: {activeQuestion.correctOptionId}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {generatedQuestion.options.map((opt) => (
-                      <div key={opt.id} className="relative group">
-                        <OptionRenderer
-                          option={opt}
-                          isSelected={opt.id === generatedQuestion.correctOptionId}
-                          onSelect={() => {}}
-                          disabled={true}
-                          showCorrect={true}
-                          isCorrectOption={opt.id === generatedQuestion.correctOptionId}
-                        />
-                        <div className="mt-1 text-[10px] text-center font-mono text-slate-400 truncate">
-                          FP: {opt.fingerprint.slice(0, 16)}...
+                    {activeQuestion.options.map((opt) => {
+                      const isSelectedInTest = testSelectedOption === opt.id;
+                      const isCorrect = opt.id === activeQuestion.correctOptionId;
+                      return (
+                        <div
+                          key={opt.id}
+                          onClick={() => {
+                            if (!testMode) return;
+                            setTestSelectedOption(opt.id);
+                            if (isCorrect) sound.playSuccess();
+                            else sound.playError();
+                          }}
+                          className={`relative p-2.5 rounded-2xl border transition-all ${
+                            testMode ? 'cursor-pointer hover:border-slate-600' : ''
+                          } ${
+                            isSelectedInTest
+                              ? isCorrect
+                                ? 'bg-emerald-950/60 border-emerald-500 ring-2 ring-emerald-500/40'
+                                : 'bg-rose-950/60 border-rose-500 ring-2 ring-rose-500/40'
+                              : isCorrect && (testShowAnswer || !testMode)
+                              ? 'bg-slate-950 border-emerald-500/50'
+                              : 'bg-slate-950 border-slate-800'
+                          }`}
+                        >
+                          <OptionRenderer
+                            option={opt}
+                            questionType={activeQuestion.type}
+                            isSelected={testMode ? isSelectedInTest : opt.id === activeQuestion.correctOptionId}
+                            onSelect={() => {}}
+                            disabled={!testMode}
+                            showCorrect={testMode ? testShowAnswer : true}
+                            isCorrectOption={opt.id === activeQuestion.correctOptionId}
+                          />
+                          <div className="mt-1.5 flex items-center justify-between text-[11px] px-1 font-mono text-slate-400">
+                            <span className="font-bold text-slate-300">Seçenek {opt.id}</span>
+                            {isSelectedInTest && (
+                              <span
+                                className={`text-[10px] font-bold ${
+                                  isCorrect ? 'text-emerald-400' : 'text-rose-400'
+                                }`}
+                              >
+                                {isCorrect ? '✓ Doğru' : '✗ Yanlış'}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
                 {/* Visual Explanation Preview */}
                 <div className="pt-2">
                   <VisualExplanationOverlay
-                    explanation={generatedQuestion.explanation}
-                    correctOptionId={generatedQuestion.correctOptionId}
+                    explanation={activeQuestion.explanation}
+                    correctOptionId={activeQuestion.correctOptionId}
                   />
                 </div>
               </div>
             ) : (
               /* Raw JSON Inspector */
               <div className="space-y-3">
-                <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
+                <div className="flex items-center justify-between text-xs text-slate-400 font-mono">
                   <span>Tam Soru Şeması (BaseQuestion Interface)</span>
-                  <span>{JSON.stringify(generatedQuestion).length} bytes</span>
+                  <span>{JSON.stringify(activeQuestion).length} bytes</span>
                 </div>
-                <pre className="p-4 rounded-xl bg-slate-900 text-slate-100 font-mono text-xs overflow-x-auto max-h-[560px] border border-slate-800 leading-relaxed">
-                  {JSON.stringify(generatedQuestion, null, 2)}
+                <pre className="p-4 rounded-xl bg-slate-950 text-slate-200 font-mono text-xs overflow-x-auto max-h-[560px] border border-slate-800 leading-relaxed">
+                  {JSON.stringify(activeQuestion, null, 2)}
                 </pre>
               </div>
             )}
