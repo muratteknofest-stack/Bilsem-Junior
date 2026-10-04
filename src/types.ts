@@ -474,6 +474,16 @@ export interface BaseQuestion {
     durationMs: number;
     rejectionReasons?: string[];
   };
+  /** Automated multi-pass verification metadata */
+  verificationStatus?: {
+    isVerified: boolean;
+    passCount: number;
+    stages: string[];
+    testedAt: string;
+    confidenceScore: number;
+    solverChecked: boolean;
+    auditLog?: string[];
+  };
 }
 
 export interface PracticeSessionState {

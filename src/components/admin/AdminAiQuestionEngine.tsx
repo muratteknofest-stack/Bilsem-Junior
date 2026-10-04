@@ -37,6 +37,7 @@ import {
   BaseQuestion
 } from '../../types';
 import { ALL_QUESTION_TYPES, CATEGORY_TYPES_MAP, generateQuestionByType } from '../../features/questions/generators';
+import { runMultiPassQuestionTests, stampQuestionVerification } from '../../features/questions/verifier';
 import { questionBankService } from '../../services/question-bank-service';
 
 export interface AdminAiQuestionEngineProps {}
@@ -172,8 +173,12 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
       baseQ.status = 'published';
       baseQ.isCustom = true;
 
+      // 5-Pass Automated Verification & Solver Testing
+      const report = runMultiPassQuestionTests(baseQ);
+      const verifiedBaseQ = stampQuestionVerification(baseQ, report);
+
       // Automatically add to Question Bank!
-      questionBankService.createCustomQuestion(baseQ);
+      questionBankService.createCustomQuestion(verifiedBaseQ);
 
       const qScore = Math.floor(Math.random() * 6) + 93;
       generatedItems.push({
@@ -523,11 +528,11 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                           Kalite: {res.qualityScore}
                         </div>
                         
-                        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-xs font-bold ${
+                        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-bold ${
                           res.solverVerified ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border-red-500/30 text-red-400'
                         }`}>
                           <ShieldCheck className="w-3.5 h-3.5" />
-                          {res.solverVerified ? 'Çözülebilir' : 'Çözülemez'}
+                          <span>5 Aşamalı Test: {res.solverVerified ? '%100 Doğrulandı' : 'Başarısız'}</span>
                         </div>
                       </div>
                     </div>

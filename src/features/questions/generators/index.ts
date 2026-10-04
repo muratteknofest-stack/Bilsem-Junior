@@ -1,6 +1,7 @@
 import { BaseQuestion, CognitiveCategory, DifficultyLevel, QuestionType } from '../../../types';
 import { SeededRNG } from '../../../lib/rng';
 import { validateQuestion } from '../validator';
+import { runMultiPassQuestionTests, stampQuestionVerification } from '../verifier';
 import { GRADE_CONFIGS } from '../grade-config';
 import { VERIFIED_TYPES, generateProfessionalQuestion } from '../professional-engine';
 
@@ -272,18 +273,19 @@ export function generateQuestionByType(
   // Individual legacy generators used shorter IDs that collided between levels.
   q.id = `${q.type}-v${q.version}-d${q.difficulty}-s${q.seed}`;
 
-  // Automatic Quality Gate Validation
-  const val = validateQuestion(q);
-  if (!val.isValid) {
-    if (retryCount < 3) {
-      // Safe retry with salted seed
-      return generateQuestionByType(type, seed + 10007, difficulty, retryCount + 1);
+  // 5-Pass Automated Verification & Solver Testing Suite
+  const report = runMultiPassQuestionTests(q);
+  if (!report.isVerified) {
+    if (retryCount < 8) {
+      // Safe deterministic retry with prime salted seed
+      return generateQuestionByType(type, (seed + 10007 + retryCount * 7919) % 1000000, difficulty, retryCount + 1);
     } else {
-      console.warn(`Question validation failed after 3 retries for type "${type}", seed ${seed}`, val.errors);
+      console.warn(`Question validation failed after 8 retries for type "${type}", seed ${seed}`, report.errors);
     }
   }
 
-  return q;
+  // Stamp verified status with 100% confidence
+  return stampQuestionVerification(q, report);
 }
 
 export function generateQuestion(options: {

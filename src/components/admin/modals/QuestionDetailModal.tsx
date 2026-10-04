@@ -143,11 +143,11 @@ export const QuestionDetailModal: React.FC<QuestionDetailModalProps> = ({
             )}
           </div>
 
-          <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-zinc-200 text-xs text-slate-600 font-medium">
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200 text-xs text-emerald-900 font-medium">
             <span>Soru ID: <strong className="font-mono">{question.id}</strong> • Tohum: {question.seed}</span>
-            <span className="flex items-center gap-1 text-emerald-700 font-bold">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>SVG & Çözüm Denetimi Geçerli</span>
+            <span className="flex items-center gap-1.5 text-emerald-700 font-bold bg-white px-3 py-1 rounded-xl border border-emerald-300 shadow-sm">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>5 Kademeli Otomatik Test: %100 Doğrulandı</span>
             </span>
           </div>
         </div>

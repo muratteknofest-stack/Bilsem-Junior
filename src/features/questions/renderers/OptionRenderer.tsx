@@ -25,19 +25,25 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
 }) => {
   const { id, visualData } = option;
 
-  // Determine badge styling based on state
-  let cardStyle = 'border-slate-200 bg-white shadow-[0_4px_0_0_#cbd5e1] hover:-translate-y-1 hover:shadow-[0_6px_0_0_#94a3b8] hover:border-indigo-400 active:translate-y-1 active:shadow-[0_0px_0_0_#cbd5e1]';
-  let badgeStyle = 'bg-slate-100 text-slate-700 border-slate-300 shadow-sm';
+  // Determine 3D tactile button styling based on state
+  let cardStyle =
+    'border-slate-200/90 bg-white shadow-[0_5px_0_0_#cbd5e1] hover:-translate-y-1 hover:shadow-[0_8px_0_0_#94a3b8] hover:border-indigo-400 active:translate-y-1 active:shadow-[0_1px_0_0_#cbd5e1]';
+  let badgeStyle =
+    'bg-gradient-to-b from-slate-50 to-slate-100 text-slate-800 border-slate-300 shadow-[0_2px_0_0_#cbd5e1]';
 
   if (isSelected && !showCorrect) {
-    cardStyle = 'border-indigo-500 bg-indigo-50/90 shadow-[0_4px_0_0_#6366f1] ring-2 ring-indigo-500/30 transform -translate-y-1';
-    badgeStyle = 'bg-indigo-600 text-white border-indigo-600 shadow-md';
+    cardStyle =
+      'border-indigo-500 bg-indigo-50/90 shadow-[0_5px_0_0_#4f46e5] ring-4 ring-indigo-500/20 transform -translate-y-1';
+    badgeStyle =
+      'bg-gradient-to-b from-indigo-500 to-indigo-600 text-white border-indigo-600 shadow-[0_2px_0_0_#3730a3]';
   } else if (showCorrect) {
     if (isCorrectOption) {
-      cardStyle = 'border-emerald-500 bg-emerald-50 shadow-[0_4px_0_0_#10b981] ring-2 ring-emerald-500/30 scale-[1.02]';
-      badgeStyle = 'bg-emerald-600 text-white border-emerald-600 shadow-md';
+      cardStyle =
+        'border-emerald-500 bg-emerald-50 shadow-[0_5px_0_0_#059669] ring-4 ring-emerald-500/20 scale-[1.02]';
+      badgeStyle =
+        'bg-gradient-to-b from-emerald-500 to-emerald-600 text-white border-emerald-600 shadow-[0_2px_0_0_#047857]';
     } else if (isSelected && !isCorrectOption) {
-      cardStyle = 'border-rose-400 bg-rose-50 opacity-80 shadow-[0_2px_0_0_#f43f5e] translate-y-1';
+      cardStyle = 'border-rose-400 bg-rose-50 opacity-80 shadow-[0_2px_0_0_#e11d48] translate-y-1';
       badgeStyle = 'bg-rose-600 text-white border-rose-600';
     } else {
       cardStyle = 'border-slate-200 bg-slate-50 opacity-50 shadow-none translate-y-1 grayscale-[50%]';
@@ -59,8 +65,8 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
     // 1. Direct numerical or text badge (e.g. counting, equation, or number pattern)
     if (vd.textNumber !== undefined && vd.textNumber !== null) {
       return (
-        <div className="flex items-center justify-center w-full min-h-[60px] text-xl sm:text-2xl md:text-3xl font-bold font-mono text-slate-800">
-          <span className="px-4 py-2 rounded-xl bg-slate-100/90 border border-slate-200 ">
+        <div className="flex items-center justify-center w-full min-h-[60px] text-xl sm:text-2xl md:text-3xl font-black font-mono text-slate-800">
+          <span className="px-5 py-2.5 rounded-2xl bg-gradient-to-b from-white to-slate-50 border-2 border-slate-200 shadow-[0_4px_0_0_#cbd5e1]">
             {vd.textNumber}
           </span>
         </div>
@@ -70,32 +76,34 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
     // 2. Tangram piece (Tangram Puzzle)
     if (vd.tangramPiece) {
       const piece = vd.tangramPiece;
-      const color = vd.color || '#6366f1';
+      const color = vd.color || '#4f46e5';
       const label = option.label || 'Parça';
 
       return (
-        <div className="flex flex-col items-center justify-center w-full py-1 gap-1.5">
-          <svg viewBox="0 0 100 100" className="w-16 h-16 sm:w-20 sm:h-20 drop-">
-            {piece === 'large_triangle_1' && (
-              <polygon points="15,85 85,85 15,15" fill={color} stroke="#1e293b" strokeWidth="2.5" />
-            )}
-            {piece === 'large_triangle_2' && (
-              <polygon points="15,15 85,15 85,85" fill={color} stroke="#1e293b" strokeWidth="2.5" />
-            )}
-            {piece === 'medium_triangle' && (
-              <polygon points="25,75 75,75 25,25" fill={color} stroke="#1e293b" strokeWidth="2.5" />
-            )}
-            {(piece === 'small_triangle' || piece === 'small_triangle_1' || piece === 'small_triangle_2') && (
-              <polygon points="30,70 70,70 30,30" fill={color} stroke="#1e293b" strokeWidth="2.5" />
-            )}
-            {piece === 'square' && (
-              <rect x="25" y="25" width="50" height="50" rx="3" fill={color} stroke="#1e293b" strokeWidth="2.5" />
-            )}
-            {piece === 'parallelogram' && (
-              <polygon points="20,75 60,75 80,25 40,25" fill={color} stroke="#1e293b" strokeWidth="2.5" />
-            )}
+        <div className="flex flex-col items-center justify-center w-full py-1 gap-1.5 select-none">
+          <svg viewBox="0 0 100 100" className="w-16 h-16 sm:w-20 sm:h-20" shapeRendering="geometricPrecision">
+            <g style={{ filter: 'drop-shadow(0px 3px 4px rgba(15,23,42,0.18))' }}>
+              {piece === 'large_triangle_1' && (
+                <polygon points="15,85 85,85 15,15" fill={color} stroke="#0f172a" strokeWidth="2" strokeLinejoin="round" />
+              )}
+              {piece === 'large_triangle_2' && (
+                <polygon points="15,15 85,15 85,85" fill={color} stroke="#0f172a" strokeWidth="2" strokeLinejoin="round" />
+              )}
+              {piece === 'medium_triangle' && (
+                <polygon points="25,75 75,75 25,25" fill={color} stroke="#0f172a" strokeWidth="2" strokeLinejoin="round" />
+              )}
+              {(piece === 'small_triangle' || piece === 'small_triangle_1' || piece === 'small_triangle_2') && (
+                <polygon points="30,70 70,70 30,30" fill={color} stroke="#0f172a" strokeWidth="2" strokeLinejoin="round" />
+              )}
+              {piece === 'square' && (
+                <rect x="25" y="25" width="50" height="50" rx="4" fill={color} stroke="#0f172a" strokeWidth="2" strokeLinejoin="round" />
+              )}
+              {piece === 'parallelogram' && (
+                <polygon points="20,75 60,75 80,25 40,25" fill={color} stroke="#0f172a" strokeWidth="2" strokeLinejoin="round" />
+              )}
+            </g>
           </svg>
-          <span className="text-xs sm:text-sm font-semibold text-slate-700 text-center leading-tight">
+          <span className="text-xs sm:text-sm font-bold text-slate-700 text-center leading-tight">
             {label}
           </span>
         </div>
@@ -288,9 +296,21 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
       const pct = vd.fillPercent;
       const fillHeight = (70 * pct) / 100;
       return (
-        <svg viewBox="0 0 100 100" className="w-full h-20 md:h-24">
-          {/* Glass beaker */}
-          <rect x="25" y="15" width="50" height="70" rx="4" fill="#f8fafc" stroke="#334155" strokeWidth="3" />
+        <svg viewBox="0 0 100 100" className="w-full h-20 md:h-24 select-none" shapeRendering="geometricPrecision">
+          <defs>
+            <linearGradient id={`liqGrad_${id}`} x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#06b6d4" />
+              <stop offset="65%" stopColor="#0891b2" />
+              <stop offset="100%" stopColor="#0e7490" />
+            </linearGradient>
+            <linearGradient id={`beakerGlass_${id}`} x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.45" />
+              <stop offset="35%" stopColor="#ffffff" stopOpacity="0.05" />
+              <stop offset="100%" stopColor="#ffffff" stopOpacity="0.25" />
+            </linearGradient>
+          </defs>
+          {/* Glass beaker body */}
+          <rect x="25" y="15" width="50" height="70" rx="6" fill="#f8fafc" stroke="#334155" strokeWidth="2.5" />
           {/* Liquid fill */}
           <rect
             x="27"
@@ -298,13 +318,19 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
             width="46"
             height={fillHeight}
             rx="2"
-            fill={vd.color || '#06b6d4'}
-            opacity={0.85}
+            fill={`url(#liqGrad_${id})`}
+            opacity={0.92}
           />
+          {/* Liquid Meniscus Curve */}
+          {fillHeight > 2 && (
+            <ellipse cx="50" cy={83 - fillHeight} rx="23" ry="3" fill="#22d3ee" opacity="0.8" />
+          )}
+          {/* Glass Reflection Overlay */}
+          <rect x="26" y="16" width="48" height="68" rx="5" fill={`url(#beakerGlass_${id})`} pointerEvents="none" />
           {/* Beaker ticks */}
-          <line x1="25" y1="32" x2="33" y2="32" stroke="#64748b" strokeWidth="2" />
-          <line x1="25" y1="50" x2="35" y2="50" stroke="#64748b" strokeWidth="2" />
-          <line x1="25" y1="67" x2="33" y2="67" stroke="#64748b" strokeWidth="2" />
+          <line x1="25" y1="32" x2="33" y2="32" stroke="#64748b" strokeWidth="2" strokeLinecap="round" />
+          <line x1="25" y1="50" x2="36" y2="50" stroke="#64748b" strokeWidth="2.2" strokeLinecap="round" />
+          <line x1="25" y1="68" x2="33" y2="68" stroke="#64748b" strokeWidth="2" strokeLinecap="round" />
         </svg>
       );
     }
@@ -369,14 +395,22 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
                   row.map((cell: number, x: number) => (
                     <div
                       key={`${x}-${y}`}
-                      className={`rounded-sm ${cell === 1 ? 'bg-indigo-500 ' : 'bg-white/50'}`}
+                      className={`rounded-md transition-all ${
+                        cell === 1
+                          ? 'bg-gradient-to-b from-indigo-500 to-indigo-600 shadow-[0_2px_0_0_#3730a3] border border-indigo-400'
+                          : 'bg-white border border-slate-200 shadow-inner'
+                      }`}
                     />
                   ))
                 )
               : grid.map((cell: number, idx: number) => (
                   <div
                     key={idx}
-                    className={`rounded-sm ${cell === 1 ? 'bg-indigo-500 ' : 'bg-white/50'}`}
+                    className={`rounded-md transition-all ${
+                      cell === 1
+                        ? 'bg-gradient-to-b from-indigo-500 to-indigo-600 shadow-[0_2px_0_0_#3730a3] border border-indigo-400'
+                        : 'bg-white border border-slate-200 shadow-inner'
+                    }`}
                   />
                 ))}
           </div>

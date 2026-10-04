@@ -15,38 +15,38 @@ export const MatrixRenderer: React.FC<EngineProps> = ({ question, mode }) => {
   if (mode === 'matrix_2x2') {
     const grid = visualConfig.grid || [];
     return (
-      <div className="w-full flex items-center justify-center p-3 md:p-6 bg-slate-50/80 rounded-xl border border-slate-200">
-        <div className="grid grid-cols-2 gap-3 md:gap-4 p-3 bg-slate-200/70 rounded-xl">
+      <div className="w-full flex items-center justify-center p-3 md:p-6 bg-slate-50/90 rounded-2xl border-2 border-slate-200 shadow-inner">
+        <div className="grid grid-cols-2 gap-3 md:gap-5 p-3.5 bg-slate-200/80 rounded-2xl shadow-inner">
           {/* Row 0, Col 0 */}
-          <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 bg-white rounded-xl border border-slate-300  flex items-center justify-center p-2">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 bg-white rounded-2xl border-2 border-slate-200 shadow-[0_4px_0_0_#cbd5e1] flex items-center justify-center p-2">
             {grid[0]?.[0] && (
-              <svg viewBox="0 0 100 100" className="w-full h-full">
+              <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
                 <ShapeSvg kind={grid[0][0].kind} style={grid[0][0]} size={65} />
               </svg>
             )}
           </div>
 
           {/* Row 0, Col 1 */}
-          <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 bg-white rounded-xl border border-slate-300  flex items-center justify-center p-2">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 bg-white rounded-2xl border-2 border-slate-200 shadow-[0_4px_0_0_#cbd5e1] flex items-center justify-center p-2">
             {grid[0]?.[1] && (
-              <svg viewBox="0 0 100 100" className="w-full h-full">
+              <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
                 <ShapeSvg kind={grid[0][1].kind} style={grid[0][1]} size={65} />
               </svg>
             )}
           </div>
 
           {/* Row 1, Col 0 */}
-          <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 bg-white rounded-xl border border-slate-300  flex items-center justify-center p-2">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 bg-white rounded-2xl border-2 border-slate-200 shadow-[0_4px_0_0_#cbd5e1] flex items-center justify-center p-2">
             {grid[1]?.[0] && (
-              <svg viewBox="0 0 100 100" className="w-full h-full">
+              <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
                 <ShapeSvg kind={grid[1][0].kind} style={grid[1][0]} size={65} />
               </svg>
             )}
           </div>
 
           {/* Row 1, Col 1 (The Missing Question Cell) */}
-          <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 bg-indigo-50 border-2 border-dashed border-indigo-400 rounded-xl flex items-center justify-center">
-            <HelpCircle className="w-8 h-8 md:w-10 md:h-10 text-indigo-600 animate-pulse" />
+          <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 bg-indigo-50 border-2 border-dashed border-indigo-400 rounded-2xl shadow-[0_4px_0_0_#c7d2fe] flex items-center justify-center">
+            <HelpCircle className="w-8 h-8 md:w-10 md:h-10 text-indigo-600 animate-pulse drop-shadow-sm" />
           </div>
         </div>
       </div>
@@ -64,8 +64,8 @@ export const MatrixRenderer: React.FC<EngineProps> = ({ question, mode }) => {
       : [];
 
     return (
-      <div className="w-full flex items-center justify-center p-3 md:p-6 bg-slate-50/80 rounded-xl border border-slate-200">
-        <div className="grid grid-cols-3 gap-2 sm:gap-3 p-3 bg-slate-200/70 rounded-xl">
+      <div className="w-full flex items-center justify-center p-3 md:p-6 bg-slate-50/90 rounded-2xl border-2 border-slate-200 shadow-inner">
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5 p-3.5 bg-slate-200/80 rounded-2xl shadow-inner">
           {flatCells.map((cell: any, idx: number) => {
             const isMissing = !cell || cell === '?' || (typeof cell === 'object' && (cell.isHidden || cell.isMissing || cell.kind === '?'));
             const kind = typeof cell === 'string' ? cell : cell?.kind;
@@ -73,17 +73,17 @@ export const MatrixRenderer: React.FC<EngineProps> = ({ question, mode }) => {
             return (
               <div
                 key={idx}
-                className={`w-14 h-14 sm:w-18 sm:h-18 md:w-22 md:h-22 rounded-xl flex items-center justify-center p-2 ${
+                className={`w-14 h-14 sm:w-18 sm:h-18 md:w-22 md:h-22 rounded-2xl flex items-center justify-center p-2 ${
                   isMissing
-                    ? 'bg-indigo-50 border-2 border-dashed border-indigo-400'
-                    : 'bg-white border border-slate-300 '
+                    ? 'bg-indigo-50 border-2 border-dashed border-indigo-400 shadow-[0_3px_0_0_#c7d2fe]'
+                    : 'bg-white border-2 border-slate-200 shadow-[0_3px_0_0_#cbd5e1]'
                 }`}
               >
                 {isMissing ? (
-                  <HelpCircle className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-600 animate-pulse" />
+                  <HelpCircle className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-600 animate-pulse drop-shadow-sm" />
                 ) : (
-                  <svg viewBox="0 0 100 100" className="w-full h-full">
-                    <ShapeSvg kind={kind as any} style={{ ...(typeof cell === 'object' ? cell : {}), fill: cellFill, stroke: '#1e293b' }} size={60} />
+                  <svg viewBox="0 0 100 100" className="w-full h-full" shapeRendering="geometricPrecision">
+                    <ShapeSvg kind={kind as any} style={{ ...(typeof cell === 'object' ? cell : {}), fill: cellFill, stroke: '#0f172a' }} size={60} />
                   </svg>
                 )}
               </div>
