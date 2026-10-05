@@ -9,8 +9,8 @@ import {
   CognitiveCategory 
 } from '../types';
 import { dataService } from '../services/data-service';
-import { db } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../lib/platform';
+import { doc, getDoc } from '../lib/supabase-data';
 import { 
   LineChart, 
   Line, 

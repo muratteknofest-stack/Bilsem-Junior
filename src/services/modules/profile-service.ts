@@ -1,5 +1,5 @@
-import { doc, updateDoc } from 'firebase/firestore';
-import { db, auth } from '../../lib/firebase';
+import { doc, updateDoc } from '../../lib/supabase-data';
+import { db, auth } from '../../lib/platform';
 import { safeStorage } from '../../lib/storage';
 import { STORAGE_KEYS } from './shared';
 import { UserProfile, UserRole } from '../../types';
@@ -91,9 +91,6 @@ export function setCurrentUser(user: UserProfile) {
 
 export function isAuthenticated(): boolean {
   const current = getCurrentUser();
-  if (current?.email === 'muratteknofest@gmail.com' && current?.role === 'admin' && safeStorage.getItem(STORAGE_KEYS.AUTH_SESSION) === 'true') {
-    return true;
-  }
   if (current?.id?.startsWith('demo_') && safeStorage.getItem(STORAGE_KEYS.AUTH_SESSION) === 'true') {
     return true;
   }
@@ -113,7 +110,6 @@ export function loginAs(role: UserRole, customUser?: UserProfile): UserProfile {
 
   if (
     user.id !== auth.currentUser?.uid && 
-    user.email !== 'muratteknofest@gmail.com' &&
     !user.id?.startsWith('demo_')
   ) {
     throw new Error('Kimliği doğrulanmamış yerel oturum engellendi.');

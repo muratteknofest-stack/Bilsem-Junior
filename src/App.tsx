@@ -4,6 +4,7 @@ import { useAuth } from './contexts/AuthContext';
 import { AnimatePresence, motion } from 'motion/react';
 import { UserProfile, UserRole, SkillMastery, MistakeItem, DailyStudyPlan, ReminderAlertEvent, CognitiveCategory } from './types';
 import { dataService } from './services/data-service';
+import { sound } from './lib/sound';
 import { reminderService } from './services/reminder-service';
 import { Navbar } from './components/Navbar';
 import { MobileBottomNav } from './components/MobileBottomNav';
@@ -147,6 +148,10 @@ export default function App() {
 
     // Bidirectional switching between student and parent:
     if (targetRoute === 'parent') {
+      if (userProfile?.role !== 'parent' && !u.id.startsWith('demo_')) {
+        setCurrentRoute('dashboard');
+        return;
+      }
       const updated = { ...u, role: 'parent' as UserRole };
       setCurrentUser(updated);
       dataService.switchRole('parent');
@@ -157,6 +162,10 @@ export default function App() {
     }
 
     if (targetRoute === 'dashboard') {
+      if (userProfile?.role === 'parent' && !u.id.startsWith('demo_')) {
+        setCurrentRoute('parent');
+        return;
+      }
       const updated = { ...u, role: 'student' as UserRole };
       setCurrentUser(updated);
       dataService.switchRole('student');
@@ -168,7 +177,7 @@ export default function App() {
 
     // If parent navigates to student test/practice/achievements, allow it in student role
     if (['practice', 'adaptive', 'exams', 'mistakes', 'achievements', 'leaderboard', 'glossary'].includes(targetRoute)) {
-      if (u.role === 'parent') {
+      if (u.role === 'parent' && u.id.startsWith('demo_')) {
         const updated = { ...u, role: 'student' as UserRole };
         setCurrentUser(updated);
         dataService.switchRole('student');
@@ -180,7 +189,7 @@ export default function App() {
     }
 
     // Admin route protection
-    if (targetRoute === 'admin' && u.role !== 'admin' && u.email !== 'muratteknofest@gmail.com') {
+    if (targetRoute === 'admin' && (!authUser || userProfile?.role !== 'admin')) {
       setCurrentRoute(u.role === 'parent' ? 'parent' : 'dashboard');
       syncState();
       return;
@@ -191,6 +200,8 @@ export default function App() {
   };
 
   const handleSwitchRole = (newRole: UserRole) => {
+    if (!currentUser.id.startsWith('demo_') && userProfile?.role !== newRole) return;
+    if (newRole === 'admin' && (!authUser || userProfile?.role !== 'admin')) return;
     sound.playClick();
     const updated = { ...currentUser, role: newRole };
     setCurrentUser(updated);

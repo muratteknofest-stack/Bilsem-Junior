@@ -33,7 +33,7 @@ async function startServer() {
     if (origin && allowedOrigins.has(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Vary', 'Origin');
-      res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Firebase-AppCheck');
+      res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     }
     if (req.method === 'OPTIONS') return res.sendStatus(origin && allowedOrigins.has(origin) ? 204 : 403);
@@ -50,10 +50,7 @@ async function startServer() {
         connectSrc: [
           "'self'",
           'https://*.googleapis.com',
-          'https://*.firebaseio.com',
-          'https://firebasevertexai.googleapis.com',
-          'https://identitytoolkit.googleapis.com',
-          'https://securetoken.googleapis.com',
+          'https://*.supabase.co',
         ],
       },
     } : false,

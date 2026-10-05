@@ -7,6 +7,7 @@ import {
   normalizeStudentCode,
 } from '../security';
 import { accountSecurityLimiter } from '../rate-limiters';
+import { getServiceClient } from '../supabase-admin';
 
 const authRoutes = Router();
 
@@ -23,6 +24,46 @@ const registerFamilySchema = z.object({
   grade: z.number().int().min(1).max(4),
   examFocus: z.string().default('bilsem'),
 }).strict();
+
+const registerStudentSchema = z.object({
+  email: z.string().email().toLowerCase().trim(),
+  password: strongPassword,
+  studentName: z.string().min(2).max(50).trim(),
+  grade: z.number().int().min(1).max(4),
+  examFocus: z.string().min(1).max(100),
+}).strict();
+
+authRoutes.post('/register-student', requireAppCheck, accountSecurityLimiter, async (req, res) => {
+  const parsed = registerStudentSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Kayıt bilgileri geçersiz.' });
+  const { email, password, studentName, grade, examFocus } = parsed.data;
+  const adminAuth = getAdminAuth();
+  let uid: string | undefined;
+  try {
+    const user = await adminAuth.createUser({
+      email, password, emailVerified: false, displayName: studentName,
+    });
+    uid = user.uid;
+    const now = Date.now();
+    await getAdminDb().doc(`users/${uid}`).set({
+      id: uid, email, name: studentName, role: 'student', grade, examFocus,
+      recoveryEmail: email, consent: {
+        actorRole: 'student', acceptedAt: now, kvkkVersion: '2026.1', termsVersion: '2026.1',
+      },
+      avatar: '🦊', level: 1, xp: 0, streak: 0,
+      lastActiveDate: new Date(now).toISOString(),
+      dailyGoalMinutes: 15, todayMinutesSpent: 0, soundEnabled: true,
+      createdAt: now, updatedAt: now, totalPoints: 0,
+      claimedStreakDays: [], totalQuestionsSolved: 0, resolvedMistakesCount: 0,
+    });
+    const { error } = await getServiceClient().auth.resend({ type: 'signup', email });
+    if (error) throw error;
+    return res.status(201).json({ success: true });
+  } catch (error) {
+    if (uid) await adminAuth.deleteUser(uid).catch(() => undefined);
+    return res.status(500).json({ error: 'Hesap oluşturulamadı veya doğrulama e-postası gönderilemedi.' });
+  }
+});
 
 authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, async (req, res) => {
   const parsed = registerFamilySchema.safeParse(req.body);
@@ -69,6 +110,7 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
     let studentEmail = '';
     const baseCode = normalizeStudentCode(studentName);
     
+    let availableCode = false;
     for (let attempt = 0; attempt < 5; attempt++) {
       const randomSuffix = Math.floor(1000 + Math.random() * 9000);
       studentCode = `${baseCode}${randomSuffix}`;
@@ -76,9 +118,14 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
       try {
         await adminAuth.getUserByEmail(studentEmail);
       } catch (err: any) {
-        if (err.code === 'auth/user-not-found') break;
+        if (err.code === 'auth/user-not-found') {
+          availableCode = true;
+          break;
+        }
+        throw err;
       }
     }
+    if (!availableCode) throw new Error('Benzersiz öğrenci kodu üretilemedi. Lütfen tekrar deneyiniz.');
 
     createdStudentUser = await adminAuth.createUser({
       email: studentEmail,
@@ -136,6 +183,10 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
     batch.set(adminDb.doc(`users/${createdStudentUser.uid}`), studentProfile);
     batch.set(adminDb.doc(`users/${createdParentUser.uid}`), parentProfile);
     await batch.commit();
+    const { error: mailError } = await getServiceClient().auth.resend({
+      type: 'signup', email: parentEmail,
+    });
+    if (mailError) throw mailError;
 
     return res.status(201).json({
       success: true,

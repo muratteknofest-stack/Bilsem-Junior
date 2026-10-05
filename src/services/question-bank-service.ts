@@ -16,8 +16,8 @@ import {
   writeBatch,
   onSnapshot,
   getDocs,
-} from 'firebase/firestore';
-import { db } from '../lib/firebase';
+} from '../lib/supabase-data';
+import { db } from '../lib/platform';
 import { z } from 'zod';
 
 const STORAGE_KEY = 'bilsem_admin_managed_questions_v2';
@@ -100,7 +100,7 @@ class QuestionBankService {
           collection(db, 'questions'),
           (snapshot) => {
             if (!snapshot.empty) {
-              const liveList = snapshot.docs.map((d) => ({
+              const liveList = snapshot.docs.map((d: { data: () => BaseQuestion; id: string }) => ({
                 ...(d.data() as BaseQuestion),
                 id: d.id,
               }));
@@ -182,7 +182,7 @@ class QuestionBankService {
     return [...this.questions];
   }
 
-  public createCustomQuestion(question: BaseQuestion): BaseQuestion {
+  public createCustomQuestion(question: BaseQuestion, syncToCloud = true): BaseQuestion {
     const publishedQ: BaseQuestion = {
       ...question,
       status: question.status || 'published',
@@ -199,11 +199,11 @@ class QuestionBankService {
     this.notify();
 
     // Live sync to Firestore
-    try {
-      setDoc(doc(db, 'questions', publishedQ.id), publishedQ).catch((err) => {
-        console.warn('Live Firestore sync error (createCustomQuestion):', err);
+    if (syncToCloud) {
+      void setDoc(doc(db, 'questions', publishedQ.id), publishedQ).catch((err) => {
+        console.warn('Soru Supabase ile senkronize edilemedi:', err);
       });
-    } catch {}
+    }
 
     return publishedQ;
   }

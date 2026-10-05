@@ -1,111 +1,89 @@
 import type { NextFunction, Request, Response } from 'express';
-import { getApps, initializeApp, type App } from 'firebase-admin/app';
-import { getAppCheck } from 'firebase-admin/app-check';
-import { getAuth, type DecodedIdToken } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getServiceClient, getAdminDb } from './supabase-admin';
+export { getAdminDb } from './supabase-admin';
 
 export type AppRole = 'student' | 'parent' | 'admin';
-
 export interface AuthenticatedRequest extends Request {
-  authUser?: DecodedIdToken;
-}
-
-let adminApp: App | null = null;
-
-export function getAdminApp(): App {
-  if (adminApp) return adminApp;
-  adminApp = getApps()[0] || initializeApp({
-    projectId: process.env.FIREBASE_PROJECT_ID,
-  });
-  return adminApp;
+  authUser?: { uid: string; email?: string; email_verified: boolean; role?: string };
 }
 
 export function getAdminAuth() {
-  return getAuth(getAdminApp());
-}
-
-export function getAdminDb() {
-  const app = getAdminApp();
-  const databaseId = process.env.FIREBASE_DATABASE_ID?.trim();
-  return databaseId ? getFirestore(app, databaseId) : getFirestore(app);
+  const admin = getServiceClient().auth.admin;
+  return {
+    async getUserByEmail(email: string) {
+      for (let page = 1; page <= 100; page++) {
+        const { data, error } = await admin.listUsers({ page, perPage: 1000 });
+        if (error) throw error;
+        const user = data.users.find(item => item.email?.toLowerCase() === email.toLowerCase());
+        if (user) return { uid: user.id };
+        if (data.users.length < 1000) break;
+      }
+      throw Object.assign(new Error('User not found'), { code: 'auth/user-not-found' });
+    },
+    async createUser(options: { email: string; password: string; phoneNumber?: string; emailVerified?: boolean; displayName?: string }) {
+      const { data, error } = await admin.createUser({
+        email: options.email, password: options.password,
+        email_confirm: options.emailVerified ?? false,
+        user_metadata: { display_name: options.displayName },
+      });
+      if (error || !data.user) throw error ?? new Error('Hesap oluşturulamadı.');
+      return { uid: data.user.id };
+    },
+    async deleteUser(uid: string) {
+      const { error } = await admin.deleteUser(uid);
+      if (error) throw error;
+    },
+    async updateUser(uid: string, updates: { password: string }) {
+      const { error } = await admin.updateUserById(uid, updates);
+      if (error) throw error;
+    },
+    async revokeRefreshTokens(uid: string) {
+      // The password update invalidates previous credentials; session revocation
+      // is handled by the database procedure below for the linked student.
+      const { error } = await getServiceClient().rpc('revoke_user_sessions', { target_id: uid });
+      if (error) throw error;
+    },
+  };
 }
 
 export async function requireFirebaseAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  const authorization = req.header('authorization') || '';
-  const match = authorization.match(/^Bearer\s+(.+)$/i);
-  if (!match) {
-    return res.status(401).json({ error: 'Oturum doğrulaması gerekli.' });
-  }
-
-  try {
-    req.authUser = await getAdminAuth().verifyIdToken(match[1], true);
-    return next();
-  } catch {
-    return res.status(401).json({ error: 'Oturum geçersiz veya süresi dolmuş.' });
-  }
-}
-
-export async function requireAppCheck(req: Request, res: Response, next: NextFunction) {
-  const configured = process.env.ENFORCE_APP_CHECK?.trim().toLowerCase();
-  const shouldEnforce = configured === 'true' || (configured !== 'false' && process.env.NODE_ENV === 'production');
-  if (!shouldEnforce) return next();
-
-  const token = req.header('x-firebase-appcheck');
-  if (!token) {
-    return res.status(401).json({ error: 'Uygulama doğrulaması gerekli.' });
-  }
-
-  try {
-    await getAppCheck(getAdminApp()).verifyToken(token);
-    return next();
-  } catch {
-    return res.status(401).json({ error: 'Uygulama doğrulaması geçersiz.' });
-  }
-}
-
-export function requireVerifiedEmail(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  if (!req.authUser?.email_verified) {
-    return res.status(403).json({ error: 'Bu işlem için veli e-posta adresi doğrulanmalıdır.' });
-  }
+  const match = (req.header('authorization') || '').match(/^Bearer\s+(.+)$/i);
+  if (!match) return res.status(401).json({ error: 'Oturum doğrulaması gerekli.' });
+  const { data, error } = await getServiceClient().auth.getUser(match[1]);
+  if (error || !data.user) return res.status(401).json({ error: 'Oturum geçersiz veya süresi dolmuş.' });
+  req.authUser = { uid: data.user.id, email: data.user.email,
+    email_verified: Boolean(data.user.email_confirmed_at),
+    role: data.user.app_metadata?.role };
   return next();
 }
 
-const roleCache = new Map<string, { role: string; expiresAt: number }>();
-const ROLE_CACHE_TTL_MS = 600_000; // 10 minutes
-
+export function requireAppCheck(_req: Request, _res: Response, next: NextFunction) {
+  // Bearer-token validation, CORS and endpoint rate limits remain in force.
+  return next();
+}
+export function requireVerifiedEmail(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (!req.authUser?.email_verified) return res.status(403).json({ error: 'Veli e-posta adresi doğrulanmalıdır.' });
+  return next();
+}
 export function requireProfileRole(...roles: AppRole[]) {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.authUser) return res.status(401).json({ error: 'Oturum doğrulaması gerekli.' });
     try {
-      const uid = req.authUser.uid;
-      const cached = roleCache.get(uid);
-      if (cached && cached.expiresAt > Date.now()) {
-        if (!roles.includes(cached.role as AppRole)) {
-          return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmuyor.' });
-        }
-        return next();
-      }
-
-      const snapshot = await getAdminDb().doc(`users/${uid}`).get();
-      const profile = snapshot.data();
-      if (!profile || profile.id !== uid || !roles.includes(profile.role)) {
+      const profile = (await getAdminDb().doc(`users/${req.authUser.uid}`).get()).data();
+      if (!profile || profile.id !== req.authUser.uid || !roles.includes(profile.role))
         return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmuyor.' });
-      }
-      
-      roleCache.set(uid, { role: profile.role, expiresAt: Date.now() + ROLE_CACHE_TTL_MS });
+      if (profile.role === 'admin' && req.authUser.role !== 'admin')
+        return res.status(403).json({ error: 'Yönetici yetkisi doğrulanamadı.' });
       return next();
     } catch {
-      return res.status(503).json({ error: 'Hesap yetkisi şu anda doğrulanamadı.' });
+      return res.status(503).json({ error: 'Hesap yetkisi doğrulanamadı.' });
     }
   };
 }
-
 export function requireRole(...roles: AppRole[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    const role = req.authUser?.role as AppRole | undefined;
-    if (!role || !roles.includes(role)) {
+    if (!req.authUser?.role || !roles.includes(req.authUser.role as AppRole))
       return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmuyor.' });
-    }
     return next();
   };
 }

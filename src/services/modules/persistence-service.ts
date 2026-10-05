@@ -1,5 +1,5 @@
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { db, auth } from '../../lib/firebase';
+import { doc, setDoc, getDoc, serverTimestamp } from '../../lib/supabase-data';
+import { db, auth } from '../../lib/platform';
 import { safeStorage } from '../../lib/storage';
 import { STORAGE_KEYS, USER_PROGRESS_KEYS, createEmptyMasteries } from './shared';
 import { ExamResult, SkillMastery } from '../../types';

@@ -1,5 +1,6 @@
-import { collection, doc, getDocs, setDoc, query, where, limit, writeBatch } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { collection, doc, getDocs, setDoc, query, where, limit, writeBatch } from '../lib/supabase-data';
+import { auth, db } from '../lib/platform';
+import { supabase } from '../lib/supabase';
 import type { BaseQuestion } from '../types';
 import { auditQuestion } from '../features/questions/quality';
 import { questionBankService } from './question-bank-service';
@@ -13,27 +14,17 @@ export interface StoredQuestion extends BaseQuestion {
 }
 const clean = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 
-async function ensureAdminAuth(): Promise<void> {
-  if (!auth.currentUser) {
-    if ((auth as any).authStateReady) {
-      await (auth as any).authStateReady().catch(() => {});
-    }
-  }
-  if (!auth.currentUser) {
-    try {
-      const { signInWithEmailAndPassword } = await import('firebase/auth');
-      await signInWithEmailAndPassword(auth, 'muratteknofest@gmail.com', 'Mu7203397.Mu9486635.');
-    } catch {
-      try {
-        const { signInAnonymously } = await import('firebase/auth');
-        await signInAnonymously(auth);
-      } catch {}
-    }
-  }
+async function requireAdminUser() {
+  if (typeof auth.authStateReady === 'function') await auth.authStateReady();
+  const user = auth.currentUser;
+  if (!user || !user.emailVerified) throw new Error('Yönetici oturumu gerekli.');
+  const token = await user.getIdTokenResult(true);
+  if (token.claims.role !== 'admin') throw new Error('Yönetici yetkisi gerekli.');
+  return user;
 }
 
 export async function loadQuestionLibrary(): Promise<StoredQuestion[]> {
-  await ensureAdminAuth();
+  await requireAdminUser();
 
   try {
     const snapshot = await getDocs(collection(db, 'questions'));
@@ -58,15 +49,12 @@ export async function saveEditorialQuestion(
   expectedRevision: number,
   confirmedReview: boolean,
 ): Promise<StoredQuestion> {
-  await ensureAdminAuth();
-  
-  const user = auth.currentUser;
-  const uid = user?.uid || 'admin_muratteknofest';
+  const user = await requireAdminUser();
+  const uid = user.uid;
   const report = auditQuestion(question);
   if (report.errors.length) throw new Error(report.errors.join(' '));
   if (status === 'published' && !confirmedReview) throw new Error('Yayımlamadan önce yönerge, cevap ve görselleri inceleyip onaylayın.');
 
-  const ref = doc(db, 'questions', question.id);
   const now = new Date().toISOString();
   const stored: StoredQuestion = clean({
     ...question,
@@ -81,17 +69,19 @@ export async function saveEditorialQuestion(
 
   if (status !== 'published') delete stored.reviewedBy;
 
-  // 1. Live write to Firestore
-  try {
-    await setDoc(ref, stored, { merge: true });
-  } catch (err) {
-    console.warn('Live Firestore save notice:', err);
+  // Confirm the remote write before updating the local editor cache.
+  const { data: confirmed, error } = await supabase.rpc('save_question', {
+    payload: stored, p_expected_revision: expectedRevision,
+  });
+  if (error) {
+    if (error.code === '40001') throw new Error('Soru başka bir oturumda değişti. Yeniden yükleyin.');
+    throw error;
   }
 
-  // 2. Also update questionBankService so all admin panels stay synchronized
-  questionBankService.createCustomQuestion(stored);
+  // Keep admin panels synchronized after the confirmed remote write.
+  questionBankService.createCustomQuestion(confirmed as StoredQuestion, false);
 
-  return stored;
+  return confirmed as StoredQuestion;
 }
 
 export async function loadPublishedQuestions(): Promise<BaseQuestion[]> {
@@ -103,13 +93,11 @@ export async function loadPublishedQuestions(): Promise<BaseQuestion[]> {
   } catch (err) {
     console.warn('Firestore published load notice:', err);
   }
-  return questionBankService.getAll();
+  return questionBankService.getAll().filter(q => q.status === 'published' || (!q.isCustom && !q.status));
 }
 
 export async function clearAllFirestoreQuestions(): Promise<number> {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Bu işlem için yönetici oturumu gerekli.');
-  
+  await requireAdminUser();
   const snapshot = await getDocs(collection(db, 'questions'));
   if (snapshot.empty) return 0;
 

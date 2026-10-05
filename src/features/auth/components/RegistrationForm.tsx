@@ -1,17 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { UserRole, UserProfile } from '../../../types';
-import { auth, db } from '../../../lib/firebase';
-import {
-  createUserWithEmailAndPassword,
-  browserLocalPersistence,
-  deleteUser,
-  setPersistence,
-} from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { dataService } from '../../../services/data-service';
 import { sound } from '../../../lib/sound';
 import { registerFamilyInFirebase } from '../../../services/family-registration-service';
-import { createConsentRecord } from '../../../lib/account-policy';
+import { apiUrl } from '../../../lib/api-client';
 import { FooterInfoModal, FooterModalTopic } from '../../../components/FooterInfoModal';
 import {
   registerStudentSchema,
@@ -54,7 +45,6 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
   setErrorMessage,
   onRegisterSuccess,
 }) => {
-  const { sendEmailVerification, loginLocally } = useAuth();
 
   const [regStudentName, setRegStudentName] = useState('');
   const [regGrade, setRegGrade] = useState<number>(2);
@@ -114,7 +104,6 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
     setIsSubmitting(true);
     try {
       if (selectedRole === 'parent') {
-        await setPersistence(auth, browserLocalPersistence);
         const result = await registerFamilyInFirebase({
           parentEmail: regParentEmail.trim(),
           parentPassword: regPassword,
@@ -125,72 +114,33 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
           examFocus: regExamFocus,
         });
 
-        // Hydrate session and auto-login smoothly
-        dataService.loginAs('parent', result.parentProfile);
-        dataService.hydrateUserStateFromFirebase().catch(() => {});
-        loginLocally(result.parentProfile);
         sound.playSuccess();
 
         onRegisterSuccess({
           identifier: regParentEmail.trim(),
           role: 'parent',
           createdStudentCode: result.student.code,
-          autoProfile: result.parentProfile,
-          successToast: `Aile hesabı oluşturuldu! Çocuğunuzun giriş kodu: ${result.student.code}`,
+          successToast: `Aile hesabı oluşturuldu. E-postanızı doğrulayın. Çocuğunuzun giriş kodu: ${result.student.code}`,
         });
       } else {
-        await setPersistence(auth, browserLocalPersistence);
         const email = regParentEmail.trim().toLowerCase();
-        const pass = regPassword;
-        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-        
-        const newProfile: UserProfile = {
-          id: userCredential.user.uid,
-          email: email,
-          name: regStudentName.trim(),
-          role: 'student',
-          grade: regGrade,
-          examFocus: regExamFocus,
-          recoveryEmail: email,
-          consent: createConsentRecord('student'),
-          avatar: '🦊',
-          level: 1,
-          xp: 0,
-          streak: 0,
-          lastActiveDate: new Date().toISOString(),
-          dailyGoalMinutes: 15,
-          todayMinutesSpent: 0,
-          soundEnabled: true,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          totalPoints: 0,
-          claimedStreakDays: [],
-          totalQuestionsSolved: 0,
-          resolvedMistakesCount: 0,
-        };
-        
-        try {
-          await setDoc(doc(db, 'users', userCredential.user.uid), newProfile);
-        } catch (profileError) {
-          await deleteUser(userCredential.user);
-          throw profileError;
-        }
-
-        // Send non-blocking verification email in background
-        sendEmailVerification(userCredential.user).catch(() => {});
-
-        // Hydrate session and auto-login smoothly
-        dataService.loginAs('student', newProfile);
-        dataService.hydrateUserStateFromFirebase().catch(() => {});
-        loginLocally(newProfile);
+        const response = await fetch(apiUrl('/api/register-student'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email, password: regPassword, studentName: regStudentName.trim(),
+            grade: regGrade, examFocus: regExamFocus,
+          }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'Kayıt oluşturulamadı.');
         sound.playSuccess();
 
         onRegisterSuccess({
           identifier: email,
           role: 'student',
           createdStudentCode: null,
-          autoProfile: newProfile,
-          successToast: `ZekaPark'a hoş geldin, ${regStudentName.trim()}! Öğrenci panelin hazır.`,
+          successToast: `ZekaPark'a hoş geldin, ${regStudentName.trim()}! Giriş için e-postanı doğrula.`,
         });
       }
       

@@ -66,7 +66,7 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
     } catch {
       if (alive.current) {
         setCloudReady(false);
-        setCloudError('Firebase kütüphanesine erişilemedi. Yönetici yetkisi ve bağlantı kontrol edilmeli. Ekrandaki taslaklar henüz buluta kaydedilmedi; JSON olarak indirebilirsiniz.');
+        setCloudError('Supabase bağlantısına erişilemedi. Yönetici yetkisi ve bağlantı kontrol edilmeli. Ekrandaki taslaklar henüz buluta kaydedilmedi; JSON olarak indirebilirsiniz.');
       }
     } finally { if (alive.current) setLoading(false); }
   }
@@ -138,9 +138,9 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
       setLibrary(prev => [stored, ...prev.filter(q => q.id !== stored.id)]);
       setBatch(prev => prev.map(q => q.id === stored.id ? stored : q));
       setActive(stored); setSavedKey(questionContentKey(stored)); setReview([false, false, false]);
-      setNotice(nextStatus === 'published' ? 'Soru Firebase’e kaydedildi ve öğrenci havuzunda yayımlandı.' : 'Firebase’e kaydedildi · ' + statusLabel[nextStatus]);
+      setNotice(nextStatus === 'published' ? 'Soru Supabase’e kaydedildi ve öğrenci havuzunda yayımlandı.' : 'Supabase’e kaydedildi · ' + statusLabel[nextStatus]);
     } catch (err) {
-      if (alive.current) setNotice('Kaydedilemedi. Taslak ekranda korunuyor. ' + (err instanceof Error && !err.message.startsWith('Firebase') ? err.message : 'Yönetici yetkisini ve bağlantıyı kontrol edin.'));
+      if (alive.current) setNotice('Kaydedilemedi. Taslak ekranda korunuyor. ' + (err instanceof Error ? err.message : 'Yönetici yetkisini ve bağlantıyı kontrol edin.'));
     } finally { if (alive.current) setSaving(false); }
   }
   async function saveBatch() {
@@ -159,9 +159,9 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
         setLibrary(prev => [stored, ...prev.filter(saved => saved.id !== q.id)]);
         setBatch(prev => prev.map(item => item.id === q.id ? stored : item));
         if (active?.id === q.id) { setActive(stored); setSavedKey(questionContentKey(stored)); setReview([false, false, false]); }
-        setNotice(savedCount + ' / ' + items.length + ' taslak Firebase’e kaydedildi.');
+        setNotice(savedCount + ' / ' + items.length + ' taslak Supabase’e kaydedildi.');
       }
-      setNotice(savedCount + ' taslak Firebase’e kaydedildi. Hiçbiri otomatik yayımlanmadı.');
+      setNotice(savedCount + ' taslak Supabase’e kaydedildi. Hiçbiri otomatik yayımlanmadı.');
     } catch {
       if (alive.current) setNotice(savedCount + ' taslak kaydedildi; kalanlar kaydedilemedi. Kalan içerik ekranda korunuyor. Yetki ve bağlantıyı kontrol edin.');
     } finally { if (alive.current) setSaving(false); }
@@ -245,7 +245,7 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
           const legacy = questionBankService.getAll().filter(q => q.isCustom && auditQuestion(q).errors.length === 0);
           const known = new Set(allKnown.map(questionVisualKey));
           const items = legacy.filter(q => { const k = questionVisualKey(q); if (known.has(k)) return false; known.add(k); return true; }).map(q => ({ ...q, id: crypto.randomUUID(), status: 'draft' as const }));
-          setBatch(prev => [...items, ...prev]); setSection('compose'); setNotice(items.length + ' eski cihaz taslağı inceleme için alındı. Firebase’e kaydetmeden bulutta görünmez.');
+          setBatch(prev => [...items, ...prev]); setSection('compose'); setNotice(items.length + ' eski cihaz taslağı inceleme için alındı. Supabase’e kaydetmeden bulutta görünmez.');
         }}>Bu cihazdaki eski taslakları al</button>}
       </aside>
       {active && report ? <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 space-y-6">
