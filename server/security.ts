@@ -3,8 +3,9 @@ import { getApps, initializeApp, type App } from 'firebase-admin/app';
 import { getAppCheck } from 'firebase-admin/app-check';
 import { getAuth, type DecodedIdToken } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
+import { hasAuthorizedProfileRole, type AppRole } from './authorization';
 
-export type AppRole = 'student' | 'parent' | 'admin';
+export type { AppRole } from './authorization';
 
 export interface AuthenticatedRequest extends Request {
   authUser?: DecodedIdToken;
@@ -80,7 +81,7 @@ export function requireProfileRole(...roles: AppRole[]) {
       const uid = req.authUser.uid;
       const cached = roleCache.get(uid);
       if (cached && cached.expiresAt > Date.now()) {
-        if (!roles.includes(cached.role as AppRole)) {
+        if (!hasAuthorizedProfileRole(uid, { id: uid, role: cached.role }, req.authUser, roles)) {
           return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmuyor.' });
         }
         return next();
@@ -88,7 +89,7 @@ export function requireProfileRole(...roles: AppRole[]) {
 
       const snapshot = await getAdminDb().doc(`users/${uid}`).get();
       const profile = snapshot.data();
-      if (!profile || profile.id !== uid || !roles.includes(profile.role)) {
+      if (!hasAuthorizedProfileRole(uid, profile, req.authUser, roles)) {
         return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmuyor.' });
       }
       
@@ -103,7 +104,7 @@ export function requireProfileRole(...roles: AppRole[]) {
 export function requireRole(...roles: AppRole[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const role = req.authUser?.role as AppRole | undefined;
-    if (!role || !roles.includes(role)) {
+    if (!role || !roles.includes(role) || (role === 'admin' && req.authUser?.email_verified !== true)) {
       return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmuyor.' });
     }
     return next();

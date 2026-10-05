@@ -6,6 +6,7 @@ import {
   browserSessionPersistence,
   setPersistence,
   signInWithEmailAndPassword,
+  signOut as firebaseSignOut,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { dataService } from '../../../services/data-service';
@@ -26,32 +27,6 @@ import {
   ShieldCheck,
   CheckCircle2
 } from 'lucide-react';
-
-const OWNER_ADMIN_EMAIL = 'muratteknofest@gmail.com';
-
-function createOwnerAdminProfile(uid: string, email: string): UserProfile {
-  const now = Date.now();
-  return {
-    id: uid,
-    email,
-    name: 'ZekaPark Yönetici',
-    role: 'admin',
-    avatar: '👨‍💻',
-    level: 1,
-    xp: 0,
-    streak: 0,
-    lastActiveDate: new Date(now).toISOString(),
-    dailyGoalMinutes: 20,
-    todayMinutesSpent: 0,
-    soundEnabled: true,
-    createdAt: now,
-    updatedAt: now,
-    totalPoints: 0,
-    claimedStreakDays: [],
-    totalQuestionsSolved: 0,
-    resolvedMistakesCount: 0,
-  };
-}
 
 interface LoginFormProps {
   selectedRole: UserRole;
@@ -79,7 +54,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const handleQuickDemo = (role: UserRole) => {
+  const handleQuickDemo = (role: 'student' | 'parent') => {
     sound.playClick();
     setSelectedRole(role);
     setErrorMessage(null);
@@ -138,9 +113,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       sound.playSuccess();
       setSuccessToast('Veli portalı demo modu ile giriş yapıldı.');
       setTimeout(() => onLoginSuccess('parent', demoProfile), 300);
-    } else {
-      setIdentifier(OWNER_ADMIN_EMAIL);
-      setPassword('Mu7203397.Mu9486635.');
     }
   };
 
@@ -172,57 +144,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         loginEmail = studentCodeToEmail(loginEmail);
       }
 
-      // Master Admin Authentication Path for Project Owner
-      if (loginEmail.toLowerCase() === OWNER_ADMIN_EMAIL.toLowerCase() && password === 'Mu7203397.Mu9486635.') {
-        let adminUid = 'admin_muratteknofest';
-        try {
-          await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
-          let cred;
-          try {
-            cred = await signInWithEmailAndPassword(auth, loginEmail, password);
-          } catch {
-            try {
-              const { createUserWithEmailAndPassword } = await import('firebase/auth');
-              cred = await createUserWithEmailAndPassword(auth, loginEmail, password);
-            } catch {
-              const { signInAnonymously } = await import('firebase/auth');
-              cred = await signInAnonymously(auth).catch(() => null);
-            }
-          }
-          if (cred?.user?.uid) {
-            adminUid = cred.user.uid;
-          }
-        } catch (e) {
-          console.warn('Admin auth session note:', e);
-        }
-
-        const ownerProfile = createOwnerAdminProfile(adminUid, OWNER_ADMIN_EMAIL);
-        try {
-          const userDocRef = doc(db, 'users', adminUid);
-          await setDoc(userDocRef, ownerProfile, { merge: true });
-        } catch {}
-
-        dataService.loginAs('admin', ownerProfile);
-        loginLocally(ownerProfile);
-        sound.playSuccess();
-        setSuccessToast('Yönetici girişi başarılı! Yönlendiriliyorsunuz...');
-        
-        setTimeout(() => {
-          onLoginSuccess('admin', ownerProfile);
-        }, 300);
-        return;
-      }
-
       await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
       
-      let credential;
-      try {
-        credential = await signInWithEmailAndPassword(auth, loginEmail, password);
-      } catch (signInError: any) {
-        throw signInError;
+      const credential = await signInWithEmailAndPassword(auth, loginEmail, password);
+      if (selectedRole === 'admin') {
+        const token = await credential.user.getIdTokenResult(true);
+        if (!credential.user.emailVerified || token.claims.role !== 'admin') {
+          throw new Error('ADMIN_ACCESS_DENIED');
+        }
       }
-
-      const emailLower = (credential.user.email || loginEmail).toLowerCase();
 
       // Non-blocking verification notice if email is not verified
       if (!isManagedStudentEmail(credential.user.email) && !credential.user.emailVerified) {
@@ -234,6 +164,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
       let loggedInProfile: UserProfile;
 
+      if (selectedRole === 'admin' && !profileSnapshot.exists()) {
+        throw new Error('ADMIN_ACCESS_DENIED');
+      }
       if (!profileSnapshot.exists()) {
         // Self-heal: create standard profile if document is missing
         loggedInProfile = {
@@ -263,10 +196,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         loggedInProfile = profileSnapshot.data() as UserProfile;
       }
 
-      // Force admin role for the owner email if not already set
-      if (emailLower === OWNER_ADMIN_EMAIL.toLowerCase() && loggedInProfile.role !== 'admin') {
-        loggedInProfile.role = 'admin';
-        await setDoc(userDocRef, { ...loggedInProfile, role: 'admin' }, { merge: true }).catch(() => {});
+      if (loggedInProfile.id !== credential.user.uid ||
+          (selectedRole === 'admin' && loggedInProfile.role !== 'admin')) {
+        throw new Error('ADMIN_ACCESS_DENIED');
       }
 
       // Respect the user's selected role: allow student and parent to use the same family email
@@ -324,6 +256,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       }, 400);
       
     } catch (error: any) {
+      if (selectedRole === 'admin') {
+        await firebaseSignOut(auth).catch(() => undefined);
+        dataService.logout();
+      }
       sound.playError();
       console.warn('Login notice (handled):', error.code || error.message);
       let errMsg = 'Giriş yapılamadı.';
@@ -337,6 +273,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
          errMsg = 'Ağ bağlantısı kurulamadı. Lütfen internet bağlantınızı kontrol edin.';
       } else if (error.message === 'PROFILE_NOT_FOUND') {
          errMsg = 'Kullanıcı profili bulunamadı. Lütfen yeni kayıt oluşturun veya destek ile iletişime geçin.';
+      } else if (error.message === 'ADMIN_ACCESS_DENIED') {
+          errMsg = 'Yönetici yetkisi doğrulanamadı. Hesap yetkilerini kontrol edin.';
       } else if (error.message === 'ROLE_MISMATCH') {
          errMsg = 'Seçtiğiniz rol bu hesap ile eşleşmiyor.';
       } else if (error.message === 'EMAIL_NOT_VERIFIED_SENT') {
@@ -497,7 +435,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                   ? 'Örn: DENIZ2026 veya ogrenci@zekapark.com'
                   : selectedRole === 'parent'
                   ? 'Örn: veli@zekapark.com'
-                  : 'Örn: muratteknofest@gmail.com'
+                  : 'Örn: yonetici@ornek.com'
               }
               className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm font-medium text-slate-900 placeholder:text-slate-400 bg-white focus:outline-hidden focus:ring-2 transition-all ${
                 fieldErrors.identifier
@@ -616,7 +554,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           <span className="text-[11px] font-semibold text-slate-500">Hızlı Deneme & Önizleme:</span>
           <span className="text-[10px] text-slate-400">Tek tıkla giriş</span>
         </div>
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-2 gap-1.5">
           <button
             type="button"
             onClick={() => handleQuickDemo('student')}
@@ -632,14 +570,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           >
             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
             <span>Veli Demo</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickDemo('admin')}
-            className="py-1.5 px-2 rounded-lg border border-purple-200 bg-purple-50/50 hover:bg-purple-100/60 text-purple-700 text-[11px] font-bold transition-colors cursor-pointer flex items-center justify-center gap-1"
-          >
-            <CheckCircle2 className="w-3 h-3 text-purple-600" />
-            <span>Yönetici Doldur</span>
           </button>
         </div>
       </div>

@@ -25,7 +25,7 @@ const LoginPage = lazy(() => import('./components/LoginPage').then((m) => ({ def
 
 export default function App() {
   // Auth context
-  const { currentUser: authUser, userProfile, loading: authLoading, logout: authLogout, switchRole: authSwitchRole } = useAuth();
+  const { currentUser: authUser, userProfile, isAdminAuthorized, loading: authLoading, logout: authLogout, switchRole: authSwitchRole } = useAuth();
   
   // We don't block the entire app while auth is loading anymore
   // so we can show a nice skeleton for the dashboard.
@@ -180,7 +180,7 @@ export default function App() {
     }
 
     // Admin route protection
-    if (targetRoute === 'admin' && u.role !== 'admin' && u.email !== 'muratteknofest@gmail.com') {
+    if (targetRoute === 'admin' && !isAdminAuthorized) {
       setCurrentRoute(u.role === 'parent' ? 'parent' : 'dashboard');
       syncState();
       return;
@@ -191,6 +191,7 @@ export default function App() {
   };
 
   const handleSwitchRole = (newRole: UserRole) => {
+    if (newRole === 'admin' && !isAdminAuthorized) return;
     sound.playClick();
     const updated = { ...currentUser, role: newRole };
     setCurrentUser(updated);
@@ -320,7 +321,7 @@ export default function App() {
               />
             )}
 
-            {currentRoute === 'admin' && (
+            {currentRoute === 'admin' && isAdminAuthorized && (
               <AdminPanelView />
             )}
 

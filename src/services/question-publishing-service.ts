@@ -13,27 +13,17 @@ export interface StoredQuestion extends BaseQuestion {
 }
 const clean = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 
-async function ensureAdminAuth(): Promise<void> {
-  if (!auth.currentUser) {
-    if ((auth as any).authStateReady) {
-      await (auth as any).authStateReady().catch(() => {});
-    }
-  }
-  if (!auth.currentUser) {
-    try {
-      const { signInWithEmailAndPassword } = await import('firebase/auth');
-      await signInWithEmailAndPassword(auth, 'muratteknofest@gmail.com', 'Mu7203397.Mu9486635.');
-    } catch {
-      try {
-        const { signInAnonymously } = await import('firebase/auth');
-        await signInAnonymously(auth);
-      } catch {}
-    }
-  }
+async function requireAdminUser() {
+  if (typeof auth.authStateReady === 'function') await auth.authStateReady();
+  const user = auth.currentUser;
+  if (!user || !user.emailVerified) throw new Error('Yönetici oturumu gerekli.');
+  const token = await user.getIdTokenResult(true);
+  if (token.claims.role !== 'admin') throw new Error('Yönetici yetkisi gerekli.');
+  return user;
 }
 
 export async function loadQuestionLibrary(): Promise<StoredQuestion[]> {
-  await ensureAdminAuth();
+  await requireAdminUser();
 
   try {
     const snapshot = await getDocs(collection(db, 'questions'));
@@ -58,10 +48,8 @@ export async function saveEditorialQuestion(
   expectedRevision: number,
   confirmedReview: boolean,
 ): Promise<StoredQuestion> {
-  await ensureAdminAuth();
-  
-  const user = auth.currentUser;
-  const uid = user?.uid || 'admin_muratteknofest';
+  const user = await requireAdminUser();
+  const uid = user.uid;
   const report = auditQuestion(question);
   if (report.errors.length) throw new Error(report.errors.join(' '));
   if (status === 'published' && !confirmedReview) throw new Error('Yayımlamadan önce yönerge, cevap ve görselleri inceleyip onaylayın.');
@@ -81,14 +69,10 @@ export async function saveEditorialQuestion(
 
   if (status !== 'published') delete stored.reviewedBy;
 
-  // 1. Live write to Firestore
-  try {
-    await setDoc(ref, stored, { merge: true });
-  } catch (err) {
-    console.warn('Live Firestore save notice:', err);
-  }
+  // Confirm the remote write before updating the local editor cache.
+  await setDoc(ref, stored, { merge: true });
 
-  // 2. Also update questionBankService so all admin panels stay synchronized
+  // Keep admin panels synchronized after the confirmed remote write.
   questionBankService.createCustomQuestion(stored);
 
   return stored;
@@ -107,9 +91,7 @@ export async function loadPublishedQuestions(): Promise<BaseQuestion[]> {
 }
 
 export async function clearAllFirestoreQuestions(): Promise<number> {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Bu işlem için yönetici oturumu gerekli.');
-  
+  await requireAdminUser();
   const snapshot = await getDocs(collection(db, 'questions'));
   if (snapshot.empty) return 0;
 
