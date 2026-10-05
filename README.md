@@ -48,16 +48,17 @@ frontend and add the Sites origin to `CORS_ALLOWED_ORIGINS` on the server.
 - Browser clients can create only their own non-admin profile.
 - Parent/child account pairs use separate Firebase Auth sessions and passwords;
   the rules accept a parent link only after the student profile points back to it.
-- Admin access normally requires an `admin` Firebase custom claim. The initial
-  verified owner account (`iomegagame@gmail.com`) is explicitly allowlisted in
-  Firestore rules so it can bootstrap administration when Admin SDK access is not
-  available. A profile document alone never grants admin access.
+- Admin access requires a verified email, a Firebase `role=admin` custom claim
+  and a matching `users/{uid}` profile with `role=admin`. Browser code cannot
+  provision an administrator.
 - User progress is stored under `users/{uid}/private/state`; linked parents have
   read-only access to their child's profile and progress.
 
-Deploy `firestore.rules` before enabling real accounts. Existing admin accounts
-must receive their matching custom claim through a trusted admin script or the
-Firebase Admin SDK.
+Before deploying these rules, rotate any administrator password previously
+embedded in the browser bundle, revoke its refresh tokens, and provision the
+known administrator UID's claim and matching profile through a trusted Admin
+SDK environment. Verify a fresh administrator login before removing the old
+rules. See `docs/admin-security-rollout.md` for the release sequence.
 
 ## Deployment
 

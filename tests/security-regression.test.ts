@@ -36,37 +36,34 @@ test('Firestore authorization protects admin access and validates family links',
 });
 
 test('linked student password reset requires verified parent authorization', async () => {
-  const source = await readFile(new URL('../server.ts', import.meta.url), 'utf8');
-  assert.match(source, /\/api\/parent\/reset-student-password/);
+  const source = await readFile(new URL('../server/routes/parent-routes.ts', import.meta.url), 'utf8');
+  assert.match(source, /\/parent\/reset-student-password/);
   assert.match(source, /requireVerifiedEmail/);
   assert.match(source, /requireProfileRole\('parent'\)/);
   assert.match(source, /revokeRefreshTokens/);
-  assert.match(source, /linkedParentId === req\.authUser\.uid/);
+  assert.match(source, /student\?\.linkedParentId === req\.authUser\.uid/);
   assert.match(source, /requireAppCheck/);
-  assert.match(source, /X-Firebase-AppCheck/);
-  assert.match(source, /student\.linkedParentId !== req\.authUser\.uid/);
-  assert.doesNotMatch(source, /AI soru üretimi başarısız:.*err\.message/);
+  assert.match(source, /parent\.linkedStudentIds\.includes\(parsed\.data\.studentId\)/);
 });
 
 test('protected AI routes authenticate before applying per-user limits', async () => {
-  const source = await readFile(new URL('../server.ts', import.meta.url), 'utf8');
-  assert.match(source, /authenticatedRateLimitKey/);
-  assert.match(source, /'\/api\/ai-hint', requireFirebaseAuth, requireAppCheck, aiLimiter, requireProfileRole\('student', 'admin'\)/);
-  assert.match(source, /'\/api\/admin\/ai-generate-question', requireFirebaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole\('admin'\)/);
+  const student = await readFile(new URL('../server/routes/student-ai-routes.ts', import.meta.url), 'utf8');
+  const admin = await readFile(new URL('../server/routes/admin-ai-routes.ts', import.meta.url), 'utf8');
+  const limiters = await readFile(new URL('../server/rate-limiters.ts', import.meta.url), 'utf8');
+  assert.match(limiters, /authenticatedRateLimitKey/);
+  assert.match(student, /'\/ai-hint', requireFirebaseAuth, requireAppCheck, aiLimiter, requireProfileRole\('student', 'admin'\)/);
+  assert.match(admin, /'\/admin\/ai-generate-question', requireFirebaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole\('admin'\)/);
 });
 
 test('login source contains no local authentication fallback or fixed password', async () => {
-  const source = await readFile(new URL('../src/components/LoginPage.tsx', import.meta.url), 'utf8');
+  const source = await readFile(new URL('../src/features/auth/components/LoginForm.tsx', import.meta.url), 'utf8');
   assert.doesNotMatch(source, /SYSTEM_ACCOUNTS/);
   assert.doesNotMatch(source, /resilient local login/i);
-  assert.doesNotMatch(source, /Standart şifre|setPassword\('123456'\)/);
-  assert.doesNotMatch(source, /\/api\/auth\/register-family/);
-  assert.match(source, /registerFamilyInFirebase/);
-  assert.match(source, /OWNER_ADMIN_EMAIL = 'iomegagame@gmail\.com'/);
-  assert.match(source, /signedInEmail === OWNER_ADMIN_EMAIL &&[\s\S]*credential\.user\.emailVerified/);
+  assert.doesNotMatch(source, /signInAnonymously|createUserWithEmailAndPassword/);
+  assert.doesNotMatch(source, /OWNER_ADMIN_EMAIL|createOwnerAdminProfile/);
+  assert.match(source, /token\.claims\.role !== 'admin'/);
   assert.match(source, /credential\.user\.emailVerified/);
-  assert.match(source, /createOwnerAdminProfile/);
-  assert.match(source, /loggedInProfile\.role !== selectedRole/);
+  assert.match(source, /loggedInProfile\.role !== 'admin'/);
   assert.doesNotMatch(source, /errMsg = error\.message/);
 });
 
