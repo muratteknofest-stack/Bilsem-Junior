@@ -7,22 +7,7 @@ import { clearUserProgress } from './persistence-service';
 
 export function syncUserFromFirebase(profile: UserProfile | null) {
   if (profile) {
-    // Preserve currently active family role (student or parent) if the user has chosen one
-    const raw = safeStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-    let activeRole = profile.role;
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (parsed.role && (parsed.role === 'student' || parsed.role === 'parent')) {
-          activeRole = parsed.role;
-        }
-      } catch {}
-    }
-    const merged: UserProfile = {
-      ...profile,
-      role: activeRole,
-    };
-    safeStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(merged));
+    safeStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(profile));
     safeStorage.setItem(STORAGE_KEYS.AUTH_SESSION, 'true');
   } else {
     safeStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
@@ -102,7 +87,9 @@ export function loginAs(role: UserRole, customUser?: UserProfile): UserProfile {
     throw new Error('Kimliği doğrulanmamış yerel oturum engellendi.');
   }
 
-  // Allow family account to access either student or parent role smoothly
+  if (!customUser.id?.startsWith('demo_') && role !== customUser.role) {
+    throw new Error('Hesap rolü profil ile eşleşmiyor.');
+  }
   const user: UserProfile = {
     ...customUser,
     role: role,
@@ -129,6 +116,7 @@ export function loginAs(role: UserRole, customUser?: UserProfile): UserProfile {
 
 export function switchActiveRole(newRole: UserRole): UserProfile {
   const current = getCurrentUser();
+  if (!current.id?.startsWith('demo_')) throw new Error('Gerçek hesap rolü değiştirilemez.');
   const updatedUser: UserProfile = {
     ...current,
     role: newRole,
