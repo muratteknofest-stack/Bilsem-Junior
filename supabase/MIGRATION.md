@@ -5,7 +5,8 @@ application runtime or cancel the Firebase project. Keep Firebase available
 until application authentication, API calls, and data reads use Supabase and
 production counts have been reconciled.
 
-1. Create a Supabase project. Apply `migrations/202610050001_initial.sql`.
+1. Use the Zekapark Supabase project (`guixuelbwqgurvmuhkve`). The initial
+   schema was applied as migration `20261005170918_initial_zekapark_supabase_schema`.
 2. Export Firestore collections as JSON objects keyed by document ID:
    `users`, `privateStates` (the `users/{uid}/private/state` documents),
    `questions`, `practiceSessions`, `testAttempts`,
