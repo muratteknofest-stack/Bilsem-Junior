@@ -40,3 +40,8 @@ Thumbs.db
 coverage/
 htmlcov/
 *.coverage
+# Private migration exports
+private-export/
+firestore-export.json
+auth-users.json
+uid-map.json

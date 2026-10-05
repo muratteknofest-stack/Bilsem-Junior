@@ -7,7 +7,11 @@ production counts have been reconciled.
 
 1. Use the Zekapark Supabase project (`guixuelbwqgurvmuhkve`). The initial
    schema was applied as migration `20261005170918_initial_zekapark_supabase_schema`.
-2. Export Firestore collections as JSON objects keyed by document ID:
+2. With Firebase Application Default Credentials, run
+   `FIREBASE_PROJECT_ID=... FIREBASE_DATABASE_ID=... node scripts/export-firebase-for-supabase.mjs ./private-export`.
+   The script creates `firestore-export.json` and `auth-users.json` with
+   owner-only permissions and refuses to overwrite them. Export Firestore
+   collections as JSON objects keyed by document ID:
    `users`, `privateStates` (the `users/{uid}/private/state` documents),
    `questions`, `practiceSessions`, `testAttempts`,
    `ai_generation_jobs`, `ai_generation_logs`, and `securityEvents`.
