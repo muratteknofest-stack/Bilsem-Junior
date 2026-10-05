@@ -1,7 +1,9 @@
 import { createClient, type User as SupabaseUser } from '@supabase/supabase-js';
 
-const url = import.meta.env.VITE_SUPABASE_URL;
-const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const url = import.meta.env.VITE_SUPABASE_URL || 'https://guixuelbwqgurvmuhkve.supabase.co';
+// This project-scoped publishable key is safe in the browser bundle. Never
+// substitute the service role key here.
+const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_-XGuPVsHBRLFb6PkIEuY8A_bz6vLcdz';
 if (!url || !key) throw new Error('Supabase bağlantı ayarları eksik.');
 
 let rememberSession = true;
