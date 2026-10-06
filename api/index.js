@@ -1,9 +1,8 @@
-import type { IncomingMessage, ServerResponse } from 'node:http';
-import { createApiApp } from '../server/api-app';
+import { createApiApp } from '../server/generated-api.mjs';
 
 const app = createApiApp();
 
-export default function handler(req: IncomingMessage, res: ServerResponse) {
+export default function handler(req, res) {
   const url = new URL(req.url || '/', 'http://localhost');
   const route = url.searchParams.get('__path');
   if (route !== null) {
