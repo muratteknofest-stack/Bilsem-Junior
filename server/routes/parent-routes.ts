@@ -5,7 +5,7 @@ import {
   getAdminAuth,
   getAdminDb,
   requireAppCheck,
-  requireFirebaseAuth,
+  requireSupabaseAuth,
   requireProfileRole,
   requireVerifiedEmail,
   escapeHtml,
@@ -26,7 +26,7 @@ const linkedStudentPasswordSchema = z.object({
 
 parentRoutes.post(
   '/parent/reset-student-password',
-  requireFirebaseAuth,
+  requireSupabaseAuth,
   requireAppCheck,
   accountSecurityLimiter,
   requireVerifiedEmail,
@@ -68,7 +68,7 @@ const reportSchema = z.object({
   studentId: z.string().min(1).max(128),
 }).strict();
 
-parentRoutes.post('/send-weekly-report', requireFirebaseAuth, requireAppCheck, reportLimiter, requireVerifiedEmail, requireProfileRole('parent'), async (req: AuthenticatedRequest, res) => {
+parentRoutes.post('/send-weekly-report', requireSupabaseAuth, requireAppCheck, reportLimiter, requireVerifiedEmail, requireProfileRole('parent'), async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = reportSchema.safeParse(req.body);
     if (!parsed.success || !req.authUser) {

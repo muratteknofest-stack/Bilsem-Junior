@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { UserRole, UserProfile } from '../../../types';
 import { sound } from '../../../lib/sound';
-import { registerFamilyInFirebase } from '../../../services/family-registration-service';
+import { registerFamilyInSupabase } from '../../../services/family-registration-service';
 import { apiUrl } from '../../../lib/api-client';
 import { FooterInfoModal, FooterModalTopic } from '../../../components/FooterInfoModal';
 import {
@@ -104,7 +104,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
     setIsSubmitting(true);
     try {
       if (selectedRole === 'parent') {
-        const result = await registerFamilyInFirebase({
+        const result = await registerFamilyInSupabase({
           parentEmail: regParentEmail.trim(),
           parentPassword: regPassword,
           studentPassword: regStudentPassword,

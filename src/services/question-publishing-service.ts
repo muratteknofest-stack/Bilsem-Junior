@@ -36,7 +36,7 @@ export async function loadQuestionLibrary(): Promise<StoredQuestion[]> {
       return liveDocs;
     }
   } catch (err) {
-    console.warn('Firestore library load notice:', err);
+    console.warn('Supabase library load notice:', err);
   }
 
   // Fallback to local question bank so editor never blocks
@@ -91,17 +91,17 @@ export async function loadPublishedQuestions(): Promise<BaseQuestion[]> {
       return snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as BaseQuestion).filter(q => auditQuestion(q).errors.length === 0);
     }
   } catch (err) {
-    console.warn('Firestore published load notice:', err);
+    console.warn('Supabase published load notice:', err);
   }
   return questionBankService.getAll().filter(q => q.status === 'published' || (!q.isCustom && !q.status));
 }
 
-export async function clearAllFirestoreQuestions(): Promise<number> {
+export async function clearAllSupabaseQuestions(): Promise<number> {
   await requireAdminUser();
   const snapshot = await getDocs(collection(db, 'questions'));
   if (snapshot.empty) return 0;
 
-  // Firestore batch delete
+  // Supabase batch delete
   const batch = writeBatch(db);
   let count = 0;
   snapshot.docs.forEach((document) => {

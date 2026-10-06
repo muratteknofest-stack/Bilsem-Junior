@@ -12,9 +12,16 @@ React, Vite, Express, Supabase Auth/Postgres and Gemini based learning app.
 4. Run `npm run dev`. The Express service hosts `/api/*` and the app.
 5. Run `npm run build` and the focused migration tests before deployment.
 
-The existing Supabase project is `guixuelbwqgurvmuhkve`. Apply committed
-migrations in version order and check Supabase Security Advisor. Existing
-profiles, users, questions and private state must be preserved.
+For a new Supabase project, apply [supabase/schema.sql](supabase/schema.sql)
+once before registering accounts. The schema enables RLS for every application
+table and grants browser access only to the necessary roles. Configure the
+project's publishable key and URL in both the Vite and API environments.
+Set Auth's site URL, redirects and SMTP delivery before inviting users. On a
+trusted server, run `node scripts/bootstrap-admin.mjs admin@example.com` with
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in the server environment. The
+script sends an invitation, sets the server-controlled `app_metadata.role` and
+creates the matching admin profile. The publishable key cannot perform this
+step. Invite only the verified administrator for the new project.
 
 ## Hosting
 
@@ -37,10 +44,16 @@ If an AI endpoint is unavailable, the existing deterministic teaching
 fallback runs in the client. The parent can use the device share flow when
 email service is unavailable.
 
-## Firebase cutover
+## Supabase-only start
 
-See [supabase/MIGRATION.md](supabase/MIGRATION.md). Export Firebase Auth and
-Firestore privately, reconcile every UID to the corresponding Supabase Auth
-UUID, dry-run the importer and verify per-feature data before changing the
-live site. Retire Firebase only after the app, API and user sessions pass
-end-to-end checks.
+New accounts use Supabase Auth and Postgres directly. Firebase data and Google
+account access are not required. The previous ZekaPark Supabase project and its
+records remain untouched during a new-project installation. Old accounts are
+not automatically available in the new project; their owners create new
+accounts, or an administrator migrates them separately after identity checks.
+
+Set Auth site/redirect URLs and email delivery in Supabase. Deploy the Express
+API with its server-only environment variables, then set `VITE_API_BASE_URL`
+to its origin for the Vite build. Check parent registration, email confirmation,
+student login, progress sync, question publishing, and admin AI using dedicated
+test accounts before replacing the live deployment.

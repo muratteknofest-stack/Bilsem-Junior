@@ -17,10 +17,10 @@ export function usePublishedQuestions() {
     });
 
     // 2. Subscribe to published questions for instant test distribution
-    let unsubFirestore: (() => void) | null = null;
+    let unsubSupabase: (() => void) | null = null;
     if (typeof window !== 'undefined') {
       try {
-        unsubFirestore = onSnapshot(
+        unsubSupabase = onSnapshot(
           query(collection(db, 'questions'), where('status', '==', 'published')),
           (snapshot) => {
             const items = snapshot.docs
@@ -40,7 +40,7 @@ export function usePublishedQuestions() {
 
     return () => {
       unsubService();
-      if (unsubFirestore) unsubFirestore();
+      if (unsubSupabase) unsubSupabase();
     };
   }, []);
 

@@ -10,7 +10,7 @@ export function clearUserProgress() {
   USER_PROGRESS_KEYS.forEach((key) => safeStorage.removeItem(key));
 }
 
-export async function persistUserStateToFirebase() {
+export async function persistUserStateToSupabase() {
   const currentUser = auth.currentUser;
   if (!currentUser) return;
 
@@ -28,7 +28,7 @@ export function scheduleProgressPersist() {
   if (!auth.currentUser) return;
   if (persistTimer) clearTimeout(persistTimer);
   persistTimer = setTimeout(() => {
-    void persistUserStateToFirebase().catch((error) => {
+    void persistUserStateToSupabase().catch((error) => {
       console.error('Kullanıcı ilerlemesi senkronize edilemedi.', error);
     });
   }, 400);
@@ -44,7 +44,7 @@ export function removeProgressItem(key: (typeof USER_PROGRESS_KEYS)[number]) {
   scheduleProgressPersist();
 }
 
-export async function hydrateUserStateFromFirebase(): Promise<void> {
+export async function hydrateUserStateFromSupabase(): Promise<void> {
   const currentUser = auth.currentUser;
   if (!currentUser) return;
 

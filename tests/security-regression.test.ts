@@ -51,8 +51,8 @@ test('linked student password reset requires verified parent authorization', asy
 test('protected AI routes authenticate before applying per-user limits', async () => {
   const source = await readFile(new URL('../server.ts', import.meta.url), 'utf8');
   assert.match(source, /authenticatedRateLimitKey/);
-  assert.match(source, /'\/api\/ai-hint', requireFirebaseAuth, requireAppCheck, aiLimiter, requireProfileRole\('student', 'admin'\)/);
-  assert.match(source, /'\/api\/admin\/ai-generate-question', requireFirebaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole\('admin'\)/);
+  assert.match(source, /'\/api\/ai-hint', requireSupabaseAuth, requireAppCheck, aiLimiter, requireProfileRole\('student', 'admin'\)/);
+  assert.match(source, /'\/api\/admin\/ai-generate-question', requireSupabaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole\('admin'\)/);
 });
 
 test('login source contains no local authentication fallback or fixed password', async () => {
@@ -61,7 +61,7 @@ test('login source contains no local authentication fallback or fixed password',
   assert.doesNotMatch(source, /resilient local login/i);
   assert.doesNotMatch(source, /Standart şifre|setPassword\('123456'\)/);
   assert.doesNotMatch(source, /\/api\/auth\/register-family/);
-  assert.match(source, /registerFamilyInFirebase/);
+  assert.match(source, /registerFamilyInSupabase/);
   assert.match(source, /OWNER_ADMIN_EMAIL = 'iomegagame@gmail\.com'/);
   assert.match(source, /signedInEmail === OWNER_ADMIN_EMAIL &&[\s\S]*credential\.user\.emailVerified/);
   assert.match(source, /credential\.user\.emailVerified/);

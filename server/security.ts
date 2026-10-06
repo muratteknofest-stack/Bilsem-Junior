@@ -46,7 +46,7 @@ export function getAdminAuth() {
   };
 }
 
-export async function requireFirebaseAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+export async function requireSupabaseAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const match = (req.header('authorization') || '').match(/^Bearer\s+(.+)$/i);
   if (!match) return res.status(401).json({ error: 'Oturum doğrulaması gerekli.' });
   const { data, error } = await getServiceClient().auth.getUser(match[1]);

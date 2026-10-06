@@ -3,7 +3,7 @@ import { z } from 'zod';
 import {
   getAdminDb,
   requireAppCheck,
-  requireFirebaseAuth,
+  requireSupabaseAuth,
   requireProfileRole,
   type AuthenticatedRequest,
 } from '../security';
@@ -52,7 +52,7 @@ async function getAiQueue() {
   }
 }
 
-adminAiRoutes.post('/admin/ai-generate-question', requireFirebaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole('admin'), async (req: AuthenticatedRequest, res) => {
+adminAiRoutes.post('/admin/ai-generate-question', requireSupabaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole('admin'), async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = aiQuestionGenerateSchema.safeParse(req.body);
     if (!parsed.success || !req.authUser) {
@@ -123,7 +123,7 @@ adminAiRoutes.post('/admin/ai-generate-question', requireFirebaseAuth, requireAp
   }
 });
 
-adminAiRoutes.post('/admin/ai-bulk-generate', requireFirebaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole('admin'), async (req: AuthenticatedRequest, res) => {
+adminAiRoutes.post('/admin/ai-bulk-generate', requireSupabaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole('admin'), async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = aiBulkGenerateSchema.safeParse(req.body);
     if (!parsed.success || !req.authUser) {
@@ -152,7 +152,7 @@ adminAiRoutes.post('/admin/ai-bulk-generate', requireFirebaseAuth, requireAppChe
   }
 });
 
-adminAiRoutes.get('/admin/ai-generation-job/:jobId', requireFirebaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole('admin'), async (req: AuthenticatedRequest, res) => {
+adminAiRoutes.get('/admin/ai-generation-job/:jobId', requireSupabaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole('admin'), async (req: AuthenticatedRequest, res) => {
   try {
     const queue = await getAiQueue();
     if (!queue) {
@@ -190,7 +190,7 @@ adminAiRoutes.get('/admin/ai-generation-job/:jobId', requireFirebaseAuth, requir
   }
 });
 
-adminAiRoutes.post('/admin/ai-question-review', requireFirebaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole('admin'), async (req: AuthenticatedRequest, res) => {
+adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole('admin'), async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = aiQuestionReviewSchema.safeParse(req.body);
     if (!parsed.success || !req.authUser) {

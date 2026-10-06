@@ -6,7 +6,7 @@ import {
   browserSessionPersistence,
   setPersistence,
   signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
+  signOut as supabaseSignOut,
 } from '../../../lib/supabase';
 import { doc, getDoc } from '../../../lib/supabase-data';
 import { dataService } from '../../../services/data-service';
@@ -169,7 +169,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         email: credential.user.email || loginEmail };
 
       dataService.loginAs(selectedRole, activeProfile);
-      dataService.hydrateUserStateFromFirebase().catch(console.error);
+      dataService.hydrateUserStateFromSupabase().catch(console.error);
       loginLocally(activeProfile);
       sound.playSuccess();
       setSuccessToast(
@@ -186,7 +186,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       
     } catch (error: any) {
       if (selectedRole === 'admin') {
-        await firebaseSignOut(auth).catch(() => undefined);
+        await supabaseSignOut(auth).catch(() => undefined);
         dataService.logout();
       }
       sound.playError();

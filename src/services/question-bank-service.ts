@@ -93,7 +93,7 @@ class QuestionBankService {
 
     this.initialized = true;
 
-    // Real-time live Firestore synchronization
+    // Real-time live Supabase synchronization
     if (typeof window !== 'undefined') {
       try {
         onSnapshot(
@@ -110,11 +110,11 @@ class QuestionBankService {
             }
           },
           (err) => {
-            console.warn('Firestore live sync notice (fallback to local cache):', err);
+            console.warn('Supabase live sync notice (fallback to local cache):', err);
           }
         );
       } catch (err) {
-        console.warn('Firestore snapshot setup skipped:', err);
+        console.warn('Supabase snapshot setup skipped:', err);
       }
     }
   }
@@ -198,7 +198,7 @@ class QuestionBankService {
     this.save();
     this.notify();
 
-    // Live sync to Firestore
+    // Live sync to Supabase
     if (syncToCloud) {
       void setDoc(doc(db, 'questions', publishedQ.id), publishedQ).catch((err) => {
         console.warn('Soru Supabase ile senkronize edilemedi:', err);
@@ -275,10 +275,10 @@ class QuestionBankService {
     this.save();
     this.notify();
 
-    // Live Sync to Firebase Firestore
+    // Live Sync to Supabase
     try {
       setDoc(doc(db, 'questions', newQuestion.id), newQuestion).catch((err) => {
-        console.warn('Live Firestore sync error (addQuestion):', err);
+        console.warn('Live Supabase sync error (addQuestion):', err);
       });
     } catch {}
 
@@ -301,7 +301,7 @@ class QuestionBankService {
     this.save();
     this.notify();
 
-    // Live Batch Sync to Firebase Firestore
+    // Live Batch Sync to Supabase
     if (typeof window !== 'undefined') {
       try {
         for (let i = 0; i < preparedQuestions.length; i += 400) {
@@ -311,11 +311,11 @@ class QuestionBankService {
             batch.set(doc(db, 'questions', q.id), q);
           });
           batch.commit().catch((err) => {
-            console.warn('Live Firestore batch sync error (addBulkQuestions):', err);
+            console.warn('Live Supabase batch sync error (addBulkQuestions):', err);
           });
         }
       } catch (e) {
-        console.warn('Firebase batch error:', e);
+        console.warn('Supabase batch error:', e);
       }
     }
 
@@ -338,10 +338,10 @@ class QuestionBankService {
     this.save();
     this.notify();
 
-    // Live Sync update to Firebase Firestore
+    // Live Sync update to Supabase
     try {
       setDoc(doc(db, 'questions', id), updated, { merge: true }).catch((err) => {
-        console.warn('Live Firestore update error:', err);
+        console.warn('Live Supabase update error:', err);
       });
     } catch {}
 
@@ -355,10 +355,10 @@ class QuestionBankService {
       this.save();
       this.notify();
 
-      // Live delete from Firebase Firestore
+      // Live delete from Supabase
       try {
         deleteDoc(doc(db, 'questions', id)).catch((err) => {
-          console.warn('Live Firestore delete error:', err);
+          console.warn('Live Supabase delete error:', err);
         });
       } catch {}
 
@@ -375,7 +375,7 @@ class QuestionBankService {
     this.save();
     this.notify();
 
-    // Live Batch Delete from Firebase Firestore
+    // Live Batch Delete from Supabase
     if (typeof window !== 'undefined') {
       try {
         for (let i = 0; i < ids.length; i += 400) {
@@ -385,11 +385,11 @@ class QuestionBankService {
             batch.delete(doc(db, 'questions', id));
           });
           batch.commit().catch((err) => {
-            console.warn('Live Firestore batch delete error:', err);
+            console.warn('Live Supabase batch delete error:', err);
           });
         }
       } catch (e) {
-        console.warn('Firebase batch delete error:', e);
+        console.warn('Supabase toplu silme hatası:', e);
       }
     }
 
@@ -420,10 +420,10 @@ class QuestionBankService {
     this.save();
     this.notify();
 
-    // Live Sync clone to Firebase Firestore
+    // Live Sync clone to Supabase
     try {
       setDoc(doc(db, 'questions', clone.id), clone).catch((err) => {
-        console.warn('Live Firestore duplicate error:', err);
+        console.warn('Live Supabase duplicate error:', err);
       });
     } catch {}
 
@@ -436,7 +436,7 @@ class QuestionBankService {
     this.save();
     this.notify();
 
-    // Live Wipe from Firebase Firestore
+    // Live Wipe from Supabase
     if (typeof window !== 'undefined' && existingIds.length > 0) {
       try {
         getDocs(collection(db, 'questions')).then((snapshot) => {

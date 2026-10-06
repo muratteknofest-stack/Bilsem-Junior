@@ -16,7 +16,7 @@ export interface FamilyRegistrationResult {
   verificationSent: boolean;
 }
 
-export async function registerFamilyInFirebase(input: FamilyRegistrationInput): Promise<FamilyRegistrationResult> {
+export async function registerFamilyInSupabase(input: FamilyRegistrationInput): Promise<FamilyRegistrationResult> {
   const response = await fetch(apiUrl('/api/register-family'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

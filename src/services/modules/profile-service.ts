@@ -5,7 +5,7 @@ import { STORAGE_KEYS } from './shared';
 import { UserProfile, UserRole } from '../../types';
 import { clearUserProgress } from './persistence-service';
 
-export function syncUserFromFirebase(profile: UserProfile | null) {
+export function syncUserFromSupabase(profile: UserProfile | null) {
   if (profile) {
     safeStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(profile));
     safeStorage.setItem(STORAGE_KEYS.AUTH_SESSION, 'true');
@@ -15,7 +15,7 @@ export function syncUserFromFirebase(profile: UserProfile | null) {
   }
 }
 
-export async function _updateFirebaseProfile(updates: Partial<UserProfile>) {
+export async function _updateSupabaseProfile(updates: Partial<UserProfile>) {
   if (!auth.currentUser) return;
   try {
     const ref = doc(db, 'users', auth.currentUser.uid);
@@ -24,7 +24,7 @@ export async function _updateFirebaseProfile(updates: Partial<UserProfile>) {
     );
     await updateDoc(ref, { ...definedUpdates, updatedAt: Date.now() });
   } catch (e) {
-    console.error('Failed to update firebase', e);
+    console.error('Supabase profil güncellemesi başarısız:', e);
   }
 }
 
@@ -65,7 +65,7 @@ export function setCurrentUser(user: UserProfile) {
     todaySessionsCompleted, soundEnabled, totalQuestionsSolved, resolvedMistakesCount,
     featuredBadgeIds, reminderConfig,
   } = user;
-  void _updateFirebaseProfile({
+  void _updateSupabaseProfile({
     avatar, level, xp, streak, longestStreak, lastActiveDate, todayPracticed,
     streakFreezeCount, claimedStreakDays, weeklyStreakHistory, dailyGoalMinutes,
     todayMinutesSpent, dailyGoalQuestions, todayQuestionsSolved, dailyGoalSessions,

@@ -4,7 +4,7 @@ import App from './App';
 import './index.css';
 import { AuthProvider } from './contexts/AuthContext';
 
-// Safely handle unhandled background Firebase Auth network rejections
+// Safely handle unhandled background Supabase Auth network rejections
 if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event) => {
     const reason = event.reason;
