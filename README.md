@@ -12,8 +12,10 @@ React, Vite, Express, Supabase Auth/Postgres and Gemini based learning app.
 4. Run `npm run dev`. The Express service hosts `/api/*` and the app.
 5. Run `npm run build` and the focused migration tests before deployment.
 
-For a new Supabase project, apply [supabase/schema.sql](supabase/schema.sql)
-once before registering accounts. The schema enables RLS for every application
+The new Supabase project is `vehhvsdkifwstbjhnhao`. Its fresh schema is
+already applied. For another new project, apply
+[supabase/schema.sql](supabase/schema.sql) once before registering accounts.
+The schema enables RLS for every application
 table and grants browser access only to the necessary roles. Configure the
 project's publishable key and URL in both the Vite and API environments.
 Set Auth's site URL, redirects and SMTP delivery before inviting users. On a

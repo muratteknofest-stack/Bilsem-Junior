@@ -213,8 +213,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const validatedData = parseResult.data;
 
-    if (!currentUser || !userProfile) throw new Error('Profil güncellemek için oturum açın.');
     const updatedAt = Date.now();
+    if (userProfile?.id.startsWith('demo_')) {
+      const updated = { ...userProfile, ...validatedData, updatedAt };
+      setUserProfile(updated);
+      dataService.setCurrentUser(updated);
+      return;
+    }
+    if (!currentUser || !userProfile) throw new Error('Profil güncellemek için oturum açın.');
     await updateDoc(doc(db, 'users', currentUser.uid), { ...validatedData, updatedAt });
     const updated = { ...userProfile, ...validatedData, updatedAt };
     setUserProfile(updated);

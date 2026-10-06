@@ -203,14 +203,14 @@ create policy private_state_delete on public.user_private_state for delete to au
   using (user_id = (select auth.uid()));
 
 create policy questions_read on public.questions for select to authenticated
-  using (status = 'published' or (select auth.jwt()->'app_metadata'->>'role') = 'admin');
+  using (status = 'published' or ((select auth.jwt())->'app_metadata'->>'role') = 'admin');
 create policy questions_insert on public.questions for insert to authenticated
-  with check ((select auth.jwt()->'app_metadata'->>'role') = 'admin');
+  with check (((select auth.jwt())->'app_metadata'->>'role') = 'admin');
 create policy questions_update on public.questions for update to authenticated
-  using ((select auth.jwt()->'app_metadata'->>'role') = 'admin')
-  with check ((select auth.jwt()->'app_metadata'->>'role') = 'admin');
+  using (((select auth.jwt())->'app_metadata'->>'role') = 'admin')
+  with check (((select auth.jwt())->'app_metadata'->>'role') = 'admin');
 create policy questions_delete on public.questions for delete to authenticated
-  using ((select auth.jwt()->'app_metadata'->>'role') = 'admin');
+  using (((select auth.jwt())->'app_metadata'->>'role') = 'admin');
 
 create policy practice_read on public.practice_sessions for select to authenticated
   using (user_id = (select auth.uid()) or exists (
