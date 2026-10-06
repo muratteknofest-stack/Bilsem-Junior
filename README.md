@@ -27,12 +27,14 @@ step. Invite only the verified administrator for the new project.
 
 ## Hosting
 
-A static Vite host needs a separately deployed Express API for family
-registration, parent password reset, weekly email reports and AI endpoints.
-Set `VITE_API_BASE_URL` to that API origin at **build time** and add the site
-origin to the API's `CORS_ALLOWED_ORIGINS`. Configure Supabase Auth's site and
-redirect URLs for the deployed origin. The frontend can otherwise use
-Supabase Auth and Postgres directly under RLS.
+On Vercel, `api/index.ts` exposes the Express API through a Function and
+`vercel.json` routes `/api/*` to it. Set `VITE_SUPABASE_URL` and
+`VITE_SUPABASE_PUBLISHABLE_KEY` for the Vite build, plus server-only
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` for the Function. Leave
+`VITE_API_BASE_URL` empty for this same-origin deployment. Other static hosts
+need a separately deployed Express API and `VITE_API_BASE_URL` set to its
+origin at build time. Configure Supabase Auth's site and redirect URLs for
+the deployed origin. The frontend accesses Supabase under RLS.
 
 The API uses the service role key only on the server. It checks bearer tokens,
 profile roles and, for admin routes, the server controlled Auth
@@ -55,7 +57,7 @@ not automatically available in the new project; their owners create new
 accounts, or an administrator migrates them separately after identity checks.
 
 Set Auth site/redirect URLs and email delivery in Supabase. Deploy the Express
-API with its server-only environment variables, then set `VITE_API_BASE_URL`
-to its origin for the Vite build. Check parent registration, email confirmation,
+API with its server-only environment variables. Set `VITE_API_BASE_URL` only
+for a separate API origin. Check parent registration, email confirmation,
 student login, progress sync, question publishing, and admin AI using dedicated
 test accounts before replacing the live deployment.
