@@ -47,6 +47,9 @@ import { WeeklyProgressChartCard } from './WeeklyProgressChartCard';
 import { TodayPersonalizedStudyPlanCard } from './TodayPersonalizedStudyPlanCard';
 import { WeeklyChallengesView } from './WeeklyChallengesView';
 import { WeeklyChallengesBannerCard } from './WeeklyChallengesBannerCard';
+import { StudentStudyHub } from './StudentStudyHub';
+import { levelProgress } from '../features/student/study-hub-model';
+import { getStudyFavorites, saveStudyFavorites } from '../services/student-preferences-service';
 import {
   CardSkeleton,
   ChartSkeleton,
@@ -140,7 +143,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   user,
   dailyPlan,
   masteries = [],
-  mistakes = [],
+  mistakes,
   onUserUpdate,
   onStartPractice,
   onStartAdaptive,
@@ -149,11 +152,15 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   onNavigate
 }) => {
   const activeUser = user || dataService.getCurrentUser();
-  const activeMistakes = mistakes && mistakes.length > 0 ? mistakes : dataService.getMistakes();
+  const activeMistakes = mistakes ?? dataService.getMistakes();
   
   const [activeTab, setActiveTab] = useState<'modes' | 'plan' | 'skills' | 'challenges' | 'progress'>('modes');
   const [copiedStudentCode, setCopiedStudentCode] = useState(false);
   const [cheeredUser, setCheeredUser] = useState<string | null>(null);
+  const [favorites, setFavorites] = useState(getStudyFavorites);
+  const [skillSearch, setSkillSearch] = useState('');
+  const [skillFilter, setSkillFilter] = useState<'all' | 'practice' | 'new'>('all');
+  useEffect(() => { setFavorites(getStudyFavorites()); }, [activeUser.id]);
 
   const studentCodeDisplay = activeUser.studentCode || '';
 
@@ -198,17 +205,15 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     return list;
   }, [masteries]);
 
-  // Weakest category for adaptive prompt
-  const weakestSkill = useMemo(() => {
-    if (safeMasteries.length === 0) return null;
-    return [...safeMasteries].sort((a, b) => (a.mastery || 0) - (b.mastery || 0))[0];
-  }, [safeMasteries]);
-
-  // Next level XP calculations
-  const nextLvlXp = activeUser.level * 250;
-  const currentXp = activeUser.xp || 0;
-  const progressPct = Math.min(100, Math.round((currentXp / nextLvlXp) * 100));
-  const remainingXp = Math.max(0, nextLvlXp - currentXp);
+  const visibleMasteries = safeMasteries.filter(m => {
+    const matches = m.categoryName.toLocaleLowerCase('tr-TR').includes(skillSearch.trim().toLocaleLowerCase('tr-TR'));
+    return matches && (skillFilter === 'all' || (skillFilter === 'new' ? !m.attemptCount : m.attemptCount > 0 && m.mastery < 80));
+  });
+  const xpProgress = levelProgress(activeUser.xp);
+  const nextLvlXp = xpProgress.level * 250;
+  const currentXp = xpProgress.xp;
+  const progressPct = xpProgress.percent;
+  const remainingXp = xpProgress.remaining;
 
   // Time based greeting
   const greeting = useMemo(() => {
@@ -297,7 +302,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 {/* Level Badge on Avatar */}
                 <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white text-xs font-black px-2.5 py-0.5 rounded-full ring-4 ring-white dark:ring-zinc-900 shadow-md flex items-center gap-0.5">
                   <Star className="w-3 h-3 fill-amber-300 text-amber-300" />
-                  <span>{activeUser.level || 1}</span>
+                  <span>{xpProgress.level}</span>
                 </div>
               </motion.div>
 
@@ -307,7 +312,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     {greeting.text}, {activeUser.name?.split(' ')[0] || 'Zeka Şampiyonu'} {greeting.emoji}
                   </h1>
                   <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-800/50">
-                    <Sparkles className="w-3 h-3" /> Seviye {activeUser.level || 1}
+                    <Sparkles className="w-3 h-3" /> Seviye {xpProgress.level}
                   </span>
                 </div>
 
@@ -319,7 +324,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 <div className="mt-3 sm:mt-4 max-w-md w-full">
                   <div className="flex justify-between text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">
                     <span className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-bold">
-                      <Zap className="w-3.5 h-3.5 fill-current" /> Seviye {activeUser.level || 1}
+                      <Zap className="w-3.5 h-3.5 fill-current" /> Seviye {xpProgress.level}
                     </span>
                     <span>
                       <strong className="text-zinc-900 dark:text-white font-bold">{currentXp}</strong> / {nextLvlXp} XP 
@@ -358,7 +363,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                       )}
                     </motion.button>
                   )}
-                  <button
+                  {activeUser.id.startsWith('demo_') && <button
                     type="button"
                     onClick={() => {
                       sound.playClick();
@@ -369,7 +374,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                   >
                     <Users className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                     <span>Veli Portalı</span>
-                  </button>
+                  </button>}
                 </div>
 
               </div>
@@ -426,54 +431,16 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </div>
         </motion.section>
 
-        {/* Dynamic AI Weakness Callout Banner */}
-        {weakestSkill && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.1 }}
-            className="p-5 sm:p-6 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 dark:from-amber-950/40 dark:via-orange-950/20 dark:to-zinc-900 border border-amber-300/60 dark:border-amber-500/30 rounded-3xl relative overflow-hidden backdrop-blur-md shadow-sm"
-          >
-            <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
-            
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/20">
-                  <Brain className="w-6 h-6 animate-bounce" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800">
-                      Adaptif Yapay Zeka Tespiti
-                    </span>
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                      Başarı: %{Math.round(weakestSkill.mastery || 0)}
-                    </span>
-                  </div>
-                  <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 mt-1 font-['Outfit',sans-serif]">
-                    {weakestSkill.categoryName} Alanında Hızlı Gelişim Fırsatı!
-                  </h3>
-                  <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 mt-0.5 max-w-xl">
-                    Son analizlere göre bu kategoriyi pekiştirmek BİLSEM denemelerindeki puanını doğrudan %15 artırabilir.
-                  </p>
-                </div>
-              </div>
-
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => {
-                  sound.playClick();
-                  onStartPractice(weakestSkill.category);
-                }}
-                className="w-full sm:w-auto px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs sm:text-sm shadow-md shadow-amber-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0"
-              >
-                <Play className="w-4 h-4 fill-current" />
-                {weakestSkill.categoryName.split(' ')[0]} Antrenmanına Başla
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
+        <StudentStudyHub
+          masteries={safeMasteries}
+          unresolved={unresolvedMistakesCount}
+          savedExam={dataService.getActiveExam()}
+          favorites={favorites}
+          onFavoriteChange={value => setFavorites(saveStudyFavorites(value))}
+          onPractice={onStartPractice}
+          onMistakes={onOpenMistakes}
+          onResumeExam={onStartExam}
+        />
 
         {/* Modern Segmented Navigation Bar */}
         <div className="flex p-1.5 bg-zinc-200/70 dark:bg-zinc-900/80 rounded-2xl w-full max-w-full overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] border border-zinc-200/80 dark:border-zinc-800/80 backdrop-blur-md shadow-inner gap-1 flex-nowrap md:w-fit">
@@ -860,7 +827,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     <div>
                       <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-50 font-['Outfit',sans-serif] flex items-center gap-2">
                         <Brain className="w-5 h-5 text-purple-500" />
-                        8 Bilişsel Zeka Alanı
+                        {safeMasteries.length} Bilişsel Çalışma Alanı
                       </h2>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                         Her alandaki ustalık dereceni gör ve istediğin alanda anında antrenmana başla
@@ -869,7 +836,21 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {safeMasteries.map((m: SkillMastery, i: number) => {
+                    <div className="sm:col-span-2 space-y-3">
+                      <label htmlFor="student-skill-search" className="sr-only">Çalışma alanı ara</label>
+                      <input id="student-skill-search" type="search" value={skillSearch} onChange={event => setSkillSearch(event.target.value)} placeholder="Çalışma alanı ara…"
+                        className="min-h-12 w-full rounded-xl border border-zinc-200 bg-white px-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-zinc-700 dark:bg-zinc-900" />
+                      <div className="flex flex-wrap gap-2" aria-label="Çalışma alanı filtreleri">
+                        {([['all', 'Tüm alanlar'], ['practice', 'Pekiştireceklerim'], ['new', 'Henüz keşfetmediklerim']] as const).map(([value, label]) => <button type="button" key={value} aria-pressed={skillFilter === value} onClick={() => setSkillFilter(value)}
+                          className={`min-h-10 rounded-xl border px-3 py-2 text-xs font-bold ${skillFilter === value ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200' : 'border-zinc-200 bg-white text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300'}`}>{label}</button>)}
+                      </div>
+                      <p role="status" className="text-xs text-zinc-500">{visibleMasteries.length} alan gösteriliyor</p>
+                    </div>
+                    {visibleMasteries.length === 0 && <div className="sm:col-span-2 rounded-2xl border border-dashed border-zinc-300 p-8 text-center dark:border-zinc-700">
+                      <p className="text-sm font-semibold">Bu seçimle eşleşen alan yok.</p>
+                      <button type="button" onClick={() => { setSkillSearch(''); setSkillFilter('all'); }} className="mt-3 min-h-11 rounded-xl bg-indigo-50 px-4 text-sm font-bold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200">Tüm alanları göster</button>
+                    </div>}
+                    {visibleMasteries.map((m: SkillMastery, i: number) => {
                       const cfg = CATEGORY_STYLE_CONFIG[m.category] || {
                         color: 'text-indigo-600 dark:text-indigo-400',
                         bgLight: 'bg-indigo-50 dark:bg-indigo-950/30',
@@ -895,7 +876,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                 <Icon className="w-5 h-5" />
                               </div>
                               <span className={`text-xs font-black px-2.5 py-1 rounded-full ${cfg.bgLight} ${cfg.color} border ${cfg.borderLight}`}>
-                                %{masteryPct} Ustalık
+                                {m.attemptCount > 0 ? `%${masteryPct} Ustalık` : 'Yeni alan'}
                               </span>
                             </div>
 
@@ -905,7 +886,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
                             <div className="flex items-center justify-between text-[11px] text-zinc-400 mt-2 mb-1.5 font-medium">
                               <span>{m.attemptCount || 0} Çözülen Soru</span>
-                              <span className="text-emerald-600 dark:text-emerald-400 font-bold">%{m.accuracy || 0} Doğruluk</span>
+                              <span className="text-emerald-600 dark:text-emerald-400 font-bold">{m.attemptCount > 0 ? `%${m.accuracy || 0} Doğruluk` : 'İlk adımını at'}</span>
                             </div>
 
                             <div className="h-2 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">

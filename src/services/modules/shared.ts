@@ -54,6 +54,7 @@ export const STORAGE_KEYS = {
   ACTIVE_EXAM: 'yapyap_active_exam',
   WEEKLY_QUESTIONS: 'yapyap_weekly_questions_v1',
   WEEKLY_CATEGORIES: 'bilsem_weekly_category_challenges_v1',
+  STUDY_FAVORITES: 'zekapark_study_favorites_v1',
 };
 
 export const USER_PROGRESS_KEYS = [
@@ -65,6 +66,7 @@ export const USER_PROGRESS_KEYS = [
   STORAGE_KEYS.ACTIVE_EXAM,
   STORAGE_KEYS.WEEKLY_QUESTIONS,
   STORAGE_KEYS.WEEKLY_CATEGORIES,
+  STORAGE_KEYS.STUDY_FAVORITES,
 ] as const;
 
 export const INITIAL_SKILL_MASTERIES: SkillMastery[] = [
