@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
 import { AuthProvider } from './contexts/AuthContext';
+import { PasswordResetPage } from './features/auth/components/PasswordResetPage';
+import { isRecoveryRedirect } from './lib/supabase';
 
 // Safely handle unhandled background Supabase Auth network rejections
 if (typeof window !== 'undefined') {
@@ -22,8 +24,12 @@ if (typeof window !== 'undefined') {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
+    {window.location.pathname === '/reset-password' || isRecoveryRedirect ? (
+      <PasswordResetPage />
+    ) : (
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    )}
   </StrictMode>,
 );

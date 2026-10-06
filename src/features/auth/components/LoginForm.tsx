@@ -138,6 +138,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     }
 
     setIsSubmitting(true);
+    let authenticated = false;
     try {
       let loginEmail = identifier.trim();
       if (!loginEmail.includes('@')) {
@@ -147,6 +148,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
       
       const credential = await signInWithEmailAndPassword(auth, loginEmail, password);
+      authenticated = true;
       if (selectedRole === 'admin') {
         const token = await credential.user.getIdTokenResult(true);
         if (!credential.user.emailVerified || token.claims.role !== 'admin') {
@@ -154,9 +156,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         }
       }
 
-      // Non-blocking verification notice if email is not verified
       if (!isManagedStudentEmail(credential.user.email) && !credential.user.emailVerified) {
-        sendEmailVerification(credential.user).catch(() => {});
+        await sendEmailVerification(credential.user).catch(() => {});
+        throw new Error('EMAIL_NOT_VERIFIED_SENT');
       }
 
       const userDocRef = doc(db, 'users', credential.user.uid);
@@ -185,7 +187,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       }, 400);
       
     } catch (error: any) {
-      if (selectedRole === 'admin') {
+      if (authenticated) {
         await supabaseSignOut(auth).catch(() => undefined);
         dataService.logout();
       }

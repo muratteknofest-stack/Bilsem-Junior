@@ -9,6 +9,7 @@ export interface FamilyRegistrationInput {
   studentPassword: string;
   grade: number;
   examFocus: string;
+  consentAccepted: boolean;
 }
 export interface FamilyRegistrationResult {
   parentProfile: UserProfile;

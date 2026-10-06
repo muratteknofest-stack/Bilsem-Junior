@@ -24,9 +24,38 @@ const browserStorage = {
   },
 };
 
+export const isRecoveryRedirect = typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.hash.slice(1)).get('type') === 'recovery';
+
 export const supabase = createClient(url, key, {
   auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true, storage: browserStorage },
 });
+
+let recoverySessionReady = false;
+const recoveryListeners = new Set<() => void>();
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'PASSWORD_RECOVERY' && session) {
+    recoverySessionReady = true;
+    recoveryListeners.forEach(listener => listener());
+  } else if (event === 'SIGNED_OUT') {
+    recoverySessionReady = false;
+  }
+});
+
+export function onPasswordRecovery(listener: () => void) {
+  recoveryListeners.add(listener);
+  if (recoverySessionReady) listener();
+  return () => { recoveryListeners.delete(listener); };
+}
+
+export async function updateRecoveredPassword(password: string) {
+  if (!recoverySessionReady) throw new Error('Sıfırlama bağlantısı geçersiz veya süresi dolmuş.');
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw error;
+  const { error: signOutError } = await supabase.auth.signOut();
+  if (signOutError) throw new Error('Şifre değişti ancak oturum kapatılamadı. Lütfen çıkış yapın.');
+  recoverySessionReady = false;
+}
 
 export interface User {
   uid: string;
@@ -120,7 +149,7 @@ export async function sendEmailVerification(_user: User) {
 }
 export async function sendPasswordResetEmail(_auth: typeof auth, email: string) {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/`,
+    redirectTo: `${window.location.origin}/reset-password`,
   });
   if (error) throw error;
 }

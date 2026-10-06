@@ -11,6 +11,7 @@ import { auth, db } from '../lib/platform';
 import { UserProfile, UserRole } from '../types';
 import { dataService } from '../services/data-service';
 import { userProfileUpdateSchema, formatZodError } from '../lib/validations';
+import { isManagedStudentEmail } from '../lib/account-identifiers';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -77,6 +78,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentUser(user);
         setIsAdminAuthorized(false);
         if (user) {
+          if (!isManagedStudentEmail(user.email) && !user.emailVerified) {
+            await supabaseSignOut(auth).catch(() => undefined);
+            dataService.logout();
+            if (isMounted) setUserProfile(null);
+            if (isMounted) setLoading(false);
+            return;
+          }
           // Validate the profile in Supabase before exposing an authenticated session.
           const userDocRef = doc(db, 'users', user.uid);
           let adminAuthorized = false;

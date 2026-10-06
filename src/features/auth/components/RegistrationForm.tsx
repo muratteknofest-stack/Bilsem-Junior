@@ -112,6 +112,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
           studentName: regStudentName.trim(),
           grade: regGrade,
           examFocus: regExamFocus,
+          consentAccepted: regKvkkConsent,
         });
 
         sound.playSuccess();
@@ -130,6 +131,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
           body: JSON.stringify({
             email, password: regPassword, studentName: regStudentName.trim(),
             grade: regGrade, examFocus: regExamFocus,
+            consentAccepted: regKvkkConsent,
           }),
         });
         const result = await response.json().catch(() => ({}));

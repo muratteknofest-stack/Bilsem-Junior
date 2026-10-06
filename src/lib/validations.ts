@@ -6,7 +6,7 @@ import { z } from 'zod';
 // Passwords must be at least 8 characters and contain a letter and a number.
 export const passwordStrengthRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&._-]{8,}$/;
 
-const strongPasswordSchema = z
+export const strongPasswordSchema = z
   .string()
   .min(8, 'Şifreniz en az 8 karakter olmalıdır.')
   .max(128, 'Şifreniz en fazla 128 karakter olabilir.')
@@ -154,6 +154,14 @@ export const forgotPasswordSchema = z.object({
 });
 
 export type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
+
+export const passwordResetSchema = z.object({
+  password: strongPasswordSchema,
+  confirmPassword: z.string().min(1, 'Şifrenizi tekrar giriniz.'),
+}).refine(value => value.password === value.confirmPassword, {
+  message: 'Şifreler eşleşmiyor.',
+  path: ['confirmPassword'],
+});
 
 /**
  * User Profile Update Schema
