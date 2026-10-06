@@ -11,10 +11,14 @@ the former email-based admin exception and allow server-side session revocation.
 1. Export Firebase from a trusted machine with Application Default Credentials:
    `FIREBASE_PROJECT_ID=... FIREBASE_DATABASE_ID=... node scripts/export-firebase-for-supabase.mjs ./private-export`.
    This produces private `firestore-export.json` and `auth-users.json`.
-2. Reconcile each Firebase Auth UID with the correct existing or newly
-   provisioned Supabase Auth UUID. Save an object of old UID → new UUID as
-   `uid-map.json`. Do not infer identities solely from a display name.
-3. Run `node scripts/import-firestore-to-supabase.mjs private-export/firestore-export.json uid-map.json`.
+2. Set the **server-only** `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, then
+   run `node scripts/reconcile-auth-users.mjs private-export/auth-users.json private-export/firestore-export.json private-export/uid-map.json`.
+   The script proposes old UID → existing Supabase UUID matches only for unique,
+   verified email addresses and compatible profile roles. Review its private
+   `.unresolved.json` report; provision missing accounts and verify every
+   unresolved identity before completing `uid-map.json`. Do not infer identities
+   solely from display names. The script never creates accounts or sends email.
+3. Run `node scripts/import-firestore-to-supabase.mjs private-export/firestore-export.json private-export/uid-map.json`.
    This validates every mapped family link and record without writing.
 4. Review the export counts against the existing Supabase project. Back up
    existing rows, then set server-only `SUPABASE_URL` and
