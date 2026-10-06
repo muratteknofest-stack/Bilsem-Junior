@@ -103,19 +103,26 @@ supabase.auth.onAuthStateChange((_event, session) => {
 
 export function onAuthStateChanged(_auth: typeof auth, onChange: (user: User | null) => void, onError?: (error: Error) => void) {
   let active = true;
+  let authEventSeen = false;
+  const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    authEventSeen = true;
+    const user = session?.user ? asUser(session.user) : null;
+    auth.currentUser = user;
+    // Auth callbacks run under the Supabase Auth lock. Profile reads and
+    // sign-out in onChange must start after the callback has returned.
+    setTimeout(() => {
+      if (active) onChange(user);
+    }, 0);
+  });
   supabase.auth.getUser().then(({ data, error }) => {
-    if (!active) return;
-    if (error) onError?.(error);
+    if (!active || authEventSeen) return;
+    if (error && error.name !== 'AuthSessionMissingError') onError?.(error);
     else {
       auth.currentUser = data.user ? asUser(data.user) : null;
       onChange(auth.currentUser);
     }
-  }).catch(error => onError?.(error));
-  const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-    if (active) {
-      auth.currentUser = session?.user ? asUser(session.user) : null;
-      onChange(auth.currentUser);
-    }
+  }).catch(error => {
+    if (active && !authEventSeen) onError?.(error);
   });
   return () => { active = false; listener.subscription.unsubscribe(); };
 }
