@@ -1,5 +1,5 @@
 import type { BaseQuestion } from '../../types';
-import { solveBoard, type Board, VERIFIED_TYPES } from './professional-engine';
+import { solveBoard, type Board, STUDENT_TYPES } from './professional-engine';
 import { independentlySolveBoard } from './independent-board-solver';
 import { generateVisualFingerprint as fingerprint } from './fingerprint';
 
@@ -22,7 +22,7 @@ export function solveQuestion(q: BaseQuestion): UniversalSolverResult {
   });
   try {
     if (!q || !Array.isArray(q.options) || q.options.length !== 4 || q.options.some(o => !o)) return failure('Dört geçerli seçenek gerekli.');
-    if ((q.visualConfig as Record<string, unknown> | null)?.displayMode !== 'verified_board' || !VERIFIED_TYPES.includes(q.type)) return failure('Bu gösterim için bağımsız kanıtlayıcı yok; inceleme gerekli.');
+    if ((q.visualConfig as Record<string, unknown> | null)?.displayMode !== 'verified_board' || !STUDENT_TYPES.includes(q.type)) return failure('Bu gösterim için bağımsız kanıtlayıcı yok; inceleme gerekli.');
     const board = q.visualConfig as Board;
     const expected = solveBoard(board);
     const independent = independentlySolveBoard(board);

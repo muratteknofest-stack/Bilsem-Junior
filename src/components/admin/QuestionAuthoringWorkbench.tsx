@@ -4,7 +4,7 @@ import type { BaseQuestion, DifficultyLevel, QuestionType } from '../../types';
 import { QUESTION_TYPE_LABELS, COGNITIVE_CATEGORY_LABELS } from '../../types';
 import { ALL_QUESTION_TYPES, generateQuestionByType } from '../../features/questions/generators';
 import { GRADE_CONFIGS } from '../../features/questions/grade-config';
-import { VERIFIED_TYPES } from '../../features/questions/professional-engine';
+import { STUDENT_TYPES as VERIFIED_TYPES } from '../../features/questions/professional-engine';
 import { auditQuestion, questionVisualKey, questionContentKey } from '../../features/questions/quality';
 import { QuestionRenderer } from '../../features/questions/renderers/QuestionRenderer';
 import { OptionRenderer } from '../../features/questions/renderers/OptionRenderer';
@@ -215,7 +215,7 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
       <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
         <label className="text-sm text-slate-300 space-y-2"><span>Hedef sınıf</span><select className={field} value={grade} disabled={running} onChange={e => { const g = Number(e.target.value) as Grade; setGrade(g); setDifficulty(GRADE_CONFIGS[g].defaultDifficulty); }}>{[1, 2, 3, 4].map(g => <option key={g} value={g}>{g}. sınıf</option>)}</select></label>
         <label className="col-span-2 xl:col-span-2 text-sm text-slate-300 space-y-2"><span>Soru ailesi</span><select className={field} value={type} disabled={running} onChange={e => setType(e.target.value as QuestionType | 'mixed')}>
-          <option value="mixed">Karma · otomatik çözümlenebilen türler</option><optgroup label="Bağımsız cevap doğrulamalı · 11 tür">{VERIFIED_TYPES.map(t => <option key={t} value={t}>{QUESTION_TYPE_LABELS[t]}</option>)}</optgroup>
+          <option value="mixed">Karma · otomatik çözümlenebilen türler</option><optgroup label={`Bağımsız cevap doğrulamalı · ${VERIFIED_TYPES.length} tür`}>{VERIFIED_TYPES.map(t => <option key={t} value={t}>{QUESTION_TYPE_LABELS[t]}</option>)}</optgroup>
           <optgroup label="Diğer türler · eğitmen denetimi gerekli">{ALL_QUESTION_TYPES.filter(t => !VERIFIED_TYPES.includes(t)).map(t => <option key={t} value={t}>{QUESTION_TYPE_LABELS[t]}</option>)}</optgroup>
         </select></label>
         <label className="text-sm text-slate-300 space-y-2"><span>Zorluk</span><select className={field} value={difficulty} disabled={running} onChange={e => setDifficulty(Number(e.target.value) as DifficultyLevel)}>{[1, 2, 3, 4, 5, 6].map(d => <option key={d} value={d}>{d} / 6</option>)}</select></label>

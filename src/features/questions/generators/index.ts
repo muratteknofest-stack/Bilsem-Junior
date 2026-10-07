@@ -5,7 +5,8 @@ import { SeededRNG } from '../../../lib/rng';
 import { validateQuestion } from '../validator';
 import { runMultiPassQuestionTests, stampQuestionVerification } from '../verifier';
 import { GRADE_CONFIGS } from '../grade-config';
-import { VERIFIED_TYPES, generateProfessionalQuestion } from '../professional-engine';
+import { VERIFIED_TYPES, RECOVERED_TYPES, STUDENT_TYPES, generateProfessionalQuestion } from '../professional-engine';
+import { generateRecoveredQuestion } from '../recovered-engine';
 
 // Import all 18 procedural generators
 import { generateOddOneOutQuestion } from './odd-one-out';
@@ -126,9 +127,10 @@ export const CATEGORY_TYPES_MAP: Record<CognitiveCategory, QuestionType[]> = {
 };
 
 export const STUDENT_CATEGORY_TYPES: Partial<Record<CognitiveCategory, QuestionType[]>> = {
+  visual_perception: ['shape_combination'],
   pattern: ['visual_sequence'], matrix: ['matrix_2x2', 'matrix_3x3', 'raven_matrix'],
-  spatial: ['figure_rotation', 'mirror_reflection'], logic: ['logic_grid'],
-  attention: ['shape_counting'], numerical: ['number_pattern', 'operation_machine'], coding: ['symbol_coding'],
+  spatial: ['figure_rotation', 'mirror_reflection', 'symmetry_completion', 'direction_path'], logic: ['logic_grid'],
+  attention: ['shape_counting'], numerical: ['number_pattern', 'operation_machine', 'number_pyramid'], coding: ['symbol_coding'],
 };
 
 export function generateQuestionByType(
@@ -137,6 +139,11 @@ export function generateQuestionByType(
   difficulty: DifficultyLevel = 3,
   retryCount = 0
 ): BaseQuestion {
+  if (RECOVERED_TYPES.includes(type)) {
+    const question = generateRecoveredQuestion(type, seed, difficulty);
+    assertQuestionReadyForStudents(question);
+    return question;
+  }
   if (VERIFIED_TYPES.includes(type)) {
     const question = generateProfessionalQuestion(type, seed, difficulty);
     assertQuestionReadyForStudents(question);
@@ -278,7 +285,7 @@ export function generateQuestionByType(
       q = generateSpatialOrigamiQuestion(seed, difficulty);
       break;
     default:
-      q = generateVisualSequenceQuestion(seed, difficulty);
+      throw new Error('UNKNOWN_QUESTION_TYPE: Soru türü tanınmıyor.');
   }
 
   // IDs must remain unique across type, generator version, difficulty and seed.
@@ -302,6 +309,7 @@ export function generateQuestion(options: {
   type?: QuestionType;
 }): BaseQuestion {
   const seed = options.seed ?? Math.floor(Math.random() * 999999) + 1;
+  if (!Number.isSafeInteger(seed) || seed < 1 || options.targetGrade !== undefined && !isSchoolGrade(options.targetGrade) || options.difficulty !== undefined && (!Number.isInteger(options.difficulty) || options.difficulty < 1 || options.difficulty > 6)) throw new Error('INVALID_GENERATION_INPUT: Sınıf, zorluk veya tohum geçersiz.');
   const rng = new SeededRNG(seed);
   const difficulty = options.targetGrade ? gradeDifficulty(options.targetGrade, options.difficulty ?? 3) : options.difficulty ?? 3;
   const allowed = (type: QuestionType) => !(options.targetGrade === 1 && ['operation_machine', 'matrix_3x3', 'raven_matrix'].includes(type));
@@ -309,24 +317,33 @@ export function generateQuestion(options: {
   let chosenType: QuestionType;
 
   if (options.type) {
+    if (!STUDENT_TYPES.includes(options.type)) throw new Error('QUESTION_REVIEW_REQUIRED: Bu türün bağımsız doğrulaması henüz yok.');
+    if (options.category && options.category !== 'mixed' && !STUDENT_CATEGORY_TYPES[options.category]?.includes(options.type)) throw new Error('CATEGORY_MISMATCH: İstenen tür ve kategori uyuşmuyor.');
     if (!allowed(options.type)) throw new Error('Soru türü sınıf profilinde desteklenmiyor.');
     chosenType = options.type;
   } else if (options.category && options.category !== 'mixed') {
     const pool = (STUDENT_CATEGORY_TYPES[options.category] || []).filter(allowed);
-    chosenType = rng.pick(pool.length ? pool : VERIFIED_TYPES.filter(allowed));
+    if (!pool.length) throw new Error('CATEGORY_UNAVAILABLE: Bu kategoride doğrulanmış soru bulunmuyor.');
+    chosenType = rng.pick(pool);
   } else {
-    chosenType = rng.pick(VERIFIED_TYPES.filter(allowed));
+    chosenType = rng.pick(STUDENT_TYPES.filter(allowed));
   }
 
+  let lastFailure = '';
   for (let attempt = 0; attempt < 16; attempt++) {
-    const question = generateQuestionByType(chosenType, (seed + attempt * 10007) % 2147483647 || 1, difficulty);
-    if (isSchoolGrade(options.targetGrade)) {
-      question.targetGrade = options.targetGrade; question.targetGrades = [options.targetGrade];
-      question.ageGroup = options.targetGrade <= 2 ? '1-2' : '3-4';
+    try {
+      const question = generateQuestionByType(chosenType, (seed % 2147483647 + attempt * 10007) % 2147483647 || 1, difficulty);
+      if (isSchoolGrade(options.targetGrade)) {
+        question.targetGrade = options.targetGrade; question.targetGrades = [options.targetGrade];
+        question.ageGroup = options.targetGrade <= 2 ? '1-2' : '3-4';
+      }
+      if (isQuestionReadyForStudents(question)) return question;
+      lastFailure = 'Sınıf profili veya içerik kontrolü başarısız.';
+    } catch (error) {
+      lastFailure = error instanceof Error ? error.message : 'Üretim başarısız.';
     }
-    if (isQuestionReadyForStudents(question)) return question;
   }
-  throw new Error('QUESTION_REVIEW_REQUIRED: Sınıf profiline uygun soru üretilemedi.');
+  throw new Error('QUESTION_REVIEW_REQUIRED: 16 denemede doğrulanmış soru üretilemedi. ' + lastFailure);
 }
 
 export function generateQuestionForGrade(
@@ -335,11 +352,12 @@ export function generateQuestionForGrade(
   type?: QuestionType,
   difficulty?: DifficultyLevel
 ): BaseQuestion {
+  if (!isSchoolGrade(grade)) throw new Error('Hedef sınıf 1–4 olmalı.');
   const cfg = GRADE_CONFIGS[grade];
   const finalSeed = seed ?? Math.floor(Math.random() * 900000) + 100000;
   const rng = new SeededRNG(finalSeed);
 
-  const finalType = type ?? rng.pick(cfg.recommendedTypes.filter(t => VERIFIED_TYPES.includes(t)));
+  const finalType = type ?? rng.pick(cfg.recommendedTypes.filter(t => STUDENT_TYPES.includes(t)));
   const finalDifficulty = difficulty ?? cfg.defaultDifficulty;
 
   return generateQuestion({ type: finalType, seed: finalSeed, difficulty: finalDifficulty, targetGrade: grade });

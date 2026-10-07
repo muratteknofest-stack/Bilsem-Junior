@@ -65,8 +65,8 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
     // 1. Direct numerical or text badge (e.g. counting, equation, or number pattern)
     if (vd.textNumber !== undefined && vd.textNumber !== null) {
       return (
-        <div className="flex items-center justify-center w-full min-h-[60px] text-xl sm:text-2xl md:text-3xl font-black font-mono text-slate-800">
-          <span className="px-5 py-2.5 rounded-2xl bg-gradient-to-b from-white to-slate-50 border-2 border-slate-200 shadow-[0_4px_0_0_#cbd5e1]">
+        <div className={`flex items-center justify-center w-full min-w-0 min-h-[60px] font-bold text-slate-800 ${String(vd.textNumber).length > 8 ? 'text-sm sm:text-base text-center' : 'text-xl sm:text-2xl md:text-3xl font-mono'}`}>
+          <span className="max-w-full break-words px-3 py-2.5 rounded-2xl bg-gradient-to-b from-white to-slate-50 border-2 border-slate-200 shadow-[0_4px_0_0_#cbd5e1]">
             {vd.textNumber}
           </span>
         </div>

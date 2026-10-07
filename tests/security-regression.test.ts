@@ -52,7 +52,7 @@ test('protected AI routes authenticate before applying per-user limits and reche
   assert.match(limits, /keyGenerator: authenticatedRateLimitKey/);
   assert.match(student, /'\/ai-hint', requireSupabaseAuth, requireAppCheck, aiLimiter, requireProfileRole\('student', 'admin'\)/);
   assert.match(admin, /'\/admin\/ai-generate-question', requireSupabaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole\('admin'\)/);
-  assert.match(admin, /if \(!isQuestionReadyForStudents\(currentData\)\)/);
+  assert.match(admin, /if \(!isQuestionReadyForStudents\(currentData\) \|\| report\.errors\.length\)/);
 });
 
 test('login source contains no local authentication fallback or fixed password', async () => {

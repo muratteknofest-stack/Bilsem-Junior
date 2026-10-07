@@ -3,10 +3,10 @@ import { Expand, Layers, Shapes, X } from 'lucide-react';
 import type { Board, Tile } from '../professional-engine';
 
 /** SVG geometry remains sharp at any display scale; relief never moves logical cells. */
-export function TileDiagram({ tile, flat = false }: { tile: Tile; flat?: boolean }) {
+export function TileDiagram({ tile, flat = false, hideRight = false }: { tile: Tile; flat?: boolean; hideRight?: boolean }) {
   const id = useId().replace(/:/g, '_');
   const cell = (208 - (tile.size - 1) * 9) / tile.size;
-  const rows = Array.from({ length: tile.size }, (_, r) => `${r + 1}. satır: ${tile.cells.slice(r * tile.size, (r + 1) * tile.size).map(v => v ? 'dolu' : 'boş').join(', ')}`).join('; ');
+  const rows = Array.from({ length: tile.size }, (_, r) => `${r + 1}. satır: ${tile.cells.slice(r * tile.size, (r + 1) * tile.size).map((v, c) => hideRight && c >= Math.ceil(tile.size / 2) ? 'tamamlanacak' : v ? 'dolu' : 'boş').join(', ')}`).join('; ');
   return <svg viewBox="0 0 240 246" role="img" aria-label={`${tile.size} çarpı ${tile.size} desen. ${rows}`} className="qb-tile-svg" shapeRendering="geometricPrecision">
     <defs>
       <linearGradient id={`${id}-frame`} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#ffffff" /><stop offset="1" stopColor="#e8eaf7" /></linearGradient>
@@ -17,12 +17,14 @@ export function TileDiagram({ tile, flat = false }: { tile: Tile; flat?: boolean
     <rect x="4" y="4" width="232" height="232" rx="22" fill={flat ? '#fff' : `url(#${id}-frame)`} stroke="#c6cce0" strokeWidth="1.5" />
     {tile.cells.map((filled, i) => {
       const x = 16 + (i % tile.size) * (cell + 9), y = 16 + Math.floor(i / tile.size) * (cell + 9);
+      if (hideRight && i % tile.size >= Math.ceil(tile.size / 2)) return <g key={i}><rect x={x} y={y} width={cell} height={cell} rx="9" fill="#f3f0ff" stroke="#9381ca" strokeDasharray="4 3" /><text x={x + cell / 2} y={y + cell / 2} textAnchor="middle" dominantBaseline="central" fontSize="24" fill="#68539c">?</text></g>;
       return <g key={i} data-cell={filled ? 'filled' : 'empty'}>
         {!flat && filled === 1 && <rect x={x} y={y + 4} width={cell} height={cell} rx="9" fill="#374ca5" />}
         <rect x={x} y={y} width={cell} height={cell} rx="9" fill={filled ? flat ? '#4054b2' : `url(#${id}-face)` : flat ? '#fff' : `url(#${id}-empty)`} stroke={filled ? '#4d62b8' : '#cdd3e3'} strokeWidth={filled ? '1.2' : '1.5'} />
         {!flat && filled === 1 && <path d={`M ${x + 10} ${y + 2} H ${x + cell - 10}`} stroke="#c8d3ff" strokeWidth="2" strokeLinecap="round" />}
       </g>;
     })}
+    {hideRight && <line x1="120" y1="9" x2="120" y2="231" stroke="#d35b38" strokeWidth="2" strokeDasharray="5 4" />}
   </svg>;
 }
 
@@ -42,12 +44,17 @@ function BoardContent({ board, flat }: { board: Board; flat: boolean }) {
         <div className={`qb-board-grid ${board.sequence ? 'qb-sequence' : ''}`} style={{ '--qb-columns': Math.min(board.columns || 2, board.tiles.length) } as React.CSSProperties}>
           {board.tiles.map((tile, i) => <div key={i} className={`qb-tile-card ${tile ? '' : 'qb-missing'}`}>
             {board.sequence && <span className="qb-card-index">{i + 1}. adım</span>}
-            {tile ? <TileDiagram tile={tile} flat={flat} /> : <div className="qb-missing-content" aria-label="Eksik desen"><span>?</span><small>Sen tamamla</small></div>}
+            {tile ? <TileDiagram tile={tile} flat={flat} hideRight={board.kind === 'symmetry'} /> : <div className="qb-missing-content" aria-label="Eksik desen"><span>?</span><small>Sen tamamla</small></div>}
           </div>)}
         </div>
       </div>
       {board.sequence && <p className="qb-scroll-note">Tüm adımları görmek için gerekirse sağa kaydır.</p>}
     </>}
+    {board.kind === 'pyramid' && <div className="qb-pyramid" aria-label="Sayı piramidi">{Array.from({ length: board.base!.length }, (_, r) => <div key={r} className="qb-pyramid-row">{Array.from({ length: r + 1 }, (_, c) => <span key={c} className="qb-number-card">{r === board.base!.length - 1 ? board.base![c] : r === 0 ? '?' : '·'}</span>)}</div>)}<p>Alt iki komşunun toplamını bir üst kutuya taşı.</p></div>}
+    {board.kind === 'path' && <div className="qb-path"><div className="qb-path-grid" style={{ gridTemplateColumns: `repeat(${board.gridSize}, 1fr)` }} aria-label="Rota ızgarası; satırlar yukarıdan aşağı, sütunlar soldan sağa">{Array.from({ length: board.gridSize! ** 2 }, (_, i) => {
+      const row = Math.floor(i / board.gridSize!), col = i % board.gridSize!, start = row === board.start![0] && col === board.start![1];
+      return <div key={i} className={start ? 'qb-path-start' : ''}><small>{row + 1}, {col + 1}</small>{start && <strong>Başla</strong>}</div>;
+    })}</div><ol className="qb-path-moves" aria-label="İzlenecek adımlar">{board.moves!.map((m, i) => <li key={i} aria-label={`${i + 1}. adım: ${{ up: 'yukarı', down: 'aşağı', left: 'sola', right: 'sağa' }[m]}`}><small>{i + 1}</small><strong aria-hidden="true">{{ up: '↑', down: '↓', left: '←', right: '→' }[m]}</strong></li>)}</ol></div>}
     {board.kind === 'numbers' && <div className="qb-number-sequence">{[...board.values!, '?'].map((value, i) => <div key={i} className={`qb-number-card ${value === '?' ? 'qb-unknown' : ''}`}><small>{i + 1}. adım</small><strong>{value}</strong></div>)}</div>}
     {board.kind === 'machine' && <div className="qb-machine"><div className="qb-machine-head"><span>GİRDİ</span><span>AYNI İŞLEM</span><span>ÇIKTI</span></div>{[...board.examples!, [board.input!, '?']].map(([x, y], i) => <div className="qb-machine-row" key={i}><span>{x}</span><span className="qb-machine-arrow" aria-hidden="true">→</span><span className={y === '?' ? 'qb-unknown' : ''}>{y}</span></div>)}</div>}
     {board.kind === 'symbols' && <div className="qb-symbols"><div className="qb-key" aria-label="Sembol değerleri">{board.key!.map(k => <div key={k.symbol}><SymbolDiagram symbol={k.symbol} flat={flat} /><span>=</span><strong>{k.value}</strong></div>)}</div><div className="qb-equation" aria-label="Toplanacak semboller">{board.symbols!.map((s, i) => <React.Fragment key={i}>{i > 0 && <span>+</span>}<SymbolDiagram symbol={s} flat={flat} /></React.Fragment>)}<span>=</span><strong>?</strong></div></div>}
@@ -56,7 +63,7 @@ function BoardContent({ board, flat }: { board: Board; flat: boolean }) {
   </div>;
 }
 
-const titles: Record<Board['kind'], string> = { transform: 'Şekil ve dönüşüm', matrix: 'Desen ilişkisi', numbers: 'Sayı örüntüsü', machine: 'İşlem makinesi', symbols: 'Sembol anahtarı', count: 'Dikkat alanı', order: 'İpuçlarını birleştir' };
+const titles: Record<Board['kind'], string> = { symmetry: 'Simetriyi tamamla', overlay: 'Desenleri birleştir', pyramid: 'Sayı piramidi', path: 'Rotayı izle', transform: 'Şekil ve dönüşüm', matrix: 'Desen ilişkisi', numbers: 'Sayı örüntüsü', machine: 'İşlem makinesi', symbols: 'Sembol anahtarı', count: 'Dikkat alanı', order: 'İpuçlarını birleştir' };
 export function ProfessionalBoard({ board }: { board: Board }) {
   const [flat, setFlat] = useState(false), [expanded, setExpanded] = useState(false);
   const modal = useRef<HTMLDialogElement>(null), opener = useRef<HTMLButtonElement>(null);

@@ -50,11 +50,12 @@ export function inspectEducation(q: BaseQuestion, grade: SchoolGrade, age?: numb
   const p = EDUCATION_PROFILES[grade], b = q.visualConfig as Board;
   if (!p) throw new Error('Hedef sınıf 1–4 olmalı.');
   const numeric = [ ...(b.values || []), ...(b.examples || []).flat(), b.input,
+    ...(b.base || []),
     ...(b.key || []).map(k => k.value), ...q.options.map(o => (o.visualData as { textNumber?: unknown })?.textNumber),
   ].filter((v): v is number => typeof v === 'number');
   const metrics = { maxNumber: Math.max(0, ...numeric.map(Math.abs)), itemCount: b.items?.length || 0,
-    symbolCount: b.symbols?.length || 0, peopleCount: b.names?.length || 0,
-    gridSize: Math.max(0, ...(b.tiles || []).filter(Boolean).map(t => t!.size)), promptWords: q.prompt.trim().split(/\s+/u).length };
+    symbolCount: b.symbols?.length || b.moves?.length || 0, peopleCount: b.names?.length || 0,
+    gridSize: Math.max(b.gridSize || 0, ...(b.tiles || []).filter(Boolean).map(t => t!.size)), promptWords: q.prompt.trim().split(/\s+/u).length };
   const audience: string[] = [], difficulty: string[] = [], visual: string[] = [];
   if (age !== undefined && (!Number.isInteger(age) || age < p.ages[0] || age > p.ages[1])) audience.push('AGE_PROFILE: Yaş seçilen sınıfın içerik profili dışında.');
   if (q.targetGrade !== undefined && q.targetGrade !== grade) audience.push('GRADE_MISMATCH: Soru sınıfı istekle uyuşmuyor.');
@@ -63,8 +64,8 @@ export function inspectEducation(q: BaseQuestion, grade: SchoolGrade, age?: numb
   if (grade === 1 && (b.kind === 'machine' || b.kind === 'matrix')) audience.push('PREREQUISITE: Bu çok adımlı kural 1. sınıf profilinde desteklenmiyor.');
   if (q.difficulty > p.maxDifficulty) difficulty.push('DIFFICULTY_LIMIT: Seviye sınıf sınırının üzerinde.');
   if (numeric.some(v => !Number.isSafeInteger(v) || v < 0) || metrics.maxNumber > p.maxNumber) difficulty.push('NUMBER_LOAD: Verilen veya seçenek sayısı profil sınırını aşıyor.');
-  if (metrics.symbolCount > p.maxSymbols || metrics.peopleCount > p.maxPeople) difficulty.push('WORKING_MEMORY: Sembol veya sıralama yükü fazla.');
-  if (metrics.itemCount > p.maxItems || metrics.gridSize > p.maxGrid) visual.push('VISUAL_LOAD: Görsel yoğunluk sınıf sınırını aşıyor.');
+  if ((b.kind === 'path' ? metrics.symbolCount > grade + 4 : metrics.symbolCount > p.maxSymbols) || metrics.peopleCount > p.maxPeople) difficulty.push('WORKING_MEMORY: Sembol veya sıralama yükü fazla.');
+  if (metrics.itemCount > p.maxItems || metrics.gridSize > (b.kind === 'path' && grade === 4 ? 5 : p.maxGrid)) visual.push('VISUAL_LOAD: Görsel yoğunluk sınıf sınırını aşıyor.');
   if (b.kind === 'symbols' && (b.key || []).some(k => !['●', '▲', '■', '◆'].includes(k.symbol))) visual.push('SYMBOL_RENDERING: Sembol çizimi tanımlı değil.');
   if (b.kind === 'count' && (b.items || []).some(s => !['●', '▲', '■', '◆'].includes(s))) visual.push('SYMBOL_RENDERING: Sayılacak şeklin çizimi tanımlı değil.');
   return { audience, difficulty, visual, metrics };

@@ -14,7 +14,7 @@ export function interactionModes(q: BaseQuestion): AnswerMode[] {
   const b = q.visualConfig as Board;
   const extra: AnswerMode[] = b?.displayMode !== 'verified_board' ? [] :
     b.kind === 'order' ? ['order'] : b.kind === 'symbols' ? ['match'] :
-    ['numbers', 'machine', 'count'].includes(b.kind) ? ['number'] : [];
+    ['numbers', 'machine', 'count', 'pyramid'].includes(b.kind) ? ['number'] : [];
   return [...extra, 'place', 'choice'];
 }
 

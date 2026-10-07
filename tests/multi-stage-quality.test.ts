@@ -131,3 +131,16 @@ test('profiled visual load and machine prerequisites are checked even when the a
   assert.equal(r.stages.find(s=>s.id==='visual')?.status,'failed');
   assert.equal(r.eligible,false);
 });
+
+
+test('recovered engines traverse all nine AI pipeline gates with a mocked reviewer', async () => {
+  for (const questionType of ['symmetry_completion', 'shape_combination', 'direction_path', 'number_pyramid']) {
+    const ai = reviewer();
+    const result = await runQuestionPipeline(ai.client, { ...config, questionType }, { nextSeed: seeds(321) });
+    assert.equal(result.success, true, result.rejectionReasons.join(' '));
+    assert.equal(result.question?.authoring?.engine, 'verified-4');
+    assert.equal(result.qualityReport?.stages.every(stage => stage.status === 'passed'), true);
+    assert.equal(isQuestionReadyForStudents(result.question), true);
+    assert.equal(ai.prompts.length, 2);
+  }
+});

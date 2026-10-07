@@ -4,11 +4,17 @@ import { generateVisualFingerprint as fingerprint } from './fingerprint';
 
 export const ENGINE_VERSION = 'verified-3';
 export const VERIFIED_TYPES: QuestionType[] = ['matrix_2x2', 'matrix_3x3', 'raven_matrix', 'visual_sequence', 'figure_rotation', 'mirror_reflection', 'number_pattern', 'operation_machine', 'symbol_coding', 'shape_counting', 'logic_grid'];
+export const RECOVERED_TYPES: QuestionType[] = ['symmetry_completion', 'shape_combination', 'direction_path', 'number_pyramid'];
+export const STUDENT_TYPES: QuestionType[] = [...VERIFIED_TYPES, ...RECOVERED_TYPES];
 export type Tile = { cells: number[]; size: number };
 type Value = Tile | { textNumber: number | string };
 export type Board = {
   displayMode: 'verified_board';
-  kind: 'transform' | 'matrix' | 'numbers' | 'machine' | 'symbols' | 'count' | 'order';
+  kind: 'transform' | 'matrix' | 'numbers' | 'machine' | 'symbols' | 'count' | 'order' | 'symmetry' | 'overlay' | 'path' | 'pyramid';
+  base?: number[];
+  gridSize?: number;
+  start?: [number, number];
+  moves?: ('up' | 'down' | 'left' | 'right')[];
   tiles?: (Tile | null)[];
   columns?: number;
   operation?: 'rotate' | 'mirrorX' | 'mirrorY';
@@ -70,6 +76,32 @@ export function solveBoard(board: Board): Value {
     for (const tile of board.tiles) if (tile && (!Number.isInteger(tile.size) || tile.size < 3 || tile.size > 4 ||
       tile.cells.length !== tile.size ** 2 || tile.cells.some(c => c !== 0 && c !== 1))) throw new Error('Görsel ızgara geçersiz.');
     if (new Set(board.tiles.filter(Boolean).map(tile => tile!.size)).size !== 1) throw new Error('Izgara boyutları eşleşmiyor.');
+  }
+  if (board.kind === 'symmetry') {
+    if (board.tiles?.length !== 1 || !board.tiles[0]) throw new Error('Simetri başlangıcı eksik.');
+    const t = board.tiles[0], middle = Math.ceil(t.size / 2);
+    if (t.cells.some((v, i) => i % t.size >= middle && v !== 0)) throw new Error('Gizli yarıda veri olamaz.');
+    return { size: t.size, cells: t.cells.map((v, i) => i % t.size < middle ? v : t.cells[Math.floor(i / t.size) * t.size + t.size - 1 - i % t.size]) };
+  }
+  if (board.kind === 'overlay') {
+    if (board.tiles?.length !== 3 || !board.tiles[0] || !board.tiles[1] || board.tiles[2] !== null) throw new Error('Birleştirme için iki desen gerekli.');
+    return combine(board.tiles[0], board.tiles[1], 0);
+  }
+  if (board.kind === 'pyramid') {
+    if (!Array.isArray(board.base) || board.base.length < 3 || board.base.length > 5 || board.base.some(v => !Number.isSafeInteger(v) || v < 1 || v > 20)) throw new Error('Piramit tabanı geçersiz.');
+    let row = [...board.base];
+    while (row.length > 1) row = row.slice(1).map((v, i) => v + row[i]);
+    return { textNumber: row[0] };
+  }
+  if (board.kind === 'path') {
+    const size = board.gridSize;
+    if (!Number.isInteger(size) || size! < 3 || size! > 5 || !Array.isArray(board.start) || board.start.length !== 2 || board.start.some(v => !Number.isInteger(v) || v < 0 || v >= size!) || !Array.isArray(board.moves) || board.moves.length < 2 || board.moves.length > 10) throw new Error('Rota verisi geçersiz.');
+    let [row, col] = board.start;
+    for (const move of board.moves) {
+      if (move === 'up') row--; else if (move === 'down') row++; else if (move === 'left') col--; else if (move === 'right') col++; else throw new Error('Yön tanımsız.');
+      if (row < 0 || col < 0 || row >= size! || col >= size!) throw new Error('Rota ızgara dışına çıkıyor.');
+    }
+    return { textNumber: `${row + 1}. satır, ${col + 1}. sütun` };
   }
   if (board.kind === 'transform') {
     if (!board.tiles || ![2, 4].includes(board.tiles.length) || board.tiles.at(-1) !== null || board.tiles.slice(0, -1).some(t => !t)) throw new Error('Dönüşüm görseli eksik.');

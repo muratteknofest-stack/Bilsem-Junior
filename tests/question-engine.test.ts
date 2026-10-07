@@ -1,4 +1,4 @@
-import { VERIFIED_TYPES } from '../src/features/questions/professional-engine';
+import { STUDENT_TYPES as VERIFIED_TYPES } from '../src/features/questions/professional-engine';
 import { isQuestionReadyForStudents } from '../src/features/questions/quality';
 import assert from 'node:assert/strict';
 import test from 'node:test';

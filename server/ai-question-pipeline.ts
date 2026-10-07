@@ -1,5 +1,6 @@
 import { randomInt, randomUUID } from 'node:crypto';
-import { generateProfessionalQuestion, VERIFIED_TYPES } from '../src/features/questions/professional-engine';
+import { generateRecoveredQuestion } from '../src/features/questions/recovered-engine';
+import { generateProfessionalQuestion, STUDENT_TYPES as VERIFIED_TYPES, RECOVERED_TYPES } from '../src/features/questions/professional-engine';
 import { STUDENT_CATEGORY_TYPES } from '../src/features/questions/generators';
 import { solveQuestion } from '../src/features/questions/universal-solver';
 import { GoogleGenAI, Type } from '@google/genai';
@@ -159,7 +160,7 @@ export async function runQuestionPipeline(aiClient: GoogleGenAI, config: Pipelin
       result.question = undefined; result.qualityReport = undefined; result.solverVerified = false; result.solverAnswer = undefined;
       let providerPending = false;
       try {
-        const question = generateProfessionalQuestion(chosenType, seed, config.difficulty as DifficultyLevel);
+        const question = (RECOVERED_TYPES.includes(chosenType) ? generateRecoveredQuestion : generateProfessionalQuestion)(chosenType, seed, config.difficulty as DifficultyLevel);
         question.targetGrade = config.targetGrade; question.targetGrades = [config.targetGrade];
         if (config.targetAge !== undefined) question.targetAge = config.targetAge;
         question.ageGroup = config.targetGrade <= 2 ? '1-2' : '3-4';

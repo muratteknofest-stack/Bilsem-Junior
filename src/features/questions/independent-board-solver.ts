@@ -3,6 +3,32 @@ import type { Board, Tile } from './professional-engine';
 // Deliberately does not import solveBoard, transformTile or generator helpers.
 // A second implementation catches errors shared by generation and its own solver.
 export function independentlySolveBoard(b: Board): Tile | { textNumber: number | string } {
+  if (b.kind === 'symmetry') {
+    const t = b.tiles![0]!, cells = [...t.cells];
+    for (let row = 0; row < t.size; row++) for (let col = 0; col < Math.floor(t.size / 2); col++) cells[row * t.size + t.size - col - 1] = t.cells[row * t.size + col];
+    return { size: t.size, cells };
+  }
+  if (b.kind === 'overlay') {
+    const a = b.tiles![0]!, c = b.tiles![1]!;
+    return { size: a.size, cells: a.cells.map((v, i) => Math.min(1, v + c.cells[i])) };
+  }
+  if (b.kind === 'pyramid') {
+    // Pascal weights independently evaluate the top without building intermediate rows.
+    const base = b.base!, n = base.length - 1;
+    let coefficient = 1, sum = 0;
+    for (let i = 0; i <= n; i++) { sum += coefficient * base[i]; coefficient = coefficient * (n - i) / (i + 1); }
+    return { textNumber: sum };
+  }
+  if (b.kind === 'path') {
+    const delta = { up: -b.gridSize!, down: b.gridSize!, left: -1, right: 1 };
+    let cell = b.start![0] * b.gridSize! + b.start![1];
+    for (const m of b.moves!) {
+      const next = cell + delta[m];
+      if (next < 0 || next >= b.gridSize! ** 2 || (m === 'left' || m === 'right') && Math.floor(next / b.gridSize!) !== Math.floor(cell / b.gridSize!)) throw new Error('Rota sınırları geçersiz.');
+      cell = next;
+    }
+    return { textNumber: `${Math.floor(cell / b.gridSize!) + 1}. satır, ${cell % b.gridSize! + 1}. sütun` };
+  }
   const same = (a: Tile, c: Tile) => a.size === c.size && a.cells.every((v, i) => v === c.cells[i]);
   const move = (tile: Tile, operation: string, turns: number): Tile => {
     const n = tile.size;
