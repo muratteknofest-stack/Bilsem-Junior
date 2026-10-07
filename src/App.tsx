@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { useAuth } from './contexts/AuthContext';
 
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { UserProfile, UserRole, SkillMastery, MistakeItem, DailyStudyPlan, ReminderAlertEvent, CognitiveCategory } from './types';
 import { dataService } from './services/data-service';
 import { sound } from './lib/sound';
@@ -25,6 +25,7 @@ const CognitiveGlossaryView = lazy(() => import('./components/CognitiveGlossaryV
 const LoginPage = lazy(() => import('./components/LoginPage').then((m) => ({ default: m.LoginPage })));
 
 export default function App() {
+  const reducedMotion = useReducedMotion();
   // Auth context
   const { currentUser: authUser, userProfile, loading: authLoading, logout: authLogout, switchRole: authSwitchRole } = useAuth();
   
@@ -41,6 +42,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => dataService.getCurrentUser());
   const [isAuth, setIsAuth] = useState<boolean>(() => dataService.isAuthenticated());
   const [loginRole, setLoginRole] = useState<UserRole>('student');
+  const [loginMode, setLoginMode] = useState<'login' | 'register'>('login');
   const [currentRoute, setCurrentRoute] = useState<string>(() => {
     if (!dataService.isAuthenticated()) return 'landing';
     const u = dataService.getCurrentUser();
@@ -106,6 +108,8 @@ export default function App() {
   
 
   const handleNavigateToLogin = (role: UserRole) => {
+    setLoginMode('login');
+    window.scrollTo({ top: 0, behavior: 'instant' });
     setLoginRole(role);
     setCurrentRoute('login');
   };
@@ -113,7 +117,15 @@ export default function App() {
   const navigateTo = (targetRoute: string) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
+    if (targetRoute === 'register') {
+      setLoginMode('register');
+      setLoginRole('parent');
+      setCurrentRoute('login');
+      return;
+    }
+
     if (targetRoute.startsWith('login:')) {
+      setLoginMode('login');
       const role = targetRoute.split(':')[1] as UserRole;
       setLoginRole(role);
       setCurrentRoute('login');
@@ -121,6 +133,7 @@ export default function App() {
     }
 
     if (targetRoute === 'login') {
+      setLoginMode('login');
       setCurrentRoute('login');
       return;
     }
@@ -221,8 +234,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
-      {/* Universal Header - hidden on mobile/tablet during tests for distraction-free full-screen test experience */}
-      {!isTestRoute && (
+      {/* Workspace navigation; public pages own their header. Tests stay distraction-free. */}
+      {!isTestRoute && currentRoute !== 'landing' && currentRoute !== 'login' && (
         <Navbar
           currentUser={currentUser}
           onNavigateHome={() => navigateTo(isAuth ? (currentUser?.role === 'parent' ? 'parent' : currentUser?.role === 'admin' ? 'admin' : 'dashboard') : 'landing')}
@@ -235,15 +248,15 @@ export default function App() {
       )}
 
       {/* Main View Router */}
-      <main className="flex-1 w-full overflow-x-hidden">
+      <div role={currentRoute === 'landing' ? undefined : 'main'} className={`flex-1 w-full ${currentRoute === 'landing' ? '' : 'overflow-x-hidden'}`}>
         <Suspense fallback={<div className="min-h-[50vh] flex items-center justify-center" role="status">Yükleniyor…</div>}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={currentRoute === 'practice' ? `practice-${selectedPracticeCategory}` : currentRoute}
-            initial={{ opacity: 0, y: 10 }}
+            initial={reducedMotion ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -10 }}
+            transition={{ duration: reducedMotion ? 0 : 0.22, ease: [0.22, 1, 0.36, 1] }}
             className="w-full flex-1 flex flex-col"
           >
             {currentRoute === 'landing' && (
@@ -337,6 +350,8 @@ export default function App() {
 
             {currentRoute === 'login' && (
               <LoginPage
+                key={`${loginMode}-${loginRole}`}
+                initialMode={loginMode}
                 initialRole={loginRole}
                 onLoginSuccess={(role, profile) => {
                   setIsAuth(true);
@@ -355,7 +370,7 @@ export default function App() {
           </motion.div>
         </AnimatePresence>
         </Suspense>
-      </main>
+      </div>
 
       {/* Mobile Bottom Navigation Bar - Hidden during test routes for full screen test view */}
       {currentRoute !== 'landing' && currentRoute !== 'login' && !isTestRoute && (
@@ -392,3 +407,4 @@ export default function App() {
     </div>
   );
 }
+

@@ -10,6 +10,7 @@ import { VisualExplanationOverlay } from '../features/questions/renderers/Visual
 import { sound } from '../lib/sound';
 import { Logo } from './Logo';
 import { LearningIsland } from './landing/LearningIsland';
+import { LandingNav } from './landing/LandingNav';
 import type { FooterModalTopic } from './FooterInfoModal';
 import './landing/landing.css';
 
@@ -68,11 +69,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
   };
   return <div className="zp-landing" data-motion={moving ? 'on' : 'off'}>
     <a className="zp-skip" href="#ana-icerik">İçeriğe geç</a>
-    <header className="zp-header"><div className="zp-container zp-nav">
-      <button type="button" className="zp-brand-button" aria-label="ZekaPark ana sayfa" onClick={() => { onNavigate('landing'); window.scrollTo({ top: 0, behavior: moving ? 'smooth' : 'instant' }); }}><Logo size="md" showTagline={false} /></button>
-      <nav aria-label="Ana menü" className="zp-nav-links"><a href="#dunyalar">Keşif alanları</a><a href="#nasil">Nasıl çalışır?</a><a href="#aile">Aileler için</a></nav>
-      <div className="zp-nav-actions"><button type="button" className="zp-icon-button" aria-label={moving ? 'Animasyonları durdur' : 'Animasyonları başlat'} aria-pressed={!moving} disabled={!!reducedMotion} title={reducedMotion ? 'Cihazın hareketi azalt tercihi etkin' : moving ? 'Animasyonları durdur' : 'Animasyonları başlat'} onClick={() => setPaused(!paused)}>{moving ? <Pause size={17} /> : <Play size={17} />}</button><button type="button" className="zp-button zp-button-small zp-button-dark" onClick={() => onNavigateToLogin('student')}>Giriş yap <ArrowUpRight size={16} /></button></div>
-    </div></header>
+    <LandingNav onLogin={onNavigateToLogin} onRegister={() => onNavigate('register')}
+      onHome={() => { onNavigate('landing'); window.scrollTo({ top: 0, behavior: moving ? 'smooth' : 'instant' }); }}
+      onDemo={goDemo} moving={moving} reducedMotion={!!reducedMotion} onToggleMotion={() => setPaused(!paused)}
+      soundActive={soundActive} onToggleSound={() => { sound.enabled = !soundActive; setSoundActive(!soundActive); }} />
     <main id="ana-icerik">
       <section className="zp-container zp-hero" aria-labelledby="hero-title">
         <motion.div {...reveal} className="zp-hero-copy">
@@ -111,8 +111,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
         <div className="zp-journey-grid">{[{ n: '01', title: 'Rotanı seç', text: 'Merak ettiğin bir alandan başla. Örüntü, mantık ya da dikkat… Seçim senin.', icon: Shapes }, { n: '02', title: 'Deneyerek öğren', text: 'Soruyu çöz, açıklamayı incele. Hatalarını bir sonraki keşfin ipucuna dönüştür.', icon: Brain }, { n: '03', title: 'Gelişimini kutla', text: 'Günlük görevlerini tamamla, XP biriktir ve kendi rekorunu geliştirmeye çalış.', icon: Trophy }].map(s => <motion.div {...reveal} key={s.n} className="zp-journey-step"><div className="zp-journey-icon"><s.icon size={28} /><span>{s.n}</span></div><h3>{s.title}</h3><p>{s.text}</p></motion.div>)}</div>
       </section>
       <section id="aile" className="zp-container zp-family-section" aria-labelledby="family-title"><motion.div {...reveal} className="zp-family-panel"><div className="zp-family-visual" aria-hidden="true"><div className="zp-family-ring" /><div className="zp-family-heart"><Heart size={80} fill="currentColor" strokeWidth={1} /></div><div className="zp-family-small-card"><ShieldCheck size={23} /><span>Yanında ol.<br /><strong>Yolunu ona bırak.</strong></span></div><div className="zp-family-spark">✦</div></div><div className="zp-family-copy"><p className="zp-kicker">BİRLİKTE DAHA GÜZEL</p><h2 id="family-title">Onun keşif dünyası.<br />Sizin destek alanınız.</h2><p>Çocuğunuzun çabasını fark edin, ilerleyişine eşlik edin. Veli alanından çalışma ve gelişim bilgilerini takip edin.</p><button type="button" className="zp-button zp-button-dark" onClick={() => onNavigateToLogin('parent')}>Veli alanına geç <ArrowUpRight size={18} /></button></div></motion.div></section>
-      <section className="zp-container zp-section zp-faq" aria-labelledby="faq-title"><div><p className="zp-kicker">AKLINDA BİR SORU MU VAR?</p><h2 id="faq-title">Merak etmek<br />işin başlangıcı.</h2></div><div>{faqs.map(([q, a]) => <details key={q}><summary>{q}<ChevronDown size={19} /></summary><p>{a}</p></details>)}</div></section>
-      <section className="zp-container zp-final-section"><div className="zp-final-cta"><span aria-hidden="true" className="zp-cta-star">✦</span><p className="zp-kicker">HADİ, BİR ADIM ATALIM.</p><h2>Bir sonraki keşif senin.</h2><button type="button" className="zp-button zp-button-lime" onClick={() => onNavigateToLogin('student')}>ZekaPark’a katıl <ArrowRight size={19} /></button><p className="zp-final-note">Merakını getir. Gerisini birlikte keşfedelim.</p></div></section>
+      <section id="yardim" className="zp-container zp-section zp-faq" aria-labelledby="faq-title"><div><p className="zp-kicker">AKLINDA BİR SORU MU VAR?</p><h2 id="faq-title">Merak etmek<br />işin başlangıcı.</h2></div><div>{faqs.map(([q, a]) => <details key={q}><summary>{q}<ChevronDown size={19} /></summary><p>{a}</p></details>)}</div></section>
+      <section className="zp-container zp-final-section"><div className="zp-final-cta"><span aria-hidden="true" className="zp-cta-star">✦</span><p className="zp-kicker">HADİ, BİR ADIM ATALIM.</p><h2>Bir sonraki keşif senin.</h2><button type="button" className="zp-button zp-button-lime" onClick={() => onNavigate('register')}>ZekaPark’a katıl <ArrowRight size={19} /></button><p className="zp-final-note">Merakını getir. Gerisini birlikte keşfedelim.</p></div></section>
     </main>
     <footer className="zp-footer"><div className="zp-container"><div className="zp-footer-top"><div><Logo size="md" showTagline={false} /><p>Düşünmenin keyfini keşfet.</p></div><div><button type="button" onClick={() => onNavigateToLogin('student')}>Öğrenci girişi</button><button type="button" onClick={() => onNavigateToLogin('parent')}>Veli girişi</button><button type="button" onClick={() => onNavigateToLogin('admin')}>Yönetici girişi</button></div></div><div className="zp-footer-bottom"><span>© {new Date().getFullYear()} ZekaPark</span><div><button type="button" onClick={() => setTopic('kvkk')}>Gizlilik ve KVKK</button><button type="button" onClick={() => setTopic('terms')}>Kullanım koşulları</button><a href="mailto:zeka.kupu.test@gmail.com">İletişim</a></div><span>Merakla büyüyen zihinler için.</span></div></div></footer>
     {topic && <Suspense fallback={<div role="status" className="zp-modal-loading">Bilgiler yükleniyor… <button type="button" onClick={() => setTopic(null)}>Kapat</button></div>}><FooterInfoModal topic={topic} onClose={() => setTopic(null)} /></Suspense>}
