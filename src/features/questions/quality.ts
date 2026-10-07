@@ -2,6 +2,7 @@ import { BaseQuestion, QUESTION_TYPE_LABELS, ALL_COGNITIVE_CATEGORIES } from '..
 import { generateVisualFingerprint as fingerprint } from './fingerprint';
 import { validateQuestion } from './validator';
 import { Board, ENGINE_VERSION, solveBoard, VERIFIED_TYPES, generateProfessionalQuestion } from './professional-engine';
+import { generateProfessionalQuestion as generateV2 } from './professional-engine-v2';
 import { solveQuestion } from './universal-solver';
 
 export interface QualityReport {
@@ -56,7 +57,7 @@ export function auditQuestion(value: unknown, existing: BaseQuestion[] = []): Qu
         const v = o.visualData as Record<string, unknown>;
         return v?.cells !== undefined && (!Array.isArray(v.cells) || typeof v.size !== 'number' || ![3, 4].includes(v.size) || v.cells.length !== Number(v.size) ** 2 || v.cells.some((c: unknown) => c !== 0 && c !== 1));
       })) result.errors.push('Seçenek ızgarası geçersiz.');
-      if (!VERIFIED_TYPES.includes(q.type) || q.authoring?.engine !== ENGINE_VERSION) result.errors.push('Soru motoru sürümü tanınmıyor.');
+      if (!VERIFIED_TYPES.includes(q.type) || ![ENGINE_VERSION, 'verified-2'].includes(q.authoring?.engine || '')) result.errors.push('Soru motoru sürümü tanınmıyor.');
       const expected = fingerprint(solveBoard(q.visualConfig as Board));
       const matches = q.options.filter(o => fingerprint(o.visualData) === expected);
       if (matches.length !== 1 || matches[0].id !== q.correctOptionId) result.errors.push('Bağımsız çözüm ile cevap anahtarı uyuşmuyor.');
@@ -67,7 +68,7 @@ export function auditQuestion(value: unknown, existing: BaseQuestion[] = []): Qu
     // Certification covers the displayed instructions and explanation too. Arbitrary
     // edited/AI prose cannot inherit an old stamp or a template's mathematical proof.
     if (cfg?.displayMode === 'verified_board' && VERIFIED_TYPES.includes(q.type)) {
-      const reference = generateProfessionalQuestion(q.type, q.seed, q.difficulty);
+      const reference = q.authoring?.engine === 'verified-2' ? generateV2(q.type, q.seed, q.difficulty) : generateProfessionalQuestion(q.type, q.seed, q.difficulty);
       for (const field of ['prompt', 'secondaryPrompt', 'explanation', 'visualConfig'] as const) {
         if (fingerprint(q[field]) !== fingerprint(reference[field])) {
           result.reviewRequired.push('Soru metni, görsel veya açıklama doğrulanmış şablonla eşleşmiyor: ' + field);

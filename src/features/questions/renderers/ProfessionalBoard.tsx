@@ -1,271 +1,83 @@
-import React, { useId } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
+import { Expand, Layers, Shapes, X } from 'lucide-react';
 import type { Board, Tile } from '../professional-engine';
 
-export function TileDiagram({ tile }: { tile: Tile }) {
-  const reactId = useId().replace(/:/g, '_');
-  const size = tile.size || 3;
-  const padding = 6;
-  const boardSize = 88;
-  const gap = 2.5;
-  const totalGaps = (size - 1) * gap;
-  const cell = (boardSize - totalGaps) / size;
-
-  const filledGradId = `tileFill_${reactId}`;
-
-  return (
-    <svg
-      viewBox="0 0 100 100"
-      role="img"
-      aria-label={`${size} çarpı ${size} 3B desen matrisi`}
-      className="w-full h-full select-none"
-      shapeRendering="geometricPrecision"
-      style={{
-        filter: 'drop-shadow(0px 3px 4px rgba(15,23,42,0.1))',
-      }}
-    >
-      <defs>
-        {/* 3D Acrylic Cell Volumetric Gradient */}
-        <linearGradient id={filledGradId} x1="15%" y1="10%" x2="85%" y2="90%">
-          <stop offset="0%" stopColor="#3b82f6" />
-          <stop offset="60%" stopColor="#1d4ed8" />
-          <stop offset="100%" stopColor="#1e3a8a" />
-        </linearGradient>
-      </defs>
-
-      {/* 3D Tile Board Frame */}
-      <rect
-        x="3"
-        y="3"
-        width="94"
-        height="94"
-        rx="8"
-        fill="#f8fafc"
-        stroke="#cbd5e1"
-        strokeWidth="1.5"
-      />
-      {/* Top Edge Bevel Highlight */}
-      <line
-        x1="10"
-        y1="4.5"
-        x2="90"
-        y2="4.5"
-        stroke="rgba(255,255,255,0.9)"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-
-      {/* Grid Cells */}
-      {tile.cells.map((filled, i) => {
-        const col = i % size;
-        const row = Math.floor(i / size);
-        const x = padding + col * (cell + gap);
-        const y = padding + row * (cell + gap);
-
-        return (
-          <g key={i}>
-            {filled ? (
-              <g>
-                {/* 3D Filled Cell with Bevel */}
-                <rect
-                  x={x}
-                  y={y}
-                  width={cell}
-                  height={cell}
-                  rx="3.5"
-                  fill={`url(#${filledGradId})`}
-                  stroke="#1e3a8a"
-                  strokeWidth="0.8"
-                />
-                {/* Specular Highlight on Cell Top */}
-                <line
-                  x1={x + 2}
-                  y1={y + 1}
-                  x2={x + cell - 2}
-                  y2={y + 1}
-                  stroke="rgba(255,255,255,0.65)"
-                  strokeWidth="1.2"
-                  strokeLinecap="round"
-                />
-              </g>
-            ) : (
-              /* Porcelain Inset Empty Cell */
-              <rect
-                x={x}
-                y={y}
-                width={cell}
-                height={cell}
-                rx="3.5"
-                fill="#ffffff"
-                stroke="#e2e8f0"
-                strokeWidth="1"
-              />
-            )}
-          </g>
-        );
-      })}
-    </svg>
-  );
+/** SVG geometry remains sharp at any display scale; relief never moves logical cells. */
+export function TileDiagram({ tile, flat = false }: { tile: Tile; flat?: boolean }) {
+  const id = useId().replace(/:/g, '_');
+  const cell = (208 - (tile.size - 1) * 9) / tile.size;
+  const rows = Array.from({ length: tile.size }, (_, r) => `${r + 1}. satır: ${tile.cells.slice(r * tile.size, (r + 1) * tile.size).map(v => v ? 'dolu' : 'boş').join(', ')}`).join('; ');
+  return <svg viewBox="0 0 240 246" role="img" aria-label={`${tile.size} çarpı ${tile.size} desen. ${rows}`} className="qb-tile-svg" shapeRendering="geometricPrecision">
+    <defs>
+      <linearGradient id={`${id}-frame`} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#ffffff" /><stop offset="1" stopColor="#e8eaf7" /></linearGradient>
+      <linearGradient id={`${id}-face`} x1="0" y1="0" x2="0.8" y2="1"><stop stopColor="#879cf5" /><stop offset=".45" stopColor="#647ade" /><stop offset="1" stopColor="#475cc0" /></linearGradient>
+      <linearGradient id={`${id}-empty`} x1="0" y1="0" x2="0" y2="1"><stop stopColor="#e8ebf4" /><stop offset="1" stopColor="#f9faff" /></linearGradient>
+    </defs>
+    {!flat && <rect x="4" y="10" width="232" height="232" rx="22" fill="#b7bfdc" />}
+    <rect x="4" y="4" width="232" height="232" rx="22" fill={flat ? '#fff' : `url(#${id}-frame)`} stroke="#c6cce0" strokeWidth="1.5" />
+    {tile.cells.map((filled, i) => {
+      const x = 16 + (i % tile.size) * (cell + 9), y = 16 + Math.floor(i / tile.size) * (cell + 9);
+      return <g key={i} data-cell={filled ? 'filled' : 'empty'}>
+        {!flat && filled === 1 && <rect x={x} y={y + 4} width={cell} height={cell} rx="9" fill="#374ca5" />}
+        <rect x={x} y={y} width={cell} height={cell} rx="9" fill={filled ? flat ? '#4054b2' : `url(#${id}-face)` : flat ? '#fff' : `url(#${id}-empty)`} stroke={filled ? '#4d62b8' : '#cdd3e3'} strokeWidth={filled ? '1.2' : '1.5'} />
+        {!flat && filled === 1 && <path d={`M ${x + 10} ${y + 2} H ${x + cell - 10}`} stroke="#c8d3ff" strokeWidth="2" strokeLinecap="round" />}
+      </g>;
+    })}
+  </svg>;
 }
 
+export function SymbolDiagram({ symbol, flat = false }: { symbol: string; flat?: boolean }) {
+  const id = useId().replace(/:/g, '_');
+  const label = ({ '●': 'daire', '▲': 'üçgen', '■': 'kare', '◆': 'eşkenar dörtgen' } as Record<string, string>)[symbol] || symbol;
+  const geometry = symbol === '●' ? <circle cx="32" cy="29" r="20" /> : symbol === '▲' ? <path d="M32 7 55 49H9Z" strokeLinejoin="round" /> : symbol === '■' ? <rect x="11" y="8" width="42" height="42" rx="3" /> : <path d="m32 5 24 24-24 24L8 29Z" strokeLinejoin="round" />;
+  return <svg viewBox="0 0 64 64" className="qb-symbol-svg" role="img" aria-label={label} shapeRendering="geometricPrecision"><defs><linearGradient id={`${id}-symbol`} x1="0" y1="0" x2=".7" y2="1"><stop stopColor="#8ba2f0" /><stop offset="1" stopColor="#4057b4" /></linearGradient></defs>{!flat && <g transform="translate(0 4)" fill="#2e438f" stroke="#2e438f" strokeWidth="1.2">{geometry}</g>}<g fill={flat ? '#4054b2' : `url(#${id}-symbol)`} stroke={flat ? '#35479b' : '#657fc7'} strokeWidth="1.2">{geometry}</g></svg>;
+}
+
+function BoardContent({ board, flat }: { board: Board; flat: boolean }) {
+  return <div className="qb-content" data-flat={flat}>
+    {board.tiles && <>
+      {board.kind === 'transform' && !board.sequence && board.tiles.length === 2 && <p className="qb-instruction">{board.operation === 'rotate' ? `Saat yönünde ${(board.turns || 1) * 90}° döndür` : board.operation === 'mirrorX' ? 'Ayna sağda · Sağ ile sol yer değiştirir' : 'Ayna altta · Üst ile alt yer değiştirir'}</p>}
+      {board.sequence && <p className="qb-instruction">Soldan sağa ilerle: 1 → 2 → 3 → ?</p>}
+      <div className={`qb-grid-scroll ${board.sequence ? 'qb-sequence-scroll' : ''}`} tabIndex={board.sequence ? 0 : undefined} role={board.sequence ? 'region' : undefined} aria-label={board.sequence ? 'Desen dizisi; gerektiğinde yatay kaydır' : undefined}>
+        <div className={`qb-board-grid ${board.sequence ? 'qb-sequence' : ''}`} style={{ '--qb-columns': Math.min(board.columns || 2, board.tiles.length) } as React.CSSProperties}>
+          {board.tiles.map((tile, i) => <div key={i} className={`qb-tile-card ${tile ? '' : 'qb-missing'}`}>
+            {board.sequence && <span className="qb-card-index">{i + 1}. adım</span>}
+            {tile ? <TileDiagram tile={tile} flat={flat} /> : <div className="qb-missing-content" aria-label="Eksik desen"><span>?</span><small>Sen tamamla</small></div>}
+          </div>)}
+        </div>
+      </div>
+      {board.sequence && <p className="qb-scroll-note">Tüm adımları görmek için gerekirse sağa kaydır.</p>}
+    </>}
+    {board.kind === 'numbers' && <div className="qb-number-sequence">{[...board.values!, '?'].map((value, i) => <div key={i} className={`qb-number-card ${value === '?' ? 'qb-unknown' : ''}`}><small>{i + 1}. adım</small><strong>{value}</strong></div>)}</div>}
+    {board.kind === 'machine' && <div className="qb-machine"><div className="qb-machine-head"><span>GİRDİ</span><span>AYNI İŞLEM</span><span>ÇIKTI</span></div>{[...board.examples!, [board.input!, '?']].map(([x, y], i) => <div className="qb-machine-row" key={i}><span>{x}</span><span className="qb-machine-arrow" aria-hidden="true">→</span><span className={y === '?' ? 'qb-unknown' : ''}>{y}</span></div>)}</div>}
+    {board.kind === 'symbols' && <div className="qb-symbols"><div className="qb-key" aria-label="Sembol değerleri">{board.key!.map(k => <div key={k.symbol}><SymbolDiagram symbol={k.symbol} flat={flat} /><span>=</span><strong>{k.value}</strong></div>)}</div><div className="qb-equation" aria-label="Toplanacak semboller">{board.symbols!.map((s, i) => <React.Fragment key={i}>{i > 0 && <span>+</span>}<SymbolDiagram symbol={s} flat={flat} /></React.Fragment>)}<span>=</span><strong>?</strong></div></div>}
+    {board.kind === 'count' && <div className="qb-count"><div className="qb-target"><span>Aradığın şekil</span><SymbolDiagram symbol={board.target!} flat={flat} /></div><div className="qb-count-grid" aria-label="Sayılacak şekiller">{board.items!.map((s, i) => <div key={i}><SymbolDiagram symbol={s} flat={flat} /></div>)}</div></div>}
+    {board.kind === 'order' && <div className="qb-order"><div className="qb-people">{board.names!.map(n => <span key={n}>{n}</span>)}</div><ol className="qb-clues">{board.clues!.map(([a, b], i) => <li key={i}><span className="qb-clue-number">{i + 1}</span><span><strong>{b}</strong>, <strong>{a}</strong> adlı kişinin hemen sağındadır.</span></li>)}</ol><div className="qb-positions">{board.names!.map((_, i) => <span key={i} className={i + 1 === board.position ? 'qb-unknown' : ''}><small>{i + 1}. sıra</small><strong>{i + 1 === board.position ? '?' : '·'}</strong></span>)}</div></div>}
+  </div>;
+}
+
+const titles: Record<Board['kind'], string> = { transform: 'Şekil ve dönüşüm', matrix: 'Desen ilişkisi', numbers: 'Sayı örüntüsü', machine: 'İşlem makinesi', symbols: 'Sembol anahtarı', count: 'Dikkat alanı', order: 'İpuçlarını birleştir' };
 export function ProfessionalBoard({ board }: { board: Board }) {
-  return (
-    <div className="w-full rounded-3xl border-2 border-slate-300/80 bg-gradient-to-b from-white to-slate-50/80 p-3 sm:p-6 text-slate-900 space-y-4 sm:space-y-6 shadow-[0_8px_0_0_#cbd5e1] select-none">
-      {board.tiles && (
-        <>
-          {board.kind === 'transform' && !board.sequence && board.tiles.length === 2 && (
-            <div className="flex items-center justify-center">
-              <span className="text-center text-xs sm:text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-4 py-1.5 rounded-full shadow-sm">
-                {board.operation === 'rotate'
-                  ? `Saat yönünde ${(board.turns || 1) * 90}° döndür`
-                  : board.operation === 'mirrorX'
-                  ? 'Ayna sağda · Sağ ile sol yer değiştirir'
-                  : 'Ayna altta · Üst ile alt yer değiştirir'}
-              </span>
-            </div>
-          )}
-          <div
-            className="grid gap-3 sm:gap-6 mx-auto w-full max-w-md sm:max-w-xl md:max-w-2xl"
-            style={{
-              gridTemplateColumns: `repeat(${Math.min(board.columns || 2, board.tiles.length)}, minmax(0, 1fr))`,
-            }}
-          >
-            {board.tiles.map((tile, i) => (
-              <div
-                key={i}
-                className="aspect-square p-2.5 sm:p-4 rounded-2xl sm:rounded-3xl border-2 border-slate-300/90 flex items-center justify-center bg-white shadow-[0_6px_0_0_#cbd5e1] hover:border-indigo-400 transition-all"
-              >
-                {tile ? (
-                  <TileDiagram tile={tile} />
-                ) : (
-                  <div className="flex flex-col items-center justify-center gap-1">
-                    <span className="text-4xl font-black text-indigo-600 animate-pulse drop-shadow-sm" aria-label="Eksik desen">
-                      ?
-                    </span>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
-                      Eksik Desen
-                    </span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {board.kind === 'numbers' && (
-        <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3">
-          {[...board.values!, '?'].map((v, i) => {
-            const isMissing = v === '?';
-            return (
-              <span
-                key={i}
-                className={`min-w-14 sm:min-w-16 rounded-2xl border-2 p-3 sm:p-4 text-xl sm:text-2xl font-black tabular-nums text-center transition-all ${
-                  isMissing
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-[0_5px_0_0_#6366f1] animate-pulse ring-2 ring-indigo-400/30'
-                    : 'border-slate-300 bg-slate-50 text-slate-800 shadow-[0_5px_0_0_#cbd5e1]'
-                }`}
-              >
-                {v}
-              </span>
-            );
-          })}
-        </div>
-      )}
-
-      {board.kind === 'machine' && (
-        <div className="max-w-md mx-auto space-y-3 bg-slate-50/80 p-4 rounded-2xl border-2 border-slate-200">
-          <div className="grid grid-cols-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">
-            <span>Girdi</span>
-            <span>İşlem Kuralı</span>
-            <span>Çıktı</span>
-          </div>
-          {[...board.examples!, [board.input!, '?']].map(([x, y], i) => (
-            <div key={i} className="grid grid-cols-3 gap-3 items-center text-center text-lg sm:text-xl font-bold">
-              <span className="rounded-xl bg-white border-2 border-slate-200 shadow-sm p-2 text-slate-800">
-                {x}
-              </span>
-              <span className="text-indigo-600 font-black text-2xl">→</span>
-              <span
-                className={`rounded-xl border-2 p-2 ${
-                  y === '?'
-                    ? 'bg-indigo-50 border-indigo-400 text-indigo-600 font-black animate-pulse shadow-sm'
-                    : 'bg-white border-slate-200 text-indigo-700 shadow-sm'
-                }`}
-              >
-                {y}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {board.kind === 'symbols' && (
-        <div className="space-y-4">
-          <div className="flex flex-wrap justify-center gap-3">
-            {board.key!.map((k) => (
-              <span
-                key={k.symbol}
-                className="rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-2 text-lg sm:text-xl font-bold text-slate-800 shadow-[0_3px_0_0_#cbd5e1]"
-              >
-                {k.symbol} = {k.value}
-              </span>
-            ))}
-          </div>
-          <p className="text-center text-2xl sm:text-3xl font-black tracking-wider py-2 text-indigo-900">
-            {board.symbols!.join(' + ')} = <span className="text-indigo-600 animate-pulse">?</span>
-          </p>
-        </div>
-      )}
-
-      {board.kind === 'count' && (
-        <div className="grid grid-cols-6 gap-2 sm:gap-3 max-w-md mx-auto">
-          {board.items!.map((v, i) => (
-            <span
-              key={i}
-              className="aspect-square flex items-center justify-center text-2xl sm:text-3xl rounded-xl bg-white border-2 border-slate-200 shadow-[0_3px_0_0_#cbd5e1] hover:border-indigo-300 transition-all"
-            >
-              {v}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {board.kind === 'order' && (
-        <div className="max-w-lg mx-auto space-y-4">
-          <div className="flex flex-wrap gap-2 justify-center">
-            {board.names!.map((n) => (
-              <span
-                key={n}
-                className="rounded-full bg-indigo-50 border border-indigo-200 px-3.5 py-1 text-sm font-bold text-indigo-800 shadow-sm"
-              >
-                {n}
-              </span>
-            ))}
-          </div>
-          <ul className="space-y-2 list-disc pl-5 text-sm sm:text-base text-slate-700 font-medium">
-            {board.clues!.map(([a, b], i) => (
-              <li key={i}>
-                <span className="font-bold text-slate-900">{b}</span>,{' '}
-                <span className="font-bold text-slate-900">{a}</span> adlı kişinin hemen sağındadır.
-              </li>
-            ))}
-          </ul>
-          <div className="flex justify-center gap-2.5">
-            {board.names!.map((_, i) => (
-              <div
-                key={i}
-                className={`w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center border-2 rounded-2xl text-lg font-black transition-all ${
-                  i + 1 === board.position
-                    ? 'border-indigo-500 text-indigo-700 bg-indigo-50 shadow-[0_4px_0_0_#6366f1] ring-2 ring-indigo-400/30'
-                    : 'border-slate-200 bg-slate-50 text-slate-400 shadow-[0_3px_0_0_#cbd5e1]'
-                }`}
-              >
-                {i + 1 === board.position ? '?' : i + 1}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  const [flat, setFlat] = useState(false), [expanded, setExpanded] = useState(false);
+  const modal = useRef<HTMLDialogElement>(null), opener = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+  useEffect(() => {
+    if (!expanded || !modal.current) return;
+    const el = modal.current, overflow = document.body.style.overflow;
+    el.showModal(); document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = overflow; el.close(); };
+  }, [expanded]);
+  const close = () => { setExpanded(false); opener.current?.focus(); };
+  return <section className="qb-studio" aria-label="Soru görseli">
+    <div className="qb-toolbar"><span><Shapes size={16} /> {titles[board.kind]}</span><div><button type="button" aria-pressed={flat} onClick={() => setFlat(!flat)}><Layers size={14} /><span>Sade görünüm</span></button><button ref={opener} type="button" onClick={() => setExpanded(true)} aria-label="Soru görselini büyüt"><Expand size={15} /><span>Büyüt</span></button></div></div>
+    <BoardContent board={board} flat={flat} />
+    <dialog ref={modal} className="qb-dialog" aria-labelledby={titleId} onCancel={e => { e.preventDefault(); close(); }} onClose={() => setExpanded(false)} onClick={e => { if (e.target === e.currentTarget) close(); }} onKeyDown={e => {
+      if (e.key !== 'Tab') return;
+      const controls = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), [tabindex="0"]'));
+      if (e.shiftKey && document.activeElement === controls[0]) { e.preventDefault(); controls.at(-1)?.focus(); }
+      else if (!e.shiftKey && document.activeElement === controls.at(-1)) { e.preventDefault(); controls[0]?.focus(); }
+    }}>
+      <div className="qb-dialog-inner"><div className="qb-dialog-header"><div><h2 id={titleId}>{titles[board.kind]}</h2><p>Aynı soru, daha geniş inceleme alanı.</p></div><button type="button" autoFocus onClick={close} aria-label="Büyütülmüş görseli kapat"><X size={21} /></button></div><BoardContent board={board} flat={flat} /><p className="qb-dialog-note">İncelemeyi bitirdiğinde kapatıp cevabını yerleştirebilirsin.</p></div>
+    </dialog>
+  </section>;
 }

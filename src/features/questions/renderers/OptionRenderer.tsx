@@ -60,7 +60,7 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
     }
 
     const vd: any = visualData || {};
-    if (Array.isArray(vd.cells) && [3, 4].includes(vd.size)) return <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto"><TileDiagram tile={vd} /></div>;
+    if (Array.isArray(vd.cells) && [3, 4].includes(vd.size)) return <div className="w-20 sm:w-24 mx-auto"><TileDiagram tile={vd} /></div>;
 
     // 1. Direct numerical or text badge (e.g. counting, equation, or number pattern)
     if (vd.textNumber !== undefined && vd.textNumber !== null) {
@@ -480,7 +480,9 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
     }
   };
 
-  const optionLabelText = option.label ? `${id} seçeneği: ${option.label}` : `Seçenek ${id}`;
+  const optionValue = visualData as { textNumber?: string | number } | undefined;
+  // Let the SVG description participate in the accessible name for visual choices.
+  const optionLabelText = optionValue?.textNumber !== undefined ? `${id} seçeneği: ${optionValue.textNumber}` : undefined;
 
   return (
     <button
@@ -498,16 +500,16 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
     >
       {/* Option Identifier Badge */}
       <span
-        aria-hidden="true"
         className={`absolute top-2.5 left-2.5 sm:top-3 sm:left-3 flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-black border transition-colors ${badgeStyle}`}
       >
         {id}
       </span>
 
       {/* Visual Content Render */}
-      <div className="w-full flex items-center justify-center my-auto pt-2">
+      <div className="w-full flex items-center justify-center my-auto pt-7">
         {renderVisualContent()}
       </div>
     </button>
   );
 };
+

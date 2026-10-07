@@ -10,7 +10,7 @@ type Props = { question: BaseQuestion; response: QuestionResponse | null; onChan
 
 function CardValue({ value }: { value: unknown }) {
   const data = value as Partial<Tile> & { textNumber?: string | number };
-  return data?.cells && data.size ? <span className="block w-16 h-16 mx-auto"><TileDiagram tile={data as Tile} /></span> :
+  return data?.cells && data.size ? <span className="block w-20 mx-auto"><TileDiagram tile={data as Tile} /></span> :
     <span className="text-xl font-black">{data?.textNumber ?? String(value)}</span>;
 }
 
