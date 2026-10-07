@@ -1,4 +1,5 @@
 import React from 'react';
+import { comboMultiplier } from '../../features/student/gamification-model';
 import { motion, AnimatePresence } from 'motion/react';
 import { Flame, Zap, Star, Trophy, Sparkles, Rocket, Crown } from 'lucide-react';
 
@@ -21,7 +22,7 @@ export function getComboTier(streak: number): ComboTierInfo {
       tier: 5,
       label: 'EFSANE ZEKÂ!',
       sublabel: 'Durdurulamaz Güç!',
-      multiplier: 2.5,
+      multiplier: comboMultiplier(streak),
       multiplierText: '2.5x XP',
       badgeBg: 'bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500',
       borderColor: 'border-pink-300',
@@ -35,7 +36,7 @@ export function getComboTier(streak: number): ComboTierInfo {
       tier: 4,
       label: 'ROKET SERİSİ!',
       sublabel: 'Işık Hızı!',
-      multiplier: 2.0,
+      multiplier: comboMultiplier(streak),
       multiplierText: '2.0x XP',
       badgeBg: 'bg-gradient-to-r from-violet-600 to-indigo-600',
       borderColor: 'border-violet-300',
@@ -49,7 +50,7 @@ export function getComboTier(streak: number): ComboTierInfo {
       tier: 3,
       label: 'KUSURSUZ SERİ!',
       sublabel: 'Yüksek Odak!',
-      multiplier: 1.5,
+      multiplier: comboMultiplier(streak),
       multiplierText: '1.5x XP',
       badgeBg: 'bg-gradient-to-r from-amber-500 to-orange-500',
       borderColor: 'border-amber-300',
@@ -63,7 +64,7 @@ export function getComboTier(streak: number): ComboTierInfo {
       tier: 2,
       label: 'ALEV ALDIN!',
       sublabel: 'Harika Ritim!',
-      multiplier: 1.2,
+      multiplier: comboMultiplier(streak),
       multiplierText: '1.2x XP',
       badgeBg: 'bg-gradient-to-r from-orange-500 to-red-500',
       borderColor: 'border-orange-300',
@@ -77,7 +78,7 @@ export function getComboTier(streak: number): ComboTierInfo {
       tier: 1,
       label: 'İKİLİ SERİ!',
       sublabel: 'Devam Et!',
-      multiplier: 1.1,
+      multiplier: comboMultiplier(streak),
       multiplierText: '1.1x XP',
       badgeBg: 'bg-gradient-to-r from-amber-400 to-amber-500',
       borderColor: 'border-amber-200',
@@ -90,7 +91,7 @@ export function getComboTier(streak: number): ComboTierInfo {
     tier: 0,
     label: 'BAŞLANGIÇ',
     sublabel: 'Seri Yakala!',
-    multiplier: 1.0,
+    multiplier: comboMultiplier(streak),
     multiplierText: '1.0x XP',
     badgeBg: 'bg-slate-100',
     borderColor: 'border-zinc-200',
@@ -298,3 +299,4 @@ export const ComboStreakIndicator: React.FC<ComboStreakIndicatorProps> = ({
     </AnimatePresence>
   );
 };
+

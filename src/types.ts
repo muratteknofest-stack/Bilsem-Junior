@@ -454,6 +454,10 @@ export interface BaseQuestion {
   targetGrade?: 1 | 2 | 3 | 4;
   targetGrades?: (1 | 2 | 3 | 4)[];
   createdAt?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+  reviewedBy?: string;
+  revision?: number;
   isCustom?: boolean;
   status?: 'draft' | 'review' | 'published' | 'archived';
   authoring?: {
@@ -836,3 +840,4 @@ export interface WeeklyQuestionProgressData {
   fourWeeksTrend: PastWeekTrendItem[];
   allTimeTotal: number;
 }
+

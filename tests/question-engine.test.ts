@@ -1,3 +1,5 @@
+import { VERIFIED_TYPES } from '../src/features/questions/professional-engine';
+import { isQuestionReadyForStudents } from '../src/features/questions/quality';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { ALL_QUESTION_TYPES, generateQuestionByType } from '../src/features/questions/generators/index.ts';
@@ -6,7 +8,7 @@ import type { DifficultyLevel } from '../src/types.ts';
 
 const difficulties: DifficultyLevel[] = [1, 2, 3, 4, 5, 6];
 
-test('all question generators are deterministic and structurally valid', () => {
+test('generators are deterministic; only supported engines enter the student pool', () => {
   for (const type of ALL_QUESTION_TYPES) {
     for (const difficulty of difficulties) {
       const seed = 41_000 + difficulty;
@@ -15,6 +17,11 @@ test('all question generators are deterministic and structurally valid', () => {
       assert.deepEqual(second, first, `${type} level ${difficulty} is not deterministic`);
 
       const validation = validateQuestion(first);
+      if (!VERIFIED_TYPES.includes(type)) {
+        assert.equal(isQuestionReadyForStudents(first), false);
+        assert.equal(first.verificationStatus?.isVerified, false);
+        continue;
+      }
       assert.equal(
         validation.isValid,
         true,
@@ -39,3 +46,4 @@ test('question IDs do not collide across type, difficulty and seed', () => {
   }
   assert.equal(ids.size, ALL_QUESTION_TYPES.length * difficulties.length * 25);
 });
+

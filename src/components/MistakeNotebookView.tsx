@@ -1,3 +1,4 @@
+import { isQuestionReadyForStudents } from '../features/questions/quality';
 import React, { useState } from 'react';
 import { MistakeItem, BaseQuestion, CognitiveCategory } from '../types';
 import { dataService } from '../services/data-service';
@@ -78,6 +79,10 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
     sound.playClick();
     // Recreate the EXACT same question using its seed & difficulty!
     const q = generateQuestionByType(item.questionType, item.questionSeed, item.difficulty);
+    if (!isQuestionReadyForStudents(q)) {
+      setUnlockedNotice('Bu soru yeniden inceleniyor. Şimdilik alıştırmalardaki doğrulanmış sorularla devam edebilirsin.');
+      return;
+    }
     setActiveRetryMistake(item);
     setRetryQuestion(q);
     setSelectedOptionId(null);
@@ -543,3 +548,4 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
     </div>
   );
 };
+

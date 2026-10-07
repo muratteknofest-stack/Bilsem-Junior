@@ -1,3 +1,4 @@
+import { auditQuestion, isQuestionReadyForStudents } from '../../src/features/questions/quality';
 import { Router } from 'express';
 import { z } from 'zod';
 import {
@@ -90,13 +91,13 @@ adminAiRoutes.post('/admin/ai-generate-question', requireSupabaseAuth, requireAp
       console.warn('AI generation log yazılamadı:', logErr);
     }
 
-    if (result.success && result.question) {
+    if (result.question) {
       try {
         const adminDb = getAdminDb();
         const qRef = adminDb.collection('questions').doc(result.question.id);
         await qRef.set({
           ...result.question,
-          status: 'draft',
+          status: result.success ? 'draft' : 'review',
           revision: 0,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -104,6 +105,7 @@ adminAiRoutes.post('/admin/ai-generate-question', requireSupabaseAuth, requireAp
         });
       } catch (saveErr) {
         console.warn('AI sorusu kaydedilemedi:', saveErr);
+        return res.status(503).json({ error: 'Denetim sonucu kaydedilemedi. Soru yayımlanmadı.' });
       }
     }
 
@@ -209,6 +211,10 @@ adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, requireAppC
     const currentData = snap.data()!;
 
     if (action === 'approve') {
+      if (!isQuestionReadyForStudents(currentData)) {
+        const report = auditQuestion(currentData);
+        return res.status(422).json({ error: 'Soru doğrulanamadı; inceleme gerekli.', details: [...report.errors, ...report.reviewRequired] });
+      }
       await qRef.update({
         status: 'published',
         reviewedBy: req.authUser.uid,
@@ -230,7 +236,6 @@ adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, requireAppC
     }
 
     if (action === 'regenerate') {
-      await qRef.delete();
       const ai = getGeminiClient();
       if (!ai) return res.status(503).json({ error: 'AI servisi kullanılamıyor.' });
 
@@ -253,6 +258,7 @@ adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, requireAppC
         });
       }
 
+      if (result.success) await qRef.update({ status: 'archived', updatedAt: new Date().toISOString() });
       return res.json({
         success: result.success,
         message: result.success ? 'Soru yeniden üretildi.' : 'Yeniden üretim başarısız.',
@@ -269,3 +275,4 @@ adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, requireAppC
 });
 
 export default adminAiRoutes;
+

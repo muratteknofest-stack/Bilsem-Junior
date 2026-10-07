@@ -8,7 +8,7 @@ import {
   DIFFICULTY_COLORS,
   UserProfile
 } from '../types';
-import { generateQuestion } from '../features/questions/generators';
+import { generateQuestion, STUDENT_CATEGORY_TYPES } from '../features/questions/generators';
 import { usePublishedQuestions } from '../features/questions/use-published-questions';
 import { selectPublishedPool } from '../features/questions/editorial-data';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
@@ -18,7 +18,8 @@ import { StepByStepAiExplanation } from './StepByStepAiExplanation';
 import { VisualCountdownTimer } from './VisualCountdownTimer';
 import { AiHintModal } from './AiHintModal';
 import { AiMistakeModal } from './AiMistakeModal';
-import { ComboStreakIndicator, getComboTier } from './animations/ComboStreakIndicator';
+import { ComboStreakIndicator } from './animations/ComboStreakIndicator';
+import { answerXp } from '../features/student/gamification-model';
 import { ComboBurstOverlay } from './animations/ComboBurstOverlay';
 import { StreakFloatingFloater } from './animations/StreakFloatingFloater';
 import { dataService } from '../services/data-service';
@@ -83,7 +84,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
   const publishedQuestions = usePublishedQuestions();
   // Setup phase vs active session
   const [inSetup, setInSetup] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<CognitiveCategory | 'mixed'>(initialCategory);
+  const [selectedCategory, setSelectedCategory] = useState<CognitiveCategory | 'mixed'>(initialCategory === 'mixed' || STUDENT_CATEGORY_TYPES[initialCategory] ? initialCategory : 'mixed');
   const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyLevel | 'adaptive'>('adaptive');
 
   // Pacing & Timer configuration
@@ -325,16 +326,11 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
       const newStreak = consecutiveCorrectCount + 1;
       setConsecutiveCorrectCount(newStreak);
       
-      const baseXP = 10 + currentQuestion.difficulty * 2;
-      const tier = getComboTier(newStreak);
-      const multipliedXP = Math.round(baseXP * tier.multiplier);
-      
-      let bonusXP = 0;
-      const milestoneStreaks = [2, 3, 5, 7, 10, 15, 20];
-      const isMilestone = milestoneStreaks.includes(newStreak);
+      const reward = answerXp('practice', currentQuestion.difficulty, newStreak);
+      const bonusXP = reward.comboBonus;
+      const isMilestone = bonusXP > 0;
 
       if (isMilestone) {
-        bonusXP = 30 + newStreak * 5;
         setLastMilestoneBonus(bonusXP);
         setActiveMilestoneStreak(newStreak);
         sound.playComboMilestone(newStreak);
@@ -344,7 +340,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
         sound.playSuccess();
       }
 
-      const totalXPAdded = multipliedXP + bonusXP;
+      const totalXPAdded = reward.total;
       setLastEarnedXP(totalXPAdded);
       setShowFloater(true);
       setTimeout(() => setShowFloater(false), 1200);
@@ -449,7 +445,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
             1. Çalışma Alanı Seç
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-            {CATEGORY_OPTIONS.map((cat) => (
+            {CATEGORY_OPTIONS.filter(c => c.id === 'mixed' || STUDENT_CATEGORY_TYPES[c.id]).map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => {
@@ -1111,3 +1107,4 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
     </div>
   );
 };
+

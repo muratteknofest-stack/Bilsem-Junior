@@ -1,3 +1,4 @@
+import { isQuestionReadyForStudents } from '../../features/questions/quality';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Zap,
@@ -307,7 +308,8 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
 
       // 5. Validation Check
       const val = validateQuestion(q);
-      const isValid = val.isValid;
+      const isValid = val.isValid && isQuestionReadyForStudents(q);
+      q.status = isValid ? 'draft' : 'review';
 
       batchResult.push(q);
 
@@ -937,7 +939,7 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
               <div className="p-2 rounded-xl bg-slate-800/50">
                 <div className="text-[10px] text-slate-400">Hatasızlık</div>
                 <div className="font-bold text-emerald-400 font-mono mt-0.5">
-                  {generatedQuestions.length > 0 ? '%100' : '-'}
+                  {generatedQuestions.length > 0 ? `${Math.round(generatedQuestions.filter(isQuestionReadyForStudents).length / generatedQuestions.length * 100)}%` : '-'}
                 </div>
               </div>
               <div className="p-2 rounded-xl bg-slate-800/50">
@@ -1046,7 +1048,7 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
                 Pedagojik Kalite
               </div>
               <div className="text-2xl font-black text-emerald-400 font-['Outfit',sans-serif] mt-1">
-                %100 Onaylı
+                İnceleme bekleyen taslaklar
               </div>
             </div>
           </div>
@@ -1300,3 +1302,4 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
     </div>
   );
 };
+

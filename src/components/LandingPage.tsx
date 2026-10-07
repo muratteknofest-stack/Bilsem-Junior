@@ -80,7 +80,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   // Hero Live Interactive Question Solver State
   const [sampleSeed, setSampleSeed] = useState(4829);
   const [activeCategoryType, setActiveCategoryType] = useState<
-    'visual_sequence' | 'matrix_2x2' | 'figure_rotation' | 'odd_one_out'
+    'visual_sequence' | 'matrix_2x2' | 'figure_rotation' | 'shape_counting'
   >('visual_sequence');
   const [sampleQuestion, setSampleQuestion] = useState(() =>
     generateQuestionByType('visual_sequence', 4829, 2)
@@ -131,7 +131,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   };
 
   const switchSampleType = (
-    type: 'visual_sequence' | 'matrix_2x2' | 'figure_rotation' | 'odd_one_out'
+    type: 'visual_sequence' | 'matrix_2x2' | 'figure_rotation' | 'shape_counting'
   ) => {
     sound.playClick();
     setActiveCategoryType(type);
@@ -590,7 +590,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     { id: 'visual_sequence', label: 'Görsel Örüntü' },
                     { id: 'matrix_2x2', label: '2x2 Matris' },
                     { id: 'figure_rotation', label: 'Şekil Döndürme' },
-                    { id: 'odd_one_out', label: 'Farklı Olan' },
+                    { id: 'shape_counting', label: 'Şekilleri Say' },
                   ].map((cat) => (
                     <button
                       key={cat.id}
@@ -1328,3 +1328,4 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     </div>
   );
 };
+

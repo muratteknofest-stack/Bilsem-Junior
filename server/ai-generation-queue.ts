@@ -14,6 +14,7 @@ export interface GenerationJobConfig {
   difficulty: number | 'auto';
   count: number;
   minQualityScore: number;
+  aiModel?: string;
 }
 
 export interface GenerationJob {
@@ -163,6 +164,7 @@ export class AiGenerationQueue {
         targetGrade: job.config.targetGrade,
         difficulty: diff,
         minQualityScore: job.config.minQualityScore,
+        aiModel: job.config.aiModel,
       };
 
       const result = await runQuestionPipeline(this.aiClient, pipelineConfig);
@@ -172,9 +174,9 @@ export class AiGenerationQueue {
       job.progress.completed++;
       job.results.push(result);
 
+      if (result.question) await this.saveQuestionToSupabase(result.question);
       if (result.success && result.question) {
         job.progress.approved++;
-        await this.saveQuestionToSupabase(result.question);
       } else {
         if (result.validationErrors.length > 0 || result.rejectionReasons.length > 0) {
           job.progress.rejected++;
@@ -248,7 +250,7 @@ export class AiGenerationQueue {
   private async saveQuestionToSupabase(question: BaseQuestion) {
     try {
       // Enforce draft status for newly generated questions
-      question.status = 'draft';
+      question.status = question.aiMeta?.solverVerified ? 'draft' : 'review';
       const docRef = this.store.collection('questions').doc(question.id);
       await docRef.set(question);
     } catch (error) {
@@ -277,3 +279,4 @@ export class AiGenerationQueue {
     }
   }
 }
+

@@ -8,7 +8,7 @@ interface EngineProps {
 }
 
 export const PaperFoldRenderer: React.FC<EngineProps> = ({ question, mode }) => {
-  const { visualConfig } = question;
+  const visualConfig = (question.visualConfig || {}) as Record<string, any>;
 
   // -------------------------------------------------------------
   // 18. Paper Folding (3B Kağıt Katlama Simülasyonu)
@@ -140,3 +140,4 @@ export const PaperFoldRenderer: React.FC<EngineProps> = ({ question, mode }) => 
 
   return null;
 };
+

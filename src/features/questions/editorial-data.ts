@@ -1,9 +1,11 @@
 import type { BaseQuestion } from '../../types';
-import { auditQuestion, questionVisualKey } from './quality';
+import { auditQuestion, questionVisualKey, isQuestionReadyForStudents, assertQuestionReadyForStudents } from './quality';
 
 export function selectPublishedPool(generated: BaseQuestion[], published: BaseQuestion[]): BaseQuestion[] {
   const used = new Set<string>();
+  published = published.filter(isQuestionReadyForStudents);
   return generated.map(fallback => {
+    assertQuestionReadyForStudents(fallback);
     const matching = published.find(q => q.status === 'published' && !used.has(q.id) && q.category === fallback.category &&
       q.difficulty === fallback.difficulty &&
       (!fallback.targetGrade || q.targetGrade === fallback.targetGrade || q.targetGrades?.includes(fallback.targetGrade)));
@@ -33,3 +35,4 @@ export function parseQuestionImport(json: string, existing: BaseQuestion[]): Bas
   }
   return accepted;
 }
+

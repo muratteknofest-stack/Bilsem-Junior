@@ -109,7 +109,7 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
     sound.playClick();
     const seed = Math.floor(Math.random() * 899999) + 100000;
     // Generate a fun visual odd-one-out question
-    const q = generateQuestionByType('odd_one_out', seed, 2);
+    const q = generateQuestionByType('shape_counting', seed, 2);
     setQuickQuestion(q);
     setSelectedQuickOption(null);
     setIsQuickSubmitted(false);
@@ -579,3 +579,4 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
     </div>
   );
 };
+

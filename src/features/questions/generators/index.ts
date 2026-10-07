@@ -1,3 +1,4 @@
+import { assertQuestionReadyForStudents } from '../quality';
 import { BaseQuestion, CognitiveCategory, DifficultyLevel, QuestionType } from '../../../types';
 import { SeededRNG } from '../../../lib/rng';
 import { validateQuestion } from '../validator';
@@ -123,13 +124,23 @@ export const CATEGORY_TYPES_MAP: Record<CognitiveCategory, QuestionType[]> = {
   coding: ['symbol_coding', 'cryptogram', 'logical_sequence', 'maze_path'],
 };
 
+export const STUDENT_CATEGORY_TYPES: Partial<Record<CognitiveCategory, QuestionType[]>> = {
+  pattern: ['visual_sequence'], matrix: ['matrix_2x2', 'matrix_3x3', 'raven_matrix'],
+  spatial: ['figure_rotation', 'mirror_reflection'], logic: ['logic_grid'],
+  attention: ['shape_counting'], numerical: ['number_pattern', 'operation_machine'], coding: ['symbol_coding'],
+};
+
 export function generateQuestionByType(
   type: QuestionType,
   seed: number,
   difficulty: DifficultyLevel = 3,
   retryCount = 0
 ): BaseQuestion {
-  if (VERIFIED_TYPES.includes(type)) return generateProfessionalQuestion(type, seed, difficulty);
+  if (VERIFIED_TYPES.includes(type)) {
+    const question = generateProfessionalQuestion(type, seed, difficulty);
+    assertQuestionReadyForStudents(question);
+    return question;
+  }
   let q: BaseQuestion;
 
   switch (type) {
@@ -273,19 +284,13 @@ export function generateQuestionByType(
   // Individual legacy generators used shorter IDs that collided between levels.
   q.id = `${q.type}-v${q.version}-d${q.difficulty}-s${q.seed}`;
 
-  // 5-Pass Automated Verification & Solver Testing Suite
+  // Legacy engines remain editable drafts, never silently repaired or certified.
+  q.status = 'draft';
   const report = runMultiPassQuestionTests(q);
-  if (!report.isVerified) {
-    if (retryCount < 8) {
-      // Safe deterministic retry with prime salted seed
-      return generateQuestionByType(type, (seed + 10007 + retryCount * 7919) % 1000000, difficulty, retryCount + 1);
-    } else {
-      console.warn(`Question validation failed after 8 retries for type "${type}", seed ${seed}`, report.errors);
-    }
-  }
+  return { ...q, verificationStatus: { isVerified: false, passCount: report.passCount,
+    stages: report.stages.map(s => s.message), testedAt: 'pending-review',
+    confidenceScore: 0, solverChecked: report.solverChecked, auditLog: report.errors } };
 
-  // Stamp verified status with 100% confidence
-  return stampQuestionVerification(q, report);
 }
 
 export function generateQuestion(options: {
@@ -294,7 +299,7 @@ export function generateQuestion(options: {
   seed?: number;
   type?: QuestionType;
 }): BaseQuestion {
-  const seed = options.seed ?? Math.floor(Math.random() * 1000000);
+  const seed = options.seed ?? Math.floor(Math.random() * 999999) + 1;
   const rng = new SeededRNG(seed);
   const difficulty = options.difficulty ?? 3;
 
@@ -303,13 +308,15 @@ export function generateQuestion(options: {
   if (options.type) {
     chosenType = options.type;
   } else if (options.category && options.category !== 'mixed') {
-    const pool = CATEGORY_TYPES_MAP[options.category] || ALL_QUESTION_TYPES;
-    chosenType = rng.pick(pool);
+    const pool = (STUDENT_CATEGORY_TYPES[options.category] || []);
+    chosenType = rng.pick(pool.length ? pool : VERIFIED_TYPES);
   } else {
-    chosenType = rng.pick(ALL_QUESTION_TYPES);
+    chosenType = rng.pick(VERIFIED_TYPES);
   }
 
-  return generateQuestionByType(chosenType, seed, difficulty);
+  const question = generateQuestionByType(chosenType, seed, difficulty);
+  assertQuestionReadyForStudents(question);
+  return question;
 }
 
 export function generateQuestionForGrade(
@@ -322,7 +329,7 @@ export function generateQuestionForGrade(
   const finalSeed = seed ?? Math.floor(Math.random() * 900000) + 100000;
   const rng = new SeededRNG(finalSeed);
 
-  const finalType = type ?? rng.pick(cfg.recommendedTypes);
+  const finalType = type ?? rng.pick(cfg.recommendedTypes.filter(t => VERIFIED_TYPES.includes(t)));
   const finalDifficulty = difficulty ?? cfg.defaultDifficulty;
 
   const q = generateQuestionByType(finalType, finalSeed, finalDifficulty);
@@ -331,5 +338,7 @@ export function generateQuestionForGrade(
   q.targetGrade = grade;
   q.targetGrades = [grade];
   q.estimatedSeconds = cfg.timeLimitSeconds;
+  assertQuestionReadyForStudents(q);
   return q;
 }
+

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { BaseQuestion, SkillMastery, DifficultyLevel, DIFFICULTY_COLORS } from '../types';
-import { generateQuestion } from '../features/questions/generators';
+import { generateQuestion, STUDENT_CATEGORY_TYPES } from '../features/questions/generators';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
 import { OptionRenderer } from '../features/questions/renderers/OptionRenderer';
 import { VisualExplanationOverlay } from '../features/questions/renderers/VisualExplanationOverlay';
 import { AiHintModal } from './AiHintModal';
-import { ComboStreakIndicator, getComboTier } from './animations/ComboStreakIndicator';
+import { ComboStreakIndicator } from './animations/ComboStreakIndicator';
+import { answerXp } from '../features/student/gamification-model';
 import { ComboBurstOverlay } from './animations/ComboBurstOverlay';
 import { StreakFloatingFloater } from './animations/StreakFloatingFloater';
 import { dataService } from '../services/data-service';
@@ -62,7 +63,7 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
 
   // Pick adaptive category based on weights
   const getAdaptiveCategory = () => {
-    const sorted = [...masteries].sort((a, b) => a.mastery - b.mastery);
+    const sorted = [...masteries].filter(m => STUDENT_CATEGORY_TYPES[m.category]).sort((a, b) => a.mastery - b.mastery);
     const rand = Math.random();
 
     // 50% weak
@@ -109,14 +110,10 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
       const nextConsecutive = consecutiveCorrect + 1;
       setConsecutiveCorrect(nextConsecutive);
 
-      const baseXP = 15 + currentDifficulty * 2;
-      const tier = getComboTier(nextConsecutive);
-      const multipliedXP = Math.round(baseXP * tier.multiplier);
+      const reward = answerXp('adaptive', currentDifficulty, nextConsecutive);
+      const bonusXP = reward.comboBonus;
 
-      let bonusXP = 0;
-      const milestoneStreaks = [2, 3, 5, 7, 10];
-      if (milestoneStreaks.includes(nextConsecutive)) {
-        bonusXP = 25 + nextConsecutive * 5;
+      if (bonusXP > 0) {
         setLastMilestoneBonus(bonusXP);
         setActiveMilestoneStreak(nextConsecutive);
         sound.playComboMilestone(nextConsecutive);
@@ -126,7 +123,7 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
         sound.playSuccess();
       }
 
-      const totalXP = multipliedXP + bonusXP;
+      const totalXP = reward.total;
       setLastEarnedXP(totalXP);
       setShowFloater(true);
       setTimeout(() => setShowFloater(false), 1200);
@@ -375,3 +372,4 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
     </div>
   );
 };
+

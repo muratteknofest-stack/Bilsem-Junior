@@ -82,7 +82,7 @@ export function solveBoard(board: Board): Value {
   }
   if (board.kind === 'matrix') {
     const t = board.tiles!;
-    if (t.length !== 9 || t.slice(0, 8).some(v => !v)) throw new Error('Matris eksik.');
+    if (t.length !== 9 || t[8] !== null || t.slice(0, 8).some(v => !v)) throw new Error('Matris eksik.');
     const ops = [0, 1, 2].filter(op => same(combine(t[0]!, t[1]!, op), t[2]) && same(combine(t[3]!, t[4]!, op), t[5]));
     if (ops.length !== 1) throw new Error('Matris tek bir ortak kural vermiyor.');
     return combine(t[6]!, t[7]!, ops[0]);
@@ -116,7 +116,7 @@ export function solveBoard(board: Board): Value {
   }
   if (board.kind === 'order') {
     const names = board.names!;
-    if (!Array.isArray(names) || names.length < 3 || names.length > 6 || names.some(n => typeof n !== 'string') || new Set(names).size !== names.length || !Number.isInteger(board.position) || !board.position || board.position > names.length || !Array.isArray(board.clues) || board.clues.length > 10 || board.clues.some(p => !Array.isArray(p) || p.length !== 2 || p.some(n => !names.includes(n)))) throw new Error('Sıralama verisi geçersiz.');
+    if (!Array.isArray(names) || names.length < 3 || names.length > 6 || names.some(n => typeof n !== 'string') || new Set(names).size !== names.length || !Number.isInteger(board.position) || board.position! < 1 || board.position! > names.length || !Array.isArray(board.clues) || board.clues.length > 10 || board.clues.some(p => !Array.isArray(p) || p.length !== 2 || p.some(n => !names.includes(n)))) throw new Error('Sıralama verisi geçersiz.');
     const solutions: string[][] = [];
     const visit = (order: string[]) => {
       if (order.length === names.length) {
@@ -125,7 +125,7 @@ export function solveBoard(board: Board): Value {
     };
     visit([]);
     if (solutions.length !== 1) throw new Error('Sıralama tek çözümlü değil.');
-    return { textNumber: solutions[0][board.position - 1] };
+    return { textNumber: solutions[0][board.position! - 1] };
   }
   throw new Error('Bilinmeyen kural.');
 }
@@ -271,3 +271,4 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
     estimatedSeconds: 30 + difficulty * 7, skills: [objective], seed, visualConfig: board, status: 'draft',
     authoring: { engine: ENGINE_VERSION, objective, distractorNotes: notes } };
 }
+

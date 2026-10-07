@@ -9,7 +9,7 @@ interface EngineProps {
 }
 
 export const LogicGridRenderer: React.FC<EngineProps> = ({ question, mode }) => {
-  const { visualConfig } = question;
+  const visualConfig = (question.visualConfig || {}) as Record<string, any>;
 
   // 1. Sequence Mode (Görsel Örüntü)
   if (mode === 'sequence') {
@@ -303,3 +303,4 @@ export const LogicGridRenderer: React.FC<EngineProps> = ({ question, mode }) => 
 
   return null;
 };
+

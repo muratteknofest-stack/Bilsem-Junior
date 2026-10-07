@@ -1,3 +1,4 @@
+import { isQuestionReadyForStudents, assertQuestionReadyForStudents } from '../features/questions/quality';
 import {
   BaseQuestion,
   CognitiveCategory,
@@ -138,7 +139,7 @@ class QuestionBankService {
           q.targetGrade = item.grade;
           q.targetGrades = [item.grade];
           q.ageGroup = item.grade <= 2 ? '1-2' : '3-4';
-          q.status = 'published';
+          q.status = isQuestionReadyForStudents(q) ? 'published' : 'draft';
           q.isCustom = true;
           starterPool.push(q);
         } catch {
@@ -147,7 +148,7 @@ class QuestionBankService {
             fallback.id = `q_bilsem_g${item.grade}_seq_${i + 1}`;
             fallback.targetGrade = item.grade;
             fallback.targetGrades = [item.grade];
-            fallback.status = 'published';
+            fallback.status = isQuestionReadyForStudents(fallback) ? 'published' : 'draft';
             fallback.isCustom = true;
             starterPool.push(fallback);
           } catch {}
@@ -185,10 +186,11 @@ class QuestionBankService {
   public createCustomQuestion(question: BaseQuestion, syncToCloud = true): BaseQuestion {
     const publishedQ: BaseQuestion = {
       ...question,
-      status: question.status || 'published',
+      status: question.status || 'draft',
       isCustom: true,
       updatedAt: new Date().toISOString(),
     };
+    if (publishedQ.status === 'published') assertQuestionReadyForStudents(publishedQ);
     const existingIdx = this.questions.findIndex((q) => q.id === publishedQ.id);
     if (existingIdx !== -1) {
       this.questions[existingIdx] = { ...this.questions[existingIdx], ...publishedQ };
@@ -260,7 +262,7 @@ class QuestionBankService {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       isCustom: true,
-      status: 'published',
+      status: 'draft',
     };
 
     if (payload.customExplanationSummary || payload.customExplanationSteps) {
@@ -290,7 +292,7 @@ class QuestionBankService {
     
     const preparedQuestions: BaseQuestion[] = newQuestions.map((q) => ({
       ...q,
-      status: q.status || 'published',
+      status: 'draft',
       isCustom: true,
       createdAt: q.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -334,6 +336,10 @@ class QuestionBankService {
       updatedAt: new Date().toISOString(),
     };
 
+    // Editing invalidates prior review; publication goes through the editorial gate.
+    updated.status = 'draft';
+    delete updated.reviewedBy;
+    delete updated.verificationStatus;
     this.questions[idx] = updated;
     this.save();
     this.notify();
@@ -401,19 +407,18 @@ class QuestionBankService {
     if (!source) return null;
 
     const grade = targetGrade || source.targetGrade || 1;
-    const newSeed = Math.floor(Math.random() * 900000) + 100000;
     const clone: BaseQuestion = {
       ...source,
       id: `q_gr${grade}_copy_${Date.now()}`,
       targetGrade: grade,
       targetGrades: [grade],
-      seed: newSeed,
+      seed: source.seed,
       ageGroup: grade <= 2 ? '1-2' : '3-4',
       estimatedSeconds: GRADE_CONFIGS[grade].timeLimitSeconds,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       isCustom: true,
-      status: 'published',
+      status: 'draft',
     };
 
     this.questions.unshift(clone);
@@ -594,3 +599,4 @@ class QuestionBankService {
 }
 
 export const questionBankService = new QuestionBankService();
+

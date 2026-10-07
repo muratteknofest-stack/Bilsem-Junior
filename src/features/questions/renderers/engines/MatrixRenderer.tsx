@@ -9,7 +9,7 @@ interface EngineProps {
 }
 
 export const MatrixRenderer: React.FC<EngineProps> = ({ question, mode }) => {
-  const { visualConfig } = question;
+  const visualConfig = (question.visualConfig || {}) as Record<string, any>;
 
   // 2. Matrix 2x2 Mode
   if (mode === 'matrix_2x2') {
@@ -169,3 +169,4 @@ export const MatrixRenderer: React.FC<EngineProps> = ({ question, mode }) => {
 
   return null;
 };
+

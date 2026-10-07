@@ -4,10 +4,10 @@ import { collection, onSnapshot, query, where } from '../../lib/supabase-data';
 import { db } from '../../lib/platform';
 import { questionBankService } from '../../services/question-bank-service';
 import { loadPublishedQuestions } from '../../services/question-publishing-service';
-import { auditQuestion } from './quality';
+import { isQuestionReadyForStudents } from './quality';
 
 export function usePublishedQuestions() {
-  const localPublished = () => questionBankService.getAll().filter(q => q.status === 'published' || (!q.isCustom && !q.status));
+  const localPublished = () => questionBankService.getAll().filter(q => q.status === 'published' && isQuestionReadyForStudents(q));
   const [questions, setQuestions] = useState<BaseQuestion[]>(localPublished);
 
   useEffect(() => {
@@ -25,7 +25,7 @@ export function usePublishedQuestions() {
           (snapshot) => {
             const items = snapshot.docs
               .map((d: { data: () => BaseQuestion; id: string }) => ({ ...d.data(), id: d.id } as BaseQuestion))
-              .filter((item: BaseQuestion) => item.status === 'published' && auditQuestion(item).errors.length === 0);
+              .filter((item: BaseQuestion) => item.status === 'published' && isQuestionReadyForStudents(item));
             setQuestions(items.length > 0 ? items : localPublished());
           },
           (error) => {
@@ -46,3 +46,4 @@ export function usePublishedQuestions() {
 
   return questions;
 }
+

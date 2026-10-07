@@ -152,11 +152,11 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
       targetGrade: targetG,
       targetGrades: [targetG],
       isCustom: true,
-      status: 'published',
+      status: 'draft',
       updatedAt: new Date().toISOString(),
     };
     questionBankService.createCustomQuestion(toSave);
-    setSaveToast(`Soru Soru Bankası'na başarıyla kaydedildi! (ID: ${toSave.id})`);
+    setSaveToast(`Soru taslak olarak kaydedildi; yayımlamadan önce inceleyin. (ID: ${toSave.id})`);
     setTimeout(() => setSaveToast(null), 3500);
   };
 
@@ -797,3 +797,4 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
     </div>
   );
 };
+

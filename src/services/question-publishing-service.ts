@@ -2,7 +2,7 @@ import { collection, doc, getDocs, setDoc, query, where, limit, writeBatch } fro
 import { auth, db } from '../lib/platform';
 import { supabase } from '../lib/supabase';
 import type { BaseQuestion } from '../types';
-import { auditQuestion } from '../features/questions/quality';
+import { auditQuestion, isQuestionReadyForStudents, assertQuestionReadyForStudents } from '../features/questions/quality';
 import { questionBankService } from './question-bank-service';
 export { parseQuestionImport, selectPublishedPool } from '../features/questions/editorial-data';
 
@@ -53,6 +53,7 @@ export async function saveEditorialQuestion(
   const uid = user.uid;
   const report = auditQuestion(question);
   if (report.errors.length) throw new Error(report.errors.join(' '));
+  if (status === 'published') assertQuestionReadyForStudents(question);
   if (status === 'published' && !confirmedReview) throw new Error('Yayımlamadan önce yönerge, cevap ve görselleri inceleyip onaylayın.');
 
   const now = new Date().toISOString();
@@ -88,12 +89,12 @@ export async function loadPublishedQuestions(): Promise<BaseQuestion[]> {
   try {
     const snapshot = await getDocs(query(collection(db, 'questions'), where('status', '==', 'published'), limit(200)));
     if (!snapshot.empty) {
-      return snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as BaseQuestion).filter(q => auditQuestion(q).errors.length === 0);
+      return snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as BaseQuestion).filter(isQuestionReadyForStudents);
     }
   } catch (err) {
     console.warn('Supabase published load notice:', err);
   }
-  return questionBankService.getAll().filter(q => q.status === 'published' || (!q.isCustom && !q.status));
+  return questionBankService.getAll().filter(q => q.status === 'published' && isQuestionReadyForStudents(q));
 }
 
 export async function clearAllSupabaseQuestions(): Promise<number> {
@@ -112,3 +113,4 @@ export async function clearAllSupabaseQuestions(): Promise<number> {
   await batch.commit();
   return count;
 }
+

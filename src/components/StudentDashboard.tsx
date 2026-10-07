@@ -47,6 +47,7 @@ import { WeeklyProgressChartCard } from './WeeklyProgressChartCard';
 import { TodayPersonalizedStudyPlanCard } from './TodayPersonalizedStudyPlanCard';
 import { WeeklyChallengesView } from './WeeklyChallengesView';
 import { WeeklyChallengesBannerCard } from './WeeklyChallengesBannerCard';
+import { GamificationArena } from './GamificationArena';
 import { StudentStudyHub } from './StudentStudyHub';
 import { levelProgress } from '../features/student/study-hub-model';
 import { getStudyFavorites, saveStudyFavorites } from '../services/student-preferences-service';
@@ -209,6 +210,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     const matches = m.categoryName.toLocaleLowerCase('tr-TR').includes(skillSearch.trim().toLocaleLowerCase('tr-TR'));
     return matches && (skillFilter === 'all' || (skillFilter === 'new' ? !m.attemptCount : m.attemptCount > 0 && m.mastery < 80));
   });
+  const weeklyStats = useMemo(() => dataService.getWeeklyQuestionProgressData(activeUser).summary, [activeUser]);
   const xpProgress = levelProgress(activeUser.xp);
   const nextLvlXp = xpProgress.level * 250;
   const currentXp = xpProgress.xp;
@@ -431,6 +433,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </div>
         </motion.section>
 
+        <GamificationArena user={activeUser}
+          thisWeekQuestions={weeklyStats.thisWeekTotal} lastWeekQuestions={weeklyStats.lastWeekTotal}
+          onPractice={() => onStartPractice?.('mixed')}
+          onOpenChallenges={() => setActiveTab('challenges')} />
         <StudentStudyHub
           masteries={safeMasteries}
           unresolved={unresolvedMistakesCount}
@@ -998,11 +1004,11 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 <div className="flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-amber-500" />
                   <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 font-['Outfit',sans-serif]">
-                    Kişisel Haftalık Özet
+                    Kişisel XP Özeti
                   </h3>
                 </div>
                 <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-1 rounded-full border border-indigo-200/50 dark:border-indigo-800/40">
-                  Doğrulanmış Veri
+                  Kendi verilerin
                 </span>
               </div>
 
@@ -1031,7 +1037,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         <span className={`w-5 text-xs font-black text-center ${
                           rank === 1 ? 'text-amber-500' : rank === 2 ? 'text-slate-400' : rank === 3 ? 'text-amber-700' : 'text-zinc-400'
                         }`}>
-                          {rank}
+                          {isMe ? '★' : rank}
                         </span>
                         <span className="text-xl shrink-0">{lb.avatar || '⭐'}</span>
                         <div className="min-w-0 truncate">
@@ -1039,7 +1045,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                             {lb.anonymousAlias}
                           </p>
                           <p className="text-[10px] text-zinc-400 font-medium">
-                            {lb.xpEarned || 0} XP
+                            {lb.xpEarned || 0} toplam XP
                           </p>
                         </div>
                       </div>
@@ -1080,3 +1086,4 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     </div>
   );
 };
+

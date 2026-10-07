@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BaseQuestion, ExamResult, CognitiveCategory, DifficultyLevel } from '../types';
-import { generateQuestion, generateQuestionForGrade } from '../features/questions/generators';
+import { generateQuestion, generateQuestionForGrade, STUDENT_CATEGORY_TYPES } from '../features/questions/generators';
 import { usePublishedQuestions } from '../features/questions/use-published-questions';
 import { selectPublishedPool } from '../features/questions/editorial-data';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
@@ -79,8 +79,8 @@ const EXAM_MODES: ExamMode[] = [
 
   // Konu Odaklı Denemeler
   { id: 'focus_matrix', title: 'Matris Uzmanı', desc: 'Sadece 2D Matrisler', icon: Brain, color: 'from-amber-500 to-orange-600', iconColor: 'text-amber-100', qCount: 20, mins: 20, category: 'matrix' },
-  { id: 'focus_spatial', title: 'Uzamsal Algı', desc: 'Sadece 3D ve Yansıma', icon: Target, color: 'from-cyan-500 to-blue-600', iconColor: 'text-cyan-100', qCount: 20, mins: 25, category: 'spatial' },
-  { id: 'focus_logic', title: 'Şifre ve Mantık', desc: 'Sembolik Şifreleme ve Zeka', icon: Zap, color: 'from-indigo-500 to-purple-600', iconColor: 'text-indigo-100', qCount: 20, mins: 25, category: 'logic' },
+  { id: 'focus_spatial', title: 'Uzamsal Algı', desc: 'Döndürme ve Yansıma', icon: Target, color: 'from-cyan-500 to-blue-600', iconColor: 'text-cyan-100', qCount: 20, mins: 25, category: 'spatial' },
+  { id: 'focus_logic', title: 'Şifre ve Mantık', desc: 'Sıralama ve Mantık', icon: Zap, color: 'from-indigo-500 to-purple-600', iconColor: 'text-indigo-100', qCount: 20, mins: 25, category: 'logic' },
   { id: 'focus_memory', title: 'Görsel Hafıza', desc: 'Kısa Süreli Bellek', icon: Sparkles, color: 'from-fuchsia-500 to-pink-600', iconColor: 'text-fuchsia-100', qCount: 15, mins: 15, category: 'memory' },
   { id: 'focus_pattern', title: 'Örüntü Dedektifi', desc: 'Sıralı Şekil Dizileri', icon: Crown, color: 'from-emerald-500 to-green-600', iconColor: 'text-emerald-100', qCount: 20, mins: 20, category: 'pattern' },
   { id: 'focus_attention', title: 'Pür Dikkat', desc: 'Odaklanma ve Hız Testi', icon: Trophy, color: 'from-rose-500 to-red-600', iconColor: 'text-rose-100', qCount: 25, mins: 20, category: 'attention' },
@@ -221,9 +221,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
       'spatial',
       'logic',
       'attention',
-      'visual_perception',
       'numerical',
-      'memory',
     ];
 
     const qList: BaseQuestion[] = [];
@@ -481,7 +479,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
 
           {/* Exam Mode Selection Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {EXAM_MODES.filter((mode) => {
+            {EXAM_MODES.filter(mode => !mode.category || STUDENT_CATEGORY_TYPES[mode.category]).filter((mode) => {
               if (activeFilter === 'all') return true;
               if (activeFilter === 'focus') return !!mode.category;
               if (activeFilter === 'grade1') return mode.grade === 1 || mode.id === 'warmup';
@@ -1023,3 +1021,4 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
     </div>
   );
 };
+

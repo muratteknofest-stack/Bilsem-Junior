@@ -249,7 +249,8 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
         }}>Bu cihazdaki eski taslakları al</button>}
       </aside>
       {active && report ? <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 space-y-6">
-        <div className="flex flex-wrap justify-between gap-3 items-center"><div><p className="text-xs text-slate-500">{active.targetGrade}. sınıf · {COGNITIVE_CATEGORY_LABELS[active.category]} · Zorluk {active.difficulty}/6</p><h3 className="text-lg font-bold mt-1">Öğrenci önizlemesi</h3></div><span className={'px-3 py-1 rounded-full text-sm ' + (report.solverVerified ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900')}>{report.solverVerified ? 'Cevap yeniden hesaplandı' : 'Manuel çözüm kontrolü'}</span></div>
+        {report.reviewRequired.length > 0 && <div role="alert" className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900"><strong>Bu soru öğrencilere sunulamaz.</strong><ul className="list-disc pl-5 mt-2">{report.reviewRequired.map((reason, i) => <li key={i}>{reason}</li>)}</ul><p className="mt-2">Doğrulanmış soru ailesinden yeniden üretin. Metin veya açıklama değişiklikleri yeniden inceleme gerektirir.</p></div>}
+        <div className="flex flex-wrap justify-between gap-3 items-center"><div><p className="text-xs text-slate-500">{active.targetGrade}. sınıf · {COGNITIVE_CATEGORY_LABELS[active.category]} · Zorluk {active.difficulty}/6</p><h3 className="text-lg font-bold mt-1">Öğrenci önizlemesi</h3></div><span className={'px-3 py-1 rounded-full text-sm ' + (report.solverVerified ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900')}>{report.solverVerified ? 'Bağımsız kontroller geçti' : 'İnceleme gerekli · yayına kapalı'}</span></div>
         <p className="text-lg font-semibold leading-relaxed">{active.prompt}</p>
         {active.secondaryPrompt && <p className="text-sm text-slate-600">{active.secondaryPrompt}</p>}
         <QuestionRenderer question={active} />
@@ -278,7 +279,7 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
             }}><Save size={16} />Havuza Ekle</button>
             <button className={button + ' bg-slate-900 text-white'} disabled={saving || !cloudReady || !!report.errors.length} onClick={() => void save('draft')}><Save size={16} />Taslağı kaydet</button>
             <button className={button + ' border text-slate-700'} disabled={saving || !cloudReady || !!report.errors.length} onClick={() => void save('review')}>İncelemeye al</button>
-            <button className={button + ' bg-indigo-600 text-white hover:bg-indigo-700'} disabled={saving || !cloudReady || !!report.errors.length || !review.every(Boolean)} onClick={() => void save('published')}>{saving ? <LoaderCircle size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}Onayla ve yayımla</button>
+            <button className={button + ' bg-indigo-600 text-white hover:bg-indigo-700'} disabled={saving || !cloudReady || !!report.errors.length || !report.solverVerified || !review.every(Boolean)} onClick={() => void save('published')}>{saving ? <LoaderCircle size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}Onayla ve yayımla</button>
             {library.some(q => q.id === active.id) && <button className={button + ' border text-slate-600'} disabled={saving || !cloudReady || !!report.errors.length} onClick={() => void save('archived')}>Arşivle</button>}
           </div>
           <p className="text-xs text-slate-500">Düzenlenen bir soruyu taslak olarak kaydetmek yayından kaldırır. Arşivlenen sorular öğrenci havuzuna alınmaz. Üretim ücretli bir AI çağrısı kullanmaz.</p>
@@ -287,3 +288,4 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
     </div>
   </div>;
 }
+
