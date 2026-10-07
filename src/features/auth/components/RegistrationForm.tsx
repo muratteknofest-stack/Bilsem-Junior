@@ -168,18 +168,19 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
     <div>
       {/* Role Switcher */}
       <div className="mb-4">
-        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
+        <p className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
           Kayıt Türü Seçin
-        </label>
+        </p>
         <div className="grid grid-cols-2 gap-2" role="group" aria-label="Kayıt türü">
           <button
             type="button"
+            aria-pressed={selectedRole === 'student'}
             onClick={() => {
               setSelectedRole('student');
               setErrorMessage(null);
               setFieldErrors({});
             }}
-            className={`p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer flex items-center gap-3 ${
+            className={`zp-auth-role-button p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer flex items-center gap-3 ${
               selectedRole === 'student'
                 ? 'border-indigo-600 bg-indigo-50/70 ring-2 ring-indigo-500/20 shadow-xs'
                 : 'border-slate-200 hover:border-slate-300 bg-slate-50/40 hover:bg-slate-50'
@@ -202,12 +203,13 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
           <button
             type="button"
+            aria-pressed={selectedRole === 'parent'}
             onClick={() => {
               setSelectedRole('parent');
               setErrorMessage(null);
               setFieldErrors({});
             }}
-            className={`p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer flex items-center gap-3 ${
+            className={`zp-auth-role-button p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer flex items-center gap-3 ${
               selectedRole === 'parent'
                 ? 'border-emerald-600 bg-emerald-50/70 ring-2 ring-emerald-500/20 shadow-xs'
                 : 'border-slate-200 hover:border-slate-300 bg-slate-50/40 hover:bg-slate-50'
@@ -231,7 +233,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
       </div>
 
       {/* Helpful educational badge */}
-      <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-2.5 text-xs text-slate-600 flex items-start gap-2.5">
+      <div className="zp-auth-help mb-4 rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-2.5 text-xs text-slate-600 flex items-start gap-2.5">
         <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
         <p className="leading-relaxed">
           {selectedRole === 'parent'
@@ -243,7 +245,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
       <form onSubmit={handleRegisterSubmit} className="space-y-3.5" noValidate>
         <div className={`grid grid-cols-1 ${selectedRole === 'parent' ? 'sm:grid-cols-2' : ''} gap-3`}>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
+            <label htmlFor="register-student-name" className="block text-xs font-bold text-slate-700 mb-1">
               Öğrencinin Adı Soyadı
             </label>
             <div className="relative">
@@ -251,8 +253,12 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                 <User className="w-3.5 h-3.5" />
               </div>
               <input
+                id="register-student-name"
                 type="text"
                 value={regStudentName}
+                autoComplete="name"
+                aria-invalid={Boolean(fieldErrors.studentName)}
+                aria-describedby={fieldErrors.studentName ? 'register-student-name-error' : undefined}
                 onChange={(e) => {
                   setRegStudentName(e.target.value);
                   if (fieldErrors.studentName) {
@@ -268,7 +274,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
               />
             </div>
             {fieldErrors.studentName && (
-              <p className="mt-1 text-[11px] text-rose-600 font-bold flex items-center gap-1">
+              <p id="register-student-name-error" className="zp-auth-field-error mt-1 text-[11px] text-rose-600 font-bold flex items-center gap-1">
                 <AlertCircle className="w-3 h-3 shrink-0" />
                 <span>{fieldErrors.studentName}</span>
               </p>
@@ -276,10 +282,11 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
+            <label htmlFor="register-grade" className="block text-xs font-bold text-slate-700 mb-1">
               Sınıf Seviyesi
             </label>
             <select
+              id="register-grade"
               value={regGrade}
               onChange={(e) => setRegGrade(Number(e.target.value))}
               className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:outline-hidden bg-white cursor-pointer"
@@ -293,10 +300,10 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1">
+          <p className="block text-xs font-bold text-slate-700 mb-1">
             Geliştirilmek İstenen Öncelikli Alan
-          </label>
-          <div className="grid grid-cols-3 gap-2 text-xs font-semibold">
+          </p>
+          <div className="grid grid-cols-3 gap-2 text-xs font-semibold" role="group" aria-label="Geliştirilmek istenen öncelikli alan">
             {[
               { id: 'Genel Zihinsel Yetenek', label: 'Genel Zihinsel' },
               { id: 'Görsel Beceriler', label: 'Görsel Muhakeme' },
@@ -305,8 +312,9 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
               <button
                 key={focus.id}
                 type="button"
+                aria-pressed={regExamFocus === focus.id}
                 onClick={() => setRegExamFocus(focus.id)}
-                className={`py-2 px-2 rounded-xl border text-center transition-all cursor-pointer truncate ${
+                className={`zp-auth-focus-choice py-2 px-2 rounded-xl border text-center transition-all cursor-pointer ${
                   regExamFocus === focus.id
                     ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-bold shadow-xs'
                     : 'border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -320,7 +328,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
         <div className={`grid grid-cols-1 ${selectedRole === 'parent' ? 'sm:grid-cols-2' : ''} gap-3`}>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
+            <label htmlFor="register-email" className="block text-xs font-bold text-slate-700 mb-1">
               {selectedRole === 'student' ? 'Giriş / İletişim E-postası' : 'Veli E-posta Adresi'}
             </label>
             <div className="relative">
@@ -328,8 +336,11 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                 <Mail className="w-3.5 h-3.5" />
               </div>
               <input
+                id="register-email"
                 type="email"
                 value={regParentEmail}
+                aria-invalid={Boolean(fieldErrors.parentEmail)}
+                aria-describedby={fieldErrors.parentEmail ? 'register-email-error' : undefined}
                 onChange={(e) => {
                   setRegParentEmail(e.target.value);
                   if (fieldErrors.parentEmail) {
@@ -346,7 +357,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
               />
             </div>
             {fieldErrors.parentEmail && (
-              <p className="mt-1 text-[11px] text-rose-600 font-bold flex items-center gap-1">
+              <p id="register-email-error" className="zp-auth-field-error mt-1 text-[11px] text-rose-600 font-bold flex items-center gap-1">
                 <AlertCircle className="w-3 h-3 shrink-0" />
                 <span>{fieldErrors.parentEmail}</span>
               </p>
@@ -355,7 +366,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
 
           {selectedRole === 'parent' && (
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
+              <label htmlFor="register-phone" className="block text-xs font-bold text-slate-700 mb-1">
                 Veli Cep Telefonu (İsteğe Bağlı)
               </label>
               <div className="relative">
@@ -363,8 +374,12 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                   <Phone className="w-3.5 h-3.5" />
                 </div>
                 <input
+                  id="register-phone"
                   type="tel"
                   value={regParentPhone}
+                  autoComplete="tel"
+                  aria-invalid={Boolean(fieldErrors.parentPhone)}
+                  aria-describedby={fieldErrors.parentPhone ? 'register-phone-error' : undefined}
                   onChange={(e) => {
                     setRegParentPhone(e.target.value);
                     if (fieldErrors.parentPhone) {
@@ -380,7 +395,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                 />
               </div>
               {fieldErrors.parentPhone && (
-                <p className="mt-1 text-[11px] text-rose-600 font-bold flex items-center gap-1">
+                <p id="register-phone-error" className="zp-auth-field-error mt-1 text-[11px] text-rose-600 font-bold flex items-center gap-1">
                   <AlertCircle className="w-3 h-3 shrink-0" />
                   <span>{fieldErrors.parentPhone}</span>
                 </p>
@@ -414,6 +429,9 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
               id="register-password"
               type={showRegPassword ? 'text' : 'password'}
               value={regPassword}
+              autoComplete="new-password"
+              aria-invalid={Boolean(fieldErrors.password)}
+              aria-describedby={fieldErrors.password ? 'register-password-error' : undefined}
               onChange={(e) => {
                 setRegPassword(e.target.value);
                 if (fieldErrors.password) {
@@ -431,7 +449,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
               type="button"
               aria-label={showRegPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
               onClick={() => setShowRegPassword(!showRegPassword)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+              className="zp-auth-reveal absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
             >
               {showRegPassword ? (
                 <EyeOff className="w-4 h-4" />
@@ -459,7 +477,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                   />
                 ))}
               </div>
-              <div className="flex items-center gap-3 text-[10px] text-slate-500 pt-0.5">
+              <div className="zp-auth-checklist flex items-center gap-3 text-[10px] text-slate-500 pt-0.5">
                 <span className={`flex items-center gap-1 font-semibold ${
                   passwordStrength.hasMinLength ? 'text-emerald-700' : 'text-slate-400'
                 }`}>
@@ -483,7 +501,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
           )}
 
           {fieldErrors.password && (
-            <p className="mt-1 text-[11px] text-rose-600 font-bold flex items-center gap-1">
+            <p id="register-password-error" className="zp-auth-field-error mt-1 text-[11px] text-rose-600 font-bold flex items-center gap-1">
               <AlertCircle className="w-3 h-3 shrink-0" />
               <span>{fieldErrors.password}</span>
             </p>
@@ -503,6 +521,8 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                 id="student-password"
                 type={showRegStudentPassword ? 'text' : 'password'}
                 value={regStudentPassword}
+                aria-invalid={Boolean(fieldErrors.studentPassword)}
+                aria-describedby={fieldErrors.studentPassword ? 'student-password-error' : undefined}
                 onChange={(e) => {
                   setRegStudentPassword(e.target.value);
                   if (fieldErrors.studentPassword) {
@@ -521,13 +541,13 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                 type="button"
                 aria-label={showRegStudentPassword ? 'Öğrenci şifresini gizle' : 'Öğrenci şifresini göster'}
                 onClick={() => setShowRegStudentPassword(!showRegStudentPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                className="zp-auth-reveal absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 {showRegStudentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
             {fieldErrors.studentPassword && (
-              <p className="mt-1 text-[11px] text-rose-600 font-bold flex items-center gap-1">
+              <p id="student-password-error" className="zp-auth-field-error mt-1 text-[11px] text-rose-600 font-bold flex items-center gap-1">
                 <AlertCircle className="w-3 h-3 shrink-0" />
                 <span>{fieldErrors.studentPassword}</span>
               </p>
@@ -540,6 +560,8 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
             <input
               type="checkbox"
               checked={regKvkkConsent}
+              aria-invalid={Boolean(fieldErrors.kvkkConsent)}
+              aria-describedby={fieldErrors.kvkkConsent ? 'register-consent-error' : undefined}
               onChange={(e) => {
                 setRegKvkkConsent(e.target.checked);
                 if (fieldErrors.kvkkConsent) {
@@ -560,7 +582,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
             </span>
           </label>
           {fieldErrors.kvkkConsent && (
-            <p className="mt-1 text-[11px] text-rose-600 font-bold flex items-center gap-1">
+            <p id="register-consent-error" className="zp-auth-field-error mt-1 text-[11px] text-rose-600 font-bold flex items-center gap-1">
               <AlertCircle className="w-3 h-3 shrink-0" />
               <span>{fieldErrors.kvkkConsent}</span>
             </p>
@@ -597,3 +619,4 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
     </div>
   );
 };
+

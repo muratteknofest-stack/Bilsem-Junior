@@ -85,19 +85,19 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs" role="presentation">
-      <div role="dialog" aria-modal="true" aria-labelledby="forgot-password-title" className="bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full border border-slate-200/80 shadow-xl relative animate-in fade-in zoom-in-95 duration-200">
+    <div className="zp-auth-modal fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-xs" role="presentation">
+      <div role="dialog" aria-modal="true" aria-labelledby="forgot-password-title" className="zp-auth-dialog bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full border shadow-xl relative animate-in fade-in zoom-in-95 duration-200">
         <button
           type="button"
           aria-label="Kapat"
           onClick={onClose}
           disabled={isResettingPassword}
-          className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-1.5 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+          className="absolute top-5 right-5 text-slate-500 hover:text-slate-700 p-2.5 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <div className="w-11 h-11 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center mb-4">
+        <div className="zp-auth-modal-icon w-11 h-11 rounded-xl flex items-center justify-center mb-4">
           <KeyRound className="w-5 h-5" />
         </div>
 
@@ -145,7 +145,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
               )}
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-start gap-2">
+            <div className="zp-auth-modal-info p-3 rounded-xl border flex items-start gap-2">
               <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
               <div className="text-[11px] leading-relaxed">
                 <strong className="text-slate-700">Öğrenci Kodu ile Giriş Yapanlar:</strong> Öğrenci şifresi yenileme işlemi veli panelindeki hesap yönetimi alanından yapılabilir.
@@ -157,7 +157,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                 type="button"
                 onClick={onClose}
                 disabled={isResettingPassword}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer min-h-11"
               >
                 Vazgeç
               </button>
@@ -180,7 +180,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
             </p>
             <button
               onClick={onClose}
-              className="mt-4 px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              className="zp-auth-modal-done mt-4 px-5 py-2 rounded-xl font-bold transition-colors cursor-pointer"
             >
               Tamam
             </button>
@@ -190,3 +190,4 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     </div>
   );
 };
+

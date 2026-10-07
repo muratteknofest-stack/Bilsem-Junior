@@ -222,20 +222,21 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       {/* Modern Minimalist Role Selector */}
       <div className="mb-5">
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <p className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
             Hesap Türü
-          </label>
+          </p>
           <span className="text-[11px] text-slate-400 font-medium">Lütfen rolünüzü belirleyin</span>
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-2" role="group" aria-label="Hesap türü">
           <button
             type="button"
+            aria-pressed={selectedRole === 'student'}
             onClick={() => {
               sound.playClick();
               setSelectedRole('student');
               setErrorMessage(null);
             }}
-            className={`p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between ${
+            className={`zp-auth-role-button p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between ${
               selectedRole === 'student'
                 ? 'border-indigo-600 bg-indigo-50/70 ring-2 ring-indigo-500/20 shadow-xs'
                 : 'border-slate-200 hover:border-slate-300 bg-slate-50/40 hover:bg-slate-50'
@@ -263,12 +264,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
           <button
             type="button"
+            aria-pressed={selectedRole === 'parent'}
             onClick={() => {
               sound.playClick();
               setSelectedRole('parent');
               setErrorMessage(null);
             }}
-            className={`p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between ${
+            className={`zp-auth-role-button p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between ${
               selectedRole === 'parent'
                 ? 'border-emerald-600 bg-emerald-50/70 ring-2 ring-emerald-500/20 shadow-xs'
                 : 'border-slate-200 hover:border-slate-300 bg-slate-50/40 hover:bg-slate-50'
@@ -296,12 +298,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
           <button
             type="button"
+            aria-pressed={selectedRole === 'admin'}
             onClick={() => {
               sound.playClick();
               setSelectedRole('admin');
               setErrorMessage(null);
             }}
-            className={`p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between ${
+            className={`zp-auth-role-button p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between ${
               selectedRole === 'admin'
                 ? 'border-purple-600 bg-purple-50/70 ring-2 ring-purple-500/20 shadow-xs'
                 : 'border-slate-200 hover:border-slate-300 bg-slate-50/40 hover:bg-slate-50'
@@ -376,7 +379,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             />
           </div>
           {fieldErrors.identifier && (
-            <p id="login-identifier-error" className="mt-1.5 text-xs text-rose-600 font-bold flex items-center gap-1">
+            <p id="login-identifier-error" className="zp-auth-field-error mt-1.5 text-xs text-rose-600 font-bold flex items-center gap-1">
               <AlertCircle className="w-3.5 h-3.5 shrink-0" />
               <span>{fieldErrors.identifier}</span>
             </p>
@@ -391,7 +394,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             <button
               type="button"
               onClick={onShowForgotPassword}
-              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer"
+              className="zp-auth-help text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer"
             >
               Şifremi Unuttum?
             </button>
@@ -424,7 +427,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               type="button"
               aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+              className="zp-auth-reveal absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
             >
               {showPassword ? (
                 <EyeOff className="w-4 h-4" />
@@ -434,7 +437,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             </button>
           </div>
           {fieldErrors.password && (
-            <p id="login-password-error" className="mt-1.5 text-xs text-rose-600 font-bold flex items-center gap-1">
+            <p id="login-password-error" className="zp-auth-field-error mt-1.5 text-xs text-rose-600 font-bold flex items-center gap-1">
               <AlertCircle className="w-3.5 h-3.5 shrink-0" />
               <span>{fieldErrors.password}</span>
             </p>
@@ -489,7 +492,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           <button
             type="button"
             onClick={() => handleQuickDemo('student')}
-            className="py-1.5 px-2 rounded-lg border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100/60 text-indigo-700 text-[11px] font-bold transition-colors cursor-pointer flex items-center justify-center gap-1"
+            className="zp-auth-demo-button py-1.5 px-2 rounded-lg border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100/60 text-indigo-700 text-[11px] font-bold transition-colors cursor-pointer flex items-center justify-center gap-1"
           >
             <CheckCircle2 className="w-3 h-3 text-indigo-600" />
             <span>Öğrenci Demo</span>
@@ -497,7 +500,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           <button
             type="button"
             onClick={() => handleQuickDemo('parent')}
-            className="py-1.5 px-2 rounded-lg border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/60 text-emerald-700 text-[11px] font-bold transition-colors cursor-pointer flex items-center justify-center gap-1"
+            className="zp-auth-demo-button py-1.5 px-2 rounded-lg border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/60 text-emerald-700 text-[11px] font-bold transition-colors cursor-pointer flex items-center justify-center gap-1"
           >
             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
             <span>Veli Demo</span>
@@ -507,3 +510,4 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     </div>
   );
 };
+

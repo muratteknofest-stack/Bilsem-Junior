@@ -75,6 +75,8 @@ Cam etkisi yalnızca gezinti yüzeyi ve sahnedeki küçük yüzen notlarda bulun
 
 Bu form bileşeni, hazır kayıt akışını değiştirmek için henüz kullanılmıyor; yeni genel formlara uygulanabilir. Demo içindeki mevcut giriş alanı aynı odak/yüzey kurallarını alır.
 
+Giriş, kayıt ve şifre sıfırlama yüzeyleri `src/features/auth/auth-design-system.css` içinde aynı `--zp-*` tokenlarına bağlanır. Form alanları opak beyazdır; rol ve odak seçimi `aria-pressed` ile ifade edilir. Hata metni alanla `aria-describedby` üzerinden eşleşir. Dekoratif keşif sahnesi formdan ayrı tutulur ve azaltılmış hareket tercihinde sabit kalır.
+
 ## 7. Navigasyon ve ikonografi
 
 Tek yapışkan başlık: marka → keşif / nasıl / aileler / yardım → hesap eylemleri. Masaüstünde açıklamalı popover; ≤1000px yerel `dialog` tabanlı mobil menü. Menü ve açılır yüzeylerde `aria-expanded`, `aria-controls`, Esc, kapanınca odağın tetikleyiciye dönmesi ve klavyeyle gezinme korunur. Kayıt ol ana eylem; öğrenci/veli girişleri ayrı ve açık.
