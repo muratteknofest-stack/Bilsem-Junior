@@ -1,4 +1,5 @@
-import { assertQuestionReadyForStudents } from '../quality';
+import { gradeDifficulty, isSchoolGrade, type SchoolGrade } from '../quality-policy';
+import { assertQuestionReadyForStudents, isQuestionReadyForStudents } from '../quality';
 import { BaseQuestion, CognitiveCategory, DifficultyLevel, QuestionType } from '../../../types';
 import { SeededRNG } from '../../../lib/rng';
 import { validateQuestion } from '../validator';
@@ -294,6 +295,7 @@ export function generateQuestionByType(
 }
 
 export function generateQuestion(options: {
+  targetGrade?: SchoolGrade;
   category?: CognitiveCategory | 'mixed';
   difficulty?: DifficultyLevel;
   seed?: number;
@@ -301,22 +303,30 @@ export function generateQuestion(options: {
 }): BaseQuestion {
   const seed = options.seed ?? Math.floor(Math.random() * 999999) + 1;
   const rng = new SeededRNG(seed);
-  const difficulty = options.difficulty ?? 3;
+  const difficulty = options.targetGrade ? gradeDifficulty(options.targetGrade, options.difficulty ?? 3) : options.difficulty ?? 3;
+  const allowed = (type: QuestionType) => !(options.targetGrade === 1 && ['operation_machine', 'matrix_3x3', 'raven_matrix'].includes(type));
 
   let chosenType: QuestionType;
 
   if (options.type) {
+    if (!allowed(options.type)) throw new Error('Soru türü sınıf profilinde desteklenmiyor.');
     chosenType = options.type;
   } else if (options.category && options.category !== 'mixed') {
-    const pool = (STUDENT_CATEGORY_TYPES[options.category] || []);
-    chosenType = rng.pick(pool.length ? pool : VERIFIED_TYPES);
+    const pool = (STUDENT_CATEGORY_TYPES[options.category] || []).filter(allowed);
+    chosenType = rng.pick(pool.length ? pool : VERIFIED_TYPES.filter(allowed));
   } else {
-    chosenType = rng.pick(VERIFIED_TYPES);
+    chosenType = rng.pick(VERIFIED_TYPES.filter(allowed));
   }
 
-  const question = generateQuestionByType(chosenType, seed, difficulty);
-  assertQuestionReadyForStudents(question);
-  return question;
+  for (let attempt = 0; attempt < 16; attempt++) {
+    const question = generateQuestionByType(chosenType, (seed + attempt * 10007) % 2147483647 || 1, difficulty);
+    if (isSchoolGrade(options.targetGrade)) {
+      question.targetGrade = options.targetGrade; question.targetGrades = [options.targetGrade];
+      question.ageGroup = options.targetGrade <= 2 ? '1-2' : '3-4';
+    }
+    if (isQuestionReadyForStudents(question)) return question;
+  }
+  throw new Error('QUESTION_REVIEW_REQUIRED: Sınıf profiline uygun soru üretilemedi.');
 }
 
 export function generateQuestionForGrade(
@@ -332,13 +342,5 @@ export function generateQuestionForGrade(
   const finalType = type ?? rng.pick(cfg.recommendedTypes.filter(t => VERIFIED_TYPES.includes(t)));
   const finalDifficulty = difficulty ?? cfg.defaultDifficulty;
 
-  const q = generateQuestionByType(finalType, finalSeed, finalDifficulty);
-  // Ensure appropriate ageGroup tag
-  q.ageGroup = grade <= 2 ? '1-2' : '3-4';
-  q.targetGrade = grade;
-  q.targetGrades = [grade];
-  q.estimatedSeconds = cfg.timeLimitSeconds;
-  assertQuestionReadyForStudents(q);
-  return q;
+  return generateQuestion({ type: finalType, seed: finalSeed, difficulty: finalDifficulty, targetGrade: grade });
 }
-

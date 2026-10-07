@@ -1,3 +1,4 @@
+import { isSchoolGrade, gradeDifficulty } from '../features/questions/quality-policy';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -236,6 +237,8 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
     }
   };
 
+  const studentGrade = dataService.getCurrentUser().grade;
+  const maxGradeDifficulty = isSchoolGrade(studentGrade) ? gradeDifficulty(studentGrade, 6) : 6;
   const startSession = () => {
     sound.playClick();
     const qList: BaseQuestion[] = [];
@@ -246,6 +249,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
           : (selectedDifficulty as DifficultyLevel);
 
       const q = generateQuestion({
+        targetGrade: isSchoolGrade(dataService.getCurrentUser().grade) ? dataService.getCurrentUser().grade as 1|2|3|4 : undefined,
         category: selectedCategory,
         difficulty: diff,
         seed: Math.floor(Math.random() * 900000) + 100000 + i * 31,
@@ -257,7 +261,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
     setTotalSecondsLimit(presetSecs);
     setRemainingSeconds(presetSecs);
     setOvertimeSeconds(0);
-    setQuestions(selectPublishedPool(qList.map(q => ({ ...q, targetGrade: dataService.getCurrentUser().grade as 1 | 2 | 3 | 4 | undefined })), publishedQuestions));
+    setQuestions(selectPublishedPool(qList, publishedQuestions));
     setCurrentIndex(0);
     setSelectedOptionId(null);
     setInteractionResponse(null);
@@ -504,11 +508,12 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
             {([1, 2, 3, 4, 5, 6] as DifficultyLevel[]).map((lvl) => (
               <button
                 key={lvl}
+                disabled={lvl > maxGradeDifficulty}
                 onClick={() => {
                   sound.playClick();
                   setSelectedDifficulty(lvl);
                 }}
-                className={`p-3 rounded-xl border-2 text-center font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                className={`p-3 rounded-xl border-2 text-center font-bold text-xs sm:text-sm transition-all cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed ${
                   selectedDifficulty === lvl
                     ? 'border-indigo-600 bg-indigo-50 text-indigo-900 '
                     : 'border-zinc-200 bg-slate-50 text-slate-700 hover:border-slate-300'

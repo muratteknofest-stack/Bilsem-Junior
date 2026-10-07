@@ -1,3 +1,4 @@
+import { isSchoolGrade, gradeDifficulty } from '../features/questions/quality-policy';
 import React, { useState, useEffect, useRef } from 'react';
 import { BaseQuestion, SkillMastery, DifficultyLevel, DIFFICULTY_COLORS } from '../types';
 import { generateQuestion, STUDENT_CATEGORY_TYPES } from '../features/questions/generators';
@@ -33,7 +34,9 @@ interface AdaptivePracticeViewProps {
 export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNavigateHome }) => {
   const [masteries, setMasteries] = useState<SkillMastery[]>(() => dataService.getSkillMasteries());
   const [consecutiveCorrect, setConsecutiveCorrect] = useState(0);
-  const [currentDifficulty, setCurrentDifficulty] = useState<DifficultyLevel>(3);
+  const studentGrade = dataService.getCurrentUser().grade;
+  const maxDifficulty = isSchoolGrade(studentGrade) ? gradeDifficulty(studentGrade, 6) : 6;
+  const [currentDifficulty, setCurrentDifficulty] = useState<DifficultyLevel>(() => isSchoolGrade(studentGrade) ? gradeDifficulty(studentGrade, 3) : 3);
   const [questionCount, setQuestionCount] = useState(1);
   const [earnedXP, setEarnedXP] = useState(0);
   const [activeMilestoneStreak, setActiveMilestoneStreak] = useState<number | null>(null);
@@ -85,6 +88,7 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
 
   const [currentQuestion, setCurrentQuestion] = useState<BaseQuestion>(() => {
     return generateQuestion({
+      targetGrade: isSchoolGrade(dataService.getCurrentUser().grade) ? dataService.getCurrentUser().grade as 1|2|3|4 : undefined,
       category: 'matrix',
       difficulty: 3,
       seed: Math.floor(Math.random() * 900000) + 100000,
@@ -119,7 +123,7 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
       const nextConsecutive = consecutiveCorrect + 1;
       setConsecutiveCorrect(nextConsecutive);
 
-      const reward = answerXp('adaptive', currentDifficulty, nextConsecutive);
+      const reward = answerXp('adaptive', currentQuestion.difficulty, nextConsecutive);
       const bonusXP = reward.comboBonus;
 
       if (bonusXP > 0) {
@@ -149,18 +153,18 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
 
       setEarnedXP((prev) => prev + totalXP);
       dataService.addXP(totalXP);
-      dataService.updateSkillMastery(currentQuestion.category, true, currentDifficulty);
+      dataService.updateSkillMastery(currentQuestion.category, true, currentQuestion.difficulty);
 
       // Adapt difficulty up if 2 correct in a row
-      if (nextConsecutive >= 2 && currentDifficulty < 6) {
-        setCurrentDifficulty((prev) => Math.min(6, prev + 1) as DifficultyLevel);
+      if (nextConsecutive >= 2 && currentDifficulty < maxDifficulty) {
+        setCurrentDifficulty((prev) => Math.min(maxDifficulty, prev + 1) as DifficultyLevel);
       }
     } else {
       sound.playError();
       setConsecutiveCorrect(0);
       setActiveMilestoneStreak(null);
       dataService.addMistake(currentQuestion);
-      dataService.updateSkillMastery(currentQuestion.category, false, currentDifficulty);
+      dataService.updateSkillMastery(currentQuestion.category, false, currentQuestion.difficulty);
 
       // Lower difficulty if struggling
       if (currentDifficulty > 1) {
@@ -174,6 +178,7 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
     sound.playClick();
     const nextCat = getAdaptiveCategory();
     const nextQ = generateQuestion({
+      targetGrade: isSchoolGrade(dataService.getCurrentUser().grade) ? dataService.getCurrentUser().grade as 1|2|3|4 : undefined,
       category: nextCat,
       difficulty: currentDifficulty,
       seed: Math.floor(Math.random() * 900000) + 100000,
@@ -212,8 +217,8 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
             <Zap className="w-3.5 h-3.5 text-purple-600" />
             <span>Akıllı Adaptif Mod • Soru {questionCount}</span>
           </div>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${DIFFICULTY_COLORS[currentDifficulty]}`}>
-            Sv. {currentDifficulty}
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${DIFFICULTY_COLORS[currentQuestion.difficulty]}`}>
+            Sv. {currentQuestion.difficulty}
           </span>
           <ComboStreakIndicator streak={consecutiveCorrect} variant="hud" />
         </div>

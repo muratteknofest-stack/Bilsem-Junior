@@ -111,7 +111,7 @@ function fakeAi(mode: 'pass' | 'wrong' | 'ambiguous' | 'bad-explanation' | 'malf
       const chosenOptionId = data.options.find((o: any) => JSON.stringify(o.visualData) === JSON.stringify(answer)).id;
       return { text: JSON.stringify(mode === 'malformed' ? {} : { chosenOptionId: mode === 'wrong' ? 'NOT_AN_OPTION' : chosenOptionId, uniqueAnswer: mode !== 'ambiguous', sufficientInformation: true, issues: [] }) };
     }
-    return { text: JSON.stringify({ explanationCorrect: mode !== 'bad-explanation', gradeAppropriate: true, promptClear: true, distractorsValid: true, issues: [] }) };
+    return { text: JSON.stringify({ explanationCorrect: mode !== 'bad-explanation', gradeAppropriate: true, ageAppropriate: true, difficultyAppropriate: true, promptClear: true, distractorsValid: true, issues: [] }) };
   } } };
   return { client, prompts };
 }

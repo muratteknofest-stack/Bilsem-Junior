@@ -1,3 +1,7 @@
+import { EDUCATION_PROFILES, gradeDifficulty, type QuestionQualityReport, type GenerationAttempt } from '../../features/questions/quality-policy';
+import { QuestionQualityPanel } from './QuestionQualityPanel';
+import { QuestionRenderer } from '../../features/questions/renderers/QuestionRenderer';
+import { OptionRenderer } from '../../features/questions/renderers/OptionRenderer';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Sparkles,
@@ -66,7 +70,9 @@ interface GeneratedQuestionResult {
   correctOptionId: string;
   explanation: { summary: string; steps: string[] };
   distractorNotes: Record<string, string>;
-  rawOutput?: any;
+  qualityReport?: QuestionQualityReport;
+  attempts?: GenerationAttempt[];
+  rawOutput?: BaseQuestion;
 }
 
 export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () => {
@@ -78,6 +84,10 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
   const [questionCount, setQuestionCount] = useState<number>(5);
   const [minQuality, setMinQuality] = useState<number>(85);
   const [selectedAiModel, setSelectedAiModel] = useState<string>('');
+
+  const [targetAge, setTargetAge] = useState<number | undefined>();
+  const [maxAttempts, setMaxAttempts] = useState(3);
+  const profile = EDUCATION_PROFILES[targetGrade];
 
   // Runtime State
   const [isApiAvailable, setIsApiAvailable] = useState<boolean>(true);
@@ -96,6 +106,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
       status: data.success ? 'draft' : 'rejected', solverVerified: data.success === true && data.solverVerified === true,
       validationWarnings: [...(data.validationErrors || []), ...(data.validationWarnings || []), ...(data.rejectionReasons || [])],
       options: q.options, correctOptionId: q.correctOptionId, explanation: q.explanation,
+      qualityReport: data.qualityReport || q.qualityReport, attempts: data.attempts || q.generationAttempts,
       distractorNotes: q.authoring?.distractorNotes || {}, rawOutput: q };
   };
 
@@ -112,7 +123,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
         const response = await authenticatedFetch('/api/admin/ai-generate-question', {
           method: 'POST', body: JSON.stringify({ category: selectedCategory,
             questionType: selectedType === 'auto' ? undefined : selectedType,
-            targetGrade, difficulty, minQualityScore: minQuality, aiModel: selectedAiModel || undefined }) });
+            targetGrade, targetAge, maxAttempts, difficulty, minQualityScore: minQuality, aiModel: selectedAiModel || undefined }) });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Soru servisine ulaşılamadı.');
         setIsApiAvailable(true);
@@ -202,7 +213,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
               <label className="block text-xs font-bold text-slate-400 mb-1.5">Bilişsel Kategori</label>
               <select 
                 value={selectedCategory}
-                onChange={e => setSelectedCategory(e.target.value as CognitiveCategory)}
+                onChange={e => { setSelectedCategory(e.target.value as CognitiveCategory); setSelectedType('auto'); }}
                 className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
               >
                 {ALL_COGNITIVE_CATEGORIES.filter(c => STUDENT_CATEGORY_TYPES[c]).map(c => (
@@ -219,7 +230,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                 className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
               >
                 <option value="auto">✨ Yapay Zeka Seçsin (Otomatik)</option>
-                {ALL_QUESTION_TYPES.map(t => (
+                {(STUDENT_CATEGORY_TYPES[selectedCategory] || []).filter(t => !(targetGrade === 1 && ['operation_machine','matrix_3x3','raven_matrix'].includes(t))).map(t => (
                   <option key={t} value={t}>{QUESTION_TYPE_LABELS[t]}</option>
                 ))}
               </select>
@@ -231,7 +242,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                 {[1, 2, 3, 4].map(g => (
                   <button
                     key={g}
-                    onClick={() => setTargetGrade(g as 1|2|3|4)}
+                    onClick={() => { setTargetGrade(g as 1|2|3|4); setDifficulty(gradeDifficulty(g as 1|2|3|4, difficulty)); setTargetAge(undefined); setSelectedType('auto'); }}
                     className={`py-1.5 rounded-lg text-xs font-bold transition-colors ${
                       targetGrade === g 
                         ? 'bg-purple-600 text-white shadow-sm' 
@@ -250,13 +261,22 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                 <span className="text-purple-400">{DIFFICULTY_LABELS[difficulty]}</span>
               </label>
               <input 
-                type="range" min="1" max="6" step="1"
+                aria-label="Zorluk seviyesi" type="range" min="1" max={profile.maxDifficulty} step="1"
                 value={difficulty}
                 onChange={e => setDifficulty(parseInt(e.target.value) as DifficultyLevel)}
                 className="w-full accent-purple-500"
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <label className="text-xs font-bold text-slate-400">Hedef yaş
+                <select aria-label="Hedef yaş" value={targetAge ?? ''} onChange={e => setTargetAge(e.target.value ? Number(e.target.value) : undefined)} className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-800 p-2 text-white"><option value="">Sınıf profili ({profile.ages.join('–')})</option>{Array.from({ length: profile.ages[1] - profile.ages[0] + 1 }, (_, i) => profile.ages[0] + i).map(age => <option key={age} value={age}>{age} yaş</option>)}</select>
+              </label>
+              <label className="text-xs font-bold text-slate-400">En fazla deneme
+                <select aria-label="En fazla deneme" value={maxAttempts} onChange={e => setMaxAttempts(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-800 p-2 text-white">{[1,2,3,4].map(n => <option key={n} value={n}>{n} deneme</option>)}</select>
+              </label>
+            </div>
+            <p className="text-xs text-slate-400">Uygun olmayan aday yeni varyasyonla üretilir. Sınıf ve doğruluk kuralları her denemede yeniden denetlenir.</p>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-400 mb-1.5">Üretim Sayısı</label>
@@ -375,7 +395,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                           res.solverVerified ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border-red-500/30 text-red-400'
                         }`}>
                           <ShieldCheck className="w-3.5 h-3.5" />
-                          <span>5 Aşamalı Test: {res.solverVerified ? 'Kontroller geçti' : 'Başarısız'}</span>
+                          <span>Çok Aşamalı Test: {res.solverVerified ? 'Kontroller geçti' : 'Başarısız'}</span>
                         </div>
                       </div>
                     </div>
@@ -400,9 +420,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                             <CheckCircle2 className="w-4 h-4" /> Onaylandı
                           </span>
                         ) : res.status === 'rejected' ? (
-                          <span className="text-xs font-bold text-red-400 flex items-center gap-1">
-                            <X className="w-4 h-4" /> Reddedildi
-                          </span>
+                          <button onClick={() => handleReview(res.id, 'regenerate')} className="rounded-lg border border-amber-500/30 px-3 py-2 text-xs font-bold text-amber-300">Yeni varyasyonla tekrar dene</button>
                         ) : (
                           <>
                             <button onClick={() => handleReview(res.id, 'regenerate')} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors" title="Yeniden Üret">
@@ -424,6 +442,8 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                   {expandedId === res.id && (
                     <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} className="border-t border-slate-800 bg-slate-900/50">
                       <div className="p-4 space-y-4 text-xs text-slate-300">
+                        <QuestionQualityPanel report={res.qualityReport} attempts={res.attempts} />
+                        {res.rawOutput && <div className="rounded-xl bg-white p-3"><QuestionRenderer question={res.rawOutput} /><div className="grid grid-cols-2 gap-3">{res.rawOutput.options.map(option => <OptionRenderer key={option.id} option={option} disabled showCorrect isCorrectOption={option.id === res.correctOptionId} />)}</div></div>}
                         {res.validationWarnings && res.validationWarnings.length > 0 && (
                           <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl space-y-1">
                             <strong className="text-amber-400 flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> Uyarılar:</strong>
@@ -433,18 +453,6 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                           </div>
                         )}
                         
-                        <div>
-                          <strong className="text-slate-400 block mb-2">Seçenekler:</strong>
-                          <div className="grid grid-cols-2 gap-2">
-                            {res.options.map(opt => (
-                              <div key={opt.id} className={`p-2 rounded-lg border ${opt.id === res.correctOptionId ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-slate-700 bg-slate-800'}`}>
-                                <span className="font-bold mr-2">{opt.label})</span>
-                                {opt.text || 'Görsel Seçenek'}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
                         {res.explanation && (
                           <div className="bg-indigo-500/5 border border-indigo-500/20 p-3 rounded-xl">
                             <strong className="text-indigo-400 mb-1 block">Çözüm / Açıklama:</strong>

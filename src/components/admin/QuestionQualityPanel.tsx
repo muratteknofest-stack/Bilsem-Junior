@@ -1,0 +1,14 @@
+import React from 'react';
+import { CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
+import type { QuestionQualityReport, GenerationAttempt } from '../../features/questions/quality-policy';
+
+export function QuestionQualityPanel({ report, attempts = [] }: { report?: QuestionQualityReport; attempts?: GenerationAttempt[] }) {
+  if (!report) return <p className="text-sm text-amber-300">Bu soru için güncel çok aşamalı rapor yok. Yeniden üretim gerekli.</p>;
+  return <section className="space-y-4 rounded-2xl border border-slate-700 bg-slate-950/60 p-4" aria-label="Soru kalite raporu">
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-sm font-bold text-white">Soru kalite raporu</h3><p className="mt-1 text-xs text-slate-400">{report.target.grade}. sınıf · {report.target.age ? `${report.target.age} yaş` : 'Sınıfın yaş profili'} · Seviye {report.target.difficulty}</p></div><strong className={report.eligible ? 'text-emerald-300' : 'text-amber-300'}>{report.score}/100 kontrol puanı</strong></div>
+    <p className="text-xs text-slate-400">Her zorunlu aşama geçmelidir. Puan bir doğruluk olasılığı değildir.</p>
+    <ol className="space-y-2">{report.stages.map((stage, index) => <li key={stage.id} className="rounded-xl border border-slate-700/70 p-3"><div className="flex items-center gap-2 text-xs font-semibold text-slate-100">{stage.status === 'passed' ? <CheckCircle2 size={16} className="shrink-0 text-emerald-400" /> : stage.status === 'failed' ? <AlertTriangle size={16} className="shrink-0 text-amber-400" /> : <Clock size={16} className="shrink-0 text-slate-400" />}<span>{index + 1}. {stage.label}</span><span className="ml-auto whitespace-nowrap text-slate-400">{stage.status === 'passed' ? 'Geçti' : stage.status === 'failed' ? 'Uygun değil' : 'Bekliyor'}</span></div>{stage.reasons.map((reason, i) => <p key={i} className="mt-2 break-words text-xs text-amber-200">{reason}</p>)}</li>)}</ol>
+    <p className="text-xs text-slate-400">Tekrar denetimi: {report.metrics.comparedQuestions} soru karşılaştırıldı. En büyük sayı: {report.metrics.maxNumber}; yönerge: {report.metrics.promptWords} kelime.</p>
+    {attempts.length > 0 && <div className="space-y-2"><h4 className="text-xs font-bold text-slate-200">Üretim geçmişi · {attempts.length} deneme</h4>{attempts.map(a => <details key={a.attempt} className="rounded-lg bg-slate-800/70 p-3 text-xs text-slate-300"><summary className="cursor-pointer font-semibold">{a.attempt}. deneme · {a.outcome === 'accepted' ? 'Kontroller geçti' : a.outcome === 'unavailable' ? 'Denetim tamamlanamadı' : 'Yeniden üretim gerekli'}</summary><p className="mt-2">{a.action}</p>{a.reasons.map((r, i) => <p key={i} className="mt-1 break-words text-amber-200">{r}</p>)}</details>)}</div>}
+  </section>;
+}

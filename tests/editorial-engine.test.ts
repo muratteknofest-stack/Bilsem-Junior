@@ -60,7 +60,7 @@ test('novelty ignores seed, IDs and shuffled options; imports are atomic drafts'
 });
 
 test('published pool excludes drafts and wrong grades and avoids duplicates', () => {
-  const q = { ...generateProfessionalQuestion('number_pattern', 5, 2), targetGrade: 1 as const };
+  const q = { ...generateProfessionalQuestion('number_pattern', 5, 2), targetGrade: 2 as const };
   const published = { ...q, id: 'published', status: 'published' as const };
   const selected = selectPublishedPool([q, q], [published, { ...published, id: 'draft', status: 'draft' }]);
   assert.equal(selected[0].id, 'published'); assert.equal(selected[1].id, q.id);
@@ -82,3 +82,4 @@ test('different seeds provide substantive variety', () => {
     assert.ok(keys.size >= 90, type + ': ' + keys.size + '/100 unique questions');
   }
 });
+

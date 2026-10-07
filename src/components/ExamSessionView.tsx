@@ -1,3 +1,4 @@
+import { isSchoolGrade } from '../features/questions/quality-policy';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BaseQuestion, ExamResult, CognitiveCategory, DifficultyLevel } from '../types';
@@ -231,6 +232,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
       if (targetMode.category) {
         const diff = Math.min(6, Math.floor(i / (count / 4)) + 2) as DifficultyLevel;
         qList.push(generateQuestion({
+          targetGrade: isSchoolGrade(dataService.getCurrentUser().grade) ? dataService.getCurrentUser().grade as 1|2|3|4 : undefined,
           category: targetMode.category,
           difficulty: diff,
           seed: 700000 + Date.now() + i * 997,
@@ -242,6 +244,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
         const cat = categories[i % categories.length];
         const diff = Math.min(6, Math.floor(i / (count / 4)) + 2) as DifficultyLevel;
         const q = generateQuestion({
+          targetGrade: isSchoolGrade(dataService.getCurrentUser().grade) ? dataService.getCurrentUser().grade as 1|2|3|4 : undefined,
           category: cat,
           difficulty: diff,
           seed: 700000 + Date.now() + i * 997,

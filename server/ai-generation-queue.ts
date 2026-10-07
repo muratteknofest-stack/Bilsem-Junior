@@ -1,3 +1,5 @@
+import { EDUCATION_PROFILES } from '../src/features/questions/quality-policy';
+import { loadQualityComparisonPool } from './question-quality-store';
 import { GoogleGenAI } from '@google/genai';
 import { z } from 'zod';
 import { 
@@ -12,6 +14,8 @@ export interface GenerationJobConfig {
   questionType?: string;
   targetGrade: 1 | 2 | 3 | 4;
   difficulty: number | 'auto';
+  targetAge?: number;
+  maxAttempts?: number;
   count: number;
   minQualityScore: number;
   aiModel?: string;
@@ -155,7 +159,7 @@ export class AiGenerationQueue {
     try {
       // Determine difficulty
       const diff = job.config.difficulty === 'auto' 
-        ? Math.floor(Math.random() * 6) + 1 
+        ? Math.floor(Math.random() * EDUCATION_PROFILES[job.config.targetGrade].maxDifficulty) + 1 
         : job.config.difficulty;
 
       const pipelineConfig: PipelineConfig = {
@@ -163,18 +167,19 @@ export class AiGenerationQueue {
         questionType: job.config.questionType,
         targetGrade: job.config.targetGrade,
         difficulty: diff,
+        targetAge: job.config.targetAge,
+        maxAttempts: job.config.maxAttempts,
         minQualityScore: job.config.minQualityScore,
         aiModel: job.config.aiModel,
       };
 
-      const result = await runQuestionPipeline(this.aiClient, pipelineConfig);
+      const result = await runQuestionPipeline(this.aiClient, pipelineConfig, { existingQuestions: await loadQualityComparisonPool() });
       
       // Reset retry count on successful pipeline completion
       job.retryCount = 0;
+      if (result.question) await this.saveQuestionToSupabase(result.question);
       job.progress.completed++;
       job.results.push(result);
-
-      if (result.question) await this.saveQuestionToSupabase(result.question);
       if (result.success && result.question) {
         job.progress.approved++;
       } else {
@@ -254,7 +259,7 @@ export class AiGenerationQueue {
       const docRef = this.store.collection('questions').doc(question.id);
       await docRef.set(question);
     } catch (error) {
-      console.error('Failed to save generated question to Supabase:', error);
+      throw new Error('Denetlenen soru kaydedilemedi; üretim başarılı sayılmadı.');
     }
   }
 
@@ -263,13 +268,15 @@ export class AiGenerationQueue {
       const logDoc = this.store.collection('ai_generation_logs').doc();
       await logDoc.set({
         jobId,
-        timestamp: Date.now(),
+        adminId: this.jobs.get(jobId)?.adminId,
+        promptVersion: result.promptVersion,
+        createdAt: Date.now(),
         success: result.success,
         qualityScore: result.qualityScore,
         solverVerified: result.solverVerified,
         errors: result.validationErrors,
         warnings: result.validationWarnings,
-        rejectionReasons: result.rejectionReasons,
+        rejectionReasons: [...result.rejectionReasons, ...(result.attempts || []).map(a => `Deneme ${a.attempt} (${a.seed}): ${a.outcome}; ${a.reasons.join(" ")}`)],
         durationMs: result.durationMs,
         questionId: result.question?.id || null,
         model: result.model,

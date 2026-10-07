@@ -1,3 +1,4 @@
+import { loadQualityComparisonPool } from '../question-quality-store';
 import { auditQuestion, isQuestionReadyForStudents } from '../../src/features/questions/quality';
 import { Router } from 'express';
 import { z } from 'zod';
@@ -17,6 +18,8 @@ const aiQuestionGenerateSchema = z.object({
   category: z.string().max(80).optional(),
   questionType: z.string().max(80).optional(),
   targetGrade: z.number().int().min(1).max(4),
+  targetAge: z.number().int().min(6).max(11).optional(),
+  maxAttempts: z.number().int().min(1).max(4).optional().default(3),
   difficulty: z.number().int().min(1).max(6),
   minQualityScore: z.number().int().min(0).max(100).optional().default(85),
   aiModel: z.string().max(100).optional(),
@@ -26,6 +29,8 @@ const aiBulkGenerateSchema = z.object({
   category: z.string().max(80).optional(),
   questionType: z.string().max(80).optional(),
   targetGrade: z.number().int().min(1).max(4),
+  targetAge: z.number().int().min(6).max(11).optional(),
+  maxAttempts: z.number().int().min(1).max(4).optional().default(3),
   difficulty: z.union([z.number().int().min(1).max(6), z.literal('auto')]),
   count: z.number().int().min(1).max(50),
   minQualityScore: z.number().int().min(0).max(100).optional().default(85),
@@ -71,9 +76,11 @@ adminAiRoutes.post('/admin/ai-generate-question', requireSupabaseAuth, requireAp
       questionType: parsed.data.questionType,
       targetGrade: parsed.data.targetGrade as 1 | 2 | 3 | 4,
       difficulty: parsed.data.difficulty,
+      targetAge: parsed.data.targetAge,
+      maxAttempts: parsed.data.maxAttempts,
       minQualityScore: parsed.data.minQualityScore,
       aiModel: parsed.data.aiModel,
-    });
+    }, { existingQuestions: await loadQualityComparisonPool() });
 
     try {
       const adminDb = getAdminDb();
@@ -83,7 +90,7 @@ adminAiRoutes.post('/admin/ai-generate-question', requireSupabaseAuth, requireAp
         promptVersion: result.promptVersion,
         qualityScore: result.qualityScore,
         success: result.success,
-        rejectionReasons: result.rejectionReasons,
+        rejectionReasons: [...result.rejectionReasons, ...(result.attempts || []).map(a => `Deneme ${a.attempt} (${a.seed}): ${a.outcome}; ${a.reasons.join(" ")}`)],
         durationMs: result.durationMs,
         createdAt: Date.now(),
       });
@@ -113,6 +120,8 @@ adminAiRoutes.post('/admin/ai-generate-question', requireSupabaseAuth, requireAp
       success: result.success,
       question: result.question,
       qualityScore: result.qualityScore,
+      qualityReport: result.qualityReport,
+      attempts: result.attempts,
       solverVerified: result.solverVerified,
       validationErrors: result.validationErrors,
       validationWarnings: result.validationWarnings,
@@ -142,6 +151,8 @@ adminAiRoutes.post('/admin/ai-bulk-generate', requireSupabaseAuth, requireAppChe
       questionType: parsed.data.questionType,
       targetGrade: parsed.data.targetGrade as 1 | 2 | 3 | 4,
       difficulty: parsed.data.difficulty,
+      targetAge: parsed.data.targetAge,
+      maxAttempts: parsed.data.maxAttempts,
       count: parsed.data.count,
       minQualityScore: parsed.data.minQualityScore,
       aiModel: parsed.data.aiModel,
@@ -173,6 +184,8 @@ adminAiRoutes.get('/admin/ai-generation-job/:jobId', requireSupabaseAuth, requir
       results: job.results.map((r: any) => ({
         success: r.success,
         qualityScore: r.qualityScore,
+        qualityReport: r.qualityReport,
+        attempts: r.attempts,
         solverVerified: r.solverVerified,
         rejectionReasons: r.rejectionReasons,
         question: r.question ? {
@@ -211,8 +224,9 @@ adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, requireAppC
     const currentData = snap.data()!;
 
     if (action === 'approve') {
-      if (!isQuestionReadyForStudents(currentData)) {
-        const report = auditQuestion(currentData);
+      const comparison = await loadQualityComparisonPool();
+      const report = auditQuestion(currentData, comparison.filter(q => q.id !== currentData.id));
+      if (!isQuestionReadyForStudents(currentData) || report.errors.length) {
         return res.status(422).json({ error: 'Soru doğrulanamadı; inceleme gerekli.', details: [...report.errors, ...report.reviewRequired] });
       }
       await qRef.update({
@@ -245,12 +259,13 @@ adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, requireAppC
         questionType: currentData.type,
         targetGrade: currentData.targetGrade || 3,
         difficulty: currentData.difficulty || 3,
-      });
+        targetAge: currentData.targetAge,
+      }, { existingQuestions: await loadQualityComparisonPool() });
 
-      if (result.success && result.question) {
+      if (result.question) {
         await adminDb.collection('questions').doc(result.question.id).set({
           ...result.question,
-          status: 'draft',
+          status: result.success ? 'draft' : 'review',
           revision: 0,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -264,6 +279,8 @@ adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, requireAppC
         message: result.success ? 'Soru yeniden üretildi.' : 'Yeniden üretim başarısız.',
         question: result.question,
         qualityScore: result.qualityScore,
+        qualityReport: result.qualityReport,
+        attempts: result.attempts,
       });
     }
 

@@ -1,3 +1,4 @@
+import { inspectEducation, isSchoolGrade, hasCompleteQualityReport } from './quality-policy';
 import { BaseQuestion, QUESTION_TYPE_LABELS, ALL_COGNITIVE_CATEGORIES } from '../../types';
 import { generateVisualFingerprint as fingerprint } from './fingerprint';
 import { validateQuestion } from './validator';
@@ -77,11 +78,19 @@ export function auditQuestion(value: unknown, existing: BaseQuestion[] = []): Qu
       const normalizedOptions = (question: BaseQuestion) => question.options.map(({ id, label, visualData }) => ({ id, label, visualData })).sort((a, b) => a.id.localeCompare(b.id));
       if (fingerprint(normalizedOptions(q)) !== fingerprint(normalizedOptions(reference))) result.reviewRequired.push('Seçenek içerikleri doğrulanmış şablonla eşleşmiyor.');
       if (q.category !== reference.category) result.reviewRequired.push('Kategori doğrulanmış içerikle eşleşmiyor.');
+      if (q.authoring?.engine === 'verified-3' && fingerprint(q.authoring.distractorNotes) !== fingerprint(reference.authoring?.distractorNotes)) result.reviewRequired.push('Çeldirici gerekçeleri doğrulanmış içerikle eşleşmiyor.');
     }
     result.solverVerified = solved.canSolve && solved.isMatch && !solved.ambiguityDetected && result.reviewRequired.length === 0;
     if (q.targetGrade !== undefined && (q.targetGrade < 1 || q.targetGrade > 4 || !Number.isInteger(q.targetGrade))) result.errors.push('Hedef sınıf 1–4 olmalı.');
     if (q.targetGrades !== undefined && (!Array.isArray(q.targetGrades) || !q.targetGrades.length || q.targetGrades.some(grade => !Number.isInteger(grade) || grade < 1 || grade > 4))) result.errors.push('Hedef sınıf listesi geçersiz.');
     if (q.targetGrade && q.difficulty > q.targetGrade + 2) result.warnings.push('Zorluk bu sınıf için yüksek; öğrenci grubuna uygunluğunu inceleyin.');
+    const grades = [...new Set([q.targetGrade, ...(q.targetGrades || [])].filter(isSchoolGrade))];
+    for (const grade of grades) {
+      const education = inspectEducation(q, grade, q.targetAge);
+      result.reviewRequired.push(...education.audience, ...education.difficulty, ...education.visual);
+    }
+    if (q.targetAge !== undefined && !grades.length) result.reviewRequired.push('Yaş denetimi için hedef sınıf gerekli.');
+    if (q.aiMeta?.promptVersion === '3.0-profile-gated' && !hasCompleteQualityReport(q)) result.reviewRequired.push('Çok aşamalı kalite raporu eksik, başarısız veya içerik değişmiş.');
     // --- AI-specific validations ---
     if (q.authoring?.engine?.startsWith('ai-')) {
       if (!q.authoring.distractorNotes || Object.keys(q.authoring.distractorNotes).length < 3) {
@@ -98,7 +107,7 @@ export function auditQuestion(value: unknown, existing: BaseQuestion[] = []): Qu
       }
       if (q.seed === 0) result.warnings.push('AI soruları deterministik değildir; seed 0 olarak işaretlenmiştir.');
     }
-    if (q.aiMeta && (q.aiMeta.promptVersion !== '2.0-proof-gated' || q.aiMeta.solverVerified !== true || q.aiMeta.solverAnswer !== q.correctOptionId)) {
+    if (q.aiMeta && (!['2.0-proof-gated', '3.0-profile-gated'].includes(q.aiMeta.promptVersion) || q.aiMeta.solverVerified !== true || q.aiMeta.solverAnswer !== q.correctOptionId)) {
       result.reviewRequired.push('AI kör çözüm ve editör incelemesi tamamlanmamış veya eski sürüm.');
     }
     if (cfg?.displayMode === 'verified_board') {

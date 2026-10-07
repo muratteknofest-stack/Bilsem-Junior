@@ -1,3 +1,4 @@
+import type { QuestionQualityReport, GenerationAttempt } from './features/questions/quality-policy';
 export type UserRole = 'student' | 'parent' | 'admin';
 
 export interface StreakMilestone {
@@ -452,6 +453,9 @@ export interface BaseQuestion {
   seed: number;
   visualConfig: VisualConfig;
   targetGrade?: 1 | 2 | 3 | 4;
+  targetAge?: number;
+  qualityReport?: QuestionQualityReport;
+  generationAttempts?: GenerationAttempt[];
   targetGrades?: (1 | 2 | 3 | 4)[];
   createdAt?: string;
   updatedAt?: string;
