@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BaseQuestion, SkillMastery, DifficultyLevel, DIFFICULTY_COLORS } from '../types';
 import { generateQuestion, STUDENT_CATEGORY_TYPES } from '../features/questions/generators';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
-import { OptionRenderer } from '../features/questions/renderers/OptionRenderer';
+import { AnswerWorkspace } from '../features/questions/renderers/AnswerWorkspace';
+import { evaluateResponse, type QuestionResponse } from '../features/questions/answer-interactions';
 import { VisualExplanationOverlay } from '../features/questions/renderers/VisualExplanationOverlay';
 import { AiHintModal } from './AiHintModal';
 import { ComboStreakIndicator } from './animations/ComboStreakIndicator';
@@ -91,18 +92,26 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
   });
 
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
+  const [interactionResponse, setInteractionResponse] = useState<QuestionResponse | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const submissionLock = useRef(false);
   const [showAiHint, setShowAiHint] = useState(false);
 
-  const handleSelectOption = (optId: string) => {
+  const answerResponse: QuestionResponse | null = interactionResponse ?? (selectedOptionId ? { mode: 'choice', optionId: selectedOptionId } : null);
+  const answerResult = currentQuestion ? evaluateResponse(currentQuestion, answerResponse) : { complete: false, correct: false };
+  const answerReady = answerResult.complete;
+  const handleResponse = (response: QuestionResponse) => {
     if (isSubmitted) return;
-    sound.playClick();
-    setSelectedOptionId(optId);
+    setInteractionResponse(response);
+    setSelectedOptionId(response.mode === 'choice' || response.mode === 'place' ? response.optionId : null);
   };
 
   const handleSubmitAnswer = () => {
-    if (!selectedOptionId || isSubmitted) return;
-    const isCorrect = selectedOptionId === currentQuestion.correctOptionId;
+    if (!answerReady || submissionLock.current || isSubmitted) return;
+    const checkedAnswer = evaluateResponse(currentQuestion, answerResponse);
+    if (!checkedAnswer.complete) return;
+    submissionLock.current = true;
+    const isCorrect = checkedAnswer.correct;
     setIsSubmitted(true);
     dataService.recordQuestionSolved(isCorrect, currentQuestion.category);
 
@@ -172,7 +181,9 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
 
     setCurrentQuestion(nextQ);
     setSelectedOptionId(null);
+    setInteractionResponse(null);
     setIsSubmitted(false);
+    submissionLock.current = false;
     setShowAiHint(false);
     setActiveMilestoneStreak(null);
     setQuestionCount((prev) => prev + 1);
@@ -265,19 +276,8 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
         </div>
 
         {/* Answer Options */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-          {currentQuestion.options.map((opt) => (
-            <OptionRenderer
-              key={opt.id}
-              option={opt}
-              isSelected={selectedOptionId === opt.id}
-              onSelect={() => handleSelectOption(opt.id)}
-              disabled={isSubmitted}
-              showCorrect={isSubmitted}
-              isCorrectOption={opt.id === currentQuestion.correctOptionId}
-            />
-          ))}
-        </div>
+        <AnswerWorkspace key={currentQuestion.id} question={currentQuestion} response={answerResponse}
+          onChange={handleResponse} submitted={isSubmitted} />
 
         {/* Controls and Feedback */}
         {!isSubmitted ? (
@@ -302,14 +302,14 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
 
             <button
               onClick={handleSubmitAnswer}
-              disabled={!selectedOptionId}
+              disabled={!answerReady}
               className={`flex-1 w-full py-3.5 rounded-xl font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                selectedOptionId
+                answerReady
                   ? 'bg-purple-600 hover:bg-purple-700 text-white   active:scale-98'
                   : 'bg-slate-200 text-slate-400 cursor-not-allowed'
               }`}
             >
-              <span>{selectedOptionId ? 'Cevabı Kontrol Et' : 'Bir Seçenek İşaretle'}</span>
+              <span>{answerReady ? 'Cevabı Kontrol Et' : 'Cevabını Tamamla'}</span>
             </button>
           </div>
         ) : (
@@ -322,12 +322,12 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
 
             <div
               className={`p-4 rounded-xl text-center text-sm font-bold flex items-center justify-center gap-2 ${
-                selectedOptionId === currentQuestion.correctOptionId
+                answerResult.correct
                   ? 'bg-emerald-100 text-emerald-950 border-2 border-emerald-300'
                   : 'bg-amber-100 text-amber-950 border-2 border-amber-300'
               }`}
             >
-              {selectedOptionId === currentQuestion.correctOptionId ? (
+              {answerResult.correct ? (
                 <>
                   <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                   <span>Harika! Akıllı seviyen artıyor! (+{lastEarnedXP} XP)</span>

@@ -12,7 +12,8 @@ import { generateQuestion, STUDENT_CATEGORY_TYPES } from '../features/questions/
 import { usePublishedQuestions } from '../features/questions/use-published-questions';
 import { selectPublishedPool } from '../features/questions/editorial-data';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
-import { OptionRenderer } from '../features/questions/renderers/OptionRenderer';
+import { AnswerWorkspace } from '../features/questions/renderers/AnswerWorkspace';
+import { evaluateResponse, type QuestionResponse } from '../features/questions/answer-interactions';
 import { VisualExplanationOverlay } from '../features/questions/renderers/VisualExplanationOverlay';
 import { StepByStepAiExplanation } from './StepByStepAiExplanation';
 import { VisualCountdownTimer } from './VisualCountdownTimer';
@@ -95,7 +96,9 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
   const [questions, setQuestions] = useState<BaseQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
+  const [interactionResponse, setInteractionResponse] = useState<QuestionResponse | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const submissionLock = useRef(false);
   const [isShaking, setIsShaking] = useState(false);
   const [showAiHint, setShowAiHint] = useState(false);
   const [showAiMistakeModal, setShowAiMistakeModal] = useState(false);
@@ -209,6 +212,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
       if (matchedId && !isSubmitted) {
         sound.playClick();
         setSelectedOptionId(matchedId);
+        setInteractionResponse({ mode: 'choice', optionId: matchedId });
       }
     };
 
@@ -256,7 +260,9 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
     setQuestions(selectPublishedPool(qList.map(q => ({ ...q, targetGrade: dataService.getCurrentUser().grade as 1 | 2 | 3 | 4 | undefined })), publishedQuestions));
     setCurrentIndex(0);
     setSelectedOptionId(null);
+    setInteractionResponse(null);
     setIsSubmitted(false);
+    submissionLock.current = false;
     setCorrectCount(0);
     setWrongCount(0);
     setEarnedXP(0);
@@ -305,16 +311,22 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
 
   const currentQuestion = questions[currentIndex];
 
-  const handleSelectOption = (optionId: string) => {
+  const answerResponse: QuestionResponse | null = interactionResponse ?? (selectedOptionId ? { mode: 'choice', optionId: selectedOptionId } : null);
+  const answerResult = currentQuestion ? evaluateResponse(currentQuestion, answerResponse) : { complete: false, correct: false };
+  const answerReady = answerResult.complete;
+  const handleResponse = (response: QuestionResponse) => {
     if (isSubmitted) return;
-    sound.playClick();
-    setSelectedOptionId(optionId);
+    setInteractionResponse(response);
+    setSelectedOptionId(response.mode === 'choice' || response.mode === 'place' ? response.optionId : null);
   };
 
   const handleSubmitAnswer = () => {
-    if (!selectedOptionId || isSubmitted || !currentQuestion) return;
+    if (!answerReady || submissionLock.current || isSubmitted || !currentQuestion) return;
 
-    const isCorrect = selectedOptionId === currentQuestion.correctOptionId;
+    const checkedAnswer = evaluateResponse(currentQuestion, answerResponse);
+    if (!checkedAnswer.complete) return;
+    submissionLock.current = true;
+    const isCorrect = checkedAnswer.correct;
     setIsSubmitted(true);
 
     // Update stats and persistence
@@ -395,7 +407,9 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
     if (currentIndex + 1 < questions.length) {
       setCurrentIndex((prev) => prev + 1);
       setSelectedOptionId(null);
+      setInteractionResponse(null);
       setIsSubmitted(false);
+      submissionLock.current = false;
       setShowAiHint(false);
       setShowAiMistakeModal(false);
       setActiveMilestoneStreak(null); // Clear milestone overlay on next question
@@ -927,19 +941,8 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
         </div>
 
         {/* Answer Options Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-          {currentQuestion.options.map((opt) => (
-            <OptionRenderer
-              key={opt.id}
-              option={opt}
-              isSelected={selectedOptionId === opt.id}
-              onSelect={() => handleSelectOption(opt.id)}
-              disabled={isSubmitted}
-              showCorrect={isSubmitted}
-              isCorrectOption={opt.id === currentQuestion.correctOptionId}
-            />
-          ))}
-        </div>
+        <AnswerWorkspace key={currentQuestion.id} question={currentQuestion} response={answerResponse}
+          onChange={handleResponse} submitted={isSubmitted} />
 
         {/* Action Button & Feedback Banner */}
         {!isSubmitted ? (
@@ -965,14 +968,14 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
 
             <button
               onClick={handleSubmitAnswer}
-              disabled={!selectedOptionId}
+              disabled={!answerReady}
               className={`flex-1 w-full py-3.5 rounded-xl font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                selectedOptionId
+                answerReady
                   ? 'bg-indigo-600 hover:bg-indigo-700 text-white   active:scale-98'
                   : 'bg-slate-200 text-slate-400 cursor-not-allowed'
               }`}
             >
-              <span>{selectedOptionId ? 'Cevabı Kontrol Et' : 'Bir Seçenek İşaretle'}</span>
+              <span>{answerReady ? 'Cevabı Kontrol Et' : 'Cevabını Tamamla'}</span>
             </button>
           </div>
         ) : (
@@ -986,12 +989,12 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
             {/* Instant Friendly Feedback Banner */}
             <div
               className={`p-4 rounded-xl text-sm sm:text-base font-bold  ${
-                selectedOptionId === currentQuestion.correctOptionId
+                answerResult.correct
                   ? 'bg-emerald-100 text-emerald-950 border-2 border-emerald-300 flex items-center justify-center gap-2'
                   : 'bg-gradient-to-r from-amber-50 to-rose-50 text-amber-950 border-2 border-rose-200'
               }`}
             >
-              {selectedOptionId === currentQuestion.correctOptionId ? (
+              {answerResult.correct ? (
                 <>
                   <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                   <span>Harika! Süper düşündün! (+{lastEarnedXP} XP)</span>
@@ -1012,12 +1015,12 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
                         Bu soru biraz zordu, ama hiç sorun değil!
                       </span>
                       <span className="text-xs text-slate-600 font-normal">
-                        Hata Defterine eklendi. AI ile hatanın nedenini öğrenebilirsin.
+                        Hata Defterine eklendi. Aşağıdaki çözümü inceleyebilirsin.
                       </span>
                     </div>
                   </div>
 
-                  <button
+                  {selectedOptionId && <button
                     type="button"
                     onClick={() => {
                       sound.playClick();
@@ -1028,16 +1031,16 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
                     <HelpCircle className="w-4 h-4" />
                     <span>Neden Yanlış? (AI Analizi)</span>
                     <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                  </button>
+                  </button>}
                 </div>
               )}
             </div>
 
             {/* Step-by-step Framer Motion AI Accordion Explanation */}
-            <StepByStepAiExplanation
+            {selectedOptionId && <StepByStepAiExplanation
               question={currentQuestion}
-              selectedOptionId={selectedOptionId || ''}
-            />
+              selectedOptionId={selectedOptionId}
+            />}
 
             {/* Visual Explanation Overlay */}
             <VisualExplanationOverlay
@@ -1047,7 +1050,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
 
             {/* Next Question & AI Step Review Actions */}
             <div className="flex flex-col sm:flex-row items-center gap-2.5">
-              {selectedOptionId !== currentQuestion.correctOptionId && (
+              {selectedOptionId && !answerResult.correct && (
                 <button
                   type="button"
                   onClick={() => {

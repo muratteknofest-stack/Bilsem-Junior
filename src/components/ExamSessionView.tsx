@@ -5,7 +5,7 @@ import { generateQuestion, generateQuestionForGrade, STUDENT_CATEGORY_TYPES } fr
 import { usePublishedQuestions } from '../features/questions/use-published-questions';
 import { selectPublishedPool } from '../features/questions/editorial-data';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
-import { OptionRenderer } from '../features/questions/renderers/OptionRenderer';
+import { AnswerWorkspace } from '../features/questions/renderers/AnswerWorkspace';
 import { VisualCountdownTimer } from './VisualCountdownTimer';
 import { dataService } from '../services/data-service';
 import { sound } from '../lib/sound';
@@ -94,6 +94,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
   const [questions, setQuestions] = useState<BaseQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answerModes, setAnswerModes] = useState<Record<string, 'place' | 'choice'>>({});
   const [flags, setFlags] = useState<Record<string, boolean>>({});
   const [isShaking, setIsShaking] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>('all');
@@ -267,36 +268,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
     const q = questions[currentIndex];
     if (!q) return;
     
-    const isCorrect = optId === q.correctOptionId;
-    if (isCorrect) {
-      sound.playSuccess();
-      try {
-        confetti({ 
-          particleCount: 150, 
-          spread: 100, 
-          origin: { y: 0.5 },
-          colors: ['#10b981', '#34d399', '#fbbf24', '#3b82f6'],
-          disableForReducedMotion: true,
-          zIndex: 9999
-        });
-      } catch {}
-    } else {
-      sound.playError();
-      setIsShaking(true);
-      setTimeout(() => setIsShaking(false), 500);
-      try {
-        confetti({
-          particleCount: 40,
-          spread: 50,
-          origin: { y: 0.7 },
-          colors: ['#ef4444', '#f87171', '#94a3b8'],
-          gravity: 1.5,
-          ticks: 100,
-          disableForReducedMotion: true,
-          zIndex: 9999
-        });
-      } catch {}
-    }
+    sound.playClick();
 
     setAnswers((prev) => ({
       ...prev,
@@ -933,18 +905,15 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
           </div>
 
           {/* Answer Options Grid (CONFIDENTIAL: No immediate feedback!) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            {currentQ.options.map((opt) => (
-              <OptionRenderer
-                key={opt.id}
-                option={opt}
-                isSelected={answers[currentQ.id] === opt.id}
-                onSelect={() => handleSelectOption(opt.id)}
-                disabled={false}
-                showCorrect={false}
-              />
-            ))}
-          </div>
+          <AnswerWorkspace key={currentQ.id} question={currentQ}
+            allowedModes={['place', 'choice']}
+            response={answers[currentQ.id] ? { mode: answerModes[currentQ.id] ?? 'place', optionId: answers[currentQ.id] } : null}
+            onChange={response => {
+              if (response.mode !== 'choice' && response.mode !== 'place') return;
+              setAnswerModes(prev => ({ ...prev, [currentQ.id]: response.mode as 'place' | 'choice' }));
+              if (response.optionId) handleSelectOption(response.optionId);
+              else setAnswers(prev => { const next = { ...prev }; delete next[currentQ.id]; return next; });
+            }} />
 
           {/* Bottom Pagination Buttons */}
           <div className="flex items-center justify-between pt-3 border-t border-zinc-200">
