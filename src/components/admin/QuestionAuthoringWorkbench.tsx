@@ -210,16 +210,6 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
       {!!batch.length && (
         <>
           <button
-            className={button + ' bg-emerald-600 text-white hover:bg-emerald-500'}
-            onClick={() => {
-              const count = questionBankService.addBulkQuestions(batch);
-              setNotice(`${count} taslak başarıyla Soru Havuzu'na aktarıldı!`);
-            }}
-          >
-            <Save size={16} />
-            Havuza Aktar ({batch.length})
-          </button>
-          <button
             className={button + ' border border-slate-600 text-slate-100'}
             disabled={saving || running || !cloudReady}
             onClick={() => void saveBatch()}
@@ -297,10 +287,6 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
           {report.warnings.map((w, i) => <p key={i} className="text-sm text-amber-900">{w}</p>)}
           <fieldset className="space-y-3 border-t pt-3" disabled={saving}><legend className="text-sm font-semibold pt-3">Eğitmen incelemesi</legend>{checks.map((label, i) => <label key={label} className="flex items-start gap-3 text-sm leading-6 cursor-pointer"><input className="mt-1 w-4 h-4 accent-indigo-600" type="checkbox" checked={review[i]} onChange={e => setReview(previous => previous.map((v, n) => n === i ? e.target.checked : v))} />{label}</label>)}</fieldset>
           <div className="flex flex-wrap gap-2 pt-2">
-            <button className={button + ' bg-emerald-600 text-white hover:bg-emerald-500'} disabled={saving || !active} onClick={() => {
-              questionBankService.createCustomQuestion(active);
-              setNotice('Soru yerel havuza başarıyla eklendi!');
-            }}><Save size={16} />Havuza Ekle</button>
             <button className={button + ' bg-slate-900 text-white'} disabled={saving || !cloudReady || !!report.errors.length} onClick={() => void save('draft')}><Save size={16} />Taslağı kaydet</button>
             <button className={button + ' border text-slate-700'} disabled={saving || !cloudReady || !!report.errors.length} onClick={() => void save('review')}>İncelemeye al</button>
             <button className={button + ' bg-indigo-600 text-white hover:bg-indigo-700'} disabled={saving || !cloudReady || !!report.errors.length || !report.solverVerified || !review.every(Boolean)} onClick={() => void save('published')}>{saving ? <LoaderCircle size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}Onayla ve yayımla</button>
