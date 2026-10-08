@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import confetti from 'canvas-confetti';
 import { 
   UserProfile, 
@@ -51,6 +51,8 @@ import { GamificationArena } from './GamificationArena';
 import { StudentStudyHub } from './StudentStudyHub';
 import { levelProgress } from '../features/student/study-hub-model';
 import { getStudyFavorites, saveStudyFavorites } from '../services/student-preferences-service';
+import './landing/design-system.css';
+import './dashboard-design-system.css';
 import {
   CardSkeleton,
   ChartSkeleton,
@@ -160,6 +162,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const [cheeredUser, setCheeredUser] = useState<string | null>(null);
   const [favorites, setFavorites] = useState(getStudyFavorites);
   const [skillSearch, setSkillSearch] = useState('');
+  const prefersReducedMotion = useReducedMotion();
   const [skillFilter, setSkillFilter] = useState<'all' | 'practice' | 'new'>('all');
   useEffect(() => { setFavorites(getStudyFavorites()); }, [activeUser.id]);
 
@@ -227,7 +230,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
   if (isLoading) {
     return (
-      <main id="student-dashboard" className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 space-y-6 sm:space-y-8 pb-24 lg:pb-12 min-h-screen">
+      <main id="student-dashboard" className="zp-dashboard-page zp-student-dashboard w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 space-y-6 sm:space-y-8 pb-24 lg:pb-12 min-h-screen">
         <ProfileBannerSkeleton />
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
           <div className="md:col-span-7 lg:col-span-8 space-y-6 sm:space-y-8">
@@ -247,12 +250,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   }
 
   return (
-      <div className="w-full min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24 text-zinc-900 dark:text-zinc-100 selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
+      <div className="zp-dashboard-page zp-student-dashboard w-full min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24 text-zinc-900 dark:text-zinc-100 selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
         
         {/* Dynamic Animated Subtle Background Blobs */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
           <motion.div 
-            animate={{ 
+            animate={prefersReducedMotion ? undefined : {
               scale: [1, 1.2, 1],
               x: [0, 40, 0],
               y: [0, -30, 0],
@@ -262,7 +265,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
             className="absolute -top-24 -left-20 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-500/15 rounded-full blur-3xl"
           />
           <motion.div 
-            animate={{ 
+            animate={prefersReducedMotion ? undefined : {
               scale: [1.1, 1, 1.1],
               x: [0, -35, 0],
               y: [0, 40, 0],
@@ -280,7 +283,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="relative overflow-hidden rounded-3xl bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 p-6 md:p-8 shadow-sm transition-all"
+          className="zp-dashboard-hero relative overflow-hidden rounded-3xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800/80 p-6 md:p-8 shadow-sm transition-all"
         >
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             
@@ -288,14 +291,16 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full lg:w-auto">
               
               {/* Animated 3D-Feel Floating Avatar */}
-              <motion.div 
-                whileHover={{ scale: 1.08, rotate: [0, -3, 3, 0] }}
-                whileTap={{ scale: 0.95 }}
+              <motion.button
+                type="button"
+                aria-label="Avatar kutlaması"
+                whileHover={prefersReducedMotion ? undefined : { scale: 1.08, rotate: [0, -3, 3, 0] }}
+                whileTap={prefersReducedMotion ? undefined : { scale: 0.95 }}
                 onClick={handleAvatarClick}
                 className="relative w-18 h-18 sm:w-22 sm:h-22 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-50 via-indigo-100/70 to-indigo-200/50 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center text-4xl sm:text-5xl shadow-md border-2 border-indigo-200/60 dark:border-indigo-500/20 shrink-0 cursor-pointer group select-none"
               >
                 <motion.span 
-                  animate={{ y: [0, -4, 0] }}
+                  animate={prefersReducedMotion ? undefined : { y: [0, -4, 0] }}
                   transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                 >
                   {activeUser.avatar || '🦊'}
@@ -306,9 +311,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                   <Star className="w-3 h-3 fill-amber-300 text-amber-300" />
                   <span>{xpProgress.level}</span>
                 </div>
-              </motion.div>
+              </motion.button>
 
               <div className="flex-1 min-w-0">
+                <p className="zp-dashboard-kicker">ÖĞRENCİ ALANI / BUGÜN</p>
                 <div className="flex items-center gap-2.5 flex-wrap">
                   <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight font-['Outfit',sans-serif]">
                     {greeting.text}, {activeUser.name?.split(' ')[0] || 'Zeka Şampiyonu'} {greeting.emoji}
@@ -449,8 +455,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         />
 
         {/* Modern Segmented Navigation Bar */}
-        <div className="flex p-1.5 bg-zinc-200/70 dark:bg-zinc-900/80 rounded-2xl w-full max-w-full overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] border border-zinc-200/80 dark:border-zinc-800/80 backdrop-blur-md shadow-inner gap-1 flex-nowrap md:w-fit">
+        <div className="zp-dashboard-tabs flex p-1.5 bg-zinc-200/70 dark:bg-zinc-900/80 rounded-2xl w-full max-w-full overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] border border-zinc-200/80 dark:border-zinc-800/80 shadow-inner gap-1 flex-nowrap md:w-fit" role="group" aria-label="Öğrenci paneli bölümleri">
           <button 
+            type="button"
+            aria-pressed={activeTab === 'modes'}
             onClick={() => {
               sound.playClick();
               setActiveTab('modes');
@@ -472,6 +480,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </button>
 
           <button 
+            type="button"
+            aria-pressed={activeTab === 'plan'}
             onClick={() => {
               sound.playClick();
               setActiveTab('plan');
@@ -493,6 +503,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </button>
 
           <button 
+            type="button"
+            aria-pressed={activeTab === 'skills'}
             onClick={() => {
               sound.playClick();
               setActiveTab('skills');
@@ -514,6 +526,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </button>
 
           <button 
+            type="button"
+            aria-pressed={activeTab === 'challenges'}
             onClick={() => {
               sound.playClick();
               setActiveTab('challenges');
@@ -538,6 +552,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </button>
 
           <button 
+            type="button"
+            aria-pressed={activeTab === 'progress'}
             onClick={() => {
               sound.playClick();
               setActiveTab('progress');
@@ -631,7 +647,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         sound.playClick();
                         onStartExam();
                       }}
-                      className="group relative p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-amber-400 dark:hover:border-amber-500/50 transition-all cursor-pointer flex flex-col justify-between h-auto min-h-[180px] sm:h-52"
+                      className="zp-dashboard-surface group relative p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-amber-400 dark:hover:border-amber-500/50 transition-all cursor-pointer flex flex-col justify-between h-auto min-h-[180px] sm:h-52"
                     >
                       <div className="flex items-start justify-between w-full">
                         <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center border border-amber-200/50 dark:border-amber-800/50 group-hover:scale-110 transition-transform">
@@ -661,7 +677,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         sound.playClick();
                         onStartPractice('mixed');
                       }}
-                      className="group relative p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-emerald-400 dark:hover:border-emerald-500/50 transition-all cursor-pointer flex flex-col justify-between h-auto min-h-[180px] sm:h-52"
+                      className="zp-dashboard-surface group relative p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-emerald-400 dark:hover:border-emerald-500/50 transition-all cursor-pointer flex flex-col justify-between h-auto min-h-[180px] sm:h-52"
                     >
                       <div className="flex items-start justify-between w-full">
                         <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 flex items-center justify-center border border-emerald-200/50 dark:border-emerald-800/50 group-hover:scale-110 transition-transform">
@@ -691,7 +707,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         sound.playClick();
                         onOpenMistakes();
                       }}
-                      className="group relative p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-rose-400 dark:hover:border-rose-500/50 transition-all cursor-pointer flex flex-col justify-between h-auto min-h-[180px] sm:h-52"
+                      className="zp-dashboard-surface group relative p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-rose-400 dark:hover:border-rose-500/50 transition-all cursor-pointer flex flex-col justify-between h-auto min-h-[180px] sm:h-52"
                     >
                       <div className="flex items-start justify-between w-full">
                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform ${
@@ -874,7 +890,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ duration: 0.3, delay: i * 0.05 }}
                           whileHover={{ y: -3 }}
-                          className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-sm flex flex-col justify-between group"
+                          className="zp-dashboard-surface p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-sm flex flex-col justify-between group"
                         >
                           <div>
                             <div className="flex items-start justify-between mb-3">
@@ -999,7 +1015,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
             />
 
             {/* Weekly Leaderboard Widget with Interactive Cheer */}
-            <article className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl shadow-sm">
+            <article className="zp-dashboard-surface p-6 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl shadow-sm">
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-amber-500" />

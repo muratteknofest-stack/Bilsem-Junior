@@ -77,6 +77,8 @@ Bu form bileşeni, hazır kayıt akışını değiştirmek için henüz kullanı
 
 Giriş, kayıt ve şifre sıfırlama yüzeyleri `src/features/auth/auth-design-system.css` içinde aynı `--zp-*` tokenlarına bağlanır. Form alanları opak beyazdır; rol ve odak seçimi `aria-pressed` ile ifade edilir. Hata metni alanla `aria-describedby` üzerinden eşleşir. Dekoratif keşif sahnesi formdan ayrı tutulur ve azaltılmış hareket tercihinde sabit kalır.
 
+Öğrenci ve veli panelleri `src/components/dashboard-design-system.css` katmanını kullanır. `.zp-dashboard-page`, `.zp-dashboard-hero`, `.zp-dashboard-surface`, `.zp-dashboard-tabs` ve `.zp-dashboard-kpis` işlevsel sınıfları, iki panelde aynı yüzey ve gezinme dilini sağlar. Öğrenci oyun alanındaki koyu mor yüzeyler bilinçli vurgu; rapor, çalışma listesi ve form yüzeyleri opaktır. Koyu tema açık temanın hiyerarşisini korur. Sekmeler `aria-pressed` durumunu, şifre yenileme alanları görünür etiket ve ilişkili hata açıklamalarını taşır.
+
 ## 7. Navigasyon ve ikonografi
 
 Tek yapışkan başlık: marka → keşif / nasıl / aileler / yardım → hesap eylemleri. Masaüstünde açıklamalı popover; ≤1000px yerel `dialog` tabanlı mobil menü. Menü ve açılır yüzeylerde `aria-expanded`, `aria-controls`, Esc, kapanınca odağın tetikleyiciye dönmesi ve klavyeyle gezinme korunur. Kayıt ol ana eylem; öğrenci/veli girişleri ayrı ve açık.

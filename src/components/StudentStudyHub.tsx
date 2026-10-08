@@ -53,7 +53,7 @@ export function StudentStudyHub({ masteries, unresolved, savedExam, favorites,
         </div>
       </div>
 
-      <div className="rounded-3xl border border-zinc-200 bg-white p-6 sm:p-7 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="zp-dashboard-surface rounded-3xl border border-zinc-200 bg-white p-6 sm:p-7 dark:border-zinc-800 dark:bg-zinc-900">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="flex items-center gap-2 text-lg font-extrabold"><Bookmark size={19} className="text-indigo-500" /> Çalışma listem</h2>
@@ -89,3 +89,4 @@ export function StudentStudyHub({ masteries, unresolved, savedExam, favorites,
     </section>
   );
 }
+

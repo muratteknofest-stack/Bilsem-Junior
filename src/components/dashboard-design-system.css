@@ -1,0 +1,176 @@
+/* Student and parent workspace language, layered over existing feature styles. */
+.zp-dashboard-page {
+  background: radial-gradient(circle at 92% 0, #eee8f8 0, transparent 30rem), var(--zp-canvas);
+  color: var(--zp-ink);
+  font-family: var(--zp-font-body);
+}
+.zp-dashboard-page :focus-visible {
+  outline: 3px solid var(--zp-focus);
+  outline-offset: 3px;
+}
+.zp-dashboard-page button { min-height: 2.75rem; }
+.zp-dashboard-page h1, .zp-dashboard-page h2, .zp-dashboard-page h3 {
+  font-family: var(--zp-font-display);
+  letter-spacing: -.035em;
+}
+.zp-student-dashboard > main, .zp-parent-dashboard .zp-dashboard-content { max-width: 76rem; }
+.zp-dashboard-page .zp-dashboard-hero {
+  border-color: #dcd8e5;
+  background: linear-gradient(120deg, #ffffff 0%, #faf8ff 61%, #f1ecfb 100%);
+  box-shadow: 0 1px 2px #1d203608, 0 24px 70px #1d20360c;
+}
+.zp-dashboard-page .zp-dashboard-hero h1 {
+  color: var(--zp-ink);
+  font-size: clamp(1.9rem, 2.7vw, 2.85rem);
+  font-weight: 650;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+.zp-dashboard-kicker {
+  margin-bottom: var(--zp-space-2);
+  color: var(--zp-violet-deep);
+  font-size: .6875rem;
+  font-weight: 800;
+  letter-spacing: .15em;
+  line-height: 1.5;
+}
+.zp-dashboard-page .zp-dashboard-surface,
+.zp-parent-dashboard .zp-dashboard-kpis > div {
+  border: 1px solid #dedbe6;
+  border-radius: var(--zp-radius-lg);
+  background: var(--zp-paper);
+  box-shadow: var(--zp-shadow-card);
+}
+.zp-dashboard-page button.zp-dashboard-surface {
+  transition: border-color var(--zp-fast), box-shadow var(--zp-normal) var(--zp-ease), transform var(--zp-normal) var(--zp-ease);
+}
+.zp-dashboard-page button.zp-dashboard-surface:hover {
+  border-color: #a997cf;
+  box-shadow: 0 22px 56px #1d203620;
+  transform: translateY(-3px);
+}
+.zp-dashboard-page .zp-dashboard-tabs {
+  border: 1px solid #dedbe6;
+  border-radius: var(--zp-radius-md);
+  background: #edeaf2;
+  box-shadow: inset 0 1px 2px #1d203610;
+}
+.zp-dashboard-page .zp-dashboard-tabs > button {
+  min-height: 3rem;
+  color: var(--zp-ink-muted);
+  font-size: .875rem;
+}
+.zp-dashboard-page .zp-dashboard-tabs > button[aria-pressed=true] { color: var(--zp-violet-deep); }
+.zp-dashboard-page .zp-dashboard-tabs > button[aria-pressed=true] > div:first-child {
+  border-color: #ded6eb;
+  background: #fffefa;
+  box-shadow: 0 2px 9px #1d203611;
+}
+.zp-dashboard-page .zp-dashboard-tabs > button:hover { color: var(--zp-violet-deep); }
+.zp-dashboard-page .zp-dashboard-primary {
+  border-color: var(--zp-violet);
+  background: var(--zp-violet);
+  color: #fff;
+  box-shadow: 0 4px 0 var(--zp-violet-deep), 0 12px 26px #5434ba20;
+}
+.zp-dashboard-page .zp-dashboard-primary:hover { background: var(--zp-violet-deep); }
+.zp-dashboard-page input:not([type=checkbox]), .zp-dashboard-page select {
+  border-color: #aaa9b9;
+  border-radius: var(--zp-radius-sm);
+  color: var(--zp-ink);
+}
+.zp-dashboard-page input:not([type=checkbox]):focus-visible, .zp-dashboard-page select:focus-visible {
+  border-color: var(--zp-violet);
+  box-shadow: 0 0 0 4px #5434ba1a;
+}
+.zp-dashboard-page .zp-dashboard-modal {
+  border-color: #dcd9e3;
+  border-radius: var(--zp-radius-lg);
+  background: var(--zp-paper);
+  box-shadow: 0 30px 80px #1d203650;
+}
+.zp-dashboard-page .zp-dashboard-modal label { color: var(--zp-ink); }
+.zp-dashboard-page .zp-dashboard-modal input { min-height: 3rem; background: var(--zp-paper); }
+.zp-dashboard-page .zp-dashboard-modal input[aria-invalid=true] { border-color: #ad4b40; }
+.zp-dashboard-page .zp-dashboard-modal button[type=submit] { background: var(--zp-violet); }
+.zp-dashboard-page .zp-dashboard-modal button[type=submit]:hover { background: var(--zp-violet-deep); }
+
+/* Large playful moments keep their identity; their neighboring reading surfaces are calm. */
+.zp-student-dashboard [aria-label="Kişisel çalışma merkezim"] > div:first-child,
+.zp-student-dashboard [aria-labelledby="arena-title"] > div:first-child {
+  background: linear-gradient(145deg, #342760 0%, #4b3486 58%, #302650 100%);
+  border: 1px solid #ffffff26;
+  box-shadow: 0 22px 54px #39217d25;
+}
+.zp-student-dashboard [aria-label="Kişisel çalışma merkezim"] > div:first-child h2,
+.zp-student-dashboard [aria-labelledby="arena-title"] > div:first-child h2 { color: #fff; }
+.zp-student-dashboard [aria-label="Kişisel çalışma merkezim"] > div:first-child p,
+.zp-student-dashboard [aria-labelledby="arena-title"] > div:first-child p { color: #eee8fa; }
+.zp-student-dashboard :is(#daily-streak-card, #daily-goal-progress-card, #badges-section,
+  #today-personalized-study-plan-card, #progress-panel) {
+  border: 1px solid #dedbe6;
+  border-radius: var(--zp-radius-lg);
+  background: var(--zp-paper);
+  box-shadow: var(--zp-shadow-card);
+}
+.zp-parent-dashboard .zp-dashboard-hero { border-bottom-color: #dcd8e5; }
+.zp-parent-dashboard .zp-dashboard-kpis > div h3 { color: var(--zp-ink); font-weight: 650; }
+.zp-parent-dashboard .zp-dashboard-kpis > div p { color: var(--zp-ink-muted); font-size: .8125rem; line-height: 1.5; }
+
+@supports (backdrop-filter: blur(12px)) {
+  .zp-parent-dashboard .zp-dashboard-hero { background: #fffef9f2; backdrop-filter: blur(18px) saturate(1.2); }
+}
+@media (max-width: 680px) {
+  .zp-dashboard-page .zp-dashboard-hero h1 { font-size: clamp(1.8rem, 7vw, 2.45rem); }
+  .zp-dashboard-page .zp-dashboard-tabs > button { min-height: 3.25rem; padding-inline: .875rem; font-size: .8125rem; }
+  .zp-dashboard-page .zp-dashboard-surface,
+  .zp-parent-dashboard .zp-dashboard-kpis > div { border-radius: var(--zp-radius-md); }
+  .zp-parent-dashboard .zp-dashboard-kpis > div { padding: 1rem; }
+}
+@media (max-width: 360px) {
+  .zp-parent-dashboard .zp-dashboard-kpis { grid-template-columns: 1fr; }
+  .zp-dashboard-page .zp-dashboard-tabs > button { padding-inline: .75rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zp-dashboard-page button.zp-dashboard-surface { transition-duration: 0ms; }
+  .zp-dashboard-page button.zp-dashboard-surface:hover { transform: none; }
+  .zp-dashboard-page .animate-pulse, .zp-dashboard-page .animate-bounce { animation: none; }
+}
+
+.dark .zp-dashboard-page {
+  background: radial-gradient(circle at 92% 0, #31284b 0, transparent 30rem), #171627;
+  color: #f9f7ff;
+}
+.dark .zp-dashboard-page .zp-dashboard-hero {
+  border-color: #484057;
+  background: linear-gradient(120deg, #262239, #2e2545 65%, #352855);
+  box-shadow: 0 18px 50px #08061255;
+}
+.dark .zp-dashboard-page .zp-dashboard-hero h1,
+.dark .zp-parent-dashboard .zp-dashboard-kpis > div h3 { color: #faf8ff; }
+.dark .zp-dashboard-kicker { color: #d8c4ff; }
+.dark .zp-dashboard-page .zp-dashboard-surface,
+.dark .zp-parent-dashboard .zp-dashboard-kpis > div,
+.dark .zp-dashboard-page .zp-dashboard-modal {
+  border-color: #49425a;
+  background: #262339;
+  box-shadow: 0 14px 40px #07061140;
+}
+.dark .zp-dashboard-page .zp-dashboard-tabs { border-color: #49425a; background: #312b43; }
+.dark .zp-dashboard-page .zp-dashboard-tabs > button { color: #cac4d5; }
+.dark .zp-dashboard-page .zp-dashboard-tabs > button[aria-pressed=true] { color: #f5efff; }
+.dark .zp-dashboard-page .zp-dashboard-tabs > button[aria-pressed=true] > div:first-child { border-color: #665786; background: #493b68; }
+.dark .zp-dashboard-page .zp-dashboard-tabs > button:hover { color: #fff; }
+.dark .zp-parent-dashboard .zp-dashboard-kpis > div p { color: #cac4d5; }
+.dark .zp-dashboard-page input:not([type=checkbox]), .dark .zp-dashboard-page select { border-color: #6b627d; color: #f9f7ff; }
+.dark .zp-dashboard-page .zp-dashboard-modal label { color: #f9f7ff; }
+.dark .zp-dashboard-page .zp-dashboard-modal input { background: #211d32; }
+.dark .zp-student-dashboard :is(#daily-streak-card, #daily-goal-progress-card, #badges-section,
+  #today-personalized-study-plan-card, #progress-panel) {
+  border-color: #dcd8e5;
+  background: #fff;
+  color: var(--zp-ink);
+}
+@supports (backdrop-filter: blur(12px)) {
+  .dark .zp-parent-dashboard .zp-dashboard-hero { background: #262239ee; }
+}

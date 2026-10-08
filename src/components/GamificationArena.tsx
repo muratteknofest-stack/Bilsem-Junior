@@ -55,7 +55,7 @@ export function GamificationArena({ user, thisWeekQuestions, lastWeekQuestions, 
         </div>
       </div>
 
-      <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-7">
+      <div className="zp-dashboard-surface rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-7">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-300">
