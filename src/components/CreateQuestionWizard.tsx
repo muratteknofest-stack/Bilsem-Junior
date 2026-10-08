@@ -151,7 +151,7 @@ export const CreateQuestionWizard: React.FC<CreateQuestionWizardProps> = ({ onCl
             : baseGenerated.explanation?.steps || [],
       },
       isCustom: true,
-      status: 'published',
+      status: 'draft',
       updatedAt: new Date().toISOString(),
     };
   }, [
@@ -1107,3 +1107,4 @@ export const CreateQuestionWizard: React.FC<CreateQuestionWizardProps> = ({ onCl
     </div>
   );
 };
+

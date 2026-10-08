@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { randomInt } from 'node:crypto';
 import {
   getAdminAuth,
   getAdminDb,
@@ -104,15 +105,6 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
   try {
     const adminAuth = getAdminAuth();
     const adminDb = getAdminDb();
-    try {
-      const existing = await adminAuth.getUserByEmail(parentEmail);
-      if (existing) {
-        return res.status(409).json({ error: 'Bu e-posta adresiyle kayıtlı bir hesap zaten var.' });
-      }
-    } catch (err: any) {
-      if (err.code !== 'auth/user-not-found') throw err;
-    }
-
     createdParentUser = await adminAuth.createUser({
       email: parentEmail,
       password: parentPassword,
@@ -125,29 +117,23 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
     let studentEmail = '';
     const baseCode = normalizeStudentCode(studentName);
     
-    let availableCode = false;
     for (let attempt = 0; attempt < 5; attempt++) {
-      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+      const randomSuffix = randomInt(1000, 10000);
       studentCode = `${baseCode}${randomSuffix}`;
       studentEmail = `${studentCode.toLowerCase()}@zekapark.com`;
       try {
-        await adminAuth.getUserByEmail(studentEmail);
-      } catch (err: any) {
-        if (err.code === 'auth/user-not-found') {
-          availableCode = true;
-          break;
-        }
-        throw err;
+        createdStudentUser = await adminAuth.createUser({
+          email: studentEmail,
+          password: studentPassword,
+          emailVerified: true,
+          displayName: studentName,
+        });
+        break;
+      } catch (error) {
+        if (!isDuplicateEmail(error)) throw error;
       }
     }
-    if (!availableCode) throw new Error('Benzersiz öğrenci kodu üretilemedi. Lütfen tekrar deneyiniz.');
-
-    createdStudentUser = await adminAuth.createUser({
-      email: studentEmail,
-      password: studentPassword,
-      emailVerified: true,
-      displayName: studentName,
-    });
+    if (!createdStudentUser) throw new Error('Benzersiz öğrenci kodu üretilemedi. Lütfen tekrar deneyiniz.');
 
     const studentProfile = {
       id: createdStudentUser.uid,
@@ -230,3 +216,4 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
 });
 
 export default authRoutes;
+

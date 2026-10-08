@@ -1,6 +1,6 @@
 import { collection, doc, getDocs, setDoc, query, where, limit, writeBatch } from '../lib/supabase-data';
 import { auth, db } from '../lib/platform';
-import { supabase } from '../lib/supabase';
+import { authenticatedFetch } from '../lib/api-client';
 import type { BaseQuestion } from '../types';
 import { auditQuestion, isQuestionReadyForStudents, assertQuestionReadyForStudents } from '../features/questions/quality';
 import { questionBankService } from './question-bank-service';
@@ -12,7 +12,6 @@ export interface StoredQuestion extends BaseQuestion {
   updatedBy: string;
   reviewedBy?: string;
 }
-const clean = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 
 async function requireAdminUser() {
   if (typeof auth.authStateReady === 'function') await auth.authStateReady();
@@ -49,35 +48,20 @@ export async function saveEditorialQuestion(
   expectedRevision: number,
   confirmedReview: boolean,
 ): Promise<StoredQuestion> {
-  const user = await requireAdminUser();
-  const uid = user.uid;
+  await requireAdminUser();
   const report = auditQuestion(question);
   if (report.errors.length) throw new Error(report.errors.join(' '));
   if (status === 'published') assertQuestionReadyForStudents(question);
   if (status === 'published' && !confirmedReview) throw new Error('Yayımlamadan önce yönerge, cevap ve görselleri inceleyip onaylayın.');
 
-  const now = new Date().toISOString();
-  const stored: StoredQuestion = clean({
-    ...question,
-    status,
-    revision: (expectedRevision || 0) + 1,
-    isCustom: true,
-    createdAt: question.createdAt || now,
-    updatedAt: now,
-    updatedBy: uid,
-    ...(status === 'published' ? { reviewedBy: uid } : {}),
-  });
-
-  if (status !== 'published') delete stored.reviewedBy;
-
   // Confirm the remote write before updating the local editor cache.
-  const { data: confirmed, error } = await supabase.rpc('save_question', {
-    payload: stored, p_expected_revision: expectedRevision,
+  const response = await authenticatedFetch('/api/admin/questions/save', {
+    method: 'POST',
+    body: JSON.stringify({ question, status, expectedRevision, confirmedReview }),
   });
-  if (error) {
-    if (error.code === '40001') throw new Error('Soru başka bir oturumda değişti. Yeniden yükleyin.');
-    throw error;
-  }
+  const result = await response.json();
+  if (!response.ok) throw new Error([result.error || 'Soru kaydedilemedi.', ...(result.details || [])].join(' '));
+  const confirmed = result.question;
 
   // Keep admin panels synchronized after the confirmed remote write.
   questionBankService.createCustomQuestion(confirmed as StoredQuestion, false);

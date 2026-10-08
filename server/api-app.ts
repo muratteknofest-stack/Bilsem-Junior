@@ -4,6 +4,7 @@ import parentRoutes from './routes/parent-routes';
 import studentAiRoutes from './routes/student-ai-routes';
 import adminAiRoutes from './routes/admin-ai-routes';
 import authRoutes from './routes/auth-routes';
+import editorialRoutes from './routes/editorial-routes';
 
 export function createApiApp() {
   const app = express();
@@ -47,8 +48,10 @@ export function createApiApp() {
   app.use('/api', parentRoutes);
   app.use('/api', studentAiRoutes);
   app.use('/api', adminAiRoutes);
+  app.use('/api', editorialRoutes);
   app.use('/api', authRoutes);
   app.get('/api/health', (_req, res) => res.json({ status: 'ok', version: '1.0.0', timestamp: Date.now() }));
   app.use('/api', (_req, res) => res.status(404).json({ error: 'API uç noktası bulunamadı.' }));
   return app;
 }
+

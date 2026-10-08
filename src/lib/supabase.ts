@@ -48,6 +48,13 @@ export function onPasswordRecovery(listener: () => void) {
   return () => { recoveryListeners.delete(listener); };
 }
 
+export async function isPasswordRecoveryReady(): Promise<boolean> {
+  // Wait for Supabase to consume the redirect token before judging the link.
+  // A fixed wall-clock timeout can reject valid links on slower connections.
+  const { error } = await supabase.auth.initialize();
+  return !error && recoverySessionReady;
+}
+
 export async function updateRecoveredPassword(password: string) {
   if (!recoverySessionReady) throw new Error('Sıfırlama bağlantısı geçersiz veya süresi dolmuş.');
   const { error } = await supabase.auth.updateUser({ password });
@@ -160,3 +167,4 @@ export async function sendPasswordResetEmail(_auth: typeof auth, email: string) 
   });
   if (error) throw error;
 }
+

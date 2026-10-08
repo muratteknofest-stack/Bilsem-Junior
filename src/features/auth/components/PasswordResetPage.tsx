@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { onPasswordRecovery, updateRecoveredPassword } from '../../../lib/supabase';
+import { isPasswordRecoveryReady, onPasswordRecovery, updateRecoveredPassword } from '../../../lib/supabase';
 import { passwordResetSchema, formatZodError } from '../../../lib/validations';
 
 type RecoveryState = 'checking' | 'ready' | 'invalid' | 'done';
@@ -12,17 +12,20 @@ export const PasswordResetPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
     const unsubscribe = onPasswordRecovery(() => {
       // The Auth client has consumed the token; keep it out of browser history.
       window.history.replaceState({}, '', '/reset-password');
-      setState('ready');
+      if (mounted) setState('ready');
     });
-    const timeout = window.setTimeout(() => {
-      setState(current => current === 'checking' ? 'invalid' : current);
-    }, 5000);
+    void isPasswordRecoveryReady().then(ready => {
+      if (mounted && !ready) setState(current => current === 'checking' ? 'invalid' : current);
+    }).catch(() => {
+      if (mounted) setState(current => current === 'checking' ? 'invalid' : current);
+    });
     return () => {
+      mounted = false;
       unsubscribe();
-      window.clearTimeout(timeout);
     };
   }, []);
 
@@ -95,3 +98,4 @@ export const PasswordResetPage: React.FC = () => {
     </main>
   );
 };
+

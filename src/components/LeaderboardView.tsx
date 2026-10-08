@@ -74,7 +74,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                 Kişisel Çalışma Özeti
               </span>
               <span className="px-2.5 py-0.5 rounded-full bg-white/10 text-indigo-200 text-xs font-semibold">
-                Doğrulanmış Veriler
+                Kişisel Kayıtlar
               </span>
             </div>
 
@@ -82,7 +82,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               {period === 'daily' ? '⚡ Bugünkü İlerlemem' : '📅 Toplam İlerlemem'}
             </h1>
             <p className="text-xs sm:text-sm text-indigo-200 max-w-xl">
-              Yalnızca kendi hesabında gerçekten kaydedilmiş çalışma verilerini gör.
+              Kendi çalışma kayıtlarını ve gelişimini takip et.
             </p>
           </div>
 
@@ -384,3 +384,4 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
     </div>
   );
 };
+
