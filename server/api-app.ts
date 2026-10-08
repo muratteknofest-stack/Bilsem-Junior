@@ -5,6 +5,7 @@ import studentAiRoutes from './routes/student-ai-routes';
 import adminAiRoutes from './routes/admin-ai-routes';
 import authRoutes from './routes/auth-routes';
 import editorialRoutes from './routes/editorial-routes';
+import { getServiceClient } from './supabase-admin';
 
 export function createApiApp() {
   const app = express();
@@ -50,7 +51,16 @@ export function createApiApp() {
   app.use('/api', adminAiRoutes);
   app.use('/api', editorialRoutes);
   app.use('/api', authRoutes);
-  app.get('/api/health', (_req, res) => res.json({ status: 'ok', version: '1.0.0', timestamp: Date.now() }));
+  app.get('/api/health', async (_req, res) => {
+    try {
+      const { error } = await getServiceClient().from('profiles').select('id').limit(1);
+      if (error) throw error;
+      return res.json({ status: 'ok', database: 'ready', version: '1.0.0', timestamp: Date.now() });
+    } catch (error) {
+      console.error('API readiness check failed:', error);
+      return res.status(503).json({ status: 'unavailable', database: 'unavailable' });
+    }
+  });
   app.use('/api', (_req, res) => res.status(404).json({ error: 'API uç noktası bulunamadı.' }));
   return app;
 }
