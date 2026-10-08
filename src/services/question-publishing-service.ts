@@ -24,22 +24,12 @@ async function requireAdminUser() {
 
 export async function loadQuestionLibrary(): Promise<StoredQuestion[]> {
   await requireAdminUser();
-
-  try {
-    const snapshot = await getDocs(collection(db, 'questions'));
-    if (!snapshot.empty) {
-      const liveDocs = snapshot.docs
-        .map(d => ({ ...d.data(), id: d.id }) as StoredQuestion)
-        .filter(q => auditQuestion(q).errors.length === 0)
-        .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
-      return liveDocs;
-    }
-  } catch (err) {
-    console.warn('Supabase library load notice:', err);
-  }
-
-  // Fallback to local question bank so editor never blocks
-  return questionBankService.getAll() as StoredQuestion[];
+  const snapshot = await getDocs(collection(db, 'questions'));
+  // Keep invalid legacy drafts visible so editors can inspect and repair them.
+  // A remote failure must propagate; local data must never masquerade as cloud data.
+  return snapshot.docs
+    .map(d => ({ ...d.data(), id: d.id }) as StoredQuestion)
+    .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
 }
 
 export async function saveEditorialQuestion(
