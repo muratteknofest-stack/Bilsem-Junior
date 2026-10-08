@@ -1,7 +1,7 @@
 import type { UserProfile } from '../types';
 
-export const KVKK_POLICY_VERSION = '2026-09-13';
-export const TERMS_POLICY_VERSION = '2026-09-13';
+export const KVKK_POLICY_VERSION = '2026-10-08';
+export const TERMS_POLICY_VERSION = '2026-10-08';
 
 export function createConsentRecord(
   actorRole: 'student' | 'parent',
@@ -14,3 +14,4 @@ export function createConsentRecord(
     termsVersion: TERMS_POLICY_VERSION,
   };
 }
+

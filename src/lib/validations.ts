@@ -130,6 +130,8 @@ export const registerParentSchema = z.object({
   examFocus: z.string().min(1, 'Hedef alan seçiniz.'),
   password: strongPasswordSchema,
   studentPassword: strongPasswordSchema,
+  termsAccepted: z.literal(true, { error: 'Kullanım koşullarını kabul etmeniz gerekir.' }),
+  guardianConfirmed: z.literal(true, { error: 'Velilik/yasal temsilcilik beyanı gereklidir.' }),
   kvkkConsent: z
     .boolean()
     .refine((val) => val === true, {
@@ -267,3 +269,4 @@ export function formatZodError(error: z.ZodError<any>): {
     fieldErrors,
   };
 }
+

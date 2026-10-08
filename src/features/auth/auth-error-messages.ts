@@ -25,7 +25,7 @@ export function loginAuthError(error: AuthFailure): string | null {
     case 'invalid_credentials':
       return 'Giriş bilgileri hatalı. E-posta/öğrenci kodu ve şifrenizi kontrol edin.';
     case 'email_not_confirmed':
-      return 'E-posta adresiniz doğrulanmamış. Gelen kutusu ve spam klasörünü kontrol edin.';
+      return 'E-posta adresiniz doğrulanmamış. Öğrenci kodu kullanıyorsanız veliniz e-postasını doğrulayıp veli paneline giriş yapmalıdır. Veli hesabında gelen kutusu ve spam klasörünü kontrol edin.';
     case 'over_request_rate_limit':
       return 'Çok fazla giriş denemesi yapıldı. Birkaç dakika sonra tekrar deneyin.';
     case 'email_address_invalid':

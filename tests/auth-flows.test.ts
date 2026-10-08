@@ -11,7 +11,7 @@ const family = {
   studentPassword: 'Öğrenci456',
   grade: 2,
   examFocus: 'Genel Yetenek',
-  consentAccepted: true,
+  consentAccepted: true, termsAccepted: true, guardianConfirmed: true,
 };
 
 test('family registration normalizes identity and requires distinct passwords and explicit consent', () => {
@@ -20,6 +20,8 @@ test('family registration normalizes identity and requires distinct passwords an
   assert.equal(parsed.studentName, 'Deniz');
   assert.equal(parsed.parentPhone, family.parentPhone);
   assert.equal(registerFamilySchema.safeParse({ ...family, consentAccepted: false }).success, false);
+  assert.equal(registerFamilySchema.safeParse({ ...family, guardianConfirmed: undefined }).success, false);
+  assert.equal(registerFamilySchema.safeParse({ ...family, termsAccepted: false }).success, false);
   assert.equal(registerFamilySchema.safeParse({ ...family, studentPassword: family.parentPassword }).success, false);
   assert.equal(registerFamilySchema.safeParse({ ...family, studentName: '  ' }).success, false);
   assert.equal(registerFamilySchema.safeParse({ ...family, parentPhone: 'not-a-phone' }).success, false);
@@ -40,3 +42,4 @@ test('password reset needs a strong password and matching confirmation', () => {
   assert.equal(passwordResetSchema.safeParse({ password: 'YeniŞifre123', confirmPassword: 'wrong123' }).success, false);
   assert.equal(passwordResetSchema.safeParse({ password: '12345678', confirmPassword: '12345678' }).success, false);
 });
+

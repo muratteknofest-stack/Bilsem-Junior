@@ -8,6 +8,7 @@ import {
   normalizeStudentCode,
 } from '../security';
 import { accountSecurityLimiter } from '../rate-limiters';
+import { KVKK_POLICY_VERSION, TERMS_POLICY_VERSION } from '../../src/lib/account-policy';
 import { getServiceClient } from '../supabase-admin';
 
 const authRoutes = Router();
@@ -31,6 +32,8 @@ export const registerFamilySchema = z.object({
   grade: z.number().int().min(1).max(4),
   examFocus: z.string().trim().min(1).max(100),
   consentAccepted: z.literal(true),
+  termsAccepted: z.literal(true),
+  guardianConfirmed: z.literal(true),
 }).strict().refine(value => value.parentPassword !== value.studentPassword, {
   message: 'Veli ve öğrenci şifreleri farklı olmalıdır.', path: ['studentPassword'],
 });
@@ -44,41 +47,8 @@ export const registerStudentSchema = z.object({
   consentAccepted: z.literal(true),
 }).strict();
 
-authRoutes.post('/register-student', requireAppCheck, accountSecurityLimiter, async (req, res) => {
-  const parsed = registerStudentSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'Kayıt bilgileri geçersiz.' });
-  const { email, password, studentName, grade, examFocus } = parsed.data;
-  let uid: string | undefined;
-  try {
-    const adminAuth = getAdminAuth();
-    const user = await adminAuth.createUser({
-      email, password, emailVerified: false, displayName: studentName,
-    });
-    uid = user.uid;
-    const now = Date.now();
-    await getAdminDb().doc(`users/${uid}`).set({
-      id: uid, email, name: studentName, role: 'student', grade, examFocus,
-      recoveryEmail: email, consent: {
-        actorRole: 'student', acceptedAt: now, kvkkVersion: '2026.1', termsVersion: '2026.1',
-      },
-      avatar: '🦊', level: 1, xp: 0, streak: 0,
-      lastActiveDate: new Date(now).toISOString(),
-      dailyGoalMinutes: 15, todayMinutesSpent: 0, soundEnabled: true,
-      createdAt: now, updatedAt: now, totalPoints: 0,
-      claimedStreakDays: [], totalQuestionsSolved: 0, resolvedMistakesCount: 0,
-    });
-    const { error } = await getServiceClient().auth.resend({ type: 'signup', email });
-    if (error) throw error;
-    return res.status(201).json({ success: true });
-  } catch (error) {
-    if (uid) {
-      await getAdminDb().doc(`users/${uid}`).delete().catch(() => undefined);
-      await getAdminAuth().deleteUser(uid).catch(() => undefined);
-    }
-    if (isDuplicateEmail(error)) return res.status(409).json({ error: 'Bu e-posta adresiyle kayıtlı bir hesap zaten var.' });
-    console.error('[AuthRoutes] register-student failed:', error);
-    return res.status(503).json({ error: 'Hesap veya doğrulama e-postası oluşturulamadı. Lütfen tekrar deneyin.' });
-  }
+authRoutes.post('/register-student', accountSecurityLimiter, (_req, res) => {
+  return res.status(410).json({ error: 'Yeni öğrenci hesabı veli kaydı üzerinden açılır.', code: 'FAMILY_REGISTRATION_REQUIRED' });
 });
 
 authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, async (req, res) => {
@@ -125,7 +95,7 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
         createdStudentUser = await adminAuth.createUser({
           email: studentEmail,
           password: studentPassword,
-          emailVerified: true,
+          emailVerified: false,
           displayName: studentName,
         });
         break;
@@ -156,8 +126,11 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
       consent: {
         actorRole: 'parent',
         acceptedAt: now,
-        kvkkVersion: '2026.1',
-        termsVersion: '2026.1',
+        kvkkVersion: KVKK_POLICY_VERSION,
+        privacyAcknowledged: true,
+        termsAccepted: true,
+        guardianConfirmed: true,
+        termsVersion: TERMS_POLICY_VERSION,
       },
       createdAt: now,
       updatedAt: now,
@@ -174,8 +147,11 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
       consent: {
         actorRole: 'parent',
         acceptedAt: now,
-        kvkkVersion: '2026.1',
-        termsVersion: '2026.1',
+        kvkkVersion: KVKK_POLICY_VERSION,
+        privacyAcknowledged: true,
+        termsAccepted: true,
+        guardianConfirmed: true,
+        termsVersion: TERMS_POLICY_VERSION,
       },
       createdAt: now,
       updatedAt: now,

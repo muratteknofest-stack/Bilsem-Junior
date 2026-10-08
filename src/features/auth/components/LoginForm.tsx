@@ -152,7 +152,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         email: credential.user.email || loginEmail };
 
       dataService.loginAs(selectedRole, activeProfile);
-      dataService.hydrateUserStateFromSupabase().catch(console.error);
       loginLocally(activeProfile);
       sound.playSuccess();
       setSuccessToast(

@@ -29,6 +29,9 @@ export interface UserProfile {
   consent?: {
     acceptedAt: number;
     actorRole: 'student' | 'parent';
+    privacyAcknowledged?: boolean;
+    termsAccepted?: boolean;
+    guardianConfirmed?: boolean;
     kvkkVersion: string;
     termsVersion: string;
   };

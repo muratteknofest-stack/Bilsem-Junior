@@ -1,3 +1,4 @@
+import { QuestionIssueButton } from './QuestionIssueButton';
 import { isSchoolGrade } from '../features/questions/quality-policy';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -905,6 +906,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
           {/* Visual Question Area */}
           <div className="py-2">
             <QuestionRenderer question={currentQ} />
+          <QuestionIssueButton key={currentQ.id} question={currentQ} />
           </div>
 
           {/* Answer Options Grid (CONFIDENTIAL: No immediate feedback!) */}

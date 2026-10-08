@@ -81,13 +81,13 @@ function asUser(user: SupabaseUser): User {
     displayName: String(user.user_metadata?.display_name ?? ''),
     async getIdToken() {
       const { data, error } = await supabase.auth.getSession();
-      if (error || !data.session) throw new Error('Oturum süresi dolmuş.');
+      if (error || !data.session || data.session.user.id !== user.id) throw new Error('Oturum süresi dolmuş veya hesap değişmiş.');
       return data.session.access_token;
     },
     async getIdTokenResult(forceRefresh) {
       if (forceRefresh) await supabase.auth.refreshSession();
       const { data, error } = await supabase.auth.getClaims();
-      if (error || !data?.claims) throw error ?? new Error('Oturum doğrulanamadı.');
+      if (error || !data?.claims || data.claims.sub !== user.id) throw error ?? new Error('Oturum doğrulanamadı.');
       return { claims: { ...data.claims, role: data.claims.app_metadata?.role } };
     },
   };

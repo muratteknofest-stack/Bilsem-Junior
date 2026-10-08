@@ -1,3 +1,4 @@
+import { AccountCenter, FamilyActivation } from './AccountCenter';
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import confetti from 'canvas-confetti';
@@ -536,6 +537,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
           </button>
         </div>
 
+        {parentProfile?.role === 'parent' && <FamilyActivation />}
         <AnimatePresence mode="wait">
           {activeTab === 'overview' && (
             <motion.div 
@@ -1162,6 +1164,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.25 }}
             >
+              <AccountCenter />
               <NotificationPreferences 
                 currentStudent={currentStudent} 
                 weeklyData={weeklyData} 

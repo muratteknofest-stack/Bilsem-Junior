@@ -1,3 +1,4 @@
+import { ProgressSyncBanner } from './components/ProgressSyncBanner';
 import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { useAuth } from './contexts/AuthContext';
 
@@ -264,6 +265,7 @@ export default function App() {
         />
       )}
 
+      {isAuth && <ProgressSyncBanner />}
       {/* Main View Router */}
       <div role={currentRoute === 'landing' ? undefined : 'main'} className={`flex-1 w-full ${currentRoute === 'landing' ? '' : 'overflow-x-hidden'}`}>
         <Suspense fallback={<div className="min-h-[50vh] flex items-center justify-center" role="status">Yükleniyor…</div>}>

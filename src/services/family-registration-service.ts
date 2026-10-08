@@ -10,6 +10,8 @@ export interface FamilyRegistrationInput {
   grade: number;
   examFocus: string;
   consentAccepted: boolean;
+  termsAccepted: boolean;
+  guardianConfirmed: boolean;
 }
 export interface FamilyRegistrationResult {
   parentProfile: UserProfile;
@@ -27,3 +29,4 @@ export async function registerFamilyInSupabase(input: FamilyRegistrationInput): 
   if (!response.ok || !result.success) throw new Error(result.error || 'Aile hesabı oluşturulamadı.');
   return { parentProfile: result.parentProfile, student: result.student, verificationSent: true };
 }
+

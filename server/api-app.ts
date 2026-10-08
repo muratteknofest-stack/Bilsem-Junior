@@ -1,4 +1,7 @@
-import express from 'express';
+import express, { type ErrorRequestHandler } from 'express';
+import { randomUUID } from 'node:crypto';
+import challengeRoutes from './routes/challenge-routes';
+import supportRoutes from './routes/support-routes';
 import helmet from 'helmet';
 import parentRoutes from './routes/parent-routes';
 import studentAiRoutes from './routes/student-ai-routes';
@@ -51,6 +54,8 @@ export function createApiApp() {
   app.use('/api', adminAiRoutes);
   app.use('/api', editorialRoutes);
   app.use('/api', authRoutes);
+  app.use('/api', supportRoutes);
+  app.use('/api', challengeRoutes);
   app.get('/api/health', async (_req, res) => {
     try {
       const { error } = await getServiceClient().from('profiles').select('id').limit(1);
@@ -62,6 +67,13 @@ export function createApiApp() {
     }
   });
   app.use('/api', (_req, res) => res.status(404).json({ error: 'API uç noktası bulunamadı.' }));
+  const apiErrorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
+    const requestId = randomUUID();
+    console.error('API request failed', { requestId, code: error?.code || 'INTERNAL', name: error?.name });
+    const status = error?.type === 'entity.too.large' ? 413 : error?.type === 'entity.parse.failed' ? 400 : 503;
+    res.status(status).json({ error: status === 413 ? 'İstek boyutu sınırı aşıldı.' : status === 400 ? 'Geçersiz istek.' : 'İşlem şu anda tamamlanamıyor. Tekrar deneyin.', requestId });
+  };
+  app.use('/api', apiErrorHandler);
   return app;
 }
 

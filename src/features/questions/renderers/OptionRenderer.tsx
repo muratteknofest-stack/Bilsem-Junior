@@ -5,7 +5,7 @@ import { ShapeSvg, ShapeKind } from '../../../lib/svg-primitives';
 import { TileDiagram } from './ProfessionalBoard';
 
 interface OptionRendererProps {
-  option: VisualOption;
+  option: Pick<VisualOption, 'id' | 'label' | 'visualData'>;
   isSelected?: boolean;
   onSelect?: () => void;
   disabled?: boolean;

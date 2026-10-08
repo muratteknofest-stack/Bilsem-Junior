@@ -1,3 +1,4 @@
+import { QuestionIssueButton } from './QuestionIssueButton';
 import { isSchoolGrade, gradeDifficulty } from '../features/questions/quality-policy';
 import React, { useState, useEffect, useRef } from 'react';
 import { BaseQuestion, SkillMastery, DifficultyLevel, DIFFICULTY_COLORS } from '../types';
@@ -278,6 +279,7 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
         {/* Question Canvas */}
         <div className="py-2">
           <QuestionRenderer question={currentQuestion} />
+          <QuestionIssueButton key={currentQuestion.id} question={currentQuestion} />
         </div>
 
         {/* Answer Options */}

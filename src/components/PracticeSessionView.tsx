@@ -1,3 +1,4 @@
+import { QuestionIssueButton } from './QuestionIssueButton';
 import { isSchoolGrade, gradeDifficulty } from '../features/questions/quality-policy';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -951,6 +952,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
         {/* Programmatic Visual Question Canvas */}
         <div className="py-2">
           <QuestionRenderer question={currentQuestion} />
+          <QuestionIssueButton key={currentQuestion.id} question={currentQuestion} />
         </div>
 
         {/* Answer Options Grid */}
