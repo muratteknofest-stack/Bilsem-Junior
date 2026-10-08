@@ -55,13 +55,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const handleQuickDemo = (role: 'student' | 'parent') => {
+  const handleQuickDemo = () => {
     sound.playClick();
-    setSelectedRole(role);
+    setSelectedRole('student');
     setErrorMessage(null);
     setFieldErrors({});
 
-    if (role === 'student') {
+    {
       // Demo student account
       const demoProfile: UserProfile = {
         id: 'demo_student_user',
@@ -71,49 +71,25 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         grade: 2,
         examFocus: 'Genel Zihinsel Yetenek',
         avatar: '🦊',
-        level: 3,
-        xp: 340,
-        streak: 5,
-        lastActiveDate: new Date().toISOString(),
-        dailyGoalMinutes: 15,
-        todayMinutesSpent: 8,
-        soundEnabled: true,
-        createdAt: Date.now() - 86400000 * 7,
-        updatedAt: Date.now(),
-        totalPoints: 720,
-        claimedStreakDays: [1, 2, 3, 4],
-        totalQuestionsSolved: 48,
-        resolvedMistakesCount: 6,
-      };
-      dataService.loginAs('student', demoProfile);
-      loginLocally(demoProfile);
-      sound.playSuccess();
-      setSuccessToast('Öğrenci demo modu ile giriş yapıldı.');
-      setTimeout(() => onLoginSuccess('student', demoProfile), 300);
-    } else if (role === 'parent') {
-      const demoProfile: UserProfile = {
-        id: 'demo_parent_user',
-        email: 'veli@zekapark.com',
-        name: 'Zeynep Acar',
-        role: 'parent',
-        avatar: '👨‍👩‍👧',
         level: 1,
         xp: 0,
         streak: 0,
         lastActiveDate: new Date().toISOString(),
-        dailyGoalMinutes: 0,
+        dailyGoalMinutes: 15,
         todayMinutesSpent: 0,
         soundEnabled: true,
-        linkedStudentIds: ['demo_student_user'],
-        parentPhone: '0555 123 4567',
         createdAt: Date.now() - 86400000 * 7,
         updatedAt: Date.now(),
+        totalPoints: 0,
+        claimedStreakDays: [],
+        totalQuestionsSolved: 0,
+        resolvedMistakesCount: 0,
       };
-      dataService.loginAs('parent', demoProfile);
+      dataService.loginAs('student', demoProfile);
       loginLocally(demoProfile);
       sound.playSuccess();
-      setSuccessToast('Veli portalı demo modu ile giriş yapıldı.');
-      setTimeout(() => onLoginSuccess('parent', demoProfile), 300);
+      setSuccessToast('Deneme hesabında toplam üç örnek soru kullanılabilir.');
+      setTimeout(() => onLoginSuccess('student', demoProfile), 300);
     }
   };
 
@@ -488,24 +464,16 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       <div className="mt-5 pt-4 border-t border-slate-200/80">
         <div className="flex items-center justify-between mb-2">
           <span className="text-[11px] font-semibold text-slate-500">Hızlı Deneme & Önizleme:</span>
-          <span className="text-[10px] text-slate-400">Tek tıkla giriş</span>
+          <span className="text-[10px] text-slate-400">Toplam 3 örnek soru</span>
         </div>
-        <div className="grid grid-cols-2 gap-1.5">
+        <div>
           <button
             type="button"
-            onClick={() => handleQuickDemo('student')}
+            onClick={handleQuickDemo}
             className="zp-auth-demo-button py-1.5 px-2 rounded-lg border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100/60 text-indigo-700 text-[11px] font-bold transition-colors cursor-pointer flex items-center justify-center gap-1"
           >
             <CheckCircle2 className="w-3 h-3 text-indigo-600" />
-            <span>Öğrenci Demo</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickDemo('parent')}
-            className="zp-auth-demo-button py-1.5 px-2 rounded-lg border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/60 text-emerald-700 text-[11px] font-bold transition-colors cursor-pointer flex items-center justify-center gap-1"
-          >
-            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-            <span>Veli Demo</span>
+            <span>Öğrenci denemesini aç</span>
           </button>
         </div>
       </div>
