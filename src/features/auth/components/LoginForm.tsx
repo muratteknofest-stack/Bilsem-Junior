@@ -14,6 +14,7 @@ import { sound } from '../../../lib/sound';
 import { useAuth } from '../../../contexts/AuthContext';
 import { isManagedStudentEmail, studentCodeToEmail } from '../../../lib/account-identifiers';
 import { loginSchema, formatZodError } from '../../../lib/validations';
+import { loginAuthError } from '../auth-error-messages';
 import { 
   Eye, 
   EyeOff, 
@@ -157,8 +158,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       }
 
       if (!isManagedStudentEmail(credential.user.email) && !credential.user.emailVerified) {
-        await sendEmailVerification(credential.user).catch(() => {});
-        throw new Error('EMAIL_NOT_VERIFIED_SENT');
+        let verificationSent = false;
+        try {
+          await sendEmailVerification(credential.user);
+          verificationSent = true;
+        } catch { /* Report the delivery request failure accurately below. */ }
+        throw new Error(verificationSent ? 'EMAIL_NOT_VERIFIED_SENT' : 'EMAIL_NOT_VERIFIED_FAILED');
       }
 
       const userDocRef = doc(db, 'users', credential.user.uid);
@@ -194,14 +199,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       sound.playError();
       console.warn('Login notice (handled):', error.code || error.message);
       let errMsg = 'Giriş yapılamadı.';
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials' || error.code === 'auth/wrong-password') {
-         errMsg = 'Giriş bilgileri hatalı. Lütfen e-posta/öğrenci kodunuzu ve şifrenizi kontrol edin.';
-      } else if (error.code === 'auth/invalid-email') {
-         errMsg = 'Geçersiz e-posta formatı.';
-      } else if (error.code === 'auth/too-many-requests') {
-         errMsg = 'Çok fazla başarısız deneme yapıldı. Lütfen biraz sonra tekrar deneyin.';
-      } else if (error.code === 'auth/network-request-failed' || error.message?.includes('network-request-failed')) {
-         errMsg = 'Ağ bağlantısı kurulamadı. Lütfen internet bağlantınızı kontrol edin.';
+      const authMessage = loginAuthError(error);
+      if (authMessage) {
+         errMsg = authMessage;
       } else if (error.message === 'PROFILE_NOT_FOUND') {
          errMsg = 'Kullanıcı profili bulunamadı. Lütfen yeni kayıt oluşturun veya destek ile iletişime geçin.';
       } else if (error.message === 'ADMIN_ACCESS_DENIED') {
@@ -210,6 +210,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
          errMsg = 'Seçtiğiniz rol bu hesap ile eşleşmiyor.';
       } else if (error.message === 'EMAIL_NOT_VERIFIED_SENT') {
          errMsg = 'E-posta adresiniz henüz doğrulanmadı. Yeni doğrulama bağlantısı gönderildi.';
+      } else if (error.message === 'EMAIL_NOT_VERIFIED_FAILED') {
+         errMsg = 'E-posta adresiniz doğrulanmadı; yeni bağlantı gönderilemedi. Bir süre sonra tekrar deneyin.';
       }
       setErrorMessage(errMsg);
     } finally {

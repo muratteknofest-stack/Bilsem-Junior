@@ -3,6 +3,7 @@ import { X, KeyRound, AlertCircle, CheckCircle2, Info } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { sound } from '../../../lib/sound';
 import { forgotPasswordSchema, formatZodError } from '../../../lib/validations';
+import { passwordResetRequestError } from '../auth-error-messages';
 
 interface ForgotPasswordModalProps {
   isOpen: boolean;
@@ -65,18 +66,10 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
       await sendPasswordResetEmail(forgotEmail.trim());
       sound.playSuccess();
       setForgotSubmitted(true);
-      onSuccessToast('Eğer e-posta adresi kayıtlıysa, şifre sıfırlama bağlantısı gönderildi.');
-    } catch (err: any) {
-      if (err.code === 'auth/user-not-found') {
-        setForgotSubmitted(true);
-        onSuccessToast('Eğer e-posta adresi kayıtlıysa, şifre sıfırlama bağlantısı gönderildi.');
-        return;
-      }
+      onSuccessToast('İstek alındı. Hesap kayıtlıysa sıfırlama e-postası gönderilir.');
+    } catch (err: unknown) {
       sound.playError();
-      let errMsg = 'Şifre sıfırlama e-postası gönderilemedi.';
-      if (err.code === 'auth/invalid-email') errMsg = 'Geçersiz e-posta adresi.';
-      else if (err.code === 'auth/network-request-failed') errMsg = 'Ağ bağlantısı kurulamadı. Lütfen tekrar deneyin.';
-      setForgotError(errMsg);
+      setForgotError(passwordResetRequestError(err as { code?: string; message?: string; status?: number }));
     } finally {
       setIsResettingPassword(false);
     }
@@ -174,9 +167,9 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
         ) : (
           <div className="mt-4 text-center p-5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900">
             <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
-            <h4 className="text-sm font-bold">Talimatlar Gönderildi</h4>
+            <h4 className="text-sm font-bold">İstek Alındı</h4>
             <p className="text-xs mt-1 text-emerald-800 leading-relaxed">
-              Kayıtlı bir hesap bulunuyorsa <strong className="font-semibold">{forgotEmail}</strong> adresine şifre sıfırlama bağlantısı iletildi.
+              <strong className="font-semibold">{forgotEmail.trim()}</strong> adresine bağlı bir hesap varsa sıfırlama bağlantısı gönderilir. Gelen kutusu ve spam klasörünü kontrol edin. Öğrenci koduyla giriyorsanız şifrenizi veli hesabından yenileyin.
             </p>
             <button
               onClick={onClose}
