@@ -13,7 +13,57 @@
   font-family: var(--zp-font-display);
   letter-spacing: -.035em;
 }
-.zp-student-dashboard > main, .zp-parent-dashboard .zp-dashboard-content { max-width: 76rem; }
+.zp-student-dashboard > main { max-width: 80rem; }
+.zp-parent-dashboard .zp-dashboard-content { max-width: 76rem; }
+.zp-student-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(1rem, 2.4vw, 2rem);
+}
+.zp-student-content-grid > * { min-width: 0; }
+.zp-student-hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.zp-student-dashboard #daily-streak-card { container-type: inline-size; }
+.zp-student-dashboard #daily-streak-card .zp-streak-milestones {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.zp-student-dashboard #daily-streak-card .grid-cols-7 > * { min-width: 0; padding-inline: .25rem; }
+@container (min-width: 22rem) {
+  .zp-student-dashboard #daily-streak-card .zp-streak-milestones {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@container (min-width: 30rem) {
+  .zp-student-dashboard #daily-streak-card .zp-streak-milestones {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+.zp-student-dashboard .zp-dashboard-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+}
+.zp-student-dashboard .zp-dashboard-tabs > button {
+  min-width: 0;
+  white-space: normal;
+  text-align: center;
+}
+.zp-student-dashboard .zp-dashboard-tabs > button > span {
+  justify-content: center;
+  min-width: 0;
+  flex-wrap: wrap;
+  line-height: 1.3;
+}
+.zp-student-dashboard .zp-dashboard-tabs svg { flex-shrink: 0; }
+@media (min-width: 40rem) {
+  .zp-student-dashboard .zp-dashboard-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 64rem) {
+  .zp-student-content-grid { grid-template-columns: minmax(0, 1.8fr) minmax(18rem, 1fr); }
+  .zp-student-dashboard .zp-dashboard-tabs { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+@media (max-width: 22.5rem) {
+  .zp-student-hero-stats { grid-template-columns: minmax(0, 1fr); }
+}
 .zp-dashboard-page .zp-dashboard-hero {
   border-color: #dcd8e5;
   background: linear-gradient(120deg, #ffffff 0%, #faf8ff 61%, #f1ecfb 100%);

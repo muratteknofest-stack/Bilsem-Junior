@@ -18,8 +18,8 @@ export function GamificationArena({ user, thisWeekQuestions, lastWeekQuestions, 
   const league = weeklyLeague(duel.current);
 
   return (
-    <section aria-labelledby="arena-title" className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-950 via-violet-900 to-fuchsia-900 p-6 text-white shadow-lg shadow-indigo-950/10 sm:p-7">
+    <section aria-labelledby="arena-title" className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+      <div className="relative min-w-0 overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-950 via-violet-900 to-fuchsia-900 p-5 text-white shadow-lg shadow-indigo-950/10 sm:p-7">
         <div aria-hidden="true" className="absolute -right-16 -top-20 h-64 w-64 rounded-full border-[36px] border-white/10" />
         <div className="relative">
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-violet-200">
@@ -44,7 +44,7 @@ export function GamificationArena({ user, thisWeekQuestions, lastWeekQuestions, 
           </div>
           <progress aria-label="Haftalık kişisel yarış ilerlemesi" value={Math.min(duel.current, duel.target)} max={duel.target}
             className="mt-3 h-3 w-full overflow-hidden rounded-full accent-amber-400" />
-          <div className="mt-2 flex justify-between text-xs text-violet-200">
+          <div className="mt-2 flex flex-wrap justify-between gap-x-4 gap-y-1 text-xs text-violet-200">
             <span>{duel.hasPreviousWeek ? `Geçen hafta: ${duel.previous}` : 'Kendi rekorunla yarışıyorsun'}</span>
             <span>{league.next ? `Sonraki lig: ${league.next} soru` : 'En yüksek lige ulaştın'}</span>
           </div>
@@ -55,7 +55,7 @@ export function GamificationArena({ user, thisWeekQuestions, lastWeekQuestions, 
         </div>
       </div>
 
-      <div className="zp-dashboard-surface rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-7">
+      <div className="zp-dashboard-surface min-w-0 rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-7">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-300">
@@ -73,13 +73,13 @@ export function GamificationArena({ user, thisWeekQuestions, lastWeekQuestions, 
           {missions.map(mission => (
             <div key={mission.id} className="rounded-2xl border border-zinc-100 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-800/50">
               <div className="flex items-center justify-between gap-3 text-sm">
-                <div className="flex items-center gap-2 font-bold text-zinc-800 dark:text-zinc-100">
+                <div className="flex min-w-0 items-center gap-2 font-bold text-zinc-800 dark:text-zinc-100">
                   <span aria-hidden="true" className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-indigo-600 dark:bg-zinc-700">
                     {mission.completed ? <Check size={16} /> : mission.id === 'focus' ? <Flame size={16} /> : <Zap size={16} />}
                   </span>
                   {mission.title}
                 </div>
-                <strong className="tabular-nums text-indigo-700 dark:text-indigo-300">{mission.current}/{mission.target}</strong>
+                <strong className="shrink-0 tabular-nums text-indigo-700 dark:text-indigo-300">{mission.current}/{mission.target}</strong>
               </div>
               <p className="mt-1 pl-9 text-xs text-zinc-500 dark:text-zinc-400">{mission.detail}</p>
               <progress aria-label={`${mission.title} ilerlemesi`} value={Math.min(mission.current, mission.target)} max={mission.target}

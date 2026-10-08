@@ -28,8 +28,8 @@ export function StudentStudyHub({ masteries, unresolved, savedExam, favorites,
   };
 
   return (
-    <section aria-label="Kişisel çalışma merkezim" className="grid gap-4 lg:grid-cols-[1.15fr_1fr]">
-      <div className="relative overflow-hidden rounded-3xl bg-indigo-950 p-6 sm:p-7 text-white">
+    <section aria-label="Kişisel çalışma merkezim" className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+      <div className="relative min-w-0 overflow-hidden rounded-3xl bg-indigo-950 p-5 sm:p-7 text-white">
         <div aria-hidden="true" className="absolute -right-12 -top-14 h-48 w-48 rounded-full border-[24px] border-indigo-400/10" />
         <div className="relative flex h-full flex-col items-start">
           <span className="flex items-center gap-2 text-xs font-bold tracking-wide text-indigo-200">
@@ -53,9 +53,9 @@ export function StudentStudyHub({ masteries, unresolved, savedExam, favorites,
         </div>
       </div>
 
-      <div className="zp-dashboard-surface rounded-3xl border border-zinc-200 bg-white p-6 sm:p-7 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="zp-dashboard-surface min-w-0 rounded-3xl border border-zinc-200 bg-white p-5 sm:p-7 dark:border-zinc-800 dark:bg-zinc-900">
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <h2 className="flex items-center gap-2 text-lg font-extrabold"><Bookmark size={19} className="text-indigo-500" /> Çalışma listem</h2>
             <p className="mt-1 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">En çok çalışmak istediğin 3 alanı buraya ekle.</p>
           </div>
@@ -67,7 +67,7 @@ export function StudentStudyHub({ masteries, unresolved, savedExam, favorites,
         {favorites.length > 0 ? <div className="mt-4 space-y-2">
           {favorites.map(category => <button key={category} type="button" onClick={() => onPractice(category)}
             className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-zinc-100 bg-zinc-50 px-4 py-3 text-left text-sm font-semibold hover:border-indigo-300 hover:bg-indigo-50 dark:border-zinc-800 dark:bg-zinc-800/60 dark:hover:bg-indigo-950">
-            <span>{COGNITIVE_CATEGORY_LABELS[category]}</span><ArrowRight size={16} className="shrink-0 text-indigo-500" />
+            <span className="min-w-0">{COGNITIVE_CATEGORY_LABELS[category]}</span><ArrowRight size={16} className="shrink-0 text-indigo-500" />
           </button>)}
         </div> : <button type="button" onClick={() => setEditing(true)} className="mt-5 flex w-full flex-col items-center gap-2 rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/50 p-5 text-center dark:border-indigo-800 dark:bg-indigo-950/30">
           <Bookmark size={24} className="text-indigo-400" /><span className="text-sm font-bold">İlk çalışma alanını seç</span>
