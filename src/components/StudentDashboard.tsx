@@ -372,18 +372,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                       )}
                     </motion.button>
                   )}
-                  {activeUser.id.startsWith('demo_') && <button
-                    type="button"
-                    onClick={() => {
-                      sound.playClick();
-                      onNavigate('parent');
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100/80 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/80 text-xs font-bold transition-colors cursor-pointer shadow-xs"
-                    title="Veli Raporları ve Gelişim Portalına Geç"
-                  >
-                    <Users className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>Veli Portalı</span>
-                  </button>}
+                  {activeUser.id.startsWith('demo_') && <span className="inline-flex items-center rounded-xl border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-bold text-violet-800">Deneme: toplam 3 örnek soru</span>}
                 </div>
 
               </div>
