@@ -8,6 +8,7 @@ import { QuestionRenderer } from '../features/questions/renderers/QuestionRender
 import { AnswerWorkspace } from '../features/questions/renderers/AnswerWorkspace';
 import { VisualExplanationOverlay } from '../features/questions/renderers/VisualExplanationOverlay';
 import { sound } from '../lib/sound';
+import { landingQuestionAnswered, useLandingQuestion } from '../lib/demo-access';
 import { Logo } from './Logo';
 import { LearningIsland } from './landing/LearningIsland';
 import { LandingNav } from './landing/LandingNav';
@@ -24,7 +25,7 @@ const worlds = [
   { type: 'shape_counting' as QuestionType, title: 'Dikkat istasyonu', short: 'Dikkat', text: 'Ayrıntıları yakala. Kalabalığın içinde aradığın şekli fark et.', tag: 'Odaklan ve bul', icon: ScanEye, theme: 'peach', number: '03' },
 ];
 const faqs = [
-  ['Hesap açmadan deneyebilir miyim?', 'Evet. Bu sayfadaki örnek soruları hesap açmadan çözebilirsin. Buradaki deneme puanları ve cevaplar hesabına kaydedilmez.'],
+  ['Hesap açmadan deneyebilir miyim?', 'Evet. Bu sayfada bir örnek soru çözebilirsin. Buradaki deneme puanları ve cevaplar hesabına kaydedilmez.'],
   ['Sorular nasıl çözülüyor?', 'Sorunun türüne göre sürükle-bırak, sıralama, eşleştirme veya sayısal cevap kullanabilirsin. İstersen klasik şık seçimine dönebilirsin. Kartları sürüklemek yerine önce karta, sonra hedefe dokunmak da mümkün.'],
   ['Veli olarak neler yapabilirim?', 'Veli girişi üzerinden çocuğunun çalışma ve gelişim bilgilerine ulaşabilirsin. Öğrenci ve veli için ayrı girişler bulunur.'],
   ['Animasyonları kapatabilir miyim?', 'Evet. Üst menüdeki hareket düğmesiyle animasyonları durdurabilirsin. Cihazındaki hareketi azalt tercihi de otomatik olarak dikkate alınır.'],
@@ -40,7 +41,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
   const [category, setCategory] = useState<QuestionType>('visual_sequence');
   const [question, setQuestion] = useState(() => generateQuestionByType('visual_sequence', 4829, 2));
   const [response, setResponse] = useState<QuestionResponse | null>(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState(landingQuestionAnswered);
   const [solved, setSolved] = useState(0);
   const [correct, setCorrect] = useState(0);
   const submitLock = useRef(false);
@@ -53,6 +54,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
   }, []);
   const reveal = { initial: moving ? { opacity: 0, y: 20 } : false as const, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, amount: 0.12 }, transition: { duration: moving ? 0.5 : 0 } };
   const nextQuestion = (type = category) => {
+    if (landingQuestionAnswered()) return;
     setCategory(type); setQuestion(generateQuestionByType(type, question.seed + 131, 2));
     setResponse(null); setSubmitted(false); submitLock.current = false;
   };
@@ -65,6 +67,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
     if (submitLock.current || submitted) return;
     const checked = evaluateResponse(question, response);
     if (!checked.complete) return;
+    if (!useLandingQuestion()) return;
     submitLock.current = true; setSubmitted(true); setSolved(n => n + 1);
     if (checked.correct) { setCorrect(n => n + 1); if (soundActive) sound.playSuccess(); }
     else if (soundActive) sound.playError();
@@ -106,7 +109,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
           <h3>{question.prompt}</h3>{question.secondaryPrompt && <p className="zp-question-secondary">{question.secondaryPrompt}</p>}
           <QuestionRenderer question={question} />
           <AnswerWorkspace key={question.id} question={question} response={response} onChange={r => { if (!submitLock.current) setResponse(r); }} submitted={submitted} />
-          {!submitted ? <PremiumButton className="zp-full" disabled={!result.complete} onClick={submit}>Cevabımı kontrol et <ArrowRight size={18} /></PremiumButton> : <div className="zp-demo-feedback"><p role="status" className={result.correct ? 'zp-correct' : 'zp-try-again'}>{result.correct ? 'Buldun! Güzel bir keşif yaptın.' : 'Birlikte bakalım. Her deneme yeni bir şey öğretir.'}</p><VisualExplanationOverlay explanation={question.explanation} correctOptionId={question.correctOptionId} /><PremiumButton className="zp-full" onClick={() => nextQuestion()}>Yeni bir keşif <RotateCcw size={17} /></PremiumButton></div>}
+          {!submitted ? <PremiumButton className="zp-full" disabled={!result.complete} onClick={submit}>Cevabımı kontrol et <ArrowRight size={18} /></PremiumButton> : <div className="zp-demo-feedback"><p role="status" className={result.correct ? 'zp-correct' : 'zp-try-again'}>{landingQuestionAnswered() && solved === 0 ? 'Örnek soruyu daha önce tamamladın.' : result.correct ? 'Buldun! Güzel bir keşif yaptın.' : 'Birlikte bakalım. Her deneme yeni bir şey öğretir.'}</p>{solved > 0 && <VisualExplanationOverlay explanation={question.explanation} correctOptionId={question.correctOptionId} />}<PremiumButton className="zp-full" onClick={() => onNavigate('register')}>Hesap oluştur <ArrowRight size={17} /></PremiumButton></div>}
         </motion.div>
       </div></section>
       <section id="nasil" className="zp-container zp-section zp-journey" aria-labelledby="journey-title"><motion.div {...reveal} className="zp-centered-heading"><p className="zp-kicker">BÜYÜK KEŞİFLERİN KÜÇÜK RUTİNİ</p><h2 id="journey-title">Her gün, bir adım daha.</h2><p>Başkasının hızına yetişmek için değil, kendi yolunu keşfetmek için.</p></motion.div>
