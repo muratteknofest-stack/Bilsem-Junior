@@ -1,12 +1,9 @@
 -- Published questions must pass the server's TypeScript quality and review gate.
 -- Authenticated editors retain direct access to drafts and archival operations.
-drop policy if exists questions_insert on public.questions;
-create policy questions_insert on public.questions for insert to authenticated
+alter policy questions_insert on public.questions
   with check (((select auth.jwt())->'app_metadata'->>'role') = 'admin' and status <> 'published');
 
-drop policy if exists questions_update on public.questions;
-create policy questions_update on public.questions for update to authenticated
-  using (((select auth.jwt())->'app_metadata'->>'role') = 'admin')
+alter policy questions_update on public.questions
   with check (((select auth.jwt())->'app_metadata'->>'role') = 'admin' and status <> 'published');
 
 create or replace function public.save_question(payload jsonb, p_expected_revision integer)
