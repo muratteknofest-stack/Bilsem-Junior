@@ -10,6 +10,7 @@ import {
   UserProfile
 } from '../types';
 import { generateQuestion, STUDENT_CATEGORY_TYPES } from '../features/questions/generators';
+import { demoQuestionsRemaining, isDemoUser, useDemoQuestion } from '../lib/demo-access';
 import { usePublishedQuestions } from '../features/questions/use-published-questions';
 import { selectPublishedPool } from '../features/questions/editorial-data';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
@@ -240,9 +241,12 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
   const studentGrade = dataService.getCurrentUser().grade;
   const maxGradeDifficulty = isSchoolGrade(studentGrade) ? gradeDifficulty(studentGrade, 6) : 6;
   const startSession = () => {
+    const isDemo = isDemoUser(dataService.getCurrentUser().id);
+    const questionLimit = isDemo ? demoQuestionsRemaining() : 10;
+    if (questionLimit === 0) { onNavigateHome(); return; }
     sound.playClick();
     const qList: BaseQuestion[] = [];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < questionLimit; i++) {
       const diff: DifficultyLevel =
         selectedDifficulty === 'adaptive'
           ? ((i < 3 ? 2 : i < 7 ? 3 : 4) as DifficultyLevel)
@@ -329,6 +333,10 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
 
     const checkedAnswer = evaluateResponse(currentQuestion, answerResponse);
     if (!checkedAnswer.complete) return;
+    if (isDemoUser(dataService.getCurrentUser().id) && !useDemoQuestion()) {
+      onNavigateHome();
+      return;
+    }
     submissionLock.current = true;
     const isCorrect = checkedAnswer.correct;
     setIsSubmitted(true);
