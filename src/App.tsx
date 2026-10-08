@@ -6,6 +6,7 @@ import { UserProfile, UserRole, SkillMastery, MistakeItem, DailyStudyPlan, Remin
 import { dataService } from './services/data-service';
 import { sound } from './lib/sound';
 import { reminderService } from './services/reminder-service';
+import { demoQuestionsRemaining, isDemoUser } from './lib/demo-access';
 import { Navbar } from './components/Navbar';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { StudyReminderInAppAlert } from './components/StudyReminderInAppAlert';
@@ -46,6 +47,7 @@ export default function App() {
   const [currentRoute, setCurrentRoute] = useState<string>(() => {
     if (!dataService.isAuthenticated()) return 'landing';
     const u = dataService.getCurrentUser();
+    if (isDemoUser(u.id) && u.role !== 'student') return 'demo-limit';
     if (u?.role === 'parent') return 'parent';
     if (u?.role === 'admin') return 'admin';
     if (u?.role === 'student') return 'dashboard';
@@ -64,7 +66,7 @@ export default function App() {
       setCurrentUser(userProfile);
       setIsAuth(true);
       if (currentRoute === 'login' || currentRoute === 'landing' || (userProfile.role === 'admin' && currentRoute === 'dashboard')) {
-        setCurrentRoute(userProfile.role === 'student' ? 'dashboard' : (userProfile.role === 'parent' ? 'parent' : 'admin'));
+        setCurrentRoute(isDemoUser(userProfile.id) && userProfile.role !== 'student' ? 'demo-limit' : userProfile.role === 'student' ? 'dashboard' : (userProfile.role === 'parent' ? 'parent' : 'admin'));
       }
     } else {
       if (dataService.isAuthenticated()) {
@@ -159,6 +161,17 @@ export default function App() {
       return;
     }
 
+    if (isDemoUser(u.id)) {
+      if (targetRoute === 'practice' && demoQuestionsRemaining() === 0) {
+        setCurrentRoute('demo-limit');
+        return;
+      }
+      if (['adaptive', 'exams', 'mistakes', 'achievements', 'leaderboard', 'glossary', 'parent'].includes(targetRoute)) {
+        setCurrentRoute('demo-limit');
+        return;
+      }
+    }
+
     // Bidirectional switching between student and parent:
     if (targetRoute === 'parent') {
       if (userProfile?.role !== 'parent' && !u.id.startsWith('demo_')) {
@@ -213,6 +226,10 @@ export default function App() {
   };
 
   const handleSwitchRole = (newRole: UserRole) => {
+    if (isDemoUser(currentUser.id) && newRole !== 'student') {
+      setCurrentRoute('demo-limit');
+      return;
+    }
     if (!currentUser.id.startsWith('demo_') && userProfile?.role !== newRole) return;
     if (newRole === 'admin' && (!authUser || userProfile?.role !== 'admin')) return;
     sound.playClick();
@@ -283,6 +300,19 @@ export default function App() {
                 onOpenMistakes={() => navigateTo('mistakes')}
                 onNavigate={navigateTo}
               />
+            )}
+
+            {currentRoute === 'demo-limit' && (
+              <div className="mx-auto w-full max-w-2xl px-5 py-20 text-center" role="status">
+                <span className="text-5xl" aria-hidden="true">✦</span>
+                <h1 className="mt-6 text-3xl font-bold text-slate-900">Bu alan deneme hesabında kapalı</h1>
+                <p className="mt-4 text-slate-600">Deneme hesabı toplam üç örnek soru içerir. Adaptif çalışma, sınavlar, raporlar ve veli portalı tam üyelik içindir.</p>
+                <p className="mt-2 text-sm text-slate-500">Kalan örnek soru: {demoQuestionsRemaining()}</p>
+                <div className="mt-8 flex flex-wrap justify-center gap-3">
+                  {demoQuestionsRemaining() > 0 && <button type="button" onClick={() => navigateTo('practice')} className="rounded-xl bg-violet-700 px-5 py-3 font-semibold text-white">Örnek soruları çöz</button>}
+                  <button type="button" onClick={() => navigateTo('register')} className="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-900">Hesap oluştur</button>
+                </div>
+              </div>
             )}
 
             {currentRoute === 'practice' && (
