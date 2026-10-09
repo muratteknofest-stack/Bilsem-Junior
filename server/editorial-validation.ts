@@ -38,6 +38,9 @@ export function prepareEditorialQuestion(
     updatedAt: now,
     updatedBy: adminId,
     ...(status === 'published' ? { reviewedBy: adminId } : {}),
+    ...(status === 'published' && question.releaseAuthorization ? {
+      releaseAuthorization: { ...question.releaseAuthorization, individualHumanReview: true, humanReviewedAt: now },
+    } : {}),
   })) as BaseQuestion & { revision: number; updatedBy: string; reviewedBy?: string };
   if (status !== 'published') delete stored.reviewedBy;
   return stored;

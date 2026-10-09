@@ -31,3 +31,17 @@ test('draft edits remove previous review identity', () => {
   assert.equal(saved.status, 'draft');
   assert.equal(saved.reviewedBy, undefined);
 });
+
+test('a later educator review closes the owner release review gap', () => {
+  const released = {
+    ...validQuestion(), status: 'published' as const,
+    releaseAuthorization: { source: 'owner-request-2026-10-09', automaticChecks: 'passed' as const,
+      individualHumanReview: false, releasedAt: '2026-10-09T08:58:00.000Z' },
+  };
+  assert.throws(() => prepareEditorialQuestion(released, 'published', 2, false, 'admin-1'), EditorialValidationError);
+  const saved = prepareEditorialQuestion(released, 'published', 2, true, 'admin-1', [], '2026-10-09T09:00:00.000Z');
+  assert.equal(saved.releaseAuthorization?.individualHumanReview, true);
+  assert.equal(saved.releaseAuthorization?.humanReviewedAt, '2026-10-09T09:00:00.000Z');
+  assert.equal(saved.reviewedBy, 'admin-1');
+  assert.equal(released.releaseAuthorization.individualHumanReview, false);
+});

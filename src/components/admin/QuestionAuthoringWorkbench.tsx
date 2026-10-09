@@ -55,7 +55,7 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
-  const [quality, setQuality] = useState<'all' | 'ready' | 'review' | 'error'>('all');
+  const [quality, setQuality] = useState<'all' | 'ready' | 'review' | 'error' | 'human'>('all');
   const cancelled = useRef(false);
   const alive = useRef(true);
   const importRef = useRef<HTMLInputElement>(null);
@@ -84,6 +84,7 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
     }
     return counts;
   }, [libraryAudit]);
+  const humanReviewPending = useMemo(() => library.filter(q => q.status === 'published' && q.releaseAuthorization?.individualHumanReview === false && !q.reviewedBy).length, [library]);
   const report = useMemo(() => active ? auditQuestion(active, allKnown.filter(q => q.id !== active.id)) : null, [active, allKnown]);
   const dirty = active && questionContentKey(active) !== savedKey;
   const pending = Boolean(dirty) || batch.some(q => !library.some(saved => saved.id === q.id && questionContentKey(saved) === questionContentKey(q)));
@@ -97,7 +98,8 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
     (status === 'all' || (q.status || 'draft') === status) &&
     (section !== 'library' || quality === 'all' || (() => {
       const report = libraryAudit.get(q.id);
-      return quality === 'error' ? !!report?.errors.length
+      return quality === 'human' ? q.status === 'published' && q.releaseAuthorization?.individualHumanReview === false && !q.reviewedBy
+        : quality === 'error' ? !!report?.errors.length
         : quality === 'review' ? !report?.errors.length && (!!report?.reviewRequired.length || !report?.solverVerified)
         : !report?.errors.length && !report?.reviewRequired.length && !!report?.solverVerified;
     })()) &&
@@ -221,6 +223,7 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
       )}
     </nav>
     {cloudError && <div role="alert" className="rounded-xl bg-amber-50 border border-amber-300 p-4 text-sm text-amber-950 flex flex-wrap gap-3 items-center"><p className="flex-1 min-w-48">{cloudError}</p><button onClick={() => void refresh()} disabled={loading} className={button + ' border border-amber-400'}><RefreshCw size={16} />Tekrar dene</button></div>}
+    {humanReviewPending > 0 && <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">{humanReviewPending} soru, sahibinin isteğiyle otomatik denetim sonrası yayımlandı. Tek tek eğitmen incelemesi tamamlanmadı. “Eğitmen incelemesi bekliyor” filtresinden kontrol edebilirsiniz.</div>}
     {notice && <p role="status" className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-950">{notice}</p>}
     {section === 'compose' && <section className="rounded-2xl border border-slate-700 bg-slate-900 p-5">
       <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
@@ -246,12 +249,12 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
         <label className="relative block"><Search size={16} className="absolute left-3 top-3.5 text-slate-400" /><input aria-label="Sorularda ara" className={field + ' pl-9'} placeholder="Yönerge veya soru türü ara" value={search} onChange={e => setSearch(e.target.value)} /></label>
         <select aria-label="Duruma göre filtrele" className={field} value={status} onChange={e => setStatus(e.target.value)}><option value="all">Tüm durumlar</option>{Object.entries(statusLabel).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select>
         {section === 'library' && <><p className="text-xs text-slate-600" role="status">{library.length} kayıt · {qualityCounts.error} hatalı · {qualityCounts.review} inceleme gerekli · {qualityCounts.ready} otomatik kontrolden geçti</p>
-          <select aria-label="Denetim sonucuna göre filtrele" className={field} value={quality} onChange={e => setQuality(e.target.value as typeof quality)}><option value="all">Tüm denetim sonuçları</option><option value="error">Hatalı ({qualityCounts.error})</option><option value="review">İnceleme gerekli ({qualityCounts.review})</option><option value="ready">Otomatik kontrol geçti ({qualityCounts.ready})</option></select></>}
+          <select aria-label="Denetim sonucuna göre filtrele" className={field} value={quality} onChange={e => setQuality(e.target.value as typeof quality)}><option value="all">Tüm denetim sonuçları</option><option value="error">Hatalı ({qualityCounts.error})</option><option value="review">İnceleme gerekli ({qualityCounts.review})</option><option value="human">Eğitmen incelemesi bekliyor ({humanReviewPending})</option><option value="ready">Otomatik kontrol geçti ({qualityCounts.ready})</option></select></>}
         <div className="space-y-2 max-h-[680px] overflow-y-auto">
           {results.map((q, i) => <button key={q.id} disabled={saving} onClick={() => openQuestion(q)} className={'w-full text-left p-3 rounded-xl border ' + (active?.id === q.id ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:bg-slate-50')}>
             <div className="text-xs text-slate-500 flex justify-between gap-2"><span>{String(i + 1).padStart(2, '0')} · {q.targetGrade || '—'}. sınıf</span><span>{statusLabel[q.status || 'draft']}</span></div>
             <p className="text-sm font-semibold mt-1">{QUESTION_TYPE_LABELS[q.type] || q.type || 'Bilinmeyen tür'}</p><p className="text-sm text-slate-600 line-clamp-2 mt-1">{q.prompt || 'Yönerge eksik'}</p>
-            {section === 'library' && <p className={'mt-2 text-xs font-semibold ' + (libraryAudit.get(q.id)?.errors.length ? 'text-rose-700' : libraryAudit.get(q.id)?.solverVerified ? 'text-emerald-700' : 'text-amber-700')}>{libraryAudit.get(q.id)?.errors.length ? 'Hatalı · ' + libraryAudit.get(q.id)?.errors[0] : libraryAudit.get(q.id)?.solverVerified ? 'Otomatik kontrol geçti · eğitmen onayı gerekli' : 'İnceleme gerekli · ' + (libraryAudit.get(q.id)?.reviewRequired[0] || 'Bağımsız çözüm eksik')}</p>}
+            {section === 'library' && <p className={'mt-2 text-xs font-semibold ' + (libraryAudit.get(q.id)?.errors.length ? 'text-rose-700' : q.releaseAuthorization?.individualHumanReview === false && !q.reviewedBy ? 'text-amber-800' : libraryAudit.get(q.id)?.solverVerified ? 'text-emerald-700' : 'text-amber-700')}>{libraryAudit.get(q.id)?.errors.length ? 'Hatalı · ' + libraryAudit.get(q.id)?.errors[0] : q.releaseAuthorization?.individualHumanReview === false && !q.reviewedBy ? 'Yayında · bireysel eğitmen incelemesi bekliyor' : libraryAudit.get(q.id)?.solverVerified ? 'Otomatik kontrol geçti' : 'İnceleme gerekli · ' + (libraryAudit.get(q.id)?.reviewRequired[0] || 'Bağımsız çözüm eksik')}</p>}
           </button>)}
           {!results.length && <p className="text-sm text-slate-500 p-4">{loading ? 'Kütüphane yükleniyor…' : section === 'library' ? 'Henüz kaydedilmiş bir soru yok veya filtreye uymuyor.' : 'Soru ailesini seçip taslak üretin. İçerik öğrenciye otomatik yayımlanmaz.'}</p>}
         </div>
@@ -263,6 +266,7 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
         }}>Bu cihazdaki eski taslakları al</button>}
       </aside>
       {active && report?.errors.length ? <article className="min-w-0 rounded-2xl border border-rose-200 bg-white p-4 sm:p-6 space-y-4"><h3 className="text-lg font-bold text-rose-900">Soru yayına uygun değil</h3><p className="text-sm text-slate-600">Kayıt: {active.id}. Bu taslak öğrencilere sunulmaz. Soruyu denetleyip doğrulanmış aileden yeni bir varyasyon üretin.</p><ul className="list-disc pl-5 text-sm text-rose-800 space-y-1">{report.errors.map((error, i) => <li key={i}>{error}</li>)}</ul>{report.reviewRequired.length > 0 && <ul className="list-disc pl-5 text-sm text-amber-900 space-y-1">{report.reviewRequired.map((reason, i) => <li key={i}>{reason}</li>)}</ul>}<button className={button + ' border border-slate-300'} onClick={() => exportPackage([active])}><FileDown size={16} />İnceleme için JSON indir</button></article> : active && report ? <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 space-y-6">
+        {active.status === 'published' && active.releaseAuthorization?.individualHumanReview === false && !active.reviewedBy && <p role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">Bu soru otomatik denetim ve sahibinin yayına açma isteğiyle öğrencilerde görünür. Bireysel eğitmen incelemesi henüz tamamlanmadı.</p>}
         {report.reviewRequired.length > 0 && <div role="alert" className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900"><strong>Bu soru öğrencilere sunulamaz.</strong><ul className="list-disc pl-5 mt-2">{report.reviewRequired.map((reason, i) => <li key={i}>{reason}</li>)}</ul><p className="mt-2">Doğrulanmış soru ailesinden yeniden üretin. Metin veya açıklama değişiklikleri yeniden inceleme gerektirir.</p></div>}
         <div className="flex flex-wrap justify-between gap-3 items-center"><div><p className="text-xs text-slate-500">{active.targetGrade}. sınıf · {COGNITIVE_CATEGORY_LABELS[active.category]} · Zorluk {active.difficulty}/6</p><h3 className="text-lg font-bold mt-1">Öğrenci önizlemesi</h3></div><span className={'px-3 py-1 rounded-full text-sm ' + (report.solverVerified ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900')}>{report.solverVerified ? 'Bağımsız kontroller geçti' : 'İnceleme gerekli · yayına kapalı'}</span></div>
         <p className="text-lg font-semibold leading-relaxed">{active.prompt}</p>

@@ -3,16 +3,16 @@
 Supabase projesi `vehhvsdkifwstbjhnhao` içinde `robot-20261009-2800-v1`
 partisi, önceki `robot-20261008-1200-v1` partisine eklenmiştir.
 
-| Sınıf | Önceki incelenen | Yeni | İnceleme kuyruğu | Önceki taslaklar |
+| Sınıf | Önceki parti | Yeni parti | Yayımlanan | Önceki taslaklar |
 |---|---:|---:|---:|---:|
 | 1 | 300 | 700 | 1.000 | 86 |
 | 2 | 300 | 700 | 1.000 | 86 |
 | 3 | 300 | 700 | 1.000 | 79 |
 | 4 | 300 | 700 | 1.000 | 79 |
 
-Toplam 4.000 otomatik denetimden geçmiş, `review` durumunda soru ve 330 eski
-`draft` bulunmaktadır. Yayımlanmış soru sayısı sıfırdır. Bu sayılar öğrencilere
-hazır veya pedagojik olarak insan tarafından onaylanmış içerik sayısı değildir.
+Toplam 4.000 otomatik denetimden geçmiş `published` soru ve 330 eski `draft`
+bulunmaktadır. Bu sayılar pedagojik olarak tek tek insan tarafından onaylanmış
+içerik sayısı değildir.
 
 Üretici 10.518 aday denedi; 7.718 görsel/gövde tekrarı elendi. 27 doygun tür ve
 zorluk hücresinin kotası başka doğrulanmış türlere dağıtıldı. Kabul edilen 2.800
@@ -37,5 +37,21 @@ npm run generate:grade-bank -- \
 `existing-sha256-pairs.json`, her kayıt için `[visualKeySha256, stemKeySha256]`
 çiftlerinden oluşur. Üretim geçersiz özetleri reddeder, aynı gövde veya görseli
 yeniden üretmez ve güvenli içerikle kota tamamlanamazsa durur. Bu komut veritabanı
-yazması veya toplu yayın yapmaz. Öğrenciye açılmadan önce editörün görsel,
-yönerge, cevap ve açıklamayı inceleyip tek tek onaylaması gerekir.
+yazması veya toplu yayın yapmaz.
+
+## 9 Ekim sahibinin isteğiyle yayına açılış
+
+Kullanıcı isteği üzerine iki parti sınıf başına 1.000 soru olarak yayımlandı.
+Başlangıçta her sınıftan 10 soru açıldı; veritabanından geri okunan örnekler
+tekrar denetlendi. Kalan 990'ar soru yalnızca `review`, revizyon 1, kaynak parti,
+otomatik kontrol ve sınıf eşleşmesi koşullarını karşılıyorsa atomik olarak
+`published`, revizyon 2 yapıldı. Veritabanı son sorgusu her sınıfta tam 1.000
+`published`, 0 `review` ve eski 86/86/79/79 `draft` gösterdi. `questions_read`
+RLS politikası yalnız oturum açmış kullanıcılara yayımlanmış kayıtları okutur.
+
+Bireysel insan editör onayı **yapılmadı**. Yayın kayıtlarında `reviewedBy` boş,
+`releaseAuthorization.individualHumanReview=false` ve sahibinin talebi ayrıca
+işaretlidir. Yönetici Soru Atölyesi bu yayınları eğitmen incelemesi bekleyen
+olarak listeler. Editör soruyu gerçekten incelediğinde mevcut üç kontrolü
+onaylayarak yeniden kaydedebilir; bu işlem insan incelemesini kayıt altına alır.
+Bu yayımlama gelecekteki sorular için editör denetim kapısını kaldırmaz.

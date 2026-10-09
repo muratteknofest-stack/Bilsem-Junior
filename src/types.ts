@@ -464,6 +464,14 @@ export interface BaseQuestion {
   updatedAt?: string;
   updatedBy?: string;
   reviewedBy?: string;
+  /** Explicit owner release of an auto-verified batch, tracked separately from individual educator review. */
+  releaseAuthorization?: {
+    source: string;
+    automaticChecks: 'passed';
+    individualHumanReview: boolean;
+    releasedAt: string;
+    humanReviewedAt?: string;
+  };
   revision?: number;
   isCustom?: boolean;
   status?: 'draft' | 'review' | 'published' | 'archived';
