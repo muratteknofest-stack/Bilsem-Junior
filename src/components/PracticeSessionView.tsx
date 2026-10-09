@@ -472,10 +472,13 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <button
+            type="button"
             onClick={onNavigateHome}
-            className="p-2 rounded-xl bg-white text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+            aria-label="Önceki ekrana dön"
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-slate-700 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-5 h-5" />
+            <span className="text-sm font-semibold">Geri</span>
           </button>
           <div>
             <h1 className="text-2xl font-extrabold text-slate-900 font-['Outfit',sans-serif]">
