@@ -12,7 +12,7 @@ import {
 } from '../types';
 import { generateQuestion, STUDENT_CATEGORY_TYPES } from '../features/questions/generators';
 import { demoQuestionsRemaining, isDemoUser, useDemoQuestion } from '../lib/demo-access';
-import { usePublishedQuestions } from '../features/questions/use-published-questions';
+import { loadPublishedQuestionsForGrade, usePublishedQuestions } from '../features/questions/use-published-questions';
 import { selectPublishedPool } from '../features/questions/editorial-data';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
 import { AnswerWorkspace } from '../features/questions/renderers/AnswerWorkspace';
@@ -86,6 +86,9 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
   onOpenMistakes,
 }) => {
   const publishedQuestions = usePublishedQuestions();
+  const [startError, setStartError] = useState('');
+  const [isStarting, setIsStarting] = useState(false);
+  const startingRef = useRef(false);
   // Setup phase vs active session
   const [inSetup, setInSetup] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<CognitiveCategory | 'mixed'>(initialCategory === 'mixed' || STUDENT_CATEGORY_TYPES[initialCategory] ? initialCategory : 'mixed');
@@ -241,44 +244,62 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
 
   const studentGrade = dataService.getCurrentUser().grade;
   const maxGradeDifficulty = isSchoolGrade(studentGrade) ? gradeDifficulty(studentGrade, 6) : 6;
-  const startSession = () => {
-    const isDemo = isDemoUser(dataService.getCurrentUser().id);
-    const questionLimit = isDemo ? demoQuestionsRemaining() : 10;
-    if (questionLimit === 0) { onNavigateHome(); return; }
-    sound.playClick();
-    const qList: BaseQuestion[] = [];
-    for (let i = 0; i < questionLimit; i++) {
-      const diff: DifficultyLevel =
-        selectedDifficulty === 'adaptive'
-          ? ((i < 3 ? 2 : i < 7 ? 3 : 4) as DifficultyLevel)
-          : (selectedDifficulty as DifficultyLevel);
-
-      const q = generateQuestion({
-        targetGrade: isSchoolGrade(dataService.getCurrentUser().grade) ? dataService.getCurrentUser().grade as 1|2|3|4 : undefined,
-        category: selectedCategory,
-        difficulty: diff,
-        seed: Math.floor(Math.random() * 900000) + 100000 + i * 31,
-      });
-      qList.push(q);
+  const startSession = async () => {
+    if (startingRef.current) return;
+    startingRef.current = true;
+    setIsStarting(true);
+    setStartError('');
+    try {
+      const isDemo = isDemoUser(dataService.getCurrentUser().id);
+      const questionLimit = isDemo ? demoQuestionsRemaining() : 10;
+      if (questionLimit === 0) { onNavigateHome(); return; }
+      const grade = dataService.getCurrentUser().grade;
+      if (!isDemo && !isSchoolGrade(grade)) throw new Error('Sınıf seviyeniz belirlenemedi. Profilinizi kontrol edin.');
+      const bank = isDemo ? [] : publishedQuestions.length && publishedQuestions[0].targetGrade === grade
+        ? publishedQuestions : await loadPublishedQuestionsForGrade(grade as 1 | 2 | 3 | 4);
+      if (!isDemo && !bank.length) throw new Error('Sınıfınıza ait yayımlanmış sorular henüz yüklenemedi. Lütfen tekrar deneyin.');
+      sound.playClick();
+      const qList: BaseQuestion[] = [];
+      for (let i = 0; i < questionLimit; i++) {
+        const diff: DifficultyLevel =
+          selectedDifficulty === 'adaptive'
+            ? ((i < 3 ? 2 : i < 7 ? 3 : 4) as DifficultyLevel)
+            : (selectedDifficulty as DifficultyLevel);
+  
+        const q = generateQuestion({
+          targetGrade: isSchoolGrade(dataService.getCurrentUser().grade) ? dataService.getCurrentUser().grade as 1|2|3|4 : undefined,
+          category: selectedCategory,
+          difficulty: diff,
+          seed: Math.floor(Math.random() * 900000) + 100000 + i * 31,
+        });
+        qList.push(q);
+      }
+  
+      const presetSecs = getPresetSeconds(timerPreset);
+      setTotalSecondsLimit(presetSecs);
+      setRemainingSeconds(presetSecs);
+      setOvertimeSeconds(0);
+      setQuestions(selectPublishedPool(qList, bank));
+      setCurrentIndex(0);
+      setSelectedOptionId(null);
+      setInteractionResponse(null);
+      setIsSubmitted(false);
+      submissionLock.current = false;
+      setCorrectCount(0);
+      setWrongCount(0);
+      setEarnedXP(0);
+      setIsCompleted(false);
+      setEndedByTimeout(false);
+      setSecondsElapsed(0);
+      setInSetup(false);
+    } catch (error) {
+      console.warn('Practice question load failed:', error);
+      setStartError(error instanceof Error && (error.message.startsWith('Sınıf') || error.message.startsWith('Sınıfınıza'))
+        ? error.message : 'Sorular yüklenemedi. Lütfen tekrar deneyin.');
+    } finally {
+      startingRef.current = false;
+      setIsStarting(false);
     }
-
-    const presetSecs = getPresetSeconds(timerPreset);
-    setTotalSecondsLimit(presetSecs);
-    setRemainingSeconds(presetSecs);
-    setOvertimeSeconds(0);
-    setQuestions(selectPublishedPool(qList, publishedQuestions));
-    setCurrentIndex(0);
-    setSelectedOptionId(null);
-    setInteractionResponse(null);
-    setIsSubmitted(false);
-    submissionLock.current = false;
-    setCorrectCount(0);
-    setWrongCount(0);
-    setEarnedXP(0);
-    setIsCompleted(false);
-    setEndedByTimeout(false);
-    setSecondsElapsed(0);
-    setInSetup(false);
   };
 
   useEffect(() => {
@@ -658,11 +679,13 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
         </div>
 
         {/* Start Button */}
+        {startError && <p role="alert" className="text-sm text-rose-700">{startError}</p>}
         <button
           onClick={startSession}
+          disabled={isStarting}
           className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-extrabold text-base   hover:from-indigo-500 hover:to-purple-500 transition-all cursor-pointer active:scale-98 flex items-center justify-center gap-2"
         >
-          <span>Antrenmanı Başlat (10 Soru)</span>
+          <span>{isStarting ? 'Sorular yükleniyor…' : 'Antrenmanı Başlat (10 Soru)'}</span>
           <ArrowRight className="w-5 h-5" />
         </button>
       </div>

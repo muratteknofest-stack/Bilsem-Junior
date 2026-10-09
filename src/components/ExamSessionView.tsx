@@ -4,12 +4,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BaseQuestion, ExamResult, CognitiveCategory, DifficultyLevel } from '../types';
 import { generateQuestion, generateQuestionForGrade, STUDENT_CATEGORY_TYPES } from '../features/questions/generators';
-import { usePublishedQuestions } from '../features/questions/use-published-questions';
+import { loadPublishedQuestionsForGrade, usePublishedQuestions } from '../features/questions/use-published-questions';
 import { selectPublishedPool } from '../features/questions/editorial-data';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
 import { AnswerWorkspace } from '../features/questions/renderers/AnswerWorkspace';
 import { VisualCountdownTimer } from './VisualCountdownTimer';
 import { dataService } from '../services/data-service';
+import { isDemoUser } from '../lib/demo-access';
 import { sound } from '../lib/sound';
 import {
   Trophy,
@@ -92,6 +93,9 @@ const EXAM_MODES: ExamMode[] = [
 
 export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome }) => {
   const publishedQuestions = usePublishedQuestions();
+  const [startError, setStartError] = useState('');
+  const [isStarting, setIsStarting] = useState(false);
+  const startingRef = useRef(false);
   const [inExam, setInExam] = useState(false);
   const [questions, setQuestions] = useState<BaseQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -210,62 +214,83 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
     setShowFinishConfirm(false);
   };
 
-  const startNewExam = (mode?: any) => {
-    sound.playClick();
-    const targetMode: ExamMode = (mode && typeof mode === 'object' && typeof mode.qCount === 'number')
-      ? mode
-      : (selectedMode || EXAM_MODES[0]);
-
-    setSelectedMode(targetMode);
-    setCurrentExamTitle(targetMode.title);
-    const categories: CognitiveCategory[] = [
-      'pattern',
-      'matrix',
-      'spatial',
-      'logic',
-      'attention',
-      'numerical',
-    ];
-
-    const qList: BaseQuestion[] = [];
-    const count = targetMode.qCount || 10;
-    for (let i = 0; i < count; i++) {
-      if (targetMode.category) {
-        const diff = Math.min(6, Math.floor(i / (count / 4)) + 2) as DifficultyLevel;
-        qList.push(generateQuestion({
-          targetGrade: isSchoolGrade(dataService.getCurrentUser().grade) ? dataService.getCurrentUser().grade as 1|2|3|4 : undefined,
-          category: targetMode.category,
-          difficulty: diff,
-          seed: 700000 + Date.now() + i * 997,
-        }));
-      } else if (targetMode.grade) {
-        const diff = Math.min(6, Math.floor(i / (count / 4)) + 2) as DifficultyLevel;
-        qList.push(generateQuestionForGrade(targetMode.grade as any, 700000 + Date.now() + i * 997, undefined, diff));
-      } else {
-        const cat = categories[i % categories.length];
-        const diff = Math.min(6, Math.floor(i / (count / 4)) + 2) as DifficultyLevel;
-        const q = generateQuestion({
-          targetGrade: isSchoolGrade(dataService.getCurrentUser().grade) ? dataService.getCurrentUser().grade as 1|2|3|4 : undefined,
-          category: cat,
-          difficulty: diff,
-          seed: 700000 + Date.now() + i * 997,
-        });
-        qList.push(q);
+  const startNewExam = async (mode?: ExamMode) => {
+    if (startingRef.current) return;
+    startingRef.current = true;
+    setIsStarting(true);
+    setStartError('');
+    try {
+      const targetMode: ExamMode = (mode && typeof mode === 'object' && typeof mode.qCount === 'number')
+        ? mode
+        : (selectedMode || EXAM_MODES[0]);
+  
+      const currentUser = dataService.getCurrentUser();
+      if (isDemoUser(currentUser.id)) throw new Error('Deneme sınavları öğrenci hesabına giriş yaptıktan sonra açılır.');
+      const grade = targetMode.grade ?? currentUser.grade;
+      if (!isSchoolGrade(grade)) throw new Error('Sınıf seviyeniz belirlenemedi. Profilinizi kontrol edin.');
+      const bank = publishedQuestions.length && publishedQuestions[0].targetGrade === grade
+        ? publishedQuestions : await loadPublishedQuestionsForGrade(grade);
+      if (!bank.length) throw new Error('Bu sınıfa ait yayımlanmış sorular henüz yüklenemedi. Lütfen tekrar deneyin.');
+      sound.playClick();
+  
+      setSelectedMode(targetMode);
+      setCurrentExamTitle(targetMode.title);
+      const categories: CognitiveCategory[] = [
+        'pattern',
+        'matrix',
+        'spatial',
+        'logic',
+        'attention',
+        'numerical',
+      ];
+  
+      const qList: BaseQuestion[] = [];
+      const count = targetMode.qCount || 10;
+      for (let i = 0; i < count; i++) {
+        if (targetMode.category) {
+          const diff = Math.min(6, Math.floor(i / (count / 4)) + 2) as DifficultyLevel;
+          qList.push(generateQuestion({
+            targetGrade: isSchoolGrade(dataService.getCurrentUser().grade) ? dataService.getCurrentUser().grade as 1|2|3|4 : undefined,
+            category: targetMode.category,
+            difficulty: diff,
+            seed: 700000 + Date.now() + i * 997,
+          }));
+        } else if (targetMode.grade) {
+          const diff = Math.min(6, Math.floor(i / (count / 4)) + 2) as DifficultyLevel;
+          qList.push(generateQuestionForGrade(targetMode.grade as any, 700000 + Date.now() + i * 997, undefined, diff));
+        } else {
+          const cat = categories[i % categories.length];
+          const diff = Math.min(6, Math.floor(i / (count / 4)) + 2) as DifficultyLevel;
+          const q = generateQuestion({
+            targetGrade: isSchoolGrade(dataService.getCurrentUser().grade) ? dataService.getCurrentUser().grade as 1|2|3|4 : undefined,
+            category: cat,
+            difficulty: diff,
+            seed: 700000 + Date.now() + i * 997,
+          });
+          qList.push(q);
+        }
       }
+  
+      const initialSecs = (targetMode.mins || 15) * 60;
+      setTotalSeconds(initialSecs);
+      setRemainingSeconds(initialSecs);
+      setOvertimeSeconds(0);
+      setEndedByTimeout(false);
+      setQuestions(selectPublishedPool(qList, bank));
+      setCurrentIndex(0);
+      setAnswers({});
+      setFlags({});
+      setExamResult(null);
+      setShowFinishConfirm(false);
+      setInExam(true);
+    } catch (error) {
+      console.warn('Exam question load failed:', error);
+      setStartError(error instanceof Error && (error.message.startsWith('Bu sınıfa') || error.message.startsWith('Sınıf') || error.message.startsWith('Deneme sınavları'))
+        ? error.message : 'Sorular yüklenemedi. Lütfen tekrar deneyin.');
+    } finally {
+      startingRef.current = false;
+      setIsStarting(false);
     }
-
-    const initialSecs = (targetMode.mins || 15) * 60;
-    setTotalSeconds(initialSecs);
-    setRemainingSeconds(initialSecs);
-    setOvertimeSeconds(0);
-    setEndedByTimeout(false);
-    setQuestions(selectPublishedPool(qList, publishedQuestions));
-    setCurrentIndex(0);
-    setAnswers({});
-    setFlags({});
-    setExamResult(null);
-    setShowFinishConfirm(false);
-    setInExam(true);
   };
 
   const handleSelectOption = (optId: string) => {
@@ -454,6 +479,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
           </div>
 
           {/* Exam Mode Selection Grid */}
+          {startError && <p role="alert" className="text-sm text-rose-200">{startError}</p>}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {EXAM_MODES.filter(mode => !mode.category || STUDENT_CATEGORY_TYPES[mode.category]).filter((mode) => {
               if (activeFilter === 'all') return true;
@@ -469,6 +495,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
                 <button
                   key={mode.id}
                   onClick={() => startNewExam(mode)}
+                  disabled={isStarting}
                   className={`relative p-5 rounded-xl bg-gradient-to-br ${mode.color} text-left overflow-hidden  hover:scale-105 active:scale-95 transition-all cursor-pointer group flex flex-col justify-between min-h-[160px]`}
                 >
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700" />
@@ -674,6 +701,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
 
         {/* Action Buttons */}
         <div className="space-y-2.5">
+          {startError && <p role="alert" className="text-sm text-rose-700">{startError}</p>}
           <button
             onClick={resetToModeSelection}
             className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm  transition-all cursor-pointer flex items-center justify-center gap-2"
@@ -683,10 +711,11 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
           </button>
           <button
             onClick={() => startNewExam(selectedMode || EXAM_MODES[0])}
+            disabled={isStarting}
             className="w-full py-3.5 rounded-xl bg-indigo-50 border-2 border-indigo-200 text-indigo-700 font-bold text-sm hover:bg-indigo-100 transition-all cursor-pointer flex items-center justify-center gap-2"
           >
             <Sparkles className="w-4 h-4 text-indigo-600" />
-            <span>Aynı Modu Tekrar Çöz (Yeni Sorular)</span>
+            <span>{isStarting ? 'Sorular yükleniyor…' : 'Aynı Modu Tekrar Çöz (Yeni Sorular)'}</span>
           </button>
           <button
             onClick={onNavigateHome}
