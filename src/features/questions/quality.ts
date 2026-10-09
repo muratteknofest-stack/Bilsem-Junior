@@ -59,7 +59,7 @@ export function auditQuestion(value: unknown, existing: BaseQuestion[] = []): Qu
         const v = o.visualData as Record<string, unknown>;
         return v?.cells !== undefined && (!Array.isArray(v.cells) || typeof v.size !== 'number' || ![3, 4].includes(v.size) || v.cells.length !== Number(v.size) ** 2 || v.cells.some((c: unknown) => c !== 0 && c !== 1));
       })) result.errors.push('Seçenek ızgarası geçersiz.');
-      const knownVersion = RECOVERED_TYPES.includes(q.type) ? q.authoring?.engine === 'verified-4' : VERIFIED_TYPES.includes(q.type) && [ENGINE_VERSION, 'verified-2'].includes(q.authoring?.engine || '');
+      const knownVersion = RECOVERED_TYPES.includes(q.type) ? q.authoring?.engine === 'verified-4' : VERIFIED_TYPES.includes(q.type) && [ENGINE_VERSION, 'verified-3', 'verified-2'].includes(q.authoring?.engine || '');
       if (!knownVersion) result.errors.push('Soru motoru sürümü tanınmıyor.');
       const expected = fingerprint(solveBoard(q.visualConfig as Board));
       const matches = q.options.filter(o => fingerprint(o.visualData) === expected);
@@ -71,7 +71,7 @@ export function auditQuestion(value: unknown, existing: BaseQuestion[] = []): Qu
     // Certification covers the displayed instructions and explanation too. Arbitrary
     // edited/AI prose cannot inherit an old stamp or a template's mathematical proof.
     if (cfg?.displayMode === 'verified_board' && STUDENT_TYPES.includes(q.type)) {
-      const reference = RECOVERED_TYPES.includes(q.type) ? generateRecoveredQuestion(q.type, q.seed, q.difficulty) : q.authoring?.engine === 'verified-2' ? generateV2(q.type, q.seed, q.difficulty) : generateProfessionalQuestion(q.type, q.seed, q.difficulty);
+      const reference = RECOVERED_TYPES.includes(q.type) ? generateRecoveredQuestion(q.type, q.seed, q.difficulty) : q.authoring?.engine === 'verified-2' ? generateV2(q.type, q.seed, q.difficulty) : generateProfessionalQuestion(q.type, q.seed, q.difficulty, q.authoring?.engine === 'verified-3');
       for (const field of ['prompt', 'secondaryPrompt', 'explanation', 'visualConfig'] as const) {
         if (fingerprint(q[field]) !== fingerprint(reference[field])) {
           result.reviewRequired.push('Soru metni, görsel veya açıklama doğrulanmış şablonla eşleşmiyor: ' + field);
@@ -80,7 +80,7 @@ export function auditQuestion(value: unknown, existing: BaseQuestion[] = []): Qu
       const normalizedOptions = (question: BaseQuestion) => question.options.map(({ id, label, visualData }) => ({ id, label, visualData })).sort((a, b) => a.id.localeCompare(b.id));
       if (fingerprint(normalizedOptions(q)) !== fingerprint(normalizedOptions(reference))) result.reviewRequired.push('Seçenek içerikleri doğrulanmış şablonla eşleşmiyor.');
       if (q.category !== reference.category) result.reviewRequired.push('Kategori doğrulanmış içerikle eşleşmiyor.');
-      if (['verified-3', 'verified-4'].includes(q.authoring?.engine || '') && fingerprint(q.authoring?.distractorNotes) !== fingerprint(reference.authoring?.distractorNotes)) result.reviewRequired.push('Çeldirici gerekçeleri doğrulanmış içerikle eşleşmiyor.');
+      if (['verified-3', 'verified-4', ENGINE_VERSION].includes(q.authoring?.engine || '') && fingerprint(q.authoring?.distractorNotes) !== fingerprint(reference.authoring?.distractorNotes)) result.reviewRequired.push('Çeldirici gerekçeleri doğrulanmış içerikle eşleşmiyor.');
     }
     result.solverVerified = solved.canSolve && solved.isMatch && !solved.ambiguityDetected && result.reviewRequired.length === 0;
     if (q.targetGrade !== undefined && (q.targetGrade < 1 || q.targetGrade > 4 || !Number.isInteger(q.targetGrade))) result.errors.push('Hedef sınıf 1–4 olmalı.');

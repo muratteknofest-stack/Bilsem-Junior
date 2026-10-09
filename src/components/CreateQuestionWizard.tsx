@@ -520,7 +520,7 @@ export const CreateQuestionWizard: React.FC<CreateQuestionWizardProps> = ({ onCl
                                 : 'bg-slate-900 border-slate-800 text-slate-400'
                             }`}
                           >
-                            <OptionRenderer
+                            <OptionRenderer question={baseGenerated}
                               option={opt}
                               questionType={baseGenerated.type}
                               isSelected={opt.id === baseGenerated.correctOptionId}
@@ -840,7 +840,7 @@ export const CreateQuestionWizard: React.FC<CreateQuestionWizardProps> = ({ onCl
                               : 'bg-slate-950 border-slate-800 text-slate-400'
                           }`}
                         >
-                          <OptionRenderer
+                          <OptionRenderer question={baseGenerated}
                             option={opt}
                             questionType={baseGenerated.type}
                             isSelected={opt.id === selectedCorrectOptionId}
@@ -968,7 +968,7 @@ export const CreateQuestionWizard: React.FC<CreateQuestionWizardProps> = ({ onCl
                                 : 'bg-slate-950 border-slate-800 hover:border-slate-700'
                             }`}
                           >
-                            <OptionRenderer
+                            <OptionRenderer question={finalQuestion}
                               option={opt}
                               questionType={finalQuestion.type}
                               isSelected={isChosen}

@@ -4,18 +4,21 @@ import type { Board, Tile } from '../professional-engine';
 import { emptyResponse, interactionModes, placeInOrder, type AnswerMode, type QuestionResponse } from '../answer-interactions';
 import { OptionRenderer } from './OptionRenderer';
 import { TileDiagram } from './ProfessionalBoard';
+import { questionVisualTheme, symbolLabel, type VisualTheme } from '../visual-vocabulary';
+import { SymbolDiagram } from './VisualGlyph';
 
 const labels: Record<AnswerMode, string> = { choice: 'Şık seç', place: 'Sürükle bırak', order: 'Sırayı kur', match: 'Eşleştir', number: 'Cevabı yaz' };
 type Props = { question: BaseQuestion; response: QuestionResponse | null; onChange: (r: QuestionResponse) => void; submitted?: boolean; allowedModes?: AnswerMode[] };
 
-function CardValue({ value }: { value: unknown }) {
+function CardValue({ value, theme }: { value: unknown; theme: VisualTheme }) {
   const data = value as Partial<Tile> & { textNumber?: string | number };
-  return data?.cells && data.size ? <span className="block w-20 mx-auto"><TileDiagram tile={data as Tile} /></span> :
+  return data?.cells && data.size ? <span className="block w-24 max-w-full mx-auto"><TileDiagram tile={data as Tile} theme={theme} /></span> :
     <span className="text-xl font-black">{data?.textNumber ?? String(value)}</span>;
 }
 
 /** Pointer events support mouse, touch and pen; every placement also works with Tab + Enter. */
 export function AnswerWorkspace({ question, response, onChange, submitted = false, allowedModes }: Props) {
+  const theme = questionVisualTheme(question);
   const modes = interactionModes(question).filter(m => !allowedModes || allowedModes.includes(m));
   const [mode, setMode] = useState<AnswerMode>(response?.mode ?? modes[0]);
   const [picked, setPicked] = useState<string | null>(null);
@@ -45,7 +48,8 @@ export function AnswerWorkspace({ question, response, onChange, submitted = fals
       onClick={() => { if (picked !== null) place(picked, id); }}
       className={`min-h-24 min-w-20 flex-1 rounded-2xl border-2 border-dashed p-3 text-center focus-visible:outline-4 focus-visible:outline-indigo-500 ${value !== null && value !== undefined ? 'border-indigo-400 bg-indigo-50' : 'border-slate-300 bg-white'} ${picked !== null ? 'ring-2 ring-indigo-200' : ''}`}>
       <span className="block text-xs font-bold text-slate-600 mb-2">{title}</span>
-      {value !== null && value !== undefined ? <CardValue value={tokens.find(t => t.id === value)?.value ?? value} /> : <span className="text-slate-500 text-sm">Buraya bırak</span>}
+      {current.mode === 'match' && <span className="qb-match-symbol"><SymbolDiagram symbol={id} /></span>}
+      {value !== null && value !== undefined ? <CardValue theme={theme} value={tokens.find(t => t.id === value)?.value ?? value} /> : <span className="text-slate-500 text-sm">Buraya bırak</span>}
     </button>
   );
   const numberInput = (value: string, change: (v: string) => void, title: string) => (
@@ -66,7 +70,7 @@ export function AnswerWorkspace({ question, response, onChange, submitted = fals
       {['place', 'order', 'match'].includes(activeMode) ? 'Kartı sürükle veya önce karta, sonra hedefe dokun. Klavyede Tab ve Enter kullan.' : activeMode === 'choice' ? 'Cevabını seç.' : 'Şıklara bakmadan sonucu bul.'}
     </p>
     {current.mode === 'choice' ? <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{question.options.map(o =>
-      <OptionRenderer key={o.id} option={o} isSelected={current.optionId === o.id} onSelect={() => onChange({ mode: 'choice', optionId: o.id })}
+      <OptionRenderer key={o.id} option={o} question={question} isSelected={current.optionId === o.id} onSelect={() => onChange({ mode: 'choice', optionId: o.id })}
         disabled={submitted} showCorrect={submitted} isCorrectOption={o.id === question.correctOptionId} />)}</div> : null}
     {current.mode === 'number' ? numberInput(current.value, value => onChange({ mode: 'number', value }), 'Cevabın') : null}
     {['place', 'order', 'match'].includes(activeMode) && <>
@@ -80,19 +84,19 @@ export function AnswerWorkspace({ question, response, onChange, submitted = fals
           onLostPointerCapture={() => { drag.current = null; setGhost(null); }}
           onClick={e => { if (suppressClick.current && e.detail !== 0) { suppressClick.current = false; return; } setPicked(picked === token.id ? null : token.id); setAnnouncement(`${token.label} seçildi. Şimdi hedefi seç.`); }}
           className={`touch-none select-none min-h-16 min-w-16 rounded-xl border-2 p-3 focus-visible:outline-4 focus-visible:outline-indigo-400 ${picked === token.id ? 'border-indigo-600 bg-indigo-100 shadow-md' : 'border-slate-200 bg-white'} ${used ? 'opacity-50' : ''}`}>
-          {activeMode === 'place' && <span className="block text-xs font-bold mb-1">{token.id}</span>}<CardValue value={token.value} />
+          {activeMode === 'place' && <span className="block text-xs font-bold mb-1">{token.id}</span>}<CardValue theme={theme} value={token.value} />
         </button>;
       })}</div>
       <div className="flex flex-wrap gap-2" aria-label="Yerleştirme alanları">
         {current.mode === 'place' && target('answer', 'Cevabın', current.optionId)}
         {current.mode === 'order' && current.slots.map((value, i) => target(String(i), `${i + 1}. sıra`, value))}
-        {current.mode === 'match' && [...new Set(b.symbols!)].map(symbol => target(symbol, `${symbol} değeri`, current.pairs[symbol]))}
+        {current.mode === 'match' && [...new Set(b.symbols!)].map(symbol => target(symbol, `${symbolLabel(symbol)} değeri`, current.pairs[symbol]))}
       </div>
       {current.mode === 'match' && numberInput(current.total, total => onChange({ ...current, total }), 'Sembol dizisinin toplamı')}
     </>}
     {!submitted && <button type="button" onClick={() => { onChange(emptyResponse(activeMode, question)); setPicked(null); setAnnouncement('Cevap temizlendi.'); }} className="min-h-11 text-sm font-semibold text-slate-600 underline underline-offset-4">Cevabı temizle</button>}
     {submitted && current.mode !== 'choice' && <p className="text-sm font-bold text-indigo-800">Cevabın kaydedildi. Çözüm açıklaması aşağıda.</p>}
     <span role="status" aria-live="polite" className="sr-only">{announcement}</span>
-    {ghost && <div aria-hidden="true" className="fixed z-50 pointer-events-none rounded-xl border-2 border-indigo-500 bg-white p-3 shadow-xl" style={{ left: ghost.x + 12, top: ghost.y + 12 }}><CardValue value={tokens.find(t => t.id === ghost.token)?.value} /></div>}
+    {ghost && <div aria-hidden="true" className="fixed z-50 pointer-events-none rounded-xl border-2 border-indigo-500 bg-white p-3 shadow-xl" style={{ left: ghost.x + 12, top: ghost.y + 12 }}><CardValue theme={theme} value={tokens.find(t => t.id === ghost.token)?.value} /></div>}
   </div>;
 }

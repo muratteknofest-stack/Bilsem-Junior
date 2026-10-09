@@ -272,7 +272,7 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
         <p className="text-lg font-semibold leading-relaxed">{active.prompt}</p>
         {active.secondaryPrompt && <p className="text-sm text-slate-600">{active.secondaryPrompt}</p>}
         <QuestionRenderer question={active} />
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{active.options.map(o => <OptionRenderer key={o.id} option={o} questionType={active.type} isSelected={answer === o.id} onSelect={() => setAnswer(o.id)} showCorrect={reveal} isCorrectOption={active.correctOptionId === o.id} />)}</div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{active.options.map(o => <OptionRenderer question={active} key={o.id} option={o} questionType={active.type} isSelected={answer === o.id} onSelect={() => setAnswer(o.id)} showCorrect={reveal} isCorrectOption={active.correctOptionId === o.id} />)}</div>
         <button className={button + ' border border-indigo-200 text-indigo-700 bg-indigo-50'} onClick={() => setReveal(!reveal)}>{reveal ? 'Çözümü gizle' : 'Cevabı ve çözümü göster'}<ArrowRight size={16} /></button>
         {reveal && <section className="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-3"><h4 className="font-bold">{active.explanation.ruleTitle} · Cevap {active.correctOptionId}</h4><p className="text-sm leading-6">{active.explanation.summary}</p><ol className="list-decimal pl-5 text-sm space-y-2">{active.explanation.steps.map((s, i) => <li key={i}>{s}</li>)}</ol>
           {active.authoring && <div className="border-t pt-3 space-y-2">{active.options.map(o => <p className="text-sm" key={o.id}><strong>{o.id}:</strong> {active.authoring?.distractorNotes[o.id]}</p>)}</div>}

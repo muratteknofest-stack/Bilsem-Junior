@@ -744,7 +744,7 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
                               : 'bg-slate-950 border-slate-800'
                           }`}
                         >
-                          <OptionRenderer
+                          <OptionRenderer question={activeQuestion}
                             option={opt}
                             questionType={activeQuestion.type}
                             isSelected={testMode ? isSelectedInTest : opt.id === activeQuestion.correctOptionId}

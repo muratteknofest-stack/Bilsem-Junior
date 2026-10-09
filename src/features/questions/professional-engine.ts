@@ -1,8 +1,9 @@
 import type { BaseQuestion, CognitiveCategory, DifficultyLevel, QuestionType } from '../../types';
 import { SeededRNG } from '../../lib/rng';
 import { generateVisualFingerprint as fingerprint } from './fingerprint';
+import { VISUAL_SYMBOL_IDS, symbolLabel } from './visual-vocabulary';
 
-export const ENGINE_VERSION = 'verified-3';
+export const ENGINE_VERSION = 'verified-5';
 export const VERIFIED_TYPES: QuestionType[] = ['matrix_2x2', 'matrix_3x3', 'raven_matrix', 'visual_sequence', 'figure_rotation', 'mirror_reflection', 'number_pattern', 'operation_machine', 'symbol_coding', 'shape_counting', 'logic_grid'];
 export const RECOVERED_TYPES: QuestionType[] = ['symmetry_completion', 'shape_combination', 'direction_path', 'number_pyramid'];
 export const STUDENT_TYPES: QuestionType[] = [...VERIFIED_TYPES, ...RECOVERED_TYPES];
@@ -167,7 +168,7 @@ export function solveBoard(board: Board): Value {
   throw new Error('Bilinmeyen kural.');
 }
 
-export function generateProfessionalQuestion(type: QuestionType, seed: number, difficulty: DifficultyLevel): BaseQuestion {
+export function generateProfessionalQuestion(type: QuestionType, seed: number, difficulty: DifficultyLevel, legacyV3 = false): BaseQuestion {
   if (!VERIFIED_TYPES.includes(type) || !Number.isSafeInteger(seed) || seed < 1 || !Number.isInteger(difficulty) || difficulty < 1 || difficulty > 6) throw new Error('Soru parametreleri geçersiz.');
   const rng = new SeededRNG(seed);
   const size = difficulty >= 4 ? 4 : 3;
@@ -238,7 +239,7 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
     steps = ['İki örneğin girdi ve çıktı farklarını karşılaştır.', summary, 'Bu işlemi son girdiye uygula ve diğer örneklerle denetle.'];
     category = 'numerical'; objective = 'Örneklerden doğrusal bir işlem kuralı çıkarma.';
   } else if (type === 'symbol_coding' || type === 'shape_counting') {
-    const symbols = ['●', '▲', '■', '◆'];
+    const symbols = legacyV3 ? ['●', '▲', '■', '◆'] : rng.pickUnique(VISUAL_SYMBOL_IDS, difficulty <= 2 ? 3 : 4);
     if (type === 'symbol_coding') {
       board = { displayMode: 'verified_board', kind: 'symbols', key: rng.pickUnique(Array.from({ length: difficulty * 3 + 4 }, (_, i) => i + 1), symbols.length).map((value, i) => ({ symbol: symbols[i], value })), symbols: rng.shuffle([...rng.pickUnique(symbols, Math.min(4, difficulty + 1)), ...(difficulty >= 3 ? [symbols[0]] : [])]) };
       prompt = 'Anahtardaki değerleri kullan. Aşağıdaki sembollerin toplamı kaçtır?';
@@ -251,7 +252,7 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
       const otherSymbols = symbols.filter(s => s !== target);
       const items = rng.shuffle([...Array(targetCount).fill(target), ...Array.from({ length: total - targetCount }, () => rng.pick(otherSymbols))]);
       board = { displayMode: 'verified_board', kind: 'count', items, target };
-      prompt = 'Izgarada toplam kaç tane ' + target + ' var?';
+      prompt = legacyV3 ? 'Izgarada toplam kaç tane ' + target + ' var?' : 'Izgarada hedef olarak gösterilen ' + symbolLabel(target) + ' görselinden kaç tane var?';
       ruleTitle = 'Sistemli tarama'; summary = 'Yalnızca hedef sembolü say. Her satırı soldan sağa bir kez tara.';
       category = 'attention'; objective = 'Benzer uyaranlar arasından hedefi seçme ve sistemli tarama.';
     }
@@ -333,7 +334,7 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
       number(answer.textNumber + values[0], 'İlk sembolün değeri fazladan bir kez daha eklenmiş.');
       number(values.length, 'Sembol değerlerini toplamak yerine sembol adedi sayılmış.');
     } else if (board.kind === 'count') {
-      for (const symbol of ['●', '▲', '■', '◆'].filter(s => s !== board.target))
+      for (const symbol of (legacyV3 ? ['●', '▲', '■', '◆'] : [...new Set(board.items!)]).filter(s => s !== board.target))
         number(board.items!.filter(s => s === symbol).length, 'Hedef yerine ' + symbol + ' sembolleri sayılmış.');
       number(answer.textNumber - 1, 'Bir hedef sembol gözden kaçırılmış.');
       number(answer.textNumber + 1, 'Bir sembol iki kez sayılmış veya hedef olmayan bir şekil eklenmiş.');
@@ -348,10 +349,11 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
     const id = 'ABCD'[i]; if (same(c.value, answer)) correctOptionId = id; notes[id] = c.note;
     return { id, label: id, fingerprint: fingerprint(c.value), visualData: c.value };
   });
-  return { id: type + '-v3-d' + difficulty + '-s' + seed, version: 3, type, category, difficulty,
+  const version = legacyV3 ? 3 : 5;
+  return { id: type + '-v' + version + '-d' + difficulty + '-s' + seed, version, type, category, difficulty,
     ageGroup: difficulty <= 2 ? '1-2' : '3-4', prompt, options, correctOptionId,
     explanation: { ruleTitle, summary, steps: [...steps, 'Bu kurala uyan seçenek: ' + correctOptionId + '.'] },
     estimatedSeconds: (board.kind === 'matrix' || board.kind === 'order' ? 45 : 25) + difficulty * 8, skills: [objective], seed, visualConfig: board, status: 'draft',
-    authoring: { engine: ENGINE_VERSION, objective, distractorNotes: notes } };
+    authoring: { engine: legacyV3 ? 'verified-3' : ENGINE_VERSION, objective, distractorNotes: notes } };
 }
 

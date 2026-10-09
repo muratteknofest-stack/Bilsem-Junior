@@ -1,6 +1,7 @@
 import type { BaseQuestion, DifficultyLevel } from '../../types';
 import type { Board } from './professional-engine';
 import { generateVisualFingerprint } from './fingerprint';
+import { isVisualSymbol } from './visual-vocabulary';
 
 export const QUALITY_POLICY_VERSION = 'education-1';
 export type SchoolGrade = 1 | 2 | 3 | 4;
@@ -66,8 +67,8 @@ export function inspectEducation(q: BaseQuestion, grade: SchoolGrade, age?: numb
   if (numeric.some(v => !Number.isSafeInteger(v) || v < 0) || metrics.maxNumber > p.maxNumber) difficulty.push('NUMBER_LOAD: Verilen veya seçenek sayısı profil sınırını aşıyor.');
   if ((b.kind === 'path' ? metrics.symbolCount > grade + 4 : metrics.symbolCount > p.maxSymbols) || metrics.peopleCount > p.maxPeople) difficulty.push('WORKING_MEMORY: Sembol veya sıralama yükü fazla.');
   if (metrics.itemCount > p.maxItems || metrics.gridSize > (b.kind === 'path' && grade === 4 ? 5 : p.maxGrid)) visual.push('VISUAL_LOAD: Görsel yoğunluk sınıf sınırını aşıyor.');
-  if (b.kind === 'symbols' && (b.key || []).some(k => !['●', '▲', '■', '◆'].includes(k.symbol))) visual.push('SYMBOL_RENDERING: Sembol çizimi tanımlı değil.');
-  if (b.kind === 'count' && (b.items || []).some(s => !['●', '▲', '■', '◆'].includes(s))) visual.push('SYMBOL_RENDERING: Sayılacak şeklin çizimi tanımlı değil.');
+  if (b.kind === 'symbols' && [...(b.key || []).map(k => k.symbol), ...(b.symbols || [])].some(s => !isVisualSymbol(s))) visual.push('SYMBOL_RENDERING: Sembol çizimi tanımlı değil.');
+  if (b.kind === 'count' && [...(b.items || []), b.target || ''].some(s => !isVisualSymbol(s))) visual.push('SYMBOL_RENDERING: Sayılacak şeklin çizimi tanımlı değil.');
   return { audience, difficulty, visual, metrics };
 }
 export function hasCompleteQualityReport(q: BaseQuestion): boolean {

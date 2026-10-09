@@ -1,41 +1,32 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { Expand, Layers, Shapes, X } from 'lucide-react';
 import type { Board, Tile } from '../professional-engine';
+import { DEFAULT_VISUAL_THEME, TILE_MOTIFS, type VisualTheme } from '../visual-vocabulary';
+import { GlyphBody, SymbolDiagram } from './VisualGlyph';
 
-/** SVG geometry remains sharp at any display scale; relief never moves logical cells. */
-export function TileDiagram({ tile, flat = false, hideRight = false }: { tile: Tile; flat?: boolean; hideRight?: boolean }) {
+/** Fixed logical cells; only the uniform, orientation-neutral motif varies. */
+export function TileDiagram({ tile, flat = false, hideRight = false, theme = DEFAULT_VISUAL_THEME }: { tile: Tile; flat?: boolean; hideRight?: boolean; theme?: VisualTheme }) {
   const id = useId().replace(/:/g, '_');
   const cell = (208 - (tile.size - 1) * 9) / tile.size;
+  const motif = TILE_MOTIFS[theme.motif];
   const rows = Array.from({ length: tile.size }, (_, r) => `${r + 1}. satır: ${tile.cells.slice(r * tile.size, (r + 1) * tile.size).map((v, c) => hideRight && c >= Math.ceil(tile.size / 2) ? 'tamamlanacak' : v ? 'dolu' : 'boş').join(', ')}`).join('; ');
-  return <svg viewBox="0 0 240 246" role="img" aria-label={`${tile.size} çarpı ${tile.size} desen. ${rows}`} className="qb-tile-svg" shapeRendering="geometricPrecision">
-    <defs>
-      <linearGradient id={`${id}-frame`} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#ffffff" /><stop offset="1" stopColor="#e8eaf7" /></linearGradient>
-      <linearGradient id={`${id}-face`} x1="0" y1="0" x2="0.8" y2="1"><stop stopColor="#879cf5" /><stop offset=".45" stopColor="#647ade" /><stop offset="1" stopColor="#475cc0" /></linearGradient>
-      <linearGradient id={`${id}-empty`} x1="0" y1="0" x2="0" y2="1"><stop stopColor="#e8ebf4" /><stop offset="1" stopColor="#f9faff" /></linearGradient>
-    </defs>
-    {!flat && <rect x="4" y="10" width="232" height="232" rx="22" fill="#b7bfdc" />}
+  return <svg viewBox="0 0 240 246" role="img" aria-label={`${tile.size} çarpı ${tile.size} desen; ${motif.label} işaretleri. ${rows}`} className="qb-tile-svg" data-motif={theme.motif} shapeRendering="geometricPrecision">
+    <defs><linearGradient id={`${id}-frame`} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#fff" /><stop offset="1" stopColor={theme.tint} /></linearGradient></defs>
+    {!flat && <rect x="4" y="9" width="232" height="232" rx="22" fill="#c7d0de" />}
     <rect x="4" y="4" width="232" height="232" rx="22" fill={flat ? '#fff' : `url(#${id}-frame)`} stroke="#c6cce0" strokeWidth="1.5" />
     {tile.cells.map((filled, i) => {
       const x = 16 + (i % tile.size) * (cell + 9), y = 16 + Math.floor(i / tile.size) * (cell + 9);
       if (hideRight && i % tile.size >= Math.ceil(tile.size / 2)) return <g key={i}><rect x={x} y={y} width={cell} height={cell} rx="9" fill="#f3f0ff" stroke="#9381ca" strokeDasharray="4 3" /><text x={x + cell / 2} y={y + cell / 2} textAnchor="middle" dominantBaseline="central" fontSize="24" fill="#68539c">?</text></g>;
       return <g key={i} data-cell={filled ? 'filled' : 'empty'}>
-        {!flat && filled === 1 && <rect x={x} y={y + 4} width={cell} height={cell} rx="9" fill="#374ca5" />}
-        <rect x={x} y={y} width={cell} height={cell} rx="9" fill={filled ? flat ? '#4054b2' : `url(#${id}-face)` : flat ? '#fff' : `url(#${id}-empty)`} stroke={filled ? '#4d62b8' : '#cdd3e3'} strokeWidth={filled ? '1.2' : '1.5'} />
-        {!flat && filled === 1 && <path d={`M ${x + 10} ${y + 2} H ${x + cell - 10}`} stroke="#c8d3ff" strokeWidth="2" strokeLinecap="round" />}
+        <rect x={x} y={y} width={cell} height={cell} rx="9" fill={filled ? theme.tint : '#fff'} stroke={filled ? '#bdc8d8' : '#d7dfe9'} strokeWidth="1.3" />
+        {filled === 1 && <svg x={x + cell * .07} y={y + cell * .05} width={cell * .86} height={cell * .88} viewBox="0 0 64 68" aria-hidden="true"><GlyphBody path={motif.path} color={theme.color} flat={flat} /></svg>}
       </g>;
     })}
-    {hideRight && <line x1="120" y1="9" x2="120" y2="231" stroke="#d35b38" strokeWidth="2" strokeDasharray="5 4" />}
+    {hideRight && <line x1="120" y1="9" x2="120" y2="231" stroke="#b44830" strokeWidth="2" strokeDasharray="5 4" />}
   </svg>;
 }
 
-export function SymbolDiagram({ symbol, flat = false }: { symbol: string; flat?: boolean }) {
-  const id = useId().replace(/:/g, '_');
-  const label = ({ '●': 'daire', '▲': 'üçgen', '■': 'kare', '◆': 'eşkenar dörtgen' } as Record<string, string>)[symbol] || symbol;
-  const geometry = symbol === '●' ? <circle cx="32" cy="29" r="20" /> : symbol === '▲' ? <path d="M32 7 55 49H9Z" strokeLinejoin="round" /> : symbol === '■' ? <rect x="11" y="8" width="42" height="42" rx="3" /> : <path d="m32 5 24 24-24 24L8 29Z" strokeLinejoin="round" />;
-  return <svg viewBox="0 0 64 64" className="qb-symbol-svg" role="img" aria-label={label} shapeRendering="geometricPrecision"><defs><linearGradient id={`${id}-symbol`} x1="0" y1="0" x2=".7" y2="1"><stop stopColor="#8ba2f0" /><stop offset="1" stopColor="#4057b4" /></linearGradient></defs>{!flat && <g transform="translate(0 4)" fill="#2e438f" stroke="#2e438f" strokeWidth="1.2">{geometry}</g>}<g fill={flat ? '#4054b2' : `url(#${id}-symbol)`} stroke={flat ? '#35479b' : '#657fc7'} strokeWidth="1.2">{geometry}</g></svg>;
-}
-
-function BoardContent({ board, flat }: { board: Board; flat: boolean }) {
+function BoardContent({ board, flat, theme }: { board: Board; flat: boolean; theme: VisualTheme }) {
   return <div className="qb-content" data-flat={flat}>
     {board.tiles && <>
       {board.kind === 'transform' && !board.sequence && board.tiles.length === 2 && <p className="qb-instruction">{board.operation === 'rotate' ? `Saat yönünde ${(board.turns || 1) * 90}° döndür` : board.operation === 'mirrorX' ? 'Ayna sağda · Sağ ile sol yer değiştirir' : 'Ayna altta · Üst ile alt yer değiştirir'}</p>}
@@ -44,7 +35,7 @@ function BoardContent({ board, flat }: { board: Board; flat: boolean }) {
         <div className={`qb-board-grid ${board.sequence ? 'qb-sequence' : ''}`} style={{ '--qb-columns': Math.min(board.columns || 2, board.tiles.length) } as React.CSSProperties}>
           {board.tiles.map((tile, i) => <div key={i} className={`qb-tile-card ${tile ? '' : 'qb-missing'}`}>
             {board.sequence && <span className="qb-card-index">{i + 1}. adım</span>}
-            {tile ? <TileDiagram tile={tile} flat={flat} hideRight={board.kind === 'symmetry'} /> : <div className="qb-missing-content" aria-label="Eksik desen"><span>?</span><small>Sen tamamla</small></div>}
+            {tile ? <TileDiagram tile={tile} theme={theme} flat={flat} hideRight={board.kind === 'symmetry'} /> : <div className="qb-missing-content" aria-label="Eksik desen"><span>?</span><small>Sen tamamla</small></div>}
           </div>)}
         </div>
       </div>
@@ -64,7 +55,7 @@ function BoardContent({ board, flat }: { board: Board; flat: boolean }) {
 }
 
 const titles: Record<Board['kind'], string> = { symmetry: 'Simetriyi tamamla', overlay: 'Desenleri birleştir', pyramid: 'Sayı piramidi', path: 'Rotayı izle', transform: 'Şekil ve dönüşüm', matrix: 'Desen ilişkisi', numbers: 'Sayı örüntüsü', machine: 'İşlem makinesi', symbols: 'Sembol anahtarı', count: 'Dikkat alanı', order: 'İpuçlarını birleştir' };
-export function ProfessionalBoard({ board }: { board: Board }) {
+export function ProfessionalBoard({ board, theme = DEFAULT_VISUAL_THEME }: { board: Board; theme?: VisualTheme }) {
   const [flat, setFlat] = useState(false), [expanded, setExpanded] = useState(false);
   const modal = useRef<HTMLDialogElement>(null), opener = useRef<HTMLButtonElement>(null);
   const titleId = useId();
@@ -75,16 +66,16 @@ export function ProfessionalBoard({ board }: { board: Board }) {
     return () => { document.body.style.overflow = overflow; el.close(); };
   }, [expanded]);
   const close = () => { setExpanded(false); opener.current?.focus(); };
-  return <section className="qb-studio" aria-label="Soru görseli">
+  return <section className="qb-studio" aria-label="Soru görseli" style={{ '--qb-accent': theme.color, '--qb-tint': theme.tint } as React.CSSProperties}>
     <div className="qb-toolbar"><span><Shapes size={16} /> {titles[board.kind]}</span><div><button type="button" aria-pressed={flat} onClick={() => setFlat(!flat)}><Layers size={14} /><span>Sade görünüm</span></button><button ref={opener} type="button" onClick={() => setExpanded(true)} aria-label="Soru görselini büyüt"><Expand size={15} /><span>Büyüt</span></button></div></div>
-    <BoardContent board={board} flat={flat} />
+    <BoardContent board={board} flat={flat} theme={theme} />
     <dialog ref={modal} className="qb-dialog" aria-labelledby={titleId} onCancel={e => { e.preventDefault(); close(); }} onClose={() => setExpanded(false)} onClick={e => { if (e.target === e.currentTarget) close(); }} onKeyDown={e => {
       if (e.key !== 'Tab') return;
       const controls = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), [tabindex="0"]'));
       if (e.shiftKey && document.activeElement === controls[0]) { e.preventDefault(); controls.at(-1)?.focus(); }
       else if (!e.shiftKey && document.activeElement === controls.at(-1)) { e.preventDefault(); controls[0]?.focus(); }
     }}>
-      <div className="qb-dialog-inner"><div className="qb-dialog-header"><div><h2 id={titleId}>{titles[board.kind]}</h2><p>Aynı soru, daha geniş inceleme alanı.</p></div><button type="button" autoFocus onClick={close} aria-label="Büyütülmüş görseli kapat"><X size={21} /></button></div><BoardContent board={board} flat={flat} /><p className="qb-dialog-note">İncelemeyi bitirdiğinde kapatıp cevabını yerleştirebilirsin.</p></div>
+      <div className="qb-dialog-inner"><div className="qb-dialog-header"><div><h2 id={titleId}>{titles[board.kind]}</h2><p>Aynı soru, daha geniş inceleme alanı.</p></div><button type="button" autoFocus onClick={close} aria-label="Büyütülmüş görseli kapat"><X size={21} /></button></div><BoardContent board={board} flat={flat} theme={theme} /><p className="qb-dialog-note">İncelemeyi bitirdiğinde kapatıp cevabını yerleştirebilirsin.</p></div>
     </dialog>
   </section>;
 }

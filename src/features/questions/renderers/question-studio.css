@@ -3,6 +3,16 @@
 @media(max-width:360px){.qb-toolbar>span>svg{display:none}.qb-toolbar>span{font-size:8px}.qb-toolbar button{font-size:8px;padding-inline:4px}.qb-toolbar>div{gap:0}.qb-toolbar button svg{width:12px}.qb-clues li{font-size:10px}.qb-content{padding:9px}}
 
 /* Proof-backed route and pyramid boards retain their logical layout on small screens. */
+.qb-studio{background:linear-gradient(150deg,#fff 35%,var(--qb-tint,#eef0ff));}
+.qb-toolbar>span>svg,.qb-instruction{color:var(--qb-accent,#4a54b9)}
+.qb-count-grid>div{background:linear-gradient(145deg,#fff,#f5f7fb);padding:8px}
+.qb-symbol-svg{overflow:visible;aspect-ratio:64/68}
+.qb-target{border:1px solid #d6deeb;border-radius:14px;padding:10px 16px;background:#fff;width:fit-content;margin-inline:auto;box-shadow:0 3px 0 #dfe6f0}
+.qb-target>span{color:#35435d;font-weight:700}
+.qb-match-symbol{display:flex;justify-content:center;margin:4px 0 10px}
+.qb-match-symbol .qb-symbol-svg{width:42px;height:44px}
+.qb-unknown-symbol{font-size:28px;color:#35435d}
+@media(max-width:600px){.qb-count-grid>div{padding:5px}.qb-target{padding:8px 12px}.qb-match-symbol .qb-symbol-svg{width:36px;height:38px}}
 .qb-pyramid { display: grid; gap: .65rem; text-align: center; }
 .qb-pyramid-row { display: flex; justify-content: center; gap: .45rem; }
 .qb-pyramid-row .qb-number-card { width: clamp(40px, 12vw, 78px); min-width: 0; padding: .7rem .2rem; font-size: 1.3rem; }

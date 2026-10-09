@@ -443,7 +443,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                     <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} className="border-t border-slate-800 bg-slate-900/50">
                       <div className="p-4 space-y-4 text-xs text-slate-300">
                         <QuestionQualityPanel report={res.qualityReport} attempts={res.attempts} />
-                        {res.rawOutput && <div className="rounded-xl bg-white p-3"><QuestionRenderer question={res.rawOutput} /><div className="grid grid-cols-2 gap-3">{res.rawOutput.options.map(option => <OptionRenderer key={option.id} option={option} disabled showCorrect isCorrectOption={option.id === res.correctOptionId} />)}</div></div>}
+                        {res.rawOutput && <div className="rounded-xl bg-white p-3"><QuestionRenderer question={res.rawOutput} /><div className="grid grid-cols-2 gap-3">{res.rawOutput.options.map(option => <OptionRenderer question={res.rawOutput} key={option.id} option={option} disabled showCorrect isCorrectOption={option.id === res.correctOptionId} />)}</div></div>}
                         {res.validationWarnings && res.validationWarnings.length > 0 && (
                           <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl space-y-1">
                             <strong className="text-amber-400 flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> Uyarılar:</strong>

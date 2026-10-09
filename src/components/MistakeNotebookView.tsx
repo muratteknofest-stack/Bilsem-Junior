@@ -172,7 +172,7 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             {retryQuestion.options.map((opt) => (
-              <OptionRenderer
+              <OptionRenderer question={retryQuestion}
                 key={opt.id}
                 option={opt}
                 isSelected={selectedOptionId === opt.id}

@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { VisualOption, QuestionType } from '../../../types';
+import { VisualOption, QuestionType, type BaseQuestion } from '../../../types';
 import { ShapeSvg, ShapeKind } from '../../../lib/svg-primitives';
 import { TileDiagram } from './ProfessionalBoard';
+import { questionVisualTheme } from '../visual-vocabulary';
 
 interface OptionRendererProps {
   option: Pick<VisualOption, 'id' | 'label' | 'visualData'>;
@@ -12,6 +13,7 @@ interface OptionRendererProps {
   showCorrect?: boolean;
   isCorrectOption?: boolean;
   questionType?: QuestionType | string;
+  question?: Pick<BaseQuestion, 'id' | 'seed'>;
 }
 
 export const OptionRenderer: React.FC<OptionRendererProps> = ({
@@ -22,6 +24,7 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
   showCorrect = false,
   isCorrectOption = false,
   questionType,
+  question,
 }) => {
   const { id, visualData } = option;
 
@@ -60,7 +63,7 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
     }
 
     const vd: any = visualData || {};
-    if (Array.isArray(vd.cells) && [3, 4].includes(vd.size)) return <div className="w-20 sm:w-24 mx-auto"><TileDiagram tile={vd} /></div>;
+    if (Array.isArray(vd.cells) && [3, 4].includes(vd.size)) return <div className="w-24 sm:w-28 max-w-full mx-auto"><TileDiagram tile={vd} theme={questionVisualTheme(question)} /></div>;
 
     // 1. Direct numerical or text badge (e.g. counting, equation, or number pattern)
     if (vd.textNumber !== undefined && vd.textNumber !== null) {

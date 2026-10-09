@@ -491,7 +491,7 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
               {/* Options Grid */}
               <div className="grid grid-cols-2 gap-2.5 pt-2">
                 {quickQuestion.options.map((opt) => (
-                  <OptionRenderer
+                  <OptionRenderer question={quickQuestion}
                     key={opt.id}
                     option={opt}
                     isSelected={selectedQuickOption === opt.id}

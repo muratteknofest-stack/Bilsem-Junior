@@ -1239,7 +1239,7 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {previewQuestion.options.map((opt) => (
                     <div key={opt.id} className="relative">
-                      <OptionRenderer
+                      <OptionRenderer question={previewQuestion}
                         option={opt}
                         isSelected={opt.id === previewQuestion.correctOptionId}
                         showCorrect={true}

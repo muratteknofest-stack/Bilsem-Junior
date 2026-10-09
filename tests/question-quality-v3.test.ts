@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { generateProfessionalQuestion as generateV2 } from '../src/features/questions/professional-engine-v2';
-import { generateProfessionalQuestion as generate, solveBoard, VERIFIED_TYPES, type Board } from '../src/features/questions/professional-engine';
+import { generateProfessionalQuestion as generate, solveBoard, VERIFIED_TYPES, ENGINE_VERSION, type Board } from '../src/features/questions/professional-engine';
 import { isQuestionReadyForStudents } from '../src/features/questions/quality';
 import type { DifficultyLevel } from '../src/types';
 
@@ -12,7 +12,7 @@ test('v2 published content and v3 questions retain separate reproducible proofs 
     assert.equal(isQuestionReadyForStudents(old), true, old.id);
     assert.equal(isQuestionReadyForStudents(current), true, current.id);
     assert.notEqual(old.id, current.id);
-    assert.equal(current.authoring?.engine, 'verified-3');
+    assert.equal(current.authoring?.engine, ENGINE_VERSION);
     old.explanation.summary = 'Bu açıklama sonradan değiştirildi.';
     assert.equal(isQuestionReadyForStudents(old), false);
   }
