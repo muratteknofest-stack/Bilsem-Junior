@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { ArrowRight, ArrowUpRight, Sparkles, Play, Pause, Shapes, Brain, ScanEye, Trophy, Check, ChevronDown, RotateCcw, Move, Keyboard, ShieldCheck, Heart, Volume2, VolumeX } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Sparkles, Shapes, Brain, ScanEye, Trophy, Check, ChevronDown, Move, Keyboard, ShieldCheck, Heart, Volume2, VolumeX, Rocket, Target, Zap, Medal, GraduationCap, Rotate3D, Hash, Puzzle } from 'lucide-react';
 import type { QuestionType, UserRole } from '../types';
 import { generateQuestionByType } from '../features/questions/generators';
 import { evaluateResponse, type QuestionResponse } from '../features/questions/answer-interactions';
@@ -16,6 +16,7 @@ import { PremiumButton } from './landing/PremiumUI';
 import type { FooterModalTopic } from './FooterInfoModal';
 import './landing/landing.css';
 import './landing/design-system.css';
+import './landing/colorful-home.css';
 
 const FooterInfoModal = lazy(() => import('./FooterInfoModal').then(m => ({ default: m.FooterInfoModal })));
 interface LandingPageProps { onStartDemo?: (role: UserRole) => void; onNavigateToLogin: (role: UserRole) => void; onNavigate: (route: string) => void }
@@ -23,6 +24,15 @@ const worlds = [
   { type: 'visual_sequence' as QuestionType, title: 'Örüntü evreni', short: 'Örüntü', text: 'Parçalar arasındaki gizli bağı bul. Sıradaki adımı sen keşfet.', tag: 'Bağlantı kur', icon: Shapes, theme: 'purple', number: '01' },
   { type: 'logic_grid' as QuestionType, title: 'Mantık laboratuvarı', short: 'Mantık', text: 'İpuçlarını birleştir, parçaları sırala. Her soruya yeni bir açıdan bak.', tag: 'Adım adım düşün', icon: Brain, theme: 'mint', number: '02' },
   { type: 'shape_counting' as QuestionType, title: 'Dikkat istasyonu', short: 'Dikkat', text: 'Ayrıntıları yakala. Kalabalığın içinde aradığın şekli fark et.', tag: 'Odaklan ve bul', icon: ScanEye, theme: 'peach', number: '03' },
+  { type: 'figure_rotation' as QuestionType, title: 'Şekil gezegeni', short: 'Uzamsal', text: 'Şekilleri zihninde döndür. Aynı parçayı yeni bir açıdan tanı.', tag: 'Döndür ve keşfet', icon: Rotate3D, theme: 'blue', number: '04' },
+  { type: 'number_pattern' as QuestionType, title: 'Sayı macerası', short: 'Sayılar', text: 'Sayıların izini sür. Dizinin sakladığı kuralı ortaya çıkar.', tag: 'Kuralı yakala', icon: Hash, theme: 'yellow', number: '05' },
+  { type: 'symbol_coding' as QuestionType, title: 'Şifre atölyesi', short: 'Şifreler', text: 'Her sembol bir ipucu. Eşleştir, çöz ve gizli kodu bul.', tag: 'İpuçlarını birleştir', icon: Puzzle, theme: 'pink', number: '06' },
+];
+const rewards = [
+  { title: 'Günlük görevler', text: 'Küçük hedeflerle çalışma alışkanlığı kazan.', icon: Target, theme: 'mint' },
+  { title: 'XP ve seviyeler', text: 'Doğru cevaplarla puan topla, yeni seviyelere ilerle.', icon: Zap, theme: 'purple' },
+  { title: 'Rozet koleksiyonu', text: 'Çabanı, serilerini ve keşiflerini rozetlerle kutla.', icon: Medal, theme: 'peach' },
+  { title: 'Kendi rekorun', text: 'Geçen haftaki kendinle yarış; gelişimini fark et.', icon: Trophy, theme: 'blue' },
 ];
 const faqs = [
   ['Hesap açmadan deneyebilir miyim?', 'Evet. Bu sayfada bir örnek soru çözebilirsin. Buradaki deneme puanları ve cevaplar hesabına kaydedilmez.'],
@@ -79,23 +89,31 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
       onDemo={goDemo} moving={moving} reducedMotion={!!reducedMotion} onToggleMotion={() => setPaused(!paused)}
       soundActive={soundActive} onToggleSound={() => { sound.enabled = !soundActive; setSoundActive(!soundActive); }} />
     <main id="ana-icerik">
-      <section className="zp-container zp-hero" aria-labelledby="hero-title">
+      <section className="zp-hero-section" aria-labelledby="hero-title">
+        <div className="zp-sky-decor" aria-hidden="true"><span className="zp-cloud zp-cloud-one" /><span className="zp-cloud zp-cloud-two" /><span className="zp-sky-sun" /><span className="zp-sky-spark">✦</span></div>
+        <div className="zp-container zp-hero">
         <motion.div {...reveal} className="zp-hero-copy">
-          <div className="zp-eyebrow"><span className="zp-mini-star">✦</span> MERAK EDEN ZİHİNLER İÇİN</div>
-          <h1 id="hero-title">Küçük adımlar.<br /><span>Büyük keşifler.</span></h1>
-          <p className="zp-hero-description">Düşün, oyna, yeniden dene.<br />Her soruda yeni bir şey keşfettiğin<br className="zp-desktop-break" /> zeka parkına hoş geldin.</p>
-          <div className="zp-hero-buttons"><PremiumButton onClick={() => goDemo()}>Keşfe başla <ArrowRight size={19} /></PremiumButton><PremiumButton tone="quiet" onClick={() => onNavigateToLogin('parent')}>Veli girişi <ArrowUpRight size={17} /></PremiumButton></div>
+          <div className="zp-eyebrow"><Sparkles size={16} /> BİLSEM HAZIRLIK · 1–4. SINIF</div>
+          <h1 id="hero-title">Oyun başlasın.<br /><span>Merak büyüsün!</span></h1>
+          <p className="zp-hero-description">Zeki ile rengârenk bir keşfe çık!<br />Şekillerin sırrını çöz, ipuçlarını birleştir.<br className="zp-desktop-break" /> Düşünmenin en eğlenceli halini keşfet.</p>
+          <div className="zp-hero-buttons"><PremiumButton onClick={() => goDemo()}>Hemen dene <ArrowRight size={19} /></PremiumButton><PremiumButton tone="quiet" onClick={() => onNavigate('register')}>Macera hesabı aç <ArrowUpRight size={17} /></PremiumButton></div>
           <div className="zp-hero-reassurance"><span><Check size={14} /> Hesap açmadan dene</span><span><Check size={14} /> Kendi hızında ilerle</span></div>
-          <div className="zp-hero-footnote"><div className="zp-tiny-shapes"><span /><span /><span /></div><p>Bir doğru cevaptan fazlası.<br /><strong>Düşünmenin keyfi.</strong></p></div>
+          <div className="zp-hero-footnote"><span className="zp-hero-mini-medal"><Trophy size={23} /></span><p>Her çaba bir adım.<br /><strong>Her keşif bir “başardım!”</strong></p></div>
         </motion.div>
         <LearningIsland moving={moving} />
+        </div>
       </section>
+      <div className="zp-container zp-start-path" aria-label="ZekaPark’ta ilk adımın">
+        <button type="button" onClick={() => goDemo()}><span className="zp-path-icon zp-path-purple"><Rocket size={24} /></span><span><strong>Önce bir soru dene</strong><small>Hesap açmadan ilk keşfin</small></span><ArrowUpRight size={20} /></button>
+        <button type="button" onClick={() => onNavigate('register')}><span className="zp-path-icon zp-path-yellow"><GraduationCap size={25} /></span><span><strong>Sınıfına uygun çalış</strong><small>1, 2, 3 ve 4. sınıf için</small></span><ArrowUpRight size={20} /></button>
+        <button type="button" onClick={() => onNavigateToLogin('parent')}><span className="zp-path-icon zp-path-mint"><Heart size={24} /></span><span><strong>Birlikte gelişimini izle</strong><small>Ailelere özel veli alanı</small></span><ArrowUpRight size={20} /></button>
+      </div>
       <div className="zp-skill-ribbon" aria-label="Çalışma becerileri"><div className="zp-container"><span><Shapes size={18} /> Örüntüleri keşfet</span><i>✦</i><span><Brain size={18} /> Bağlantı kur</span><i>✦</i><span><ScanEye size={18} /> Ayrıntıları yakala</span><i>✦</i><span><Trophy size={18} /> Kendini geliştir</span></div></div>
       <section id="dunyalar" className="zp-container zp-section" aria-labelledby="worlds-title">
-        <motion.div {...reveal} className="zp-section-heading"><div><p className="zp-kicker">KEŞİF HARİTAN</p><h2 id="worlds-title">Merakın hangi yöne?</h2></div><p>Her alanda farklı bir oyun.<br />Her oyunda yeni bir düşünme yolu.</p></motion.div>
+        <motion.div {...reveal} className="zp-section-heading"><div><p className="zp-kicker"><Shapes size={16} /> KEŞİF HARİTAN</p><h2 id="worlds-title">Bir dünya seç.<br /><span>Macerana başla.</span></h2></div><p>Birbirinden farklı düşünme oyunları.<br />İlk örnek soru için bir kart seçmen yeterli.</p></motion.div>
         <div className="zp-world-grid">{worlds.map(w => <motion.button {...reveal} type="button" key={w.type} className={`zp-world-card zp-ui-card zp-world-${w.theme}`} onClick={() => goDemo(w.type)}>
           <div className="zp-world-top"><span>KEŞİF / {w.number}</span><ArrowUpRight size={22} /></div>
-          <div className={`zp-world-art zp-art-${w.theme}`} aria-hidden="true">{w.theme === 'purple' ? <><span /><span /><span /><span /></> : w.theme === 'mint' ? <><span /><span /><span /></> : <><span /><span /><span /><span /><span /></>}</div>
+          <div className={`zp-world-art zp-art-${w.theme}`} aria-hidden="true">{w.theme === 'purple' ? <><span /><span /><span /><span /></> : w.theme === 'mint' ? <><span /><span /><span /></> : w.theme === 'peach' ? <><span /><span /><span /><span /><span /></> : w.theme === 'blue' ? <><span /><span /><span /><Rotate3D size={58} /></> : w.theme === 'yellow' ? <><span>2</span><span>4</span><span>?</span></> : <><span /><span /><span /><Puzzle size={62} /></>}</div>
           <span className="zp-world-tag"><w.icon size={14} /> {w.tag}</span><h3>{w.title}</h3><p>{w.text}</p><span className="zp-world-link">Bir soru dene <ArrowRight size={16} /></span>
         </motion.button>)}</div>
       </section>
@@ -111,6 +129,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
           <AnswerWorkspace key={question.id} question={question} response={response} onChange={r => { if (!submitLock.current) setResponse(r); }} submitted={submitted} />
           {!submitted ? <PremiumButton className="zp-full" disabled={!result.complete} onClick={submit}>Cevabımı kontrol et <ArrowRight size={18} /></PremiumButton> : <div className="zp-demo-feedback"><p role="status" className={result.correct ? 'zp-correct' : 'zp-try-again'}>{landingQuestionAnswered() && solved === 0 ? 'Örnek soruyu daha önce tamamladın.' : result.correct ? 'Buldun! Güzel bir keşif yaptın.' : 'Birlikte bakalım. Her deneme yeni bir şey öğretir.'}</p>{solved > 0 && <VisualExplanationOverlay explanation={question.explanation} correctOptionId={question.correctOptionId} />}<PremiumButton className="zp-full" onClick={() => onNavigate('register')}>Hesap oluştur <ArrowRight size={17} /></PremiumButton></div>}
         </motion.div>
+      </div></section>
+      <section className="zp-rewards-section" aria-labelledby="rewards-title"><div className="zp-container">
+        <motion.div {...reveal} className="zp-centered-heading"><p className="zp-kicker"><Trophy size={16} /> KEŞFET, GELİŞ, KUTLA</p><h2 id="rewards-title">Öğrenmek bir macera.<br /><span>İlerlemek ayrı bir heyecan!</span></h2><p>Günlük görevler, puanlar ve rozetlerle her yeni adımı görünür kıl.</p></motion.div>
+        <div className="zp-rewards-grid">{rewards.map(r => <motion.article {...reveal} key={r.title} className={`zp-reward zp-reward-${r.theme}`}><span className="zp-reward-icon" aria-hidden="true"><r.icon size={34} /></span><h3>{r.title}</h3><p>{r.text}</p></motion.article>)}</div>
+        <div className="zp-rewards-action"><PremiumButton onClick={() => onNavigate('register')}>Kendi keşif yolumu aç <ArrowRight size={18} /></PremiumButton><p>Kazanımlar öğrenci hesabında takip edilir.</p></div>
       </div></section>
       <section id="nasil" className="zp-container zp-section zp-journey" aria-labelledby="journey-title"><motion.div {...reveal} className="zp-centered-heading"><p className="zp-kicker">BÜYÜK KEŞİFLERİN KÜÇÜK RUTİNİ</p><h2 id="journey-title">Her gün, bir adım daha.</h2><p>Başkasının hızına yetişmek için değil, kendi yolunu keşfetmek için.</p></motion.div>
         <div className="zp-journey-grid">{[{ n: '01', title: 'Rotanı seç', text: 'Merak ettiğin bir alandan başla. Örüntü, mantık ya da dikkat… Seçim senin.', icon: Shapes }, { n: '02', title: 'Deneyerek öğren', text: 'Soruyu çöz, açıklamayı incele. Hatalarını bir sonraki keşfin ipucuna dönüştür.', icon: Brain }, { n: '03', title: 'Gelişimini kutla', text: 'Günlük görevlerini tamamla, XP biriktir ve kendi rekorunu geliştirmeye çalış.', icon: Trophy }].map(s => <motion.div {...reveal} key={s.n} className="zp-journey-step"><div className="zp-journey-icon"><s.icon size={28} /><span>{s.n}</span></div><h3>{s.title}</h3><p>{s.text}</p></motion.div>)}</div>

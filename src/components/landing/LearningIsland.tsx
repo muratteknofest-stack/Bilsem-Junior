@@ -17,7 +17,7 @@ export function LearningIsland({ moving }: { moving: boolean }) {
   const reset = () => { x.set(0); y.set(turned ? -12 : 0); };
   return <div ref={ref} className="zp-island-wrap" data-active={moving && visible}>
     <div className="zp-scene-halo" aria-hidden="true" />
-    <div className="zp-scene-caption"><span className="zp-status-dot" /> BİR DÜNYA DOLUSU KEŞİF</div>
+    <div className="zp-scene-caption"><span className="zp-status-dot" /> ZEKİ’NİN KEŞİF ADASI</div>
     <div className="zp-island-viewport" onPointerMove={e => {
       if (!moving || e.pointerType !== 'mouse') return;
       const rect = e.currentTarget.getBoundingClientRect();
@@ -25,12 +25,15 @@ export function LearningIsland({ moving }: { moving: boolean }) {
       y.set(((e.clientX - rect.left) / rect.width - 0.5) * 16 + (turned ? -12 : 0));
     }} onPointerLeave={reset}>
       <motion.div className="zp-island-stage" style={{ rotateX: moving ? rotateX : 0, rotateY: moving ? rotateY : 0 }}>
-        <div className="zp-island-art" role="img" aria-label="Yüzen bir oyun adasında mor ZekaPark robotu, renkli üç boyutlu küpler, yıldızlar ve keşif halkaları">
+        <div className="zp-island-art" role="img" aria-label="Rengârenk keşif adasında mor Zeki robotu, üç boyutlu küpler, gökkuşağı, ağaçlar ve yıldızlar">
+          <div className="zp-park-rainbow" />
           <div className="zp-orbit zp-orbit-back" />
           <div className="zp-planet"><span /></div>
           <div className="zp-star zp-star-one">✦</div><div className="zp-star zp-star-two">✦</div><div className="zp-star zp-star-three">✧</div>
           <div className="zp-island-shadow" />
           <div className="zp-island-base"><div className="zp-island-surface"><div className="zp-surface-grid" /></div></div>
+          <div className="zp-park-tree zp-park-tree-left"><span /><i /></div><div className="zp-park-tree zp-park-tree-right"><span /><i /></div>
+          <div className="zp-park-path" /><div className="zp-park-flower zp-park-flower-one" /><div className="zp-park-flower zp-park-flower-two" />
           <div className="zp-platform zp-platform-back" /><div className="zp-platform zp-platform-front" />
           <div className="zp-float-cube zp-float-cube-one"><Cube /></div>
           <div className="zp-float-cube zp-float-cube-two"><Cube className="zp-cube-mint" /></div>
@@ -46,8 +49,8 @@ export function LearningIsland({ moving }: { moving: boolean }) {
           </div>
           <div className="zp-orbit zp-orbit-front" />
         </div>
-        <div className="zp-floating-note zp-note-quest"><span className="zp-note-icon"><Sparkles size={20} /></span><div><small>BUGÜNÜN ROTASI</small><strong>Merak et. Dene. Keşfet.</strong></div></div>
-        <div className="zp-floating-note zp-note-trophy"><span className="zp-trophy-icon"><Trophy size={24} /></span><div><strong>Her adım bir keşif</strong><small>Kendi rekorunu geliştir</small></div></div>
+        <div className="zp-floating-note zp-note-quest"><span className="zp-note-icon"><Sparkles size={20} /></span><div><small>YENİ BİR MACERA</small><strong>Keşfe hazır mısın?</strong></div></div>
+        <div className="zp-floating-note zp-note-trophy"><span className="zp-trophy-icon"><Trophy size={24} /></span><div><strong>Dene. Öğren. Parla!</strong><small>Her adımın çok değerli</small></div></div>
       </motion.div>
     </div>
     <div className="zp-scene-controls">
