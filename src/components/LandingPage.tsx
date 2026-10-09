@@ -34,6 +34,18 @@ const rewards = [
   { title: 'Rozet koleksiyonu', text: 'Çabanı, serilerini ve keşiflerini rozetlerle kutla.', icon: Medal, theme: 'peach' },
   { title: 'Kendi rekorun', text: 'Geçen haftaki kendinle yarış; gelişimini fark et.', icon: Trophy, theme: 'blue' },
 ];
+function WorldArtwork({ theme }: { theme: string }) {
+  let artwork: React.ReactNode;
+  switch (theme) {
+    case 'purple': artwork = <><span /><span /><span /><span /></>; break;
+    case 'mint': artwork = <><span /><span /><span /></>; break;
+    case 'peach': artwork = <><span /><span /><span /><span /><span /></>; break;
+    case 'blue': artwork = <><span /><span /><span /><Rotate3D size={58} /></>; break;
+    case 'yellow': artwork = <><span>2</span><span>4</span><span>?</span></>; break;
+    case 'pink': artwork = <><span /><span /><span /><Puzzle size={62} /></>; break;
+  }
+  return <div className={`zp-world-art zp-art-${theme}`} aria-hidden="true">{artwork}</div>;
+}
 const faqs = [
   ['Hesap açmadan deneyebilir miyim?', 'Evet. Bu sayfada bir örnek soru çözebilirsin. Buradaki deneme puanları ve cevaplar hesabına kaydedilmez.'],
   ['Sorular nasıl çözülüyor?', 'Sorunun türüne göre sürükle-bırak, sıralama, eşleştirme veya sayısal cevap kullanabilirsin. İstersen klasik şık seçimine dönebilirsin. Kartları sürüklemek yerine önce karta, sonra hedefe dokunmak da mümkün.'],
@@ -82,7 +94,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
     if (checked.correct) { setCorrect(n => n + 1); if (soundActive) sound.playSuccess(); }
     else if (soundActive) sound.playError();
   };
-  return <div className="zp-landing" data-motion={moving ? 'on' : 'off'}>
+  return <div className="zp-landing zp-colorful-home" data-motion={moving ? 'on' : 'off'}>
     <a className="zp-skip" href="#ana-icerik">İçeriğe geç</a>
     <LandingNav onLogin={onNavigateToLogin} onRegister={() => onNavigate('register')}
       onHome={() => { onNavigate('landing'); window.scrollTo({ top: 0, behavior: moving ? 'smooth' : 'instant' }); }}
@@ -113,7 +125,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
         <motion.div {...reveal} className="zp-section-heading"><div><p className="zp-kicker"><Shapes size={16} /> KEŞİF HARİTAN</p><h2 id="worlds-title">Bir dünya seç.<br /><span>Macerana başla.</span></h2></div><p>Birbirinden farklı düşünme oyunları.<br />İlk örnek soru için bir kart seçmen yeterli.</p></motion.div>
         <div className="zp-world-grid">{worlds.map(w => <motion.button {...reveal} type="button" key={w.type} className={`zp-world-card zp-ui-card zp-world-${w.theme}`} onClick={() => goDemo(w.type)}>
           <div className="zp-world-top"><span>KEŞİF / {w.number}</span><ArrowUpRight size={22} /></div>
-          <div className={`zp-world-art zp-art-${w.theme}`} aria-hidden="true">{w.theme === 'purple' ? <><span /><span /><span /><span /></> : w.theme === 'mint' ? <><span /><span /><span /></> : w.theme === 'peach' ? <><span /><span /><span /><span /><span /></> : w.theme === 'blue' ? <><span /><span /><span /><Rotate3D size={58} /></> : w.theme === 'yellow' ? <><span>2</span><span>4</span><span>?</span></> : <><span /><span /><span /><Puzzle size={62} /></>}</div>
+          <WorldArtwork theme={w.theme} />
           <span className="zp-world-tag"><w.icon size={14} /> {w.tag}</span><h3>{w.title}</h3><p>{w.text}</p><span className="zp-world-link">Bir soru dene <ArrowRight size={16} /></span>
         </motion.button>)}</div>
       </section>
