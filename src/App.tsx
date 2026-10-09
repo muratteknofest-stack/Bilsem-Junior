@@ -1,5 +1,5 @@
 import { ProgressSyncBanner } from './components/ProgressSyncBanner';
-import React, { lazy, Suspense, useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useAuth } from './contexts/AuthContext';
 
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
@@ -25,6 +25,7 @@ const AdminPanelView = lazy(() => import('./components/AdminPanelView').then((m)
 const LeaderboardView = lazy(() => import('./components/LeaderboardView').then((m) => ({ default: m.LeaderboardView })));
 const CognitiveGlossaryView = lazy(() => import('./components/CognitiveGlossaryView').then((m) => ({ default: m.CognitiveGlossaryView })));
 const LoginPage = lazy(() => import('./components/LoginPage').then((m) => ({ default: m.LoginPage })));
+const isTestPage = (route: string) => ['practice', 'adaptive', 'exams'].includes(route);
 
 export default function App() {
   const reducedMotion = useReducedMotion();
@@ -54,12 +55,43 @@ export default function App() {
     if (u?.role === 'student') return 'dashboard';
     return 'landing';
   });
+  const previousRouteRef = useRef(currentRoute);
+  const testReturnRouteRef = useRef('dashboard');
+  const hasTestHistoryEntryRef = useRef(false);
   const [masteries, setMasteries] = useState<SkillMastery[]>(() => dataService.getSkillMasteries());
   const [mistakes, setMistakes] = useState<MistakeItem[]>(() => dataService.getMistakes());
   const [dailyPlan, setDailyPlan] = useState<DailyStudyPlan>(() => dataService.getDailyPlan());
   const [selectedPracticeCategory, setSelectedPracticeCategory] = useState<CognitiveCategory | 'mixed'>('mixed');
   const [activeAlert, setActiveAlert] = useState<ReminderAlertEvent | null>(null);
   const [showGlobalReminderModal, setShowGlobalReminderModal] = useState(false);
+
+  // These pages render without the main navigation. Give mobile browser Back a
+  // real history entry and remember the screen that opened the test.
+  useEffect(() => {
+    const handlePopState = () => {
+      if (!hasTestHistoryEntryRef.current || !isTestPage(previousRouteRef.current)) return;
+      hasTestHistoryEntryRef.current = false;
+      setCurrentRoute(dataService.isAuthenticated() ? testReturnRouteRef.current : 'landing');
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
+    const previous = previousRouteRef.current;
+    if (isTestPage(currentRoute) && !isTestPage(previous)) {
+      testReturnRouteRef.current = previous;
+      window.history.pushState({ ...window.history.state, zekaparkTestPage: true }, '', window.location.href);
+      hasTestHistoryEntryRef.current = true;
+    } else if (!isTestPage(currentRoute) && isTestPage(previous) && hasTestHistoryEntryRef.current) {
+      // An in-app link left the test without using Back (for example, Mistakes).
+      // Do not leave a stale test marker on the current history entry.
+      window.history.replaceState({ ...window.history.state, zekaparkTestPage: false }, '', window.location.href);
+      hasTestHistoryEntryRef.current = false;
+    }
+    previousRouteRef.current = currentRoute;
+  }, [currentRoute]);
 
 
   useEffect(() => {
@@ -249,6 +281,13 @@ export default function App() {
   };
 
   const isTestRoute = currentRoute === 'practice' || currentRoute === 'adaptive' || currentRoute === 'exams';
+  const leaveTest = () => {
+    if (hasTestHistoryEntryRef.current && window.history.state?.zekaparkTestPage) {
+      window.history.back();
+      return;
+    }
+    navigateTo(isAuth ? (currentUser.role === 'parent' ? 'parent' : currentUser.role === 'admin' ? 'admin' : 'dashboard') : 'landing');
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
@@ -321,20 +360,20 @@ export default function App() {
               <PracticeSessionView
                 key={`practice-${selectedPracticeCategory}`}
                 initialCategory={selectedPracticeCategory}
-                onNavigateHome={() => navigateTo('dashboard')}
+                onNavigateHome={leaveTest}
                 onOpenMistakes={() => navigateTo('mistakes')}
               />
             )}
 
             {currentRoute === 'adaptive' && (
               <AdaptivePracticeView
-                onNavigateHome={() => navigateTo('dashboard')}
+                onNavigateHome={leaveTest}
               />
             )}
 
             {currentRoute === 'exams' && (
               <ExamSessionView
-                onNavigateHome={() => navigateTo('dashboard')}
+                onNavigateHome={leaveTest}
               />
             )}
 
