@@ -1,3 +1,4 @@
+import { generateVisualFingerprint } from './fingerprint';
 import { BaseQuestion } from '../../types';
 
 export type ValidationErrorCode =
@@ -40,24 +41,25 @@ export function validateQuestion(question: BaseQuestion): QuestionValidationResu
     errors.push({ code: 'QUESTION_STRUCTURE_INVALID', message: 'Soru kimliği (id) eksik.', field: 'id' });
   }
 
-  if (typeof question.seed !== 'number' || isNaN(question.seed)) {
+  if (!Number.isSafeInteger(question.seed) || question.seed < 1) {
     errors.push({ code: 'INVALID_SEED', message: 'Geçerli bir deterministik tohum (seed) bulunamadı.', field: 'seed' });
   }
 
-  if (!question.difficulty || question.difficulty < 1 || question.difficulty > 6) {
+  if (!Number.isInteger(question.difficulty) || question.difficulty < 1 || question.difficulty > 6) {
     errors.push({ code: 'INVALID_DIFFICULTY', message: 'Zorluk seviyesi 1 ile 6 arasında olmalıdır.', field: 'difficulty' });
   }
 
   // 2. Options validation
-  if (!Array.isArray(question.options) || question.options.length < 3) {
+  if (!Array.isArray(question.options) || question.options.length !== 4) {
     errors.push({
       code: 'INSUFFICIENT_OPTIONS',
-      message: 'Soru en az 3 ya da 4 seçenek içermelidir.',
+      message: 'Soru tam olarak dört seçenek içermelidir.',
       field: 'options',
     });
   } else {
     // Unique Option IDs
-    const optionIds = question.options.map((o) => o.id);
+    const optionIds = question.options.map((o) => o?.id);
+    if (optionIds.some(id => typeof id !== 'string' || !id.trim())) errors.push({ code: 'QUESTION_STRUCTURE_INVALID', message: 'Seçenek kimlikleri boş olamaz.' });
     const uniqueIds = new Set(optionIds);
     if (uniqueIds.size !== optionIds.length) {
       errors.push({ code: 'DUPLICATE_OPTION', message: 'Seçenek kimlikleri (A, B, C, D) benzersiz olmalıdır.' });
@@ -75,7 +77,8 @@ export function validateQuestion(question: BaseQuestion): QuestionValidationResu
     // Visual Fingerprint Uniqueness: no duplicate visual distractor/answers
     const fingerprints = new Set<string>();
     for (const opt of question.options) {
-      if (!opt.fingerprint || fingerprints.has(opt.fingerprint)) {
+      const actual = generateVisualFingerprint(opt?.visualData);
+      if (!opt?.visualData || fingerprints.has(actual)) {
         errors.push({
           code: 'DUPLICATE_OPTION',
           message: `Birbirinin aynısı görsel seçenek tespit edildi (Seçenek: ${opt.id}).`,
@@ -83,7 +86,7 @@ export function validateQuestion(question: BaseQuestion): QuestionValidationResu
           details: { optionId: opt.id, fingerprint: opt.fingerprint },
         });
       }
-      fingerprints.add(opt.fingerprint);
+      fingerprints.add(actual);
     }
   }
 
@@ -110,3 +113,4 @@ export function validateQuestion(question: BaseQuestion): QuestionValidationResu
     errors,
   };
 }
+

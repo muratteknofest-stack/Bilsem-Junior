@@ -2,15 +2,16 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   onAuthStateChanged, 
   User, 
-  signOut as firebaseSignOut,
-  sendEmailVerification as firebaseSendEmailVerification,
-  sendPasswordResetEmail as firebaseSendPasswordResetEmail
+  signOut as supabaseSignOut,
+  sendEmailVerification as supabaseSendEmailVerification,
+  sendPasswordResetEmail as supabaseSendPasswordResetEmail
 } from '../lib/supabase';
 import { doc, getDoc, updateDoc, onSnapshot } from '../lib/supabase-data';
 import { auth, db } from '../lib/platform';
 import { UserProfile, UserRole } from '../types';
 import { dataService } from '../services/data-service';
 import { userProfileUpdateSchema, formatZodError } from '../lib/validations';
+import { isManagedStudentEmail } from '../lib/account-identifiers';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -77,7 +78,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentUser(user);
         setIsAdminAuthorized(false);
         if (user) {
-          // Real-time updates and validation for user profile from Firestore
+          if (!isManagedStudentEmail(user.email) && !user.emailVerified) {
+            await supabaseSignOut(auth).catch(() => undefined);
+            dataService.logout();
+            if (isMounted) setUserProfile(null);
+            if (isMounted) setLoading(false);
+            return;
+          }
+          // Validate the profile in Supabase before exposing an authenticated session.
           const userDocRef = doc(db, 'users', user.uid);
           let adminAuthorized = false;
           
@@ -85,7 +93,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Accounts without an application profile are not silently provisioned.
             const docSnap = await getDoc(userDocRef);
             if (!docSnap.exists()) {
-              await firebaseSignOut(auth).catch(() => undefined);
+              await supabaseSignOut(auth).catch(() => undefined);
               dataService.logout();
               if (isMounted) setUserProfile(null);
               if (isMounted) setLoading(false);
@@ -93,7 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             } else {
               const profile = docSnap.data() as UserProfile;
               if (profile.id !== user.uid || !['student', 'parent', 'admin'].includes(profile.role)) {
-                await firebaseSignOut(auth).catch(() => undefined);
+                await supabaseSignOut(auth).catch(() => undefined);
                 dataService.logout();
                 if (isMounted) setUserProfile(null);
                 if (isMounted) setLoading(false);
@@ -103,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const token = await user.getIdTokenResult(true);
                 adminAuthorized = user.emailVerified && token.claims.role === 'admin';
                 if (!adminAuthorized) {
-                  await firebaseSignOut(auth).catch(() => undefined);
+                  await supabaseSignOut(auth).catch(() => undefined);
                   dataService.logout();
                   if (isMounted) setUserProfile(null);
                   if (isMounted) setLoading(false);
@@ -114,15 +122,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               const activeRole = profile.role;
               const activeProfile: UserProfile = { ...profile, role: activeRole };
               dataService.loginAs(activeRole, activeProfile);
-              await dataService.hydrateUserStateFromFirebase();
+              await dataService.hydrateUserStateFromSupabase();
               if (isMounted) {
                 setUserProfile(activeProfile);
                 setIsAdminAuthorized(adminAuthorized);
               }
             }
           } catch (err) {
-            console.warn('Notice: Firestore user document fetch failed:', err);
-            await firebaseSignOut(auth).catch(() => undefined);
+            console.warn('Supabase profili yüklenemedi:', err);
+            await supabaseSignOut(auth).catch(() => undefined);
             dataService.logout();
             if (isMounted) setUserProfile(null);
             if (isMounted) setIsAdminAuthorized(false);
@@ -143,22 +151,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const activeProfile: UserProfile = { ...profile, role: activeRole };
                     setUserProfile(activeProfile);
                     setIsAdminAuthorized(profile.role === 'admin' && adminAuthorized);
-                    dataService.syncUserFromFirebase(activeProfile);
+                    dataService.syncUserFromSupabase(activeProfile);
                   } else {
-                    void firebaseSignOut(auth).catch(() => undefined);
+                    void supabaseSignOut(auth).catch(() => undefined);
                     dataService.logout();
                     setUserProfile(null);
                     setIsAdminAuthorized(false);
                   }
                 } else if (isMounted) {
-                  void firebaseSignOut(auth).catch(() => undefined);
+                  void supabaseSignOut(auth).catch(() => undefined);
                   dataService.logout();
                   setUserProfile(null);
                   setIsAdminAuthorized(false);
                 }
               },
               (snapErr) => {
-                console.warn('Notice: Firestore snapshot listener notice:', snapErr);
+                console.warn('Supabase profil senkronizasyonu başarısız:', snapErr);
               }
             );
           } catch {}
@@ -173,7 +181,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       },
       (authError) => {
-        console.warn('Firebase Auth network state notice (handled):', authError.message || authError);
+        console.warn('Supabase Auth bağlantı hatası:', authError.message || authError);
         dataService.logout();
         if (isMounted) {
           setCurrentUser(null);
@@ -193,9 +201,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      await firebaseSignOut(auth);
+      await supabaseSignOut(auth);
     } catch (e) {
-      console.warn('Firebase signout handled:', e);
+      console.warn('Supabase oturumu kapatılamadı:', e);
     }
     dataService.logout();
     setCurrentUser(null);
@@ -213,30 +221,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const validatedData = parseResult.data;
 
-    // Update only fields accepted by the profile schema.
-    if (userProfile) {
-      const updated = { ...userProfile, ...validatedData, updatedAt: Date.now() };
+    const updatedAt = Date.now();
+    if (userProfile?.id.startsWith('demo_')) {
+      const updated = { ...userProfile, ...validatedData, updatedAt };
       setUserProfile(updated);
       dataService.setCurrentUser(updated);
+      return;
     }
-
-    if (currentUser) {
-      try {
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        const updatedData = { ...validatedData, updatedAt: Date.now() };
-        await updateDoc(userDocRef, updatedData);
-      } catch (error) {
-        console.warn("Notice: Firestore profile update skipped:", error);
-      }
-    }
+    if (!currentUser || !userProfile) throw new Error('Profil güncellemek için oturum açın.');
+    await updateDoc(doc(db, 'users', currentUser.uid), { ...validatedData, updatedAt });
+    const updated = { ...userProfile, ...validatedData, updatedAt };
+    setUserProfile(updated);
+    dataService.syncUserFromSupabase(updated);
   };
 
   const sendEmailVerification = async (user: User) => {
-    await firebaseSendEmailVerification(user);
+    await supabaseSendEmailVerification(user);
   };
 
   const sendPasswordResetEmail = async (email: string) => {
-    await firebaseSendPasswordResetEmail(auth, email);
+    await supabaseSendPasswordResetEmail(auth, email);
   };
 
   return (

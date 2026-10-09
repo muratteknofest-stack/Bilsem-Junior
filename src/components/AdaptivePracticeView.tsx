@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { QuestionIssueButton } from './QuestionIssueButton';
+import { isSchoolGrade, gradeDifficulty } from '../features/questions/quality-policy';
+import React, { useState, useEffect, useRef } from 'react';
 import { BaseQuestion, SkillMastery, DifficultyLevel, DIFFICULTY_COLORS } from '../types';
-import { generateQuestion } from '../features/questions/generators';
+import { generateQuestion, STUDENT_CATEGORY_TYPES } from '../features/questions/generators';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
-import { OptionRenderer } from '../features/questions/renderers/OptionRenderer';
+import { AnswerWorkspace } from '../features/questions/renderers/AnswerWorkspace';
+import { evaluateResponse, type QuestionResponse } from '../features/questions/answer-interactions';
 import { VisualExplanationOverlay } from '../features/questions/renderers/VisualExplanationOverlay';
 import { AiHintModal } from './AiHintModal';
-import { ComboStreakIndicator, getComboTier } from './animations/ComboStreakIndicator';
+import { ComboStreakIndicator } from './animations/ComboStreakIndicator';
+import { answerXp } from '../features/student/gamification-model';
 import { ComboBurstOverlay } from './animations/ComboBurstOverlay';
 import { StreakFloatingFloater } from './animations/StreakFloatingFloater';
 import { dataService } from '../services/data-service';
@@ -31,7 +35,9 @@ interface AdaptivePracticeViewProps {
 export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNavigateHome }) => {
   const [masteries, setMasteries] = useState<SkillMastery[]>(() => dataService.getSkillMasteries());
   const [consecutiveCorrect, setConsecutiveCorrect] = useState(0);
-  const [currentDifficulty, setCurrentDifficulty] = useState<DifficultyLevel>(3);
+  const studentGrade = dataService.getCurrentUser().grade;
+  const maxDifficulty = isSchoolGrade(studentGrade) ? gradeDifficulty(studentGrade, 6) : 6;
+  const [currentDifficulty, setCurrentDifficulty] = useState<DifficultyLevel>(() => isSchoolGrade(studentGrade) ? gradeDifficulty(studentGrade, 3) : 3);
   const [questionCount, setQuestionCount] = useState(1);
   const [earnedXP, setEarnedXP] = useState(0);
   const [activeMilestoneStreak, setActiveMilestoneStreak] = useState<number | null>(null);
@@ -62,7 +68,7 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
 
   // Pick adaptive category based on weights
   const getAdaptiveCategory = () => {
-    const sorted = [...masteries].sort((a, b) => a.mastery - b.mastery);
+    const sorted = [...masteries].filter(m => STUDENT_CATEGORY_TYPES[m.category]).sort((a, b) => a.mastery - b.mastery);
     const rand = Math.random();
 
     // 50% weak
@@ -83,6 +89,7 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
 
   const [currentQuestion, setCurrentQuestion] = useState<BaseQuestion>(() => {
     return generateQuestion({
+      targetGrade: isSchoolGrade(dataService.getCurrentUser().grade) ? dataService.getCurrentUser().grade as 1|2|3|4 : undefined,
       category: 'matrix',
       difficulty: 3,
       seed: Math.floor(Math.random() * 900000) + 100000,
@@ -90,18 +97,26 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
   });
 
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
+  const [interactionResponse, setInteractionResponse] = useState<QuestionResponse | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const submissionLock = useRef(false);
   const [showAiHint, setShowAiHint] = useState(false);
 
-  const handleSelectOption = (optId: string) => {
+  const answerResponse: QuestionResponse | null = interactionResponse ?? (selectedOptionId ? { mode: 'choice', optionId: selectedOptionId } : null);
+  const answerResult = currentQuestion ? evaluateResponse(currentQuestion, answerResponse) : { complete: false, correct: false };
+  const answerReady = answerResult.complete;
+  const handleResponse = (response: QuestionResponse) => {
     if (isSubmitted) return;
-    sound.playClick();
-    setSelectedOptionId(optId);
+    setInteractionResponse(response);
+    setSelectedOptionId(response.mode === 'choice' || response.mode === 'place' ? response.optionId : null);
   };
 
   const handleSubmitAnswer = () => {
-    if (!selectedOptionId || isSubmitted) return;
-    const isCorrect = selectedOptionId === currentQuestion.correctOptionId;
+    if (!answerReady || submissionLock.current || isSubmitted) return;
+    const checkedAnswer = evaluateResponse(currentQuestion, answerResponse);
+    if (!checkedAnswer.complete) return;
+    submissionLock.current = true;
+    const isCorrect = checkedAnswer.correct;
     setIsSubmitted(true);
     dataService.recordQuestionSolved(isCorrect, currentQuestion.category);
 
@@ -109,14 +124,10 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
       const nextConsecutive = consecutiveCorrect + 1;
       setConsecutiveCorrect(nextConsecutive);
 
-      const baseXP = 15 + currentDifficulty * 2;
-      const tier = getComboTier(nextConsecutive);
-      const multipliedXP = Math.round(baseXP * tier.multiplier);
+      const reward = answerXp('adaptive', currentQuestion.difficulty, nextConsecutive);
+      const bonusXP = reward.comboBonus;
 
-      let bonusXP = 0;
-      const milestoneStreaks = [2, 3, 5, 7, 10];
-      if (milestoneStreaks.includes(nextConsecutive)) {
-        bonusXP = 25 + nextConsecutive * 5;
+      if (bonusXP > 0) {
         setLastMilestoneBonus(bonusXP);
         setActiveMilestoneStreak(nextConsecutive);
         sound.playComboMilestone(nextConsecutive);
@@ -126,7 +137,7 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
         sound.playSuccess();
       }
 
-      const totalXP = multipliedXP + bonusXP;
+      const totalXP = reward.total;
       setLastEarnedXP(totalXP);
       setShowFloater(true);
       setTimeout(() => setShowFloater(false), 1200);
@@ -143,18 +154,18 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
 
       setEarnedXP((prev) => prev + totalXP);
       dataService.addXP(totalXP);
-      dataService.updateSkillMastery(currentQuestion.category, true, currentDifficulty);
+      dataService.updateSkillMastery(currentQuestion.category, true, currentQuestion.difficulty);
 
       // Adapt difficulty up if 2 correct in a row
-      if (nextConsecutive >= 2 && currentDifficulty < 6) {
-        setCurrentDifficulty((prev) => Math.min(6, prev + 1) as DifficultyLevel);
+      if (nextConsecutive >= 2 && currentDifficulty < maxDifficulty) {
+        setCurrentDifficulty((prev) => Math.min(maxDifficulty, prev + 1) as DifficultyLevel);
       }
     } else {
       sound.playError();
       setConsecutiveCorrect(0);
       setActiveMilestoneStreak(null);
       dataService.addMistake(currentQuestion);
-      dataService.updateSkillMastery(currentQuestion.category, false, currentDifficulty);
+      dataService.updateSkillMastery(currentQuestion.category, false, currentQuestion.difficulty);
 
       // Lower difficulty if struggling
       if (currentDifficulty > 1) {
@@ -168,6 +179,7 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
     sound.playClick();
     const nextCat = getAdaptiveCategory();
     const nextQ = generateQuestion({
+      targetGrade: isSchoolGrade(dataService.getCurrentUser().grade) ? dataService.getCurrentUser().grade as 1|2|3|4 : undefined,
       category: nextCat,
       difficulty: currentDifficulty,
       seed: Math.floor(Math.random() * 900000) + 100000,
@@ -175,7 +187,9 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
 
     setCurrentQuestion(nextQ);
     setSelectedOptionId(null);
+    setInteractionResponse(null);
     setIsSubmitted(false);
+    submissionLock.current = false;
     setShowAiHint(false);
     setActiveMilestoneStreak(null);
     setQuestionCount((prev) => prev + 1);
@@ -204,8 +218,8 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
             <Zap className="w-3.5 h-3.5 text-purple-600" />
             <span>Akıllı Adaptif Mod • Soru {questionCount}</span>
           </div>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${DIFFICULTY_COLORS[currentDifficulty]}`}>
-            Sv. {currentDifficulty}
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${DIFFICULTY_COLORS[currentQuestion.difficulty]}`}>
+            Sv. {currentQuestion.difficulty}
           </span>
           <ComboStreakIndicator streak={consecutiveCorrect} variant="hud" />
         </div>
@@ -265,22 +279,12 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
         {/* Question Canvas */}
         <div className="py-2">
           <QuestionRenderer question={currentQuestion} />
+          <QuestionIssueButton key={currentQuestion.id} question={currentQuestion} />
         </div>
 
         {/* Answer Options */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-          {currentQuestion.options.map((opt) => (
-            <OptionRenderer
-              key={opt.id}
-              option={opt}
-              isSelected={selectedOptionId === opt.id}
-              onSelect={() => handleSelectOption(opt.id)}
-              disabled={isSubmitted}
-              showCorrect={isSubmitted}
-              isCorrectOption={opt.id === currentQuestion.correctOptionId}
-            />
-          ))}
-        </div>
+        <AnswerWorkspace key={currentQuestion.id} question={currentQuestion} response={answerResponse}
+          onChange={handleResponse} submitted={isSubmitted} />
 
         {/* Controls and Feedback */}
         {!isSubmitted ? (
@@ -305,14 +309,14 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
 
             <button
               onClick={handleSubmitAnswer}
-              disabled={!selectedOptionId}
+              disabled={!answerReady}
               className={`flex-1 w-full py-3.5 rounded-xl font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                selectedOptionId
+                answerReady
                   ? 'bg-purple-600 hover:bg-purple-700 text-white   active:scale-98'
                   : 'bg-slate-200 text-slate-400 cursor-not-allowed'
               }`}
             >
-              <span>{selectedOptionId ? 'Cevabı Kontrol Et' : 'Bir Seçenek İşaretle'}</span>
+              <span>{answerReady ? 'Cevabı Kontrol Et' : 'Cevabını Tamamla'}</span>
             </button>
           </div>
         ) : (
@@ -325,12 +329,12 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
 
             <div
               className={`p-4 rounded-xl text-center text-sm font-bold flex items-center justify-center gap-2 ${
-                selectedOptionId === currentQuestion.correctOptionId
+                answerResult.correct
                   ? 'bg-emerald-100 text-emerald-950 border-2 border-emerald-300'
                   : 'bg-amber-100 text-amber-950 border-2 border-amber-300'
               }`}
             >
-              {selectedOptionId === currentQuestion.correctOptionId ? (
+              {answerResult.correct ? (
                 <>
                   <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                   <span>Harika! Akıllı seviyen artıyor! (+{lastEarnedXP} XP)</span>
@@ -375,3 +379,4 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
     </div>
   );
 };
+

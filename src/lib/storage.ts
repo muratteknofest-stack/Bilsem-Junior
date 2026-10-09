@@ -7,6 +7,7 @@ const memoryStore = new Map<string, string>();
 
 export const safeStorage = {
   getItem: (key: string): string | null => {
+    if (memoryStore.has(key)) return memoryStore.get(key)!;
     try {
       if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
         return window.localStorage.getItem(key);
@@ -21,6 +22,7 @@ export const safeStorage = {
     try {
       if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
         window.localStorage.setItem(key, value);
+        memoryStore.delete(key);
         return;
       }
     } catch {
@@ -28,6 +30,8 @@ export const safeStorage = {
     }
     memoryStore.set(key, value);
   },
+
+  isVolatile: (key: string): boolean => memoryStore.has(key),
 
   removeItem: (key: string): void => {
     try {
@@ -51,3 +55,4 @@ export const safeStorage = {
     memoryStore.clear();
   },
 };
+

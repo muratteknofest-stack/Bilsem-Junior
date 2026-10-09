@@ -226,7 +226,7 @@ export const FooterInfoModal: React.FC<FooterInfoModalProps> = ({
                     <span>Göz Dostu Kontrast ve Vektör Çizim</span>
                   </div>
                   <p className="text-xs text-slate-600">
-                    Tüm şekil ve matrisler çocuk nörogelişimine uygun, aşırı parlak olmayan pastel ve net renk paletleriyle, pürüzsüz SVG vektör formatında oluşturulur.
+                    Şekil ve matrislerde okunaklı çizimler, net seçenekler ve farklı ekranlara uyum sağlayan SVG görseller kullanılır.
                   </p>
                 </div>
               </div>
@@ -245,7 +245,7 @@ export const FooterInfoModal: React.FC<FooterInfoModalProps> = ({
                     6698 Sayılı KVKK ve Çocuk Verileri Koruma Aydınlatma Metni
                   </h3>
                   <p className="text-xs text-blue-800 leading-normal">
-                    ZekaPark olarak 18 yaş altı kullanıcılarımızın mahremiyetini en yüksek hukuki ve etik standartlarda korumayı taahhüt ediyoruz.
+                    Bu pilot sürümde hesap ve çalışma verilerinin nasıl kullanıldığını aşağıda açıklıyoruz. Ticari işletmeci ve saklama bilgileri genel yayından önce tamamlanmalıdır.
                   </p>
                 </div>
               </div>
@@ -254,28 +254,28 @@ export const FooterInfoModal: React.FC<FooterInfoModalProps> = ({
                 <div>
                   <h4 className="font-bold text-slate-900 mb-1">1. Veri Sorumlusu</h4>
                   <p>
-                    6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca, ZekaPark Eğitim Teknolojileri Ar-Ge Ekibi ("ZekaPark") veri sorumlusudur.
+                    İşletmecinin hukuki unvanı, adresi ve veri başvuru kanalı ticari yayın öncesi bu alanda yayımlanmalıdır. Mevcut destek adresi: zeka.kupu.test@gmail.com. Bu sürüm ücretli genel yayına açık değildir.
                   </p>
                 </div>
 
                 <div>
                   <h4 className="font-bold text-slate-900 mb-1">2. Toplanan Verilerin Kapsamı</h4>
                   <p>
-                    Platformumuz yalnızca eğitsel performans ölçümü için zorunlu olan asgari verileri işler: Öğrenci rumuzu/takma adı, sınıf seviyesi (1-4), soru çözme süresi, kategori bazlı başarı yüzdeleri ve veli iletişim e-posta adresi. TC kimlik numarası, okul adı, ev adresi veya biyometrik veri kesinlikle talep edilmez ve toplanmaz.
+                    Hesap e-postası, öğrenci takma adı, sınıf, aile bağlantıları, onay kayıtları ve çalışma sonuçları işlenir. Eski kayıtlarda ad soyad ve isteğe bağlı telefon bulunabilir. Yeni kayıtta ad soyad, okul, adres veya kimlik numarası istenmez. Hizmetlerin çalışması sırasında IP ve teknik işlem günlükleri hizmet sağlayıcılarında tutulabilir.
                   </p>
                 </div>
 
                 <div>
-                  <h4 className="font-bold text-slate-900 mb-1">3. Verilerin İşlenme Amacı ve Aktarım Yasağı</h4>
+                  <h4 className="font-bold text-slate-900 mb-1">3. Kullanım amaçları ve hizmet sağlayıcıları</h4>
                   <p>
-                    Toplanan öğrenme verileri yalnızca öğrencinin zayıf kaldığı bilişsel kategorileri belirlemek, adaptif soru zorluğunu ayarlamak ve veliye ilerleme raporu sunmak amacıyla kullanılır. Kullanıcı verileri hiçbir şart altında üçüncü şahıslara, reklam ajanslarına veya veri simsarlarına satılamaz, devredilemez.
+                    Veriler hesap güvenliği, alıştırma sunumu, ilerleme takibi ve destek talepleri için kullanılır. Uygulama Vercel, kimlik doğrulama ve veritabanı Supabase, yapılandırılmış e-posta gönderimi SMTP sağlayıcısı üzerinden çalışır. AI özelliği kullanıldığında ilgili soru ve çalışma bağlamı yapılandırılmış AI sağlayıcısına iletilebilir. Sağlayıcıların veri konumları, hukuki işleme sebepleri ve yurt dışı aktarım düzeni ticari yayından önce tamamlanacak veri envanterinde açıklanmalıdır.
                   </p>
                 </div>
 
                 <div>
                   <h4 className="font-bold text-slate-900 mb-1">4. Veri Saklama ve Silme Hakkı</h4>
                   <p>
-                    Veliler diledikleri zaman <code className="bg-slate-100 text-indigo-700 px-1.5 py-0.5 rounded font-mono font-bold">zeka.kupu.test@gmail.com</code> adresine e-posta göndererek kayıtlı öğrenci profilinin ve tüm performans geçmişinin kalıcı olarak silinmesini talep edebilirler.
+                    Veli panelindeki Hesabım ve Verilerim alanından profil/ilerleme verileri indirilebilir ve silme talebi oluşturulabilir. Silme talebi inceleme kaydıdır; işlem tamamlanmadan hesap silinmiş sayılmaz. Destek için <code className="bg-slate-100 text-indigo-700 px-1.5 py-0.5 rounded font-mono font-bold">zeka.kupu.test@gmail.com</code> adresine ulaşabilirsiniz. Saklama süreleri, işleme hukuki sebepleri ve başvuru süreci ticari yayın öncesinde işletmeye özgü olarak tamamlanmalıdır.
                   </p>
                 </div>
               </div>
@@ -294,7 +294,7 @@ export const FooterInfoModal: React.FC<FooterInfoModalProps> = ({
                     Kullanım Koşulları & Veli Taahhütnamesi
                   </h3>
                   <p className="text-xs text-purple-800 leading-normal">
-                    ZekaPark platformunu ziyaret eden ve üye olan tüm kullanıcılar aşağıdaki koşulları kabul etmiş sayılır.
+                    Yeni aile hesabında kullanım koşulları ayrıca kabul edilir. Ziyaret etmek tek başına hesap veya ödeme sözleşmesi kabulü olarak değerlendirilmez.
                   </p>
                 </div>
               </div>
@@ -303,7 +303,7 @@ export const FooterInfoModal: React.FC<FooterInfoModalProps> = ({
                 <div>
                   <h4 className="font-bold text-slate-900 mb-1">1. Eğitsel Destek Niteliği ve Resmi Kurum Bağımsızlığı</h4>
                   <p>
-                    ZekaPark, Millî Eğitim Bakanlığı (MEB) veya TÜBİTAK'ın resmi bir alt organı veya iştiraki değildir. Platformumuz, bilişsel zeka soruları alanında bağımsız araştırmacı, yazılımcı ve eğitimciler tarafından hazırlanmış bir pratik ve gelişim aracıdır. Sınav kazanma garantisi vermez; öğrencinin bilişsel düşünme yetisini ve soru çözme kondisyonunu maksimize etmeyi amaçlar.
+                    ZekaPark, Millî Eğitim Bakanlığı (MEB) veya TÜBİTAK'ın resmi bir alt organı veya iştiraki değildir. Platformumuz, bilişsel zeka soruları alanında bağımsız araştırmacı, yazılımcı ve eğitimciler tarafından hazırlanmış bir pratik ve gelişim aracıdır. Sınav kazanma garantisi vermez; görsel düşünme ve problem çözme alıştırmaları sunar. Klinik değerlendirme veya standardize zekâ testi değildir.
                   </p>
                 </div>
 
@@ -333,10 +333,10 @@ export const FooterInfoModal: React.FC<FooterInfoModalProps> = ({
                 </div>
                 <div>
                   <h3 className="font-extrabold text-indigo-950 text-base mb-1 font-['Outfit',sans-serif]">
-                    Bilimsel Temeller ve 6 Ana Bilişsel Alan
+                    Alıştırma alanları ve değerlendirme sınırları
                   </h3>
                   <p className="text-xs text-indigo-800 leading-normal">
-                    Sorularımız Raven Standart Progresif Matrisleri, Cattell Kültürden Arınık Zeka Testi ve modern nöropsikolojik ölçekler referans alınarak parametrik motor ile oluşturulur.
+                    Özgün örüntü, görsel eşleştirme ve mantık alıştırmaları sunuyoruz. Sonuçlar yalnızca uygulama içindeki çalışma performansını gösterir; IQ, tanı veya normlanmış yetenek puanı olarak yorumlanmamalıdır.
                   </p>
                 </div>
               </div>
@@ -409,7 +409,7 @@ export const FooterInfoModal: React.FC<FooterInfoModalProps> = ({
                 <div className="p-4 rounded-xl bg-slate-50 border border-zinc-200">
                   <h4 className="font-bold text-slate-900 mb-1">1. "Zeka Testine Gidiyorsun" Demeyin</h4>
                   <p>
-                    Çocuğa bu uygulamanın bir "zeka ölçümü" veya "kader sınavı" olduğu söylenmemelidir. "Bugün seninle keyifli akıl oyunları ve şekil bulmacaları oynanacak bir etkinliğe gidiyoruz" yaklaşımı kaygıyı %80 oranında azaltır.
+                    Çocuğa bu uygulamanın bir "zeka ölçümü" veya "kader sınavı" olduğu söylenmemelidir. "Bugün seninle keyifli akıl oyunları ve şekil bulmacaları oynanacak bir etkinliğe gidiyoruz" yaklaşımıyla çalışmayı baskı yaratmadan anlatabilirsiniz.
                   </p>
                 </div>
 
@@ -591,3 +591,4 @@ export const FooterInfoModal: React.FC<FooterInfoModalProps> = ({
     </div>
   );
 };
+

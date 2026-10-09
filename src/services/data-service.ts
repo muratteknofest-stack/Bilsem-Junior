@@ -12,12 +12,12 @@ import {
 } from './modules/shared';
 
 import {
-  clearUserProgress, persistUserStateToFirebase, scheduleProgressPersist,
-  setProgressItem, removeProgressItem, hydrateUserStateFromFirebase, loadRemoteProgressForUser
+  clearUserProgress, persistUserStateToSupabase, scheduleProgressPersist,
+  setProgressItem, removeProgressItem, hydrateUserStateFromSupabase, loadRemoteProgressForUser
 } from './modules/persistence-service';
 
 import {
-  syncUserFromFirebase, _updateFirebaseProfile, getCurrentUser,
+  syncUserFromSupabase, _updateSupabaseProfile, getCurrentUser,
   setCurrentUser, isAuthenticated, loginAs, logout, addXP, switchActiveRole
 } from './modules/profile-service';
 
@@ -61,13 +61,13 @@ class ZekaParkDataService {
   private scheduleProgressPersist() { return scheduleProgressPersist(); }
   private setProgressItem(key: (typeof USER_PROGRESS_KEYS)[number], value: string) { return setProgressItem(key, value); }
   private removeProgressItem(key: (typeof USER_PROGRESS_KEYS)[number]) { return removeProgressItem(key); }
-  private async persistUserStateToFirebase() { return persistUserStateToFirebase(); }
-  async hydrateUserStateFromFirebase(): Promise<void> { return hydrateUserStateFromFirebase(); }
+  private async persistUserStateToSupabase() { return persistUserStateToSupabase(); }
+  async hydrateUserStateFromSupabase(): Promise<void> { return hydrateUserStateFromSupabase(); }
   async loadRemoteProgressForUser(userId: string) { return loadRemoteProgressForUser(userId); }
 
   // Profile
-  syncUserFromFirebase(profile: UserProfile | null) { return syncUserFromFirebase(profile); }
-  async _updateFirebaseProfile(updates: Partial<UserProfile>) { return _updateFirebaseProfile(updates); }
+  syncUserFromSupabase(profile: UserProfile | null) { return syncUserFromSupabase(profile); }
+  async _updateSupabaseProfile(updates: Partial<UserProfile>) { return _updateSupabaseProfile(updates); }
   getCurrentUser(): UserProfile { return getCurrentUser(); }
   setCurrentUser(user: UserProfile) { return setCurrentUser(user); }
   isAuthenticated(): boolean { return isAuthenticated(); }

@@ -1,0 +1,280 @@
+{
+  "batchId": "robot-20261008-1200-v1",
+  "policy": "balanced-bank-1",
+  "seed": 20261008,
+  "generatedAt": "2026-10-08T17:37:37.822Z",
+  "summary": {
+    "total": 1200,
+    "existingCompared": 330,
+    "attempts": 4283,
+    "rejected": {
+      "generation": 0,
+      "quality": 0,
+      "duplicate": 3083
+    },
+    "redistributed": [
+      {
+        "grade": 1,
+        "type": "symmetry_completion",
+        "difficulty": 1,
+        "reason": "limited-visible-stems"
+      },
+      {
+        "grade": 1,
+        "type": "symmetry_completion",
+        "difficulty": 2,
+        "reason": "limited-visible-stems"
+      },
+      {
+        "grade": 1,
+        "type": "number_pattern",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 1,
+        "type": "number_pattern",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 2,
+        "type": "symmetry_completion",
+        "difficulty": 1,
+        "reason": "limited-visible-stems"
+      },
+      {
+        "grade": 2,
+        "type": "symmetry_completion",
+        "difficulty": 2,
+        "reason": "limited-visible-stems"
+      },
+      {
+        "grade": 2,
+        "type": "symmetry_completion",
+        "difficulty": 3,
+        "reason": "limited-visible-stems"
+      },
+      {
+        "grade": 2,
+        "type": "number_pattern",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 2,
+        "type": "number_pattern",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "number_pattern",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "number_pattern",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "symmetry_completion",
+        "difficulty": 2,
+        "reason": "limited-visible-stems"
+      },
+      {
+        "grade": 3,
+        "type": "symmetry_completion",
+        "difficulty": 3,
+        "reason": "limited-visible-stems"
+      },
+      {
+        "grade": 3,
+        "type": "symmetry_completion",
+        "difficulty": 1,
+        "reason": "limited-visible-stems"
+      },
+      {
+        "grade": 4,
+        "type": "number_pattern",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "number_pattern",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "symmetry_completion",
+        "difficulty": 3,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "symmetry_completion",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "symmetry_completion",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      }
+    ],
+    "distribution": {
+      "1": {
+        "count": 300,
+        "types": {
+          "matrix_2x2": 28,
+          "visual_sequence": 28,
+          "figure_rotation": 28,
+          "mirror_reflection": 28,
+          "number_pattern": 16,
+          "symbol_coding": 28,
+          "shape_counting": 28,
+          "logic_grid": 28,
+          "symmetry_completion": 4,
+          "shape_combination": 28,
+          "direction_path": 28,
+          "number_pyramid": 28
+        },
+        "difficulty": {
+          "1": 150,
+          "2": 150
+        },
+        "category": {
+          "matrix": 28,
+          "pattern": 28,
+          "spatial": 88,
+          "numerical": 44,
+          "coding": 28,
+          "attention": 28,
+          "logic": 28,
+          "visual_perception": 28
+        }
+      },
+      "2": {
+        "count": 300,
+        "types": {
+          "matrix_2x2": 22,
+          "matrix_3x3": 21,
+          "raven_matrix": 21,
+          "visual_sequence": 21,
+          "figure_rotation": 21,
+          "mirror_reflection": 21,
+          "number_pattern": 15,
+          "operation_machine": 22,
+          "symbol_coding": 22,
+          "shape_counting": 22,
+          "logic_grid": 22,
+          "symmetry_completion": 4,
+          "shape_combination": 22,
+          "direction_path": 22,
+          "number_pyramid": 22
+        },
+        "difficulty": {
+          "1": 100,
+          "2": 100,
+          "3": 100
+        },
+        "category": {
+          "matrix": 64,
+          "pattern": 21,
+          "spatial": 68,
+          "numerical": 59,
+          "coding": 22,
+          "attention": 22,
+          "logic": 22,
+          "visual_perception": 22
+        }
+      },
+      "3": {
+        "count": 300,
+        "types": {
+          "matrix_2x2": 21,
+          "matrix_3x3": 21,
+          "raven_matrix": 21,
+          "visual_sequence": 21,
+          "figure_rotation": 21,
+          "mirror_reflection": 21,
+          "number_pattern": 14,
+          "operation_machine": 22,
+          "symbol_coding": 22,
+          "shape_counting": 21,
+          "logic_grid": 21,
+          "symmetry_completion": 9,
+          "shape_combination": 22,
+          "direction_path": 22,
+          "number_pyramid": 21
+        },
+        "difficulty": {
+          "1": 75,
+          "2": 75,
+          "3": 75,
+          "4": 75
+        },
+        "category": {
+          "matrix": 63,
+          "pattern": 21,
+          "spatial": 73,
+          "numerical": 57,
+          "coding": 22,
+          "attention": 21,
+          "logic": 21,
+          "visual_perception": 22
+        }
+      },
+      "4": {
+        "count": 300,
+        "types": {
+          "matrix_2x2": 21,
+          "matrix_3x3": 21,
+          "raven_matrix": 21,
+          "visual_sequence": 21,
+          "figure_rotation": 21,
+          "mirror_reflection": 21,
+          "operation_machine": 21,
+          "symbol_coding": 21,
+          "shape_counting": 21,
+          "logic_grid": 21,
+          "symmetry_completion": 12,
+          "shape_combination": 21,
+          "direction_path": 21,
+          "number_pyramid": 21,
+          "number_pattern": 15
+        },
+        "difficulty": {
+          "1": 50,
+          "2": 51,
+          "3": 51,
+          "4": 50,
+          "5": 49,
+          "6": 49
+        },
+        "category": {
+          "matrix": 63,
+          "pattern": 21,
+          "spatial": 75,
+          "numerical": 57,
+          "coding": 21,
+          "attention": 21,
+          "logic": 21,
+          "visual_perception": 21
+        }
+      }
+    }
+  },
+  "questionParts": {
+    "1": "QUESTION_BATCH_20261008_GRADE_1.json",
+    "2": "QUESTION_BATCH_20261008_GRADE_2.json",
+    "3": "QUESTION_BATCH_20261008_GRADE_3.json",
+    "4": "QUESTION_BATCH_20261008_GRADE_4.json"
+  }
+}

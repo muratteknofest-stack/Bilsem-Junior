@@ -42,15 +42,20 @@ export async function getDoc(ref: Ref) {
 export async function getDocs(ref: Query) {
   const rows: Array<Record<string, any>> = [];
   const pageSize = 500;
+  const key = ref.table === 'user_private_state' ? 'user_id' : 'id';
+  let cursor: string | undefined;
   while (true) {
-    let request = supabase.from(ref.table).select('*').range(rows.length, rows.length + pageSize - 1);
+    const take = Math.min(pageSize, ref.max === undefined ? pageSize : ref.max - rows.length);
+    if (take <= 0) break;
+    let request = supabase.from(ref.table).select('*').order(key, { ascending: true }).limit(take);
     for (const filter of ref.filters ?? [])
       request = request.eq(filter.field, filter.value as string);
-    if (ref.max) request = request.limit(ref.max - rows.length);
+    if (cursor) request = request.gt(key, cursor);
     const { data, error } = await request;
     if (error) throw error;
     rows.push(...(data ?? []));
-    if (!data || data.length < pageSize || (ref.max && rows.length >= ref.max)) break;
+    if (!data || data.length < take) break;
+    cursor = String(data[data.length - 1][key]);
   }
   return { empty: rows.length === 0, docs: rows.map(row => snapshot(row, undefined, ref.table)) };
 }
@@ -77,14 +82,21 @@ export async function deleteDoc(ref: Ref) {
   if (error) throw error;
 }
 export const serverTimestamp = () => new Date().toISOString();
-export function onSnapshot(ref: Ref, onNext: (snapshot: any) => void, onError?: (error: Error) => void) {
+export function onSnapshot(ref: Query, onNext: (snapshot: any) => void, onError?: (error: Error) => void) {
   let active = true;
-  const refresh = () => (ref.id ? getDoc(ref) : getDocs(ref)).then(result => {
-    if (active) onNext(result);
-  }).catch(error => { if (active) onError?.(error); });
+  let latestRequest = 0;
+  const refresh = () => {
+    const requestId = ++latestRequest;
+    return (ref.id ? getDoc(ref) : getDocs(ref)).then(result => {
+      if (active && requestId === latestRequest) onNext(result);
+    }).catch(error => { if (active && requestId === latestRequest) onError?.(error); });
+  };
   void refresh();
   const channel = supabase.channel(`zekapark-${ref.table}-${ref.id ?? 'all'}-${Math.random()}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: ref.table }, () => void refresh())
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: ref.table,
+      ...(ref.id ? { filter: `${ref.table === 'user_private_state' ? 'user_id' : 'id'}=eq.${ref.id}` } : {}),
+    }, () => void refresh())
     .subscribe();
   const poll = ref.table === 'profiles' ? setInterval(() => void refresh(), 30000) : null;
   return () => {
@@ -101,3 +113,4 @@ export function writeBatch(_db: unknown) {
     async commit() { for (const action of actions) await action(); },
   };
 }
+

@@ -398,7 +398,7 @@ export const CreateQuestionModal: React.FC<CreateQuestionModalProps> = ({
                           {isCorrect && <Check className="w-3 h-3 text-emerald-600" />}
                         </div>
                         <div className="h-12 flex items-center justify-center pointer-events-none scale-75">
-                          <OptionRenderer option={opt} questionType={selectedType} />
+                          <OptionRenderer question={liveQuestion} option={opt} questionType={selectedType} />
                         </div>
                       </div>
                     );

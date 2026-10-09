@@ -4,8 +4,9 @@ import { safeStorage } from '../../lib/storage';
 import { STORAGE_KEYS } from './shared';
 import { UserProfile, UserRole } from '../../types';
 import { clearUserProgress } from './persistence-service';
+import { safeXpAward } from '../../features/student/gamification-model';
 
-export function syncUserFromFirebase(profile: UserProfile | null) {
+export function syncUserFromSupabase(profile: UserProfile | null) {
   if (profile) {
     safeStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(profile));
     safeStorage.setItem(STORAGE_KEYS.AUTH_SESSION, 'true');
@@ -15,7 +16,7 @@ export function syncUserFromFirebase(profile: UserProfile | null) {
   }
 }
 
-export async function _updateFirebaseProfile(updates: Partial<UserProfile>) {
+export async function _updateSupabaseProfile(updates: Partial<UserProfile>) {
   if (!auth.currentUser) return;
   try {
     const ref = doc(db, 'users', auth.currentUser.uid);
@@ -24,7 +25,7 @@ export async function _updateFirebaseProfile(updates: Partial<UserProfile>) {
     );
     await updateDoc(ref, { ...definedUpdates, updatedAt: Date.now() });
   } catch (e) {
-    console.error('Failed to update firebase', e);
+    console.error('Supabase profil güncellemesi başarısız:', e);
   }
 }
 
@@ -38,6 +39,7 @@ export function getCurrentUser(): UserProfile {
       if (parsed.streakFreezeCount === undefined) parsed.streakFreezeCount = 0;
       if (parsed.longestStreak === undefined) parsed.longestStreak = parsed.streak || 0;
       if (parsed.totalQuestionsSolved === undefined) parsed.totalQuestionsSolved = 0;
+      if (Number.isFinite(parsed.xp)) parsed.totalPoints = Math.max(0, Math.floor(parsed.xp));
       if (parsed.resolvedMistakesCount === undefined) parsed.resolvedMistakesCount = 0;
       if (parsed.dailyGoalQuestions === undefined) parsed.dailyGoalQuestions = 10;
       if (parsed.todayQuestionsSolved === undefined) parsed.todayQuestionsSolved = 0;
@@ -49,7 +51,7 @@ export function getCurrentUser(): UserProfile {
   }
   return {
     id: 'guest', name: 'Misafir', role: 'student', avatar: '🦊', grade: 1,
-    level: 1, xp: 0, streak: 0, lastActiveDate: '', dailyGoalMinutes: 15,
+    level: 1, xp: 0, totalPoints: 0, streak: 0, lastActiveDate: '', dailyGoalMinutes: 15,
     todayMinutesSpent: 0, soundEnabled: true, totalQuestionsSolved: 0,
     todayQuestionsSolved: 0, dailyGoalQuestions: 10, dailyGoalSessions: 2,
     todaySessionsCompleted: 0,
@@ -59,14 +61,14 @@ export function getCurrentUser(): UserProfile {
 export function setCurrentUser(user: UserProfile) {
   safeStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
   const {
-    avatar, level, xp, streak, longestStreak, lastActiveDate, todayPracticed,
+    avatar, level, xp, totalPoints, streak, longestStreak, lastActiveDate, todayPracticed,
     streakFreezeCount, claimedStreakDays, weeklyStreakHistory, dailyGoalMinutes,
     todayMinutesSpent, dailyGoalQuestions, todayQuestionsSolved, dailyGoalSessions,
     todaySessionsCompleted, soundEnabled, totalQuestionsSolved, resolvedMistakesCount,
     featuredBadgeIds, reminderConfig,
   } = user;
-  void _updateFirebaseProfile({
-    avatar, level, xp, streak, longestStreak, lastActiveDate, todayPracticed,
+  void _updateSupabaseProfile({
+    avatar, level, xp, totalPoints, streak, longestStreak, lastActiveDate, todayPracticed,
     streakFreezeCount, claimedStreakDays, weeklyStreakHistory, dailyGoalMinutes,
     todayMinutesSpent, dailyGoalQuestions, todayQuestionsSolved, dailyGoalSessions,
     todaySessionsCompleted, soundEnabled, totalQuestionsSolved, resolvedMistakesCount,
@@ -133,11 +135,16 @@ export function logout(): void {
 
 export function addXP(amount: number): { newXP: number; newLevel: number; leveledUp: boolean } {
   const user = getCurrentUser();
-  const oldLevel = user.level;
-  user.xp += amount;
-  const newLevel = Math.floor(user.xp / 250) + 1;
-  const leveledUp = newLevel > oldLevel;
-  user.level = newLevel;
-  setCurrentUser(user);
-  return { newXP: user.xp, newLevel, leveledUp };
+  const currentXP = Number.isFinite(user.xp) ? Math.max(0, Math.floor(user.xp)) : 0;
+  const oldLevel = Math.floor(currentXP / 250) + 1;
+  const newXP = Math.min(Number.MAX_SAFE_INTEGER, currentXP + safeXpAward(amount));
+  const newLevel = Math.floor(newXP / 250) + 1;
+  if (newXP !== currentXP || user.totalPoints !== newXP || user.level !== newLevel) {
+    user.xp = newXP;
+    user.totalPoints = newXP;
+    user.level = newLevel;
+    setCurrentUser(user);
+  }
+  return { newXP, newLevel, leveledUp: newLevel > oldLevel };
 }
+

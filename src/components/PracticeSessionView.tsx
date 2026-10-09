@@ -1,3 +1,5 @@
+import { QuestionIssueButton } from './QuestionIssueButton';
+import { isSchoolGrade, gradeDifficulty } from '../features/questions/quality-policy';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -8,17 +10,20 @@ import {
   DIFFICULTY_COLORS,
   UserProfile
 } from '../types';
-import { generateQuestion } from '../features/questions/generators';
-import { usePublishedQuestions } from '../features/questions/use-published-questions';
+import { generateQuestion, STUDENT_CATEGORY_TYPES } from '../features/questions/generators';
+import { demoQuestionsRemaining, isDemoUser, useDemoQuestion } from '../lib/demo-access';
+import { loadPublishedQuestionsForGrade, usePublishedQuestions } from '../features/questions/use-published-questions';
 import { selectPublishedPool } from '../features/questions/editorial-data';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
-import { OptionRenderer } from '../features/questions/renderers/OptionRenderer';
+import { AnswerWorkspace } from '../features/questions/renderers/AnswerWorkspace';
+import { evaluateResponse, type QuestionResponse } from '../features/questions/answer-interactions';
 import { VisualExplanationOverlay } from '../features/questions/renderers/VisualExplanationOverlay';
 import { StepByStepAiExplanation } from './StepByStepAiExplanation';
 import { VisualCountdownTimer } from './VisualCountdownTimer';
 import { AiHintModal } from './AiHintModal';
 import { AiMistakeModal } from './AiMistakeModal';
-import { ComboStreakIndicator, getComboTier } from './animations/ComboStreakIndicator';
+import { ComboStreakIndicator } from './animations/ComboStreakIndicator';
+import { answerXp } from '../features/student/gamification-model';
 import { ComboBurstOverlay } from './animations/ComboBurstOverlay';
 import { StreakFloatingFloater } from './animations/StreakFloatingFloater';
 import { dataService } from '../services/data-service';
@@ -81,9 +86,12 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
   onOpenMistakes,
 }) => {
   const publishedQuestions = usePublishedQuestions();
+  const [startError, setStartError] = useState('');
+  const [isStarting, setIsStarting] = useState(false);
+  const startingRef = useRef(false);
   // Setup phase vs active session
   const [inSetup, setInSetup] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<CognitiveCategory | 'mixed'>(initialCategory);
+  const [selectedCategory, setSelectedCategory] = useState<CognitiveCategory | 'mixed'>(initialCategory === 'mixed' || STUDENT_CATEGORY_TYPES[initialCategory] ? initialCategory : 'mixed');
   const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyLevel | 'adaptive'>('adaptive');
 
   // Pacing & Timer configuration
@@ -94,7 +102,9 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
   const [questions, setQuestions] = useState<BaseQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
+  const [interactionResponse, setInteractionResponse] = useState<QuestionResponse | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const submissionLock = useRef(false);
   const [isShaking, setIsShaking] = useState(false);
   const [showAiHint, setShowAiHint] = useState(false);
   const [showAiMistakeModal, setShowAiMistakeModal] = useState(false);
@@ -208,6 +218,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
       if (matchedId && !isSubmitted) {
         sound.playClick();
         setSelectedOptionId(matchedId);
+        setInteractionResponse({ mode: 'choice', optionId: matchedId });
       }
     };
 
@@ -231,38 +242,64 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
     }
   };
 
-  const startSession = () => {
-    sound.playClick();
-    const qList: BaseQuestion[] = [];
-    for (let i = 0; i < 10; i++) {
-      const diff: DifficultyLevel =
-        selectedDifficulty === 'adaptive'
-          ? ((i < 3 ? 2 : i < 7 ? 3 : 4) as DifficultyLevel)
-          : (selectedDifficulty as DifficultyLevel);
-
-      const q = generateQuestion({
-        category: selectedCategory,
-        difficulty: diff,
-        seed: Math.floor(Math.random() * 900000) + 100000 + i * 31,
-      });
-      qList.push(q);
+  const studentGrade = dataService.getCurrentUser().grade;
+  const maxGradeDifficulty = isSchoolGrade(studentGrade) ? gradeDifficulty(studentGrade, 6) : 6;
+  const startSession = async () => {
+    if (startingRef.current) return;
+    startingRef.current = true;
+    setIsStarting(true);
+    setStartError('');
+    try {
+      const isDemo = isDemoUser(dataService.getCurrentUser().id);
+      const questionLimit = isDemo ? demoQuestionsRemaining() : 10;
+      if (questionLimit === 0) { onNavigateHome(); return; }
+      const grade = dataService.getCurrentUser().grade;
+      if (!isDemo && !isSchoolGrade(grade)) throw new Error('Sınıf seviyeniz belirlenemedi. Profilinizi kontrol edin.');
+      const bank = isDemo ? [] : publishedQuestions.length && publishedQuestions[0].targetGrade === grade
+        ? publishedQuestions : await loadPublishedQuestionsForGrade(grade as 1 | 2 | 3 | 4);
+      if (!isDemo && !bank.length) throw new Error('Sınıfınıza ait yayımlanmış sorular henüz yüklenemedi. Lütfen tekrar deneyin.');
+      sound.playClick();
+      const qList: BaseQuestion[] = [];
+      for (let i = 0; i < questionLimit; i++) {
+        const diff: DifficultyLevel =
+          selectedDifficulty === 'adaptive'
+            ? ((i < 3 ? 2 : i < 7 ? 3 : 4) as DifficultyLevel)
+            : (selectedDifficulty as DifficultyLevel);
+  
+        const q = generateQuestion({
+          targetGrade: isSchoolGrade(dataService.getCurrentUser().grade) ? dataService.getCurrentUser().grade as 1|2|3|4 : undefined,
+          category: selectedCategory,
+          difficulty: diff,
+          seed: Math.floor(Math.random() * 900000) + 100000 + i * 31,
+        });
+        qList.push(q);
+      }
+  
+      const presetSecs = getPresetSeconds(timerPreset);
+      setTotalSecondsLimit(presetSecs);
+      setRemainingSeconds(presetSecs);
+      setOvertimeSeconds(0);
+      setQuestions(selectPublishedPool(qList, bank));
+      setCurrentIndex(0);
+      setSelectedOptionId(null);
+      setInteractionResponse(null);
+      setIsSubmitted(false);
+      submissionLock.current = false;
+      setCorrectCount(0);
+      setWrongCount(0);
+      setEarnedXP(0);
+      setIsCompleted(false);
+      setEndedByTimeout(false);
+      setSecondsElapsed(0);
+      setInSetup(false);
+    } catch (error) {
+      console.warn('Practice question load failed:', error);
+      setStartError(error instanceof Error && (error.message.startsWith('Sınıf') || error.message.startsWith('Sınıfınıza'))
+        ? error.message : 'Sorular yüklenemedi. Lütfen tekrar deneyin.');
+    } finally {
+      startingRef.current = false;
+      setIsStarting(false);
     }
-
-    const presetSecs = getPresetSeconds(timerPreset);
-    setTotalSecondsLimit(presetSecs);
-    setRemainingSeconds(presetSecs);
-    setOvertimeSeconds(0);
-    setQuestions(selectPublishedPool(qList.map(q => ({ ...q, targetGrade: dataService.getCurrentUser().grade as 1 | 2 | 3 | 4 | undefined })), publishedQuestions));
-    setCurrentIndex(0);
-    setSelectedOptionId(null);
-    setIsSubmitted(false);
-    setCorrectCount(0);
-    setWrongCount(0);
-    setEarnedXP(0);
-    setIsCompleted(false);
-    setEndedByTimeout(false);
-    setSecondsElapsed(0);
-    setInSetup(false);
   };
 
   useEffect(() => {
@@ -304,16 +341,26 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
 
   const currentQuestion = questions[currentIndex];
 
-  const handleSelectOption = (optionId: string) => {
+  const answerResponse: QuestionResponse | null = interactionResponse ?? (selectedOptionId ? { mode: 'choice', optionId: selectedOptionId } : null);
+  const answerResult = currentQuestion ? evaluateResponse(currentQuestion, answerResponse) : { complete: false, correct: false };
+  const answerReady = answerResult.complete;
+  const handleResponse = (response: QuestionResponse) => {
     if (isSubmitted) return;
-    sound.playClick();
-    setSelectedOptionId(optionId);
+    setInteractionResponse(response);
+    setSelectedOptionId(response.mode === 'choice' || response.mode === 'place' ? response.optionId : null);
   };
 
   const handleSubmitAnswer = () => {
-    if (!selectedOptionId || isSubmitted || !currentQuestion) return;
+    if (!answerReady || submissionLock.current || isSubmitted || !currentQuestion) return;
 
-    const isCorrect = selectedOptionId === currentQuestion.correctOptionId;
+    const checkedAnswer = evaluateResponse(currentQuestion, answerResponse);
+    if (!checkedAnswer.complete) return;
+    if (isDemoUser(dataService.getCurrentUser().id) && !useDemoQuestion()) {
+      onNavigateHome();
+      return;
+    }
+    submissionLock.current = true;
+    const isCorrect = checkedAnswer.correct;
     setIsSubmitted(true);
 
     // Update stats and persistence
@@ -325,16 +372,11 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
       const newStreak = consecutiveCorrectCount + 1;
       setConsecutiveCorrectCount(newStreak);
       
-      const baseXP = 10 + currentQuestion.difficulty * 2;
-      const tier = getComboTier(newStreak);
-      const multipliedXP = Math.round(baseXP * tier.multiplier);
-      
-      let bonusXP = 0;
-      const milestoneStreaks = [2, 3, 5, 7, 10, 15, 20];
-      const isMilestone = milestoneStreaks.includes(newStreak);
+      const reward = answerXp('practice', currentQuestion.difficulty, newStreak);
+      const bonusXP = reward.comboBonus;
+      const isMilestone = bonusXP > 0;
 
       if (isMilestone) {
-        bonusXP = 30 + newStreak * 5;
         setLastMilestoneBonus(bonusXP);
         setActiveMilestoneStreak(newStreak);
         sound.playComboMilestone(newStreak);
@@ -344,7 +386,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
         sound.playSuccess();
       }
 
-      const totalXPAdded = multipliedXP + bonusXP;
+      const totalXPAdded = reward.total;
       setLastEarnedXP(totalXPAdded);
       setShowFloater(true);
       setTimeout(() => setShowFloater(false), 1200);
@@ -399,7 +441,9 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
     if (currentIndex + 1 < questions.length) {
       setCurrentIndex((prev) => prev + 1);
       setSelectedOptionId(null);
+      setInteractionResponse(null);
       setIsSubmitted(false);
+      submissionLock.current = false;
       setShowAiHint(false);
       setShowAiMistakeModal(false);
       setActiveMilestoneStreak(null); // Clear milestone overlay on next question
@@ -428,10 +472,13 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <button
+            type="button"
             onClick={onNavigateHome}
-            className="p-2 rounded-xl bg-white text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+            aria-label="Önceki ekrana dön"
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-slate-700 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-5 h-5" />
+            <span className="text-sm font-semibold">Geri</span>
           </button>
           <div>
             <h1 className="text-2xl font-extrabold text-slate-900 font-['Outfit',sans-serif]">
@@ -449,7 +496,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
             1. Çalışma Alanı Seç
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-            {CATEGORY_OPTIONS.map((cat) => (
+            {CATEGORY_OPTIONS.filter(c => c.id === 'mixed' || STUDENT_CATEGORY_TYPES[c.id]).map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => {
@@ -494,11 +541,12 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
             {([1, 2, 3, 4, 5, 6] as DifficultyLevel[]).map((lvl) => (
               <button
                 key={lvl}
+                disabled={lvl > maxGradeDifficulty}
                 onClick={() => {
                   sound.playClick();
                   setSelectedDifficulty(lvl);
                 }}
-                className={`p-3 rounded-xl border-2 text-center font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                className={`p-3 rounded-xl border-2 text-center font-bold text-xs sm:text-sm transition-all cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed ${
                   selectedDifficulty === lvl
                     ? 'border-indigo-600 bg-indigo-50 text-indigo-900 '
                     : 'border-zinc-200 bg-slate-50 text-slate-700 hover:border-slate-300'
@@ -634,11 +682,13 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
         </div>
 
         {/* Start Button */}
+        {startError && <p role="alert" className="text-sm text-rose-700">{startError}</p>}
         <button
           onClick={startSession}
+          disabled={isStarting}
           className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-extrabold text-base   hover:from-indigo-500 hover:to-purple-500 transition-all cursor-pointer active:scale-98 flex items-center justify-center gap-2"
         >
-          <span>Antrenmanı Başlat (10 Soru)</span>
+          <span>{isStarting ? 'Sorular yükleniyor…' : 'Antrenmanı Başlat (10 Soru)'}</span>
           <ArrowRight className="w-5 h-5" />
         </button>
       </div>
@@ -928,22 +978,12 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
         {/* Programmatic Visual Question Canvas */}
         <div className="py-2">
           <QuestionRenderer question={currentQuestion} />
+          <QuestionIssueButton key={currentQuestion.id} question={currentQuestion} />
         </div>
 
         {/* Answer Options Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-          {currentQuestion.options.map((opt) => (
-            <OptionRenderer
-              key={opt.id}
-              option={opt}
-              isSelected={selectedOptionId === opt.id}
-              onSelect={() => handleSelectOption(opt.id)}
-              disabled={isSubmitted}
-              showCorrect={isSubmitted}
-              isCorrectOption={opt.id === currentQuestion.correctOptionId}
-            />
-          ))}
-        </div>
+        <AnswerWorkspace key={currentQuestion.id} question={currentQuestion} response={answerResponse}
+          onChange={handleResponse} submitted={isSubmitted} />
 
         {/* Action Button & Feedback Banner */}
         {!isSubmitted ? (
@@ -969,14 +1009,14 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
 
             <button
               onClick={handleSubmitAnswer}
-              disabled={!selectedOptionId}
+              disabled={!answerReady}
               className={`flex-1 w-full py-3.5 rounded-xl font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                selectedOptionId
+                answerReady
                   ? 'bg-indigo-600 hover:bg-indigo-700 text-white   active:scale-98'
                   : 'bg-slate-200 text-slate-400 cursor-not-allowed'
               }`}
             >
-              <span>{selectedOptionId ? 'Cevabı Kontrol Et' : 'Bir Seçenek İşaretle'}</span>
+              <span>{answerReady ? 'Cevabı Kontrol Et' : 'Cevabını Tamamla'}</span>
             </button>
           </div>
         ) : (
@@ -990,12 +1030,12 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
             {/* Instant Friendly Feedback Banner */}
             <div
               className={`p-4 rounded-xl text-sm sm:text-base font-bold  ${
-                selectedOptionId === currentQuestion.correctOptionId
+                answerResult.correct
                   ? 'bg-emerald-100 text-emerald-950 border-2 border-emerald-300 flex items-center justify-center gap-2'
                   : 'bg-gradient-to-r from-amber-50 to-rose-50 text-amber-950 border-2 border-rose-200'
               }`}
             >
-              {selectedOptionId === currentQuestion.correctOptionId ? (
+              {answerResult.correct ? (
                 <>
                   <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                   <span>Harika! Süper düşündün! (+{lastEarnedXP} XP)</span>
@@ -1016,12 +1056,12 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
                         Bu soru biraz zordu, ama hiç sorun değil!
                       </span>
                       <span className="text-xs text-slate-600 font-normal">
-                        Hata Defterine eklendi. AI ile hatanın nedenini öğrenebilirsin.
+                        Hata Defterine eklendi. Aşağıdaki çözümü inceleyebilirsin.
                       </span>
                     </div>
                   </div>
 
-                  <button
+                  {selectedOptionId && <button
                     type="button"
                     onClick={() => {
                       sound.playClick();
@@ -1032,16 +1072,16 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
                     <HelpCircle className="w-4 h-4" />
                     <span>Neden Yanlış? (AI Analizi)</span>
                     <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                  </button>
+                  </button>}
                 </div>
               )}
             </div>
 
             {/* Step-by-step Framer Motion AI Accordion Explanation */}
-            <StepByStepAiExplanation
+            {selectedOptionId && <StepByStepAiExplanation
               question={currentQuestion}
-              selectedOptionId={selectedOptionId || ''}
-            />
+              selectedOptionId={selectedOptionId}
+            />}
 
             {/* Visual Explanation Overlay */}
             <VisualExplanationOverlay
@@ -1051,7 +1091,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
 
             {/* Next Question & AI Step Review Actions */}
             <div className="flex flex-col sm:flex-row items-center gap-2.5">
-              {selectedOptionId !== currentQuestion.correctOptionId && (
+              {selectedOptionId && !answerResult.correct && (
                 <button
                   type="button"
                   onClick={() => {
@@ -1111,3 +1151,4 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
     </div>
   );
 };
+

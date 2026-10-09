@@ -21,51 +21,51 @@ test('student codes contain only normalized ASCII letters and digits', () => {
   assert.equal(studentCodeToEmail(' IŞIK 123 '), 'isik123@zekapark.com');
 });
 
-test('Firestore authorization protects admin access and validates family links', async () => {
-  const rules = await readFile(new URL('../firestore.rules', import.meta.url), 'utf8');
-  assert.match(rules, /request\.auth\.token\.role/);
-  assert.doesNotMatch(rules, /documents\/users\/.*\.data\.role == 'admin'/);
-  assert.match(rules, /validInitialParentLink/);
-  assert.match(rules, /linkedParentId == userId/);
-  assert.match(rules, /validAccountIdentity\(userId, 'parent'\)/);
-  assert.match(rules, /request\.resource\.data\.email == request\.auth\.token\.email/);
-  assert.match(rules, /validConsent/);
-  assert.match(rules, /allow create: if isAdmin\(\)/);
-  assert.match(rules, /affectedKeys\(\)\.hasOnly/);
-  assert.match(rules, /match \/\{document=\*\*\}[\s\S]*allow read, write: if false/);
+test('Supabase authorization uses protected app claims and immutable family identity', async () => {
+  const schema = await readFile(new URL('../supabase/schema.sql', import.meta.url), 'utf8');
+  const adminPolicy = await readFile(new URL('../supabase/migrations/20261005180525_admin_claim_only.sql', import.meta.url), 'utf8');
+  assert.match(schema, /create trigger protect_profile_identity before update/);
+  assert.match(schema, /new\.linked_parent_id/);
+  assert.match(schema, /new\.consent/);
+  assert.match(schema, /using \(\(select auth\.uid\(\)\) = id or linked_parent_id/);
+  assert.match(adminPolicy, /email_confirmed_at is not null/);
+  assert.match(adminPolicy, /raw_app_meta_data->>'role' = 'admin'/);
+  assert.doesNotMatch(adminPolicy, /raw_user_meta_data/);
 });
 
 test('linked student password reset requires verified parent authorization', async () => {
-  const source = await readFile(new URL('../server.ts', import.meta.url), 'utf8');
-  assert.match(source, /\/api\/parent\/reset-student-password/);
+  const source = await readFile(new URL('../server/routes/parent-routes.ts', import.meta.url), 'utf8');
+  assert.match(source, /\/parent\/reset-student-password/);
   assert.match(source, /requireVerifiedEmail/);
   assert.match(source, /requireProfileRole\('parent'\)/);
   assert.match(source, /revokeRefreshTokens/);
   assert.match(source, /linkedParentId === req\.authUser\.uid/);
   assert.match(source, /requireAppCheck/);
-  assert.match(source, /X-Firebase-AppCheck/);
   assert.match(source, /student\.linkedParentId !== req\.authUser\.uid/);
   assert.doesNotMatch(source, /AI soru üretimi başarısız:.*err\.message/);
 });
 
-test('protected AI routes authenticate before applying per-user limits', async () => {
-  const source = await readFile(new URL('../server.ts', import.meta.url), 'utf8');
-  assert.match(source, /authenticatedRateLimitKey/);
-  assert.match(source, /'\/api\/ai-hint', requireFirebaseAuth, requireAppCheck, aiLimiter, requireProfileRole\('student', 'admin'\)/);
-  assert.match(source, /'\/api\/admin\/ai-generate-question', requireFirebaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole\('admin'\)/);
+test('protected AI routes authenticate before applying per-user limits and recheck publication', async () => {
+  const student = await readFile(new URL('../server/routes/student-ai-routes.ts', import.meta.url), 'utf8');
+  const admin = await readFile(new URL('../server/routes/admin-ai-routes.ts', import.meta.url), 'utf8');
+  const limits = await readFile(new URL('../server/rate-limiters.ts', import.meta.url), 'utf8');
+  assert.match(limits, /keyGenerator: authenticatedRateLimitKey/);
+  assert.match(student, /'\/ai-hint', requireSupabaseAuth, requireAppCheck, aiLimiter, requireProfileRole\('student', 'admin'\)/);
+  assert.match(admin, /'\/admin\/ai-generate-question', requireSupabaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole\('admin'\)/);
+  assert.match(admin, /if \(!isQuestionReadyForStudents\(currentData\) \|\| report\.errors\.length\)/);
 });
 
 test('login source contains no local authentication fallback or fixed password', async () => {
-  const source = await readFile(new URL('../src/components/LoginPage.tsx', import.meta.url), 'utf8');
+  const source = await readFile(new URL('../src/features/auth/components/LoginForm.tsx', import.meta.url), 'utf8');
   assert.doesNotMatch(source, /SYSTEM_ACCOUNTS/);
   assert.doesNotMatch(source, /resilient local login/i);
   assert.doesNotMatch(source, /Standart şifre|setPassword\('123456'\)/);
   assert.doesNotMatch(source, /\/api\/auth\/register-family/);
-  assert.match(source, /registerFamilyInFirebase/);
-  assert.match(source, /OWNER_ADMIN_EMAIL = 'iomegagame@gmail\.com'/);
-  assert.match(source, /signedInEmail === OWNER_ADMIN_EMAIL &&[\s\S]*credential\.user\.emailVerified/);
+  const registration = await readFile(new URL('../src/features/auth/components/RegistrationForm.tsx', import.meta.url), 'utf8');
+  assert.match(registration, /registerFamilyInSupabase/);
   assert.match(source, /credential\.user\.emailVerified/);
-  assert.match(source, /createOwnerAdminProfile/);
+  assert.match(source, /token\.claims\.role !== 'admin'/);
+  assert.doesNotMatch(source, /OWNER_ADMIN_EMAIL|createOwnerAdminProfile/);
   assert.match(source, /loggedInProfile\.role !== selectedRole/);
   assert.doesNotMatch(source, /errMsg = error\.message/);
 });
@@ -76,3 +76,4 @@ test('login validation requires email identifiers for privileged roles', async (
   assert.equal(loginSchema.safeParse({ identifier: 'admin@example.com', password: 'secret', role: 'admin' }).success, true);
   assert.equal(loginSchema.safeParse({ identifier: 'OGRENCI123', password: 'secret', role: 'student' }).success, true);
 });
+

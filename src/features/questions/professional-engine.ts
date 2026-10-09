@@ -1,14 +1,21 @@
 import type { BaseQuestion, CognitiveCategory, DifficultyLevel, QuestionType } from '../../types';
 import { SeededRNG } from '../../lib/rng';
 import { generateVisualFingerprint as fingerprint } from './fingerprint';
+import { VISUAL_SYMBOL_IDS, symbolLabel } from './visual-vocabulary';
 
-export const ENGINE_VERSION = 'verified-2';
+export const ENGINE_VERSION = 'verified-5';
 export const VERIFIED_TYPES: QuestionType[] = ['matrix_2x2', 'matrix_3x3', 'raven_matrix', 'visual_sequence', 'figure_rotation', 'mirror_reflection', 'number_pattern', 'operation_machine', 'symbol_coding', 'shape_counting', 'logic_grid'];
+export const RECOVERED_TYPES: QuestionType[] = ['symmetry_completion', 'shape_combination', 'direction_path', 'number_pyramid'];
+export const STUDENT_TYPES: QuestionType[] = [...VERIFIED_TYPES, ...RECOVERED_TYPES];
 export type Tile = { cells: number[]; size: number };
 type Value = Tile | { textNumber: number | string };
 export type Board = {
   displayMode: 'verified_board';
-  kind: 'transform' | 'matrix' | 'numbers' | 'machine' | 'symbols' | 'count' | 'order';
+  kind: 'transform' | 'matrix' | 'numbers' | 'machine' | 'symbols' | 'count' | 'order' | 'symmetry' | 'overlay' | 'path' | 'pyramid';
+  base?: number[];
+  gridSize?: number;
+  start?: [number, number];
+  moves?: ('up' | 'down' | 'left' | 'right')[];
   tiles?: (Tile | null)[];
   columns?: number;
   operation?: 'rotate' | 'mirrorX' | 'mirrorY';
@@ -45,7 +52,12 @@ function combine(a: Tile, b: Tile, op: number): Tile {
 }
 const same = (a: unknown, b: unknown) => fingerprint(a) === fingerprint(b);
 function randomTile(rng: SeededRNG, size: number): Tile {
-  return { size, cells: Array.from({ length: size * size }, () => Number(rng.nextBool(0.45))) };
+  for (let attempt = 0; attempt < 64; attempt++) {
+    const cells = Array.from({ length: size * size }, () => Number(rng.nextBool(0.45)));
+    const count = cells.reduce((sum, v) => sum + v, 0);
+    if (count >= 2 && count <= cells.length - 2) return { size, cells };
+  }
+  throw new Error('Okunabilir desen üretilemedi.');
 }
 function asymmetricTile(rng: SeededRNG, size: number): Tile {
   for (let i = 0; i < 100; i++) {
@@ -66,6 +78,32 @@ export function solveBoard(board: Board): Value {
       tile.cells.length !== tile.size ** 2 || tile.cells.some(c => c !== 0 && c !== 1))) throw new Error('Görsel ızgara geçersiz.');
     if (new Set(board.tiles.filter(Boolean).map(tile => tile!.size)).size !== 1) throw new Error('Izgara boyutları eşleşmiyor.');
   }
+  if (board.kind === 'symmetry') {
+    if (board.tiles?.length !== 1 || !board.tiles[0]) throw new Error('Simetri başlangıcı eksik.');
+    const t = board.tiles[0], middle = Math.ceil(t.size / 2);
+    if (t.cells.some((v, i) => i % t.size >= middle && v !== 0)) throw new Error('Gizli yarıda veri olamaz.');
+    return { size: t.size, cells: t.cells.map((v, i) => i % t.size < middle ? v : t.cells[Math.floor(i / t.size) * t.size + t.size - 1 - i % t.size]) };
+  }
+  if (board.kind === 'overlay') {
+    if (board.tiles?.length !== 3 || !board.tiles[0] || !board.tiles[1] || board.tiles[2] !== null) throw new Error('Birleştirme için iki desen gerekli.');
+    return combine(board.tiles[0], board.tiles[1], 0);
+  }
+  if (board.kind === 'pyramid') {
+    if (!Array.isArray(board.base) || board.base.length < 3 || board.base.length > 5 || board.base.some(v => !Number.isSafeInteger(v) || v < 1 || v > 20)) throw new Error('Piramit tabanı geçersiz.');
+    let row = [...board.base];
+    while (row.length > 1) row = row.slice(1).map((v, i) => v + row[i]);
+    return { textNumber: row[0] };
+  }
+  if (board.kind === 'path') {
+    const size = board.gridSize;
+    if (!Number.isInteger(size) || size! < 3 || size! > 5 || !Array.isArray(board.start) || board.start.length !== 2 || board.start.some(v => !Number.isInteger(v) || v < 0 || v >= size!) || !Array.isArray(board.moves) || board.moves.length < 2 || board.moves.length > 10) throw new Error('Rota verisi geçersiz.');
+    let [row, col] = board.start;
+    for (const move of board.moves) {
+      if (move === 'up') row--; else if (move === 'down') row++; else if (move === 'left') col--; else if (move === 'right') col++; else throw new Error('Yön tanımsız.');
+      if (row < 0 || col < 0 || row >= size! || col >= size!) throw new Error('Rota ızgara dışına çıkıyor.');
+    }
+    return { textNumber: `${row + 1}. satır, ${col + 1}. sütun` };
+  }
   if (board.kind === 'transform') {
     if (!board.tiles || ![2, 4].includes(board.tiles.length) || board.tiles.at(-1) !== null || board.tiles.slice(0, -1).some(t => !t)) throw new Error('Dönüşüm görseli eksik.');
     const tiles = board.tiles!.filter((t): t is Tile => t !== null);
@@ -82,7 +120,7 @@ export function solveBoard(board: Board): Value {
   }
   if (board.kind === 'matrix') {
     const t = board.tiles!;
-    if (t.length !== 9 || t.slice(0, 8).some(v => !v)) throw new Error('Matris eksik.');
+    if (t.length !== 9 || t[8] !== null || t.slice(0, 8).some(v => !v)) throw new Error('Matris eksik.');
     const ops = [0, 1, 2].filter(op => same(combine(t[0]!, t[1]!, op), t[2]) && same(combine(t[3]!, t[4]!, op), t[5]));
     if (ops.length !== 1) throw new Error('Matris tek bir ortak kural vermiyor.');
     return combine(t[6]!, t[7]!, ops[0]);
@@ -116,7 +154,7 @@ export function solveBoard(board: Board): Value {
   }
   if (board.kind === 'order') {
     const names = board.names!;
-    if (!Array.isArray(names) || names.length < 3 || names.length > 6 || names.some(n => typeof n !== 'string') || new Set(names).size !== names.length || !Number.isInteger(board.position) || !board.position || board.position > names.length || !Array.isArray(board.clues) || board.clues.length > 10 || board.clues.some(p => !Array.isArray(p) || p.length !== 2 || p.some(n => !names.includes(n)))) throw new Error('Sıralama verisi geçersiz.');
+    if (!Array.isArray(names) || names.length < 3 || names.length > 6 || names.some(n => typeof n !== 'string') || new Set(names).size !== names.length || !Number.isInteger(board.position) || board.position! < 1 || board.position! > names.length || !Array.isArray(board.clues) || board.clues.length > 10 || board.clues.some(p => !Array.isArray(p) || p.length !== 2 || p.some(n => !names.includes(n)))) throw new Error('Sıralama verisi geçersiz.');
     const solutions: string[][] = [];
     const visit = (order: string[]) => {
       if (order.length === names.length) {
@@ -125,12 +163,12 @@ export function solveBoard(board: Board): Value {
     };
     visit([]);
     if (solutions.length !== 1) throw new Error('Sıralama tek çözümlü değil.');
-    return { textNumber: solutions[0][board.position - 1] };
+    return { textNumber: solutions[0][board.position! - 1] };
   }
   throw new Error('Bilinmeyen kural.');
 }
 
-export function generateProfessionalQuestion(type: QuestionType, seed: number, difficulty: DifficultyLevel): BaseQuestion {
+export function generateProfessionalQuestion(type: QuestionType, seed: number, difficulty: DifficultyLevel, legacyV3 = false): BaseQuestion {
   if (!VERIFIED_TYPES.includes(type) || !Number.isSafeInteger(seed) || seed < 1 || !Number.isInteger(difficulty) || difficulty < 1 || difficulty > 6) throw new Error('Soru parametreleri geçersiz.');
   const rng = new SeededRNG(seed);
   const size = difficulty >= 4 ? 4 : 3;
@@ -165,30 +203,14 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
         tiles.push(a, b, combine(a, b, op));
       }
       const candidate: Board = { displayMode: 'verified_board', kind: 'matrix', tiles: [...tiles.slice(0, 8), null], columns: 3 };
-      try { solveBoard(candidate); break; } catch { 
-        if (attempt === 99) {
-          tiles = [];
-          for (let row = 0; row < 3; row++) {
-            const a = { size, cells: Array(size * size).fill(0) };
-            const b = { size, cells: Array(size * size).fill(0) };
-            a.cells[0] = 1; b.cells[0] = 1;
-            a.cells[1] = 1; b.cells[1] = 0;
-            a.cells[2] = 0; b.cells[2] = 1;
-            
-            // Dynamic based on size
-            const rowOffset = row * size;
-            if (rowOffset + 3 < size * size) {
-               a.cells[rowOffset] = 1;
-               b.cells[rowOffset + 1] = 1;
-            }
-            if (size === 4) {
-               a.cells[15] = row === 2 ? 1 : 0;
-               b.cells[14] = row === 1 ? 1 : 0;
-            }
-
-            tiles.push(a, b, combine(a, b, op));
-          }
-        }
+      const answerCells = tiles[8].cells.reduce((sum, n) => sum + n, 0);
+      try {
+        solveBoard(candidate);
+        if (answerCells < 2 || answerCells > size * size - 2) throw new Error('Sonuç deseni fazla boş veya dolu.');
+        if (new Set(tiles.slice(0, 8).map(fingerprint)).size < 6) throw new Error('Örnekler yeterince çeşitli değil.');
+        break;
+      } catch {
+        if (attempt === 99) throw new Error('Açık ve ayırt edilebilir matris üretilemedi.');
       }
     }
     board = { displayMode: 'verified_board', kind: 'matrix', tiles: [...tiles.slice(0, 8), null], columns: 3 };
@@ -200,13 +222,11 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
     category = 'matrix';
   } else if (type === 'number_pattern') {
     const rule = difficulty <= 2 ? 'add' : rng.pick(['growing', 'alternate'] as const);
-    const start = rng.nextInt(1, 15), a = rng.nextInt(2, 7), b = rng.nextInt(1, 4);
+    const start = rng.nextInt(1, difficulty <= 2 ? 8 : 15), a = rng.nextInt(2, difficulty <= 2 ? 4 : 7), b = rng.nextInt(1, difficulty <= 4 ? 3 : 4);
     const values = [start];
     for (let i = 0; i < 5; i++) values.push(values.at(-1)! + (rule === 'add' ? a : rule === 'growing' ? a + i * b : i % 2 === 0 ? a : a + b));
     board = { displayMode: 'verified_board', kind: 'numbers', values, rule };
-    prompt = rule === 'alternate' ? 'Sayı dizisindeki değişim kuralını bularak sıradaki sayıyı belirleyiniz.' :
-             (rule as any) === 'multiply' ? 'Sayı dizisindeki çarpım kuralına göre sıradaki sayı kaçtır?' :
-             'Sayı dizisindeki kuralı bularak sıradaki sayıyı belirleyiniz.';
+    prompt = 'Artışların düzenini incele. Aynı düzen devam ederse sıradaki sayı kaç olur?';
     summary = rule === 'add' ? 'Her adımda ' + a + ' eklenir.' : rule === 'growing' ? 'Artış miktarı ' + a + ' ile başlar ve her adımda ' + b + ' büyür.' : 'Artışlar sırayla ' + a + ' ve ' + (a + b) + ' olarak tekrar eder.';
     ruleTitle = 'Artışları karşılaştır'; steps = ['Yan yana iki sayının farkını bul.', summary, 'Son sayıya sıradaki artışı ekle.'];
     category = 'numerical'; objective = 'Sabit, dönüşümlü ve ikinci dereceden artış örüntülerini ayırt etme.';
@@ -219,23 +239,26 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
     steps = ['İki örneğin girdi ve çıktı farklarını karşılaştır.', summary, 'Bu işlemi son girdiye uygula ve diğer örneklerle denetle.'];
     category = 'numerical'; objective = 'Örneklerden doğrusal bir işlem kuralı çıkarma.';
   } else if (type === 'symbol_coding' || type === 'shape_counting') {
-    const symbols = ['●', '▲', '■', '◆'];
+    const symbols = legacyV3 ? ['●', '▲', '■', '◆'] : rng.pickUnique(VISUAL_SYMBOL_IDS, difficulty <= 2 ? 3 : 4);
     if (type === 'symbol_coding') {
-      board = { displayMode: 'verified_board', kind: 'symbols', key: symbols.map(symbol => ({ symbol, value: rng.nextInt(1, difficulty * 3 + 3) })), symbols: Array.from({ length: 2 + Math.min(3, difficulty) }, () => rng.pick(symbols)) };
+      board = { displayMode: 'verified_board', kind: 'symbols', key: rng.pickUnique(Array.from({ length: difficulty * 3 + 4 }, (_, i) => i + 1), symbols.length).map((value, i) => ({ symbol: symbols[i], value })), symbols: rng.shuffle([...rng.pickUnique(symbols, Math.min(4, difficulty + 1)), ...(difficulty >= 3 ? [symbols[0]] : [])]) };
       prompt = 'Anahtardaki değerleri kullan. Aşağıdaki sembollerin toplamı kaçtır?';
       ruleTitle = 'Sembolü sayıya çevir'; summary = 'Her sembol anahtarda karşısındaki sayıyı temsil eder. Tekrar eden semboller de toplama katılır.';
       category = 'coding'; objective = 'Sembol–değer eşlemesini kullanma ve çalışma belleği.';
     } else {
       const target = rng.pick(symbols);
-      const items = rng.shuffle([target, ...Array.from({ length: 7 + difficulty * 3 }, () => rng.pick(symbols))]);
+      const total = [12, 16, 20, 24, 30, 36][difficulty - 1];
+      const targetCount = rng.nextInt(2, Math.floor(total / 3));
+      const otherSymbols = symbols.filter(s => s !== target);
+      const items = rng.shuffle([...Array(targetCount).fill(target), ...Array.from({ length: total - targetCount }, () => rng.pick(otherSymbols))]);
       board = { displayMode: 'verified_board', kind: 'count', items, target };
-      prompt = 'Izgarada toplam kaç tane ' + target + ' var?';
+      prompt = legacyV3 ? 'Izgarada toplam kaç tane ' + target + ' var?' : 'Izgarada hedef olarak gösterilen ' + symbolLabel(target) + ' görselinden kaç tane var?';
       ruleTitle = 'Sistemli tarama'; summary = 'Yalnızca hedef sembolü say. Her satırı soldan sağa bir kez tara.';
       category = 'attention'; objective = 'Benzer uyaranlar arasından hedefi seçme ve sistemli tarama.';
     }
     steps = ['Hedef sembolü ve verilen bilgileri dikkatle incele.', summary, 'Bulduğun sonucu ikinci kez kontrol et.'];
   } else {
-    const names = rng.pickUnique(['Ada', 'Ece', 'Can', 'Efe', 'Duru', 'Mert', 'Oya', 'Deniz'], difficulty < 4 ? 4 : 5);
+    const names = rng.pickUnique(['Ada', 'Ece', 'Can', 'Efe', 'Duru', 'Mert', 'Oya', 'Deniz'], difficulty <= 2 ? 4 : difficulty <= 4 ? 5 : 6);
     const order = rng.shuffle(names), position = rng.nextInt(1, names.length);
     board = { displayMode: 'verified_board', kind: 'order', names, clues: rng.shuffle(order.slice(1).map((n, i) => [order[i], n] as [string, string])), position };
     prompt = 'İpuçlarına göre soldan ' + position + '. sırada kim vardır?';
@@ -244,20 +267,81 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
     category = 'logic'; objective = 'Birden çok sıralama kısıtından tek çözüm üretme.';
   }
   const answer = solveBoard(board);
+  // Concrete derivations are part of the canonical content, not free-form AI prose.
+  if ('textNumber' in answer && typeof answer.textNumber === 'number') {
+    if (board.kind === 'numbers') {
+      const diffs = board.values!.slice(1).map((v, i) => v - board.values![i]);
+      steps = ['Komşu sayıları çıkar: artışlar ' + diffs.join(', ') + '.', summary,
+        'Sıradaki artış ' + (answer.textNumber - board.values!.at(-1)!) + ' olur.',
+        board.values!.at(-1) + ' + ' + (answer.textNumber - board.values!.at(-1)!) + ' = ' + answer.textNumber + '.'];
+    } else if (board.kind === 'machine') {
+      const [[x1, y1], [x2, y2]] = board.examples!;
+      const m = (y2 - y1) / (x2 - x1), offset = y1 - m * x1;
+      steps = ['Girdi farkı ' + (x2 - x1) + ', çıktı farkı ' + (y2 - y1) + ': çarpan ' + m + '.',
+        'Bir örnekle ekleneni bul: ' + y1 + ' − ' + x1 + ' × ' + m + ' = ' + offset + '.',
+        board.input + ' × ' + m + ' + ' + offset + ' = ' + answer.textNumber + '.',
+        'Aynı işlemi verilen üç örnekte de kontrol et.'];
+    } else if (board.kind === 'symbols') {
+      const values = board.symbols!.map(s => board.key!.find(k => k.symbol === s)!.value);
+      steps = ['Her sembolü anahtardaki değeriyle eşleştir.', board.symbols!.map((s, i) => s + ' = ' + values[i]).join('; ') + '.',
+        'Tekrar eden sembolleri atlamadan topla: ' + values.join(' + ') + ' = ' + answer.textNumber + '.'];
+    } else if (board.kind === 'count') {
+      const groups: number[] = [];
+      for (let i = 0; i < board.items!.length; i += 6) groups.push(board.items!.slice(i, i + 6).filter(s => s === board.target).length);
+      steps = ['Hedef ' + board.target + ' sembolüdür; diğer şekilleri sayma.',
+        'Görselleri baştan başlayarak altışarlı gruplar halinde tara: ' + groups.join(', ') + ' hedef.',
+        'Grup sayılarını topla: ' + groups.join(' + ') + ' = ' + answer.textNumber + '.'];
+    }
+  }
   const choices: { value: Value; note: string }[] = [{ value: answer, note: 'Gösterilen bütün verilerle uyumludur.' }];
-  const add = (value: Value, note: string) => { if (!choices.some(c => same(c.value, value))) choices.push({ value, note }); };
+  const add = (value: Value, note: string) => {
+    if ('textNumber' in value && typeof value.textNumber === 'number' && (!Number.isSafeInteger(value.textNumber) || value.textNumber < 0)) return;
+    if (!choices.some(c => same(c.value, value))) choices.push({ value, note });
+  };
   if ('cells' in answer) {
-    if (board.kind === 'matrix') for (const op of [0, 1, 2]) add(combine(board.tiles![6]!, board.tiles![7]!, op), 'Birleştirme kuralı yerine başka bir hücre işlemi uygulanmış.');
+    if (board.kind === 'matrix') for (const op of [0, 1, 2]) add(combine(board.tiles![6]!, board.tiles![7]!, op), 'Örneklerle uyuşmayan bir hücre birleştirme kuralı uygulanmış.');
     const source = board.tiles!.filter((t): t is Tile => t !== null).at(-1)!;
-    add(source, 'Şekil değişmeden bırakılmış.');
-    for (const turn of [1, 2, 3]) add(transformTile(source, 'rotate', turn), 'Dönüş açısı veya dönüş yönü hedef kuralla uyuşmuyor.');
-    add(transformTile(source, 'mirrorX'), 'Döndürme ile ayna yansıması karıştırılmış.');
-    for (let i = 0; choices.length < 4 && i < answer.cells.length; i++) {
-      const cells = [...answer.cells]; cells[i] = 1 - cells[i]; add({ size: answer.size, cells }, 'Bir hücrenin dolu–boş durumu yanlış aktarılmış.');
+    add(source, 'Dönüşüm uygulanmamış; başlangıç deseni aynen bırakılmış.');
+    for (const turn of rng.shuffle([1, 2, 3])) add(transformTile(source, 'rotate', turn), 'Şekil saat yönünde ' + turn * 90 + '° döndürülmüş; verilen kural bu dönüşümle uyuşmuyor.');
+    add(transformTile(source, 'mirrorX'), 'Sağ-sol yansıması kullanılmış; verilen dönüşümle uyuşmuyor.');
+    add(transformTile(source, 'mirrorY'), 'Üst-alt yansıması kullanılmış; verilen dönüşümle uyuşmuyor.');
+    for (const i of rng.shuffle(Array.from({ length: answer.cells.length }, (_, i) => i))) {
+      if (choices.length >= 4) break;
+      const cells = [...answer.cells]; cells[i] = 1 - cells[i];
+      add({ size: answer.size, cells }, (Math.floor(i / size) + 1) + '. satırın ' + (i % size + 1) + '. hücresinde dolu-boş durumu ters aktarılmış.');
     }
   } else if (typeof answer.textNumber === 'number') {
-    for (const offset of rng.shuffle([-1, 1, 2, -2, 3])) if (answer.textNumber + offset >= 0) add({ textNumber: answer.textNumber + offset }, 'Sayma, işlem veya artış takibinde hata var; tüm verileri tekrar kontrol et.');
-  } else for (const name of board.names!) add({ textNumber: name }, 'Bu kişi istenen sırada değildir; komşuluk ipuçlarıyla çelişir.');
+    const number = (n: number, note: string) => add({ textNumber: n }, note);
+    if (board.kind === 'numbers') {
+      const v = board.values!, last = v.at(-1)!, firstDiff = v[1] - v[0], lastDiff = last - v.at(-2)!;
+      number(last + lastDiff, 'Son artış aynen tekrar edilmiş; artışların düzeni kontrol edilmemiş.');
+      number(last + firstDiff, 'Yalnızca ilk artış kullanılmış; sonraki artışların değişimi atlanmış.');
+      number(last, 'Son sayı yeniden yazılmış; sıradaki artış uygulanmamış.');
+      number(last + 2 * (answer.textNumber - last), 'Sıradaki artış bir kez yerine iki kez eklenmiş.');
+      number(last - firstDiff, 'İleri gitmek yerine ilk artış çıkarılmış.');
+    } else if (board.kind === 'machine') {
+      const [[x1, y1], [x2, y2]] = board.examples!;
+      const m = (y2 - y1) / (x2 - x1), offset = y1 - m * x1, x = board.input!;
+      number(x * m, 'Çarpma yapılmış ancak eklenen sabit miktar unutulmuş.');
+      number((x + offset) * m, 'Önce çarpıp sonra eklemek yerine önce ekleyip sonra çarpılmış.');
+      number(x + m + offset, 'Çarpma yerine toplama yapılmış.');
+      number(x * (m + 1) + offset, 'Çarpan bir fazla alınmış.');
+      number(x * m + offset + m, 'Çarpan ayrıca sonuca eklenmiş.');
+    } else if (board.kind === 'symbols') {
+      const values = board.symbols!.map(s => board.key!.find(k => k.symbol === s)!.value);
+      number([...new Set(board.symbols!)].reduce((sum, s) => sum + board.key!.find(k => k.symbol === s)!.value, 0), 'Tekrar eden semboller yalnızca bir kez sayılmış.');
+      number(answer.textNumber - values.at(-1)!, 'Son sembolün değeri toplama katılmamış.');
+      number(answer.textNumber + values[0], 'İlk sembolün değeri fazladan bir kez daha eklenmiş.');
+      number(values.length, 'Sembol değerlerini toplamak yerine sembol adedi sayılmış.');
+    } else if (board.kind === 'count') {
+      for (const symbol of (legacyV3 ? ['●', '▲', '■', '◆'] : [...new Set(board.items!)]).filter(s => s !== board.target))
+        number(board.items!.filter(s => s === symbol).length, 'Hedef yerine ' + symbol + ' sembolleri sayılmış.');
+      number(answer.textNumber - 1, 'Bir hedef sembol gözden kaçırılmış.');
+      number(answer.textNumber + 1, 'Bir sembol iki kez sayılmış veya hedef olmayan bir şekil eklenmiş.');
+    }
+    for (const offset of rng.shuffle([-1, 1, 2, -2, 3])) if (choices.length < 4)
+      number(answer.textNumber + offset, 'Hesap sonucu ' + Math.abs(offset) + (offset > 0 ? ' fazla' : ' eksik') + ' bulunmuş; işlem adımlarını yeniden kontrol et.');
+  } else for (const name of board.names!) add({ textNumber: name }, name + ' istenen sırada değildir; komşuluk ipuçlarını birleştirerek konumunu kontrol et.');
   if (choices.length < 4) throw new Error('Dört farklı seçenek üretilemedi.');
   let correctOptionId = '';
   const notes: Record<string, string> = {};
@@ -265,9 +349,11 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
     const id = 'ABCD'[i]; if (same(c.value, answer)) correctOptionId = id; notes[id] = c.note;
     return { id, label: id, fingerprint: fingerprint(c.value), visualData: c.value };
   });
-  return { id: type + '-v2-d' + difficulty + '-s' + seed, version: 2, type, category, difficulty,
+  const version = legacyV3 ? 3 : 5;
+  return { id: type + '-v' + version + '-d' + difficulty + '-s' + seed, version, type, category, difficulty,
     ageGroup: difficulty <= 2 ? '1-2' : '3-4', prompt, options, correctOptionId,
     explanation: { ruleTitle, summary, steps: [...steps, 'Bu kurala uyan seçenek: ' + correctOptionId + '.'] },
-    estimatedSeconds: 30 + difficulty * 7, skills: [objective], seed, visualConfig: board, status: 'draft',
-    authoring: { engine: ENGINE_VERSION, objective, distractorNotes: notes } };
+    estimatedSeconds: (board.kind === 'matrix' || board.kind === 'order' ? 45 : 25) + difficulty * 8, skills: [objective], seed, visualConfig: board, status: 'draft',
+    authoring: { engine: legacyV3 ? 'verified-3' : ENGINE_VERSION, objective, distractorNotes: notes } };
 }
+

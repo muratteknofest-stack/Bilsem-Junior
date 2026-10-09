@@ -2,9 +2,9 @@
 // Models can be changed via environment variables without code changes
 
 export const AI_MODELS = {
-  QUESTION_PLANNER: process.env.AI_MODEL_QUESTION_PLANNER || 'gemini-3.1-pro',
-  QUESTION_GENERATOR: process.env.AI_MODEL_QUESTION_GENERATOR || 'gemini-3.1-pro',
-  QUESTION_VALIDATOR: process.env.AI_MODEL_QUESTION_VALIDATOR || 'gemini-3.1-pro',
+  QUESTION_PLANNER: process.env.AI_MODEL_QUESTION_PLANNER || 'gemini-3.1-pro-preview',
+  QUESTION_GENERATOR: process.env.AI_MODEL_QUESTION_GENERATOR || 'gemini-3.1-pro-preview',
+  QUESTION_VALIDATOR: process.env.AI_MODEL_QUESTION_VALIDATOR || 'gemini-3.1-pro-preview',
 } as const;
 
 export const AI_GENERATION_CONFIG = {
@@ -27,3 +27,4 @@ export const AI_GENERATION_CONFIG = {
 } as const;
 
 export type AiModelRole = keyof typeof AI_MODELS;
+

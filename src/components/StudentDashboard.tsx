@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import confetti from 'canvas-confetti';
 import { 
   UserProfile, 
@@ -47,9 +47,12 @@ import { WeeklyProgressChartCard } from './WeeklyProgressChartCard';
 import { TodayPersonalizedStudyPlanCard } from './TodayPersonalizedStudyPlanCard';
 import { WeeklyChallengesView } from './WeeklyChallengesView';
 import { WeeklyChallengesBannerCard } from './WeeklyChallengesBannerCard';
+import { GamificationArena } from './GamificationArena';
 import { StudentStudyHub } from './StudentStudyHub';
 import { levelProgress } from '../features/student/study-hub-model';
 import { getStudyFavorites, saveStudyFavorites } from '../services/student-preferences-service';
+import './landing/design-system.css';
+import './dashboard-design-system.css';
 import {
   CardSkeleton,
   ChartSkeleton,
@@ -159,6 +162,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const [cheeredUser, setCheeredUser] = useState<string | null>(null);
   const [favorites, setFavorites] = useState(getStudyFavorites);
   const [skillSearch, setSkillSearch] = useState('');
+  const prefersReducedMotion = useReducedMotion();
   const [skillFilter, setSkillFilter] = useState<'all' | 'practice' | 'new'>('all');
   useEffect(() => { setFavorites(getStudyFavorites()); }, [activeUser.id]);
 
@@ -209,6 +213,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     const matches = m.categoryName.toLocaleLowerCase('tr-TR').includes(skillSearch.trim().toLocaleLowerCase('tr-TR'));
     return matches && (skillFilter === 'all' || (skillFilter === 'new' ? !m.attemptCount : m.attemptCount > 0 && m.mastery < 80));
   });
+  const weeklyStats = useMemo(() => dataService.getWeeklyQuestionProgressData(activeUser).summary, [activeUser]);
   const xpProgress = levelProgress(activeUser.xp);
   const nextLvlXp = xpProgress.level * 250;
   const currentXp = xpProgress.xp;
@@ -225,17 +230,17 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
   if (isLoading) {
     return (
-      <main id="student-dashboard" className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 space-y-6 sm:space-y-8 pb-24 lg:pb-12 min-h-screen">
+      <main id="student-dashboard" className="zp-dashboard-page zp-student-dashboard w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6 sm:space-y-8 pb-24 lg:pb-12 min-h-screen">
         <ProfileBannerSkeleton />
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
-          <div className="md:col-span-7 lg:col-span-8 space-y-6 sm:space-y-8">
+        <div className="zp-student-content-grid">
+          <div className="min-w-0 space-y-6 sm:space-y-8">
             <DailyTaskSkeleton />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <ModeCardSkeleton />
               <ModeCardSkeleton />
             </div>
           </div>
-          <div className="md:col-span-5 lg:col-span-4 space-y-4 sm:space-y-6">
+          <div className="min-w-0 space-y-4 sm:space-y-6">
             <CardSkeleton className="h-[210px]" />
             <ChartSkeleton className="h-[320px]" />
           </div>
@@ -245,12 +250,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   }
 
   return (
-      <div className="w-full min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24 text-zinc-900 dark:text-zinc-100 selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
+      <div className="zp-dashboard-page zp-student-dashboard w-full min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24 text-zinc-900 dark:text-zinc-100 selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
         
         {/* Dynamic Animated Subtle Background Blobs */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
           <motion.div 
-            animate={{ 
+            animate={prefersReducedMotion ? undefined : {
               scale: [1, 1.2, 1],
               x: [0, 40, 0],
               y: [0, -30, 0],
@@ -260,7 +265,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
             className="absolute -top-24 -left-20 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-500/15 rounded-full blur-3xl"
           />
           <motion.div 
-            animate={{ 
+            animate={prefersReducedMotion ? undefined : {
               scale: [1.1, 1, 1.1],
               x: [0, -35, 0],
               y: [0, 40, 0],
@@ -271,29 +276,31 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           />
         </div>
 
-        <main id="student-dashboard" className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-8 space-y-6 sm:space-y-8 relative z-10">
+        <main id="student-dashboard" className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6 sm:space-y-8 relative z-10">
           
           {/* Next-Gen Futuristic Profile Hero Banner */}
           <motion.section 
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="relative overflow-hidden rounded-3xl bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800/80 p-6 md:p-8 shadow-sm transition-all"
+          className="zp-dashboard-hero relative overflow-hidden rounded-3xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800/80 p-4 sm:p-6 xl:p-8 shadow-sm transition-all"
         >
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6">
             
             {/* Student Info & Level Progress */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full lg:w-auto">
+            <div className="flex min-w-0 flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full xl:flex-1">
               
               {/* Animated 3D-Feel Floating Avatar */}
-              <motion.div 
-                whileHover={{ scale: 1.08, rotate: [0, -3, 3, 0] }}
-                whileTap={{ scale: 0.95 }}
+              <motion.button
+                type="button"
+                aria-label="Avatar kutlaması"
+                whileHover={prefersReducedMotion ? undefined : { scale: 1.08, rotate: [0, -3, 3, 0] }}
+                whileTap={prefersReducedMotion ? undefined : { scale: 0.95 }}
                 onClick={handleAvatarClick}
                 className="relative w-18 h-18 sm:w-22 sm:h-22 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-50 via-indigo-100/70 to-indigo-200/50 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center text-4xl sm:text-5xl shadow-md border-2 border-indigo-200/60 dark:border-indigo-500/20 shrink-0 cursor-pointer group select-none"
               >
                 <motion.span 
-                  animate={{ y: [0, -4, 0] }}
+                  animate={prefersReducedMotion ? undefined : { y: [0, -4, 0] }}
                   transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                 >
                   {activeUser.avatar || '🦊'}
@@ -304,9 +311,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                   <Star className="w-3 h-3 fill-amber-300 text-amber-300" />
                   <span>{xpProgress.level}</span>
                 </div>
-              </motion.div>
+              </motion.button>
 
               <div className="flex-1 min-w-0">
+                <p className="zp-dashboard-kicker">ÖĞRENCİ ALANI / BUGÜN</p>
                 <div className="flex items-center gap-2.5 flex-wrap">
                   <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight font-['Outfit',sans-serif]">
                     {greeting.text}, {activeUser.name?.split(' ')[0] || 'Zeka Şampiyonu'} {greeting.emoji}
@@ -322,11 +330,11 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
                 {/* XP & Next Level Bar */}
                 <div className="mt-3 sm:mt-4 max-w-md w-full">
-                  <div className="flex justify-between text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">
+                  <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">
                     <span className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-bold">
                       <Zap className="w-3.5 h-3.5 fill-current" /> Seviye {xpProgress.level}
                     </span>
-                    <span>
+                    <span className="tabular-nums">
                       <strong className="text-zinc-900 dark:text-white font-bold">{currentXp}</strong> / {nextLvlXp} XP 
                       <span className="text-zinc-400 ml-1 text-[11px]">({remainingXp} XP kaldı)</span>
                     </span>
@@ -348,11 +356,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {studentCodeDisplay && (
                     <motion.button
+                      type="button"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={handleCopyStudentCode}
                       title="Giriş kodunu kopyala"
-                      className="inline-flex items-center gap-2 bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-800 dark:hover:bg-zinc-700/80 px-3 py-1 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-200/70 dark:border-zinc-700/70 transition-colors cursor-pointer group"
+                      className="inline-flex max-w-full flex-wrap items-center gap-2 break-all bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-800 dark:hover:bg-zinc-700/80 px-3 py-1 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-200/70 dark:border-zinc-700/70 transition-colors cursor-pointer group"
                     >
                       <KeyRound className="w-3.5 h-3.5 text-zinc-500 group-hover:text-indigo-500 transition-colors" />
                       <span>Giriş Kodu: <strong className="tracking-wider font-mono text-zinc-900 dark:text-white">{studentCodeDisplay}</strong></span>
@@ -363,37 +372,26 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                       )}
                     </motion.button>
                   )}
-                  {activeUser.id.startsWith('demo_') && <button
-                    type="button"
-                    onClick={() => {
-                      sound.playClick();
-                      onNavigate('parent');
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100/80 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/80 text-xs font-bold transition-colors cursor-pointer shadow-xs"
-                    title="Veli Raporları ve Gelişim Portalına Geç"
-                  >
-                    <Users className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>Veli Portalı</span>
-                  </button>}
+                  {activeUser.id.startsWith('demo_') && <span className="inline-flex items-center rounded-xl border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-bold text-violet-800">Deneme: toplam 3 örnek soru</span>}
                 </div>
 
               </div>
             </div>
             
             {/* Quick Interactive Stat Cards */}
-            <div className="grid grid-cols-2 sm:flex sm:flex-nowrap items-center gap-2.5 sm:gap-3 w-full lg:w-auto">
+            <div className="zp-student-hero-stats grid items-stretch gap-2.5 sm:gap-3 w-full xl:w-auto xl:shrink-0">
               
               {/* Streak Pill */}
               <motion.button 
                 whileHover={{ scale: 1.04, y: -2 }}
                 whileTap={{ scale: 0.96 }}
                 onClick={handleStreakBadgeClick}
-                className="flex-1 sm:flex-none flex items-center gap-2.5 sm:gap-3.5 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-zinc-800/90 dark:to-zinc-800/40 border border-amber-200/60 dark:border-amber-500/20 rounded-2xl p-3 sm:p-4 cursor-pointer shadow-xs text-left group"
+                className="min-w-0 flex items-center gap-2.5 sm:gap-3.5 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-zinc-800/90 dark:to-zinc-800/40 border border-amber-200/60 dark:border-amber-500/20 rounded-2xl p-3 sm:p-4 cursor-pointer shadow-xs text-left group"
               >
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20 shrink-0 group-hover:scale-110 transition-transform">
                   <Flame className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse fill-current" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <div className="text-base sm:text-xl font-black text-amber-950 dark:text-amber-400 leading-tight flex items-center gap-1">
                     {activeUser.streak || 0} Gün
                   </div>
@@ -411,12 +409,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                   sound.playClick();
                   onNavigate('leaderboard');
                 }}
-                className="flex-1 sm:flex-none flex items-center gap-2.5 sm:gap-3.5 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-zinc-800/90 dark:to-zinc-800/40 border border-indigo-200/60 dark:border-indigo-500/20 rounded-2xl p-3 sm:p-4 cursor-pointer shadow-xs text-left group"
+                className="min-w-0 flex items-center gap-2.5 sm:gap-3.5 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-zinc-800/90 dark:to-zinc-800/40 border border-indigo-200/60 dark:border-indigo-500/20 rounded-2xl p-3 sm:p-4 cursor-pointer shadow-xs text-left group"
               >
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0 group-hover:scale-110 transition-transform">
                   <Trophy className="w-5 h-5 sm:w-6 sm:h-6 fill-current" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <div className="text-base sm:text-xl font-black text-indigo-950 dark:text-indigo-400 leading-tight">
                     {activeUser.xp || 0} XP
                   </div>
@@ -431,6 +429,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </div>
         </motion.section>
 
+        <GamificationArena user={activeUser}
+          thisWeekQuestions={weeklyStats.thisWeekTotal} lastWeekQuestions={weeklyStats.lastWeekTotal}
+          onPractice={() => onStartPractice?.('mixed')}
+          onOpenChallenges={() => setActiveTab('challenges')} />
         <StudentStudyHub
           masteries={safeMasteries}
           unresolved={unresolvedMistakesCount}
@@ -443,8 +445,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         />
 
         {/* Modern Segmented Navigation Bar */}
-        <div className="flex p-1.5 bg-zinc-200/70 dark:bg-zinc-900/80 rounded-2xl w-full max-w-full overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] border border-zinc-200/80 dark:border-zinc-800/80 backdrop-blur-md shadow-inner gap-1 flex-nowrap md:w-fit">
+        <div className="zp-dashboard-tabs p-1.5 bg-zinc-200/70 dark:bg-zinc-900/80 rounded-2xl w-full border border-zinc-200/80 dark:border-zinc-800/80 shadow-inner gap-1" role="group" aria-label="Öğrenci paneli bölümleri">
           <button 
+            type="button"
+            aria-pressed={activeTab === 'modes'}
             onClick={() => {
               sound.playClick();
               setActiveTab('modes');
@@ -466,6 +470,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </button>
 
           <button 
+            type="button"
+            aria-pressed={activeTab === 'plan'}
             onClick={() => {
               sound.playClick();
               setActiveTab('plan');
@@ -487,6 +493,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </button>
 
           <button 
+            type="button"
+            aria-pressed={activeTab === 'skills'}
             onClick={() => {
               sound.playClick();
               setActiveTab('skills');
@@ -508,6 +516,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </button>
 
           <button 
+            type="button"
+            aria-pressed={activeTab === 'challenges'}
             onClick={() => {
               sound.playClick();
               setActiveTab('challenges');
@@ -532,6 +542,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </button>
 
           <button 
+            type="button"
+            aria-pressed={activeTab === 'progress'}
             onClick={() => {
               sound.playClick();
               setActiveTab('progress');
@@ -554,10 +566,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         </div>
 
         {/* Dashboard 2-Column Grid Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
+        <div className="zp-student-content-grid">
           
           {/* Main Content Area (Left Col) */}
-          <div className="md:col-span-7 lg:col-span-8 space-y-6 sm:space-y-8">
+          <div className="min-w-0 space-y-6 sm:space-y-8">
             
             <AnimatePresence mode="wait">
               
@@ -593,7 +605,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         sound.playClick();
                         onStartAdaptive();
                       }}
-                      className="group relative p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-700 text-white text-left shadow-lg shadow-indigo-500/20 overflow-hidden cursor-pointer flex flex-col justify-between h-auto min-h-[180px] sm:h-52 border border-indigo-400/30"
+                      className="group relative min-w-0 p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-700 text-white text-left shadow-lg shadow-indigo-500/20 overflow-hidden cursor-pointer flex flex-col justify-between min-h-52 border border-indigo-400/30"
                     >
                       <div className="absolute top-0 right-0 w-36 h-36 bg-white/10 rounded-full blur-2xl" />
                       
@@ -625,7 +637,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         sound.playClick();
                         onStartExam();
                       }}
-                      className="group relative p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-amber-400 dark:hover:border-amber-500/50 transition-all cursor-pointer flex flex-col justify-between h-auto min-h-[180px] sm:h-52"
+                      className="zp-dashboard-surface group relative min-w-0 p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-amber-400 dark:hover:border-amber-500/50 transition-all cursor-pointer flex flex-col justify-between min-h-52"
                     >
                       <div className="flex items-start justify-between w-full">
                         <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center border border-amber-200/50 dark:border-amber-800/50 group-hover:scale-110 transition-transform">
@@ -655,7 +667,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         sound.playClick();
                         onStartPractice('mixed');
                       }}
-                      className="group relative p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-emerald-400 dark:hover:border-emerald-500/50 transition-all cursor-pointer flex flex-col justify-between h-auto min-h-[180px] sm:h-52"
+                      className="zp-dashboard-surface group relative min-w-0 p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-emerald-400 dark:hover:border-emerald-500/50 transition-all cursor-pointer flex flex-col justify-between min-h-52"
                     >
                       <div className="flex items-start justify-between w-full">
                         <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 flex items-center justify-center border border-emerald-200/50 dark:border-emerald-800/50 group-hover:scale-110 transition-transform">
@@ -685,7 +697,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         sound.playClick();
                         onOpenMistakes();
                       }}
-                      className="group relative p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-rose-400 dark:hover:border-rose-500/50 transition-all cursor-pointer flex flex-col justify-between h-auto min-h-[180px] sm:h-52"
+                      className="zp-dashboard-surface group relative min-w-0 p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-rose-400 dark:hover:border-rose-500/50 transition-all cursor-pointer flex flex-col justify-between min-h-52"
                     >
                       <div className="flex items-start justify-between w-full">
                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform ${
@@ -725,28 +737,29 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                   {/* Secondary Explore Row: Glossary & Weekly Challenges */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Bilişsel Sözlük & Mini Oyunlar Shortcut Card */}
-                    <motion.div 
+                    <motion.button
+                      type="button"
                       whileHover={{ scale: 1.01 }}
                       onClick={() => {
                         sound.playClick();
                         onNavigate('glossary');
                       }}
-                      className="p-5 rounded-3xl bg-gradient-to-br from-sky-500/10 via-indigo-500/10 to-purple-500/10 dark:from-sky-950/30 dark:to-purple-950/30 border border-sky-200/80 dark:border-sky-800/40 flex items-center justify-between gap-4 cursor-pointer hover:border-sky-400 transition-all group"
+                      className="min-w-0 w-full p-5 rounded-3xl bg-gradient-to-br from-sky-500/10 via-indigo-500/10 to-purple-500/10 dark:from-sky-950/30 dark:to-purple-950/30 border border-sky-200/80 dark:border-sky-800/40 flex items-center justify-between gap-4 cursor-pointer hover:border-sky-400 transition-all group text-left"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-11 h-11 rounded-2xl bg-sky-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-sky-500/20 group-hover:rotate-6 transition-transform">
                           <BookOpen className="w-5 h-5" />
                         </div>
                         <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <h4 className="text-sm font-bold text-zinc-900 dark:text-white font-['Outfit',sans-serif] truncate">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <h4 className="text-sm font-bold text-zinc-900 dark:text-white font-['Outfit',sans-serif]">
                               Bilişsel Sözlük
                             </h4>
                             <span className="text-[10px] font-bold bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300 px-1.5 py-0.2 rounded-full shrink-0">
                               Simülatör
                             </span>
                           </div>
-                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
+                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
                             İnteraktif görsel kavram mini oyunları
                           </p>
                         </div>
@@ -754,31 +767,32 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                       <div className="w-8 h-8 rounded-xl bg-white dark:bg-zinc-800 flex items-center justify-center text-zinc-400 group-hover:text-sky-500 group-hover:translate-x-0.5 transition-all shrink-0 shadow-xs">
                         <ChevronRight className="w-4 h-4" />
                       </div>
-                    </motion.div>
+                    </motion.button>
 
                     {/* Haftalık Bilişsel Görevler & Rozetler Shortcut Card */}
-                    <motion.div 
+                    <motion.button
+                      type="button"
                       whileHover={{ scale: 1.01 }}
                       onClick={() => {
                         sound.playClick();
                         setActiveTab('challenges');
                       }}
-                      className="p-5 rounded-3xl bg-gradient-to-br from-amber-500/10 via-indigo-500/10 to-violet-500/10 dark:from-amber-950/30 dark:to-indigo-950/30 border border-amber-200/80 dark:border-amber-800/40 flex items-center justify-between gap-4 cursor-pointer hover:border-amber-400 transition-all group"
+                      className="min-w-0 w-full p-5 rounded-3xl bg-gradient-to-br from-amber-500/10 via-indigo-500/10 to-violet-500/10 dark:from-amber-950/30 dark:to-indigo-950/30 border border-amber-200/80 dark:border-amber-800/40 flex items-center justify-between gap-4 cursor-pointer hover:border-amber-400 transition-all group text-left"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/20 group-hover:rotate-6 transition-transform">
                           <Trophy className="w-5 h-5" />
                         </div>
                         <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <h4 className="text-sm font-bold text-zinc-900 dark:text-white font-['Outfit',sans-serif] truncate">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <h4 className="text-sm font-bold text-zinc-900 dark:text-white font-['Outfit',sans-serif]">
                               Haftalık Görevler
                             </h4>
                             <span className="text-[10px] font-bold bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 px-1.5 py-0.2 rounded-full shrink-0">
                               8 Rozet
                             </span>
                           </div>
-                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
+                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
                             Kategori hedeflerini tamamla, rozetleri kap
                           </p>
                         </div>
@@ -786,7 +800,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                       <div className="w-8 h-8 rounded-xl bg-white dark:bg-zinc-800 flex items-center justify-center text-zinc-400 group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all shrink-0 shadow-xs">
                         <ChevronRight className="w-4 h-4" />
                       </div>
-                    </motion.div>
+                    </motion.button>
                   </div>
                 </motion.div>
               )}
@@ -868,7 +882,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ duration: 0.3, delay: i * 0.05 }}
                           whileHover={{ y: -3 }}
-                          className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-sm flex flex-col justify-between group"
+                          className="zp-dashboard-surface p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-sm flex flex-col justify-between group"
                         >
                           <div>
                             <div className="flex items-start justify-between mb-3">
@@ -957,7 +971,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </div>
 
           {/* Right Sidebar Gamification Area (Right Col) */}
-          <aside className="md:col-span-5 lg:col-span-4 space-y-4 sm:space-y-6">
+          <aside className="min-w-0 space-y-4 sm:space-y-6">
             
             {/* Daily Streak Card with Milestones & Freeze */}
             <DailyStreakCard 
@@ -982,27 +996,17 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               onStartPractice={() => onStartPractice('mixed')}
             />
 
-            {/* Badges Section */}
-            <BadgesSection 
-              user={activeUser} 
-              mistakes={activeMistakes} 
-              onUserUpdate={onUserUpdate}
-              onOpenMistakes={onOpenMistakes}
-              onStartPractice={() => onStartPractice()}
-              onNavigate={onNavigate}
-            />
-
             {/* Weekly Leaderboard Widget with Interactive Cheer */}
-            <article className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl shadow-sm">
+            <article className="zp-dashboard-surface p-6 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl shadow-sm">
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-amber-500" />
                   <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 font-['Outfit',sans-serif]">
-                    Kişisel Haftalık Özet
+                    Kişisel XP Özeti
                   </h3>
                 </div>
                 <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-1 rounded-full border border-indigo-200/50 dark:border-indigo-800/40">
-                  Doğrulanmış Veri
+                  Kendi verilerin
                 </span>
               </div>
 
@@ -1031,7 +1035,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         <span className={`w-5 text-xs font-black text-center ${
                           rank === 1 ? 'text-amber-500' : rank === 2 ? 'text-slate-400' : rank === 3 ? 'text-amber-700' : 'text-zinc-400'
                         }`}>
-                          {rank}
+                          {isMe ? '★' : rank}
                         </span>
                         <span className="text-xl shrink-0">{lb.avatar || '⭐'}</span>
                         <div className="min-w-0 truncate">
@@ -1039,7 +1043,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                             {lb.anonymousAlias}
                           </p>
                           <p className="text-[10px] text-zinc-400 font-medium">
-                            {lb.xpEarned || 0} XP
+                            {lb.xpEarned || 0} toplam XP
                           </p>
                         </div>
                       </div>
@@ -1076,7 +1080,18 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
         </div>
 
+        {/* Rozet koleksiyonu dar yan sütuna sıkıştırılmadan tam genişlikte okunur. */}
+        <BadgesSection
+          user={activeUser}
+          mistakes={activeMistakes}
+          onUserUpdate={onUserUpdate}
+          onOpenMistakes={onOpenMistakes}
+          onStartPractice={() => onStartPractice()}
+          onNavigate={onNavigate}
+        />
+
       </main>
     </div>
   );
 };
+

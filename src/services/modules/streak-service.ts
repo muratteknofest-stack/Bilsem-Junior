@@ -5,7 +5,9 @@ import { getCurrentUser, setCurrentUser, addXP } from './profile-service';
 export function markPracticeForToday(user: UserProfile, minutesSpent: number): boolean {
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  const previousDate = user.lastActiveDate?.slice(0, 10) || '';
+  const previous = user.lastActiveDate ? new Date(user.lastActiveDate) : null;
+  const previousDate = previous && Number.isFinite(previous.getTime())
+    ? `${previous.getFullYear()}-${String(previous.getMonth() + 1).padStart(2, '0')}-${String(previous.getDate()).padStart(2, '0')}` : '';
   const isNewCalendarDay = previousDate !== today;
 
   if (isNewCalendarDay) {
@@ -109,3 +111,4 @@ export function useStreakFreeze(): { success: boolean; user: UserProfile } {
   setCurrentUser(user);
   return { success: true, user };
 }
+

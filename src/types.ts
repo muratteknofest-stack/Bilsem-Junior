@@ -1,3 +1,4 @@
+import type { QuestionQualityReport, GenerationAttempt } from './features/questions/quality-policy';
 export type UserRole = 'student' | 'parent' | 'admin';
 
 export interface StreakMilestone {
@@ -28,6 +29,9 @@ export interface UserProfile {
   consent?: {
     acceptedAt: number;
     actorRole: 'student' | 'parent';
+    privacyAcknowledged?: boolean;
+    termsAccepted?: boolean;
+    guardianConfirmed?: boolean;
     kvkkVersion: string;
     termsVersion: string;
   };
@@ -452,8 +456,23 @@ export interface BaseQuestion {
   seed: number;
   visualConfig: VisualConfig;
   targetGrade?: 1 | 2 | 3 | 4;
+  targetAge?: number;
+  qualityReport?: QuestionQualityReport;
+  generationAttempts?: GenerationAttempt[];
   targetGrades?: (1 | 2 | 3 | 4)[];
   createdAt?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+  reviewedBy?: string;
+  /** Explicit owner release of an auto-verified batch, tracked separately from individual educator review. */
+  releaseAuthorization?: {
+    source: string;
+    automaticChecks: 'passed';
+    individualHumanReview: boolean;
+    releasedAt: string;
+    humanReviewedAt?: string;
+  };
+  revision?: number;
   isCustom?: boolean;
   status?: 'draft' | 'review' | 'published' | 'archived';
   authoring?: {
@@ -836,3 +855,4 @@ export interface WeeklyQuestionProgressData {
   fourWeeksTrend: PastWeekTrendItem[];
   allTimeTotal: number;
 }
+

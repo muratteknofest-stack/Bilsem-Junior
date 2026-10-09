@@ -1,9 +1,7 @@
 import { createClient, type User as SupabaseUser } from '@supabase/supabase-js';
 
-const url = import.meta.env.VITE_SUPABASE_URL || 'https://guixuelbwqgurvmuhkve.supabase.co';
-// This project-scoped publishable key is safe in the browser bundle. Never
-// substitute the service role key here.
-const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_-XGuPVsHBRLFb6PkIEuY8A_bz6vLcdz';
+const url = import.meta.env.VITE_SUPABASE_URL;
+const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 if (!url || !key) throw new Error('Supabase bağlantı ayarları eksik.');
 
 let rememberSession = true;
@@ -26,9 +24,45 @@ const browserStorage = {
   },
 };
 
+export const isRecoveryRedirect = typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.hash.slice(1)).get('type') === 'recovery';
+
 export const supabase = createClient(url, key, {
   auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true, storage: browserStorage },
 });
+
+let recoverySessionReady = false;
+const recoveryListeners = new Set<() => void>();
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'PASSWORD_RECOVERY' && session) {
+    recoverySessionReady = true;
+    recoveryListeners.forEach(listener => listener());
+  } else if (event === 'SIGNED_OUT') {
+    recoverySessionReady = false;
+  }
+});
+
+export function onPasswordRecovery(listener: () => void) {
+  recoveryListeners.add(listener);
+  if (recoverySessionReady) listener();
+  return () => { recoveryListeners.delete(listener); };
+}
+
+export async function isPasswordRecoveryReady(): Promise<boolean> {
+  // Wait for Supabase to consume the redirect token before judging the link.
+  // A fixed wall-clock timeout can reject valid links on slower connections.
+  const { error } = await supabase.auth.initialize();
+  return !error && recoverySessionReady;
+}
+
+export async function updateRecoveredPassword(password: string) {
+  if (!recoverySessionReady) throw new Error('Sıfırlama bağlantısı geçersiz veya süresi dolmuş.');
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw error;
+  const { error: signOutError } = await supabase.auth.signOut();
+  if (signOutError) throw new Error('Şifre değişti ancak oturum kapatılamadı. Lütfen çıkış yapın.');
+  recoverySessionReady = false;
+}
 
 export interface User {
   uid: string;
@@ -47,13 +81,13 @@ function asUser(user: SupabaseUser): User {
     displayName: String(user.user_metadata?.display_name ?? ''),
     async getIdToken() {
       const { data, error } = await supabase.auth.getSession();
-      if (error || !data.session) throw new Error('Oturum süresi dolmuş.');
+      if (error || !data.session || data.session.user.id !== user.id) throw new Error('Oturum süresi dolmuş veya hesap değişmiş.');
       return data.session.access_token;
     },
     async getIdTokenResult(forceRefresh) {
       if (forceRefresh) await supabase.auth.refreshSession();
       const { data, error } = await supabase.auth.getClaims();
-      if (error || !data?.claims) throw error ?? new Error('Oturum doğrulanamadı.');
+      if (error || !data?.claims || data.claims.sub !== user.id) throw error ?? new Error('Oturum doğrulanamadı.');
       return { claims: { ...data.claims, role: data.claims.app_metadata?.role } };
     },
   };
@@ -76,19 +110,26 @@ supabase.auth.onAuthStateChange((_event, session) => {
 
 export function onAuthStateChanged(_auth: typeof auth, onChange: (user: User | null) => void, onError?: (error: Error) => void) {
   let active = true;
+  let authEventSeen = false;
+  const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    authEventSeen = true;
+    const user = session?.user ? asUser(session.user) : null;
+    auth.currentUser = user;
+    // Auth callbacks run under the Supabase Auth lock. Profile reads and
+    // sign-out in onChange must start after the callback has returned.
+    setTimeout(() => {
+      if (active) onChange(user);
+    }, 0);
+  });
   supabase.auth.getUser().then(({ data, error }) => {
-    if (!active) return;
-    if (error) onError?.(error);
+    if (!active || authEventSeen) return;
+    if (error && error.name !== 'AuthSessionMissingError') onError?.(error);
     else {
       auth.currentUser = data.user ? asUser(data.user) : null;
       onChange(auth.currentUser);
     }
-  }).catch(error => onError?.(error));
-  const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-    if (active) {
-      auth.currentUser = session?.user ? asUser(session.user) : null;
-      onChange(auth.currentUser);
-    }
+  }).catch(error => {
+    if (active && !authEventSeen) onError?.(error);
   });
   return () => { active = false; listener.subscription.unsubscribe(); };
 }
@@ -122,7 +163,8 @@ export async function sendEmailVerification(_user: User) {
 }
 export async function sendPasswordResetEmail(_auth: typeof auth, email: string) {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/`,
+    redirectTo: `${window.location.origin}/reset-password`,
   });
   if (error) throw error;
 }
+

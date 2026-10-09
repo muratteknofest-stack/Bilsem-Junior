@@ -3,6 +3,7 @@ import { X, KeyRound, AlertCircle, CheckCircle2, Info } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { sound } from '../../../lib/sound';
 import { forgotPasswordSchema, formatZodError } from '../../../lib/validations';
+import { passwordResetRequestError } from '../auth-error-messages';
 
 interface ForgotPasswordModalProps {
   isOpen: boolean;
@@ -65,18 +66,10 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
       await sendPasswordResetEmail(forgotEmail.trim());
       sound.playSuccess();
       setForgotSubmitted(true);
-      onSuccessToast('Eğer e-posta adresi kayıtlıysa, şifre sıfırlama bağlantısı gönderildi.');
-    } catch (err: any) {
-      if (err.code === 'auth/user-not-found') {
-        setForgotSubmitted(true);
-        onSuccessToast('Eğer e-posta adresi kayıtlıysa, şifre sıfırlama bağlantısı gönderildi.');
-        return;
-      }
+      onSuccessToast('İstek alındı. Hesap kayıtlıysa sıfırlama e-postası gönderilir.');
+    } catch (err: unknown) {
       sound.playError();
-      let errMsg = 'Şifre sıfırlama e-postası gönderilemedi.';
-      if (err.code === 'auth/invalid-email') errMsg = 'Geçersiz e-posta adresi.';
-      else if (err.code === 'auth/network-request-failed') errMsg = 'Ağ bağlantısı kurulamadı. Lütfen tekrar deneyin.';
-      setForgotError(errMsg);
+      setForgotError(passwordResetRequestError(err as { code?: string; message?: string; status?: number }));
     } finally {
       setIsResettingPassword(false);
     }
@@ -85,19 +78,19 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs" role="presentation">
-      <div role="dialog" aria-modal="true" aria-labelledby="forgot-password-title" className="bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full border border-slate-200/80 shadow-xl relative animate-in fade-in zoom-in-95 duration-200">
+    <div className="zp-auth-modal fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-xs" role="presentation">
+      <div role="dialog" aria-modal="true" aria-labelledby="forgot-password-title" className="zp-auth-dialog bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full border shadow-xl relative animate-in fade-in zoom-in-95 duration-200">
         <button
           type="button"
           aria-label="Kapat"
           onClick={onClose}
           disabled={isResettingPassword}
-          className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-1.5 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+          className="absolute top-5 right-5 text-slate-500 hover:text-slate-700 p-2.5 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <div className="w-11 h-11 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center mb-4">
+        <div className="zp-auth-modal-icon w-11 h-11 rounded-xl flex items-center justify-center mb-4">
           <KeyRound className="w-5 h-5" />
         </div>
 
@@ -145,7 +138,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
               )}
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-start gap-2">
+            <div className="zp-auth-modal-info p-3 rounded-xl border flex items-start gap-2">
               <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
               <div className="text-[11px] leading-relaxed">
                 <strong className="text-slate-700">Öğrenci Kodu ile Giriş Yapanlar:</strong> Öğrenci şifresi yenileme işlemi veli panelindeki hesap yönetimi alanından yapılabilir.
@@ -157,7 +150,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                 type="button"
                 onClick={onClose}
                 disabled={isResettingPassword}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer min-h-11"
               >
                 Vazgeç
               </button>
@@ -174,13 +167,13 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
         ) : (
           <div className="mt-4 text-center p-5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900">
             <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
-            <h4 className="text-sm font-bold">Talimatlar Gönderildi</h4>
+            <h4 className="text-sm font-bold">İstek Alındı</h4>
             <p className="text-xs mt-1 text-emerald-800 leading-relaxed">
-              Kayıtlı bir hesap bulunuyorsa <strong className="font-semibold">{forgotEmail}</strong> adresine şifre sıfırlama bağlantısı iletildi.
+              <strong className="font-semibold">{forgotEmail.trim()}</strong> adresine bağlı bir hesap varsa sıfırlama bağlantısı gönderilir. Gelen kutusu ve spam klasörünü kontrol edin. Öğrenci koduyla giriyorsanız şifrenizi veli hesabından yenileyin.
             </p>
             <button
               onClick={onClose}
-              className="mt-4 px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              className="zp-auth-modal-done mt-4 px-5 py-2 rounded-xl font-bold transition-colors cursor-pointer"
             >
               Tamam
             </button>
@@ -190,3 +183,4 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     </div>
   );
 };
+

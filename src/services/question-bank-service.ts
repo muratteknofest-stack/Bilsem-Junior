@@ -1,3 +1,4 @@
+import { isQuestionReadyForStudents, assertQuestionReadyForStudents } from '../features/questions/quality';
 import {
   BaseQuestion,
   CognitiveCategory,
@@ -17,7 +18,8 @@ import {
   onSnapshot,
   getDocs,
 } from '../lib/supabase-data';
-import { db } from '../lib/platform';
+import { auth, db } from '../lib/platform';
+import { onAuthStateChanged } from '../lib/supabase';
 import { z } from 'zod';
 
 const STORAGE_KEY = 'bilsem_admin_managed_questions_v2';
@@ -79,7 +81,9 @@ class QuestionBankService {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          this.questions = parsed;
+          // Legacy caches may contain thousands of pending editorial questions.
+          // Keep only previously published entries while auth state loads.
+          this.questions = parsed.filter((q: BaseQuestion) => q.status === 'published');
         }
       }
     } catch (e) {
@@ -93,29 +97,31 @@ class QuestionBankService {
 
     this.initialized = true;
 
-    // Real-time live Firestore synchronization
+    // The student question hook loads only its own grade's published rows.
+    // The full editorial bank is loaded only for verified administrators.
     if (typeof window !== 'undefined') {
-      try {
-        onSnapshot(
-          collection(db, 'questions'),
-          (snapshot) => {
-            if (!snapshot.empty) {
-              const liveList = snapshot.docs.map((d: { data: () => BaseQuestion; id: string }) => ({
-                ...(d.data() as BaseQuestion),
-                id: d.id,
-              }));
-              this.questions = liveList;
-              this.save();
-              this.notify();
-            }
-          },
-          (err) => {
-            console.warn('Firestore live sync notice (fallback to local cache):', err);
+      let stopRemote: (() => void) | undefined;
+      let authVersion = 0;
+      onAuthStateChanged(auth, (user) => {
+        const version = ++authVersion;
+        void (async () => {
+          let isAdmin = false;
+          if (user?.emailVerified) {
+            try { isAdmin = (await user.getIdTokenResult()).claims.role === 'admin'; } catch {}
           }
-        );
-      } catch (err) {
-        console.warn('Firestore snapshot setup skipped:', err);
-      }
+          if (version !== authVersion) return;
+          stopRemote?.();
+          this.questions = [];
+          this.notify();
+          if (!isAdmin) return;
+          stopRemote = onSnapshot(collection(db, 'questions'), (snapshot) => {
+            this.questions = snapshot.docs.map((d: { data: () => BaseQuestion; id: string }) => ({
+              ...(d.data() as BaseQuestion), id: d.id,
+            }));
+            this.notify();
+          }, (err) => console.warn('Supabase soru havuzu yüklenemedi:', err));
+        })();
+      }, (err) => console.warn('Soru havuzu oturum kontrolü başarısız:', err));
     }
   }
 
@@ -138,7 +144,7 @@ class QuestionBankService {
           q.targetGrade = item.grade;
           q.targetGrades = [item.grade];
           q.ageGroup = item.grade <= 2 ? '1-2' : '3-4';
-          q.status = 'published';
+          q.status = isQuestionReadyForStudents(q) ? 'published' : 'draft';
           q.isCustom = true;
           starterPool.push(q);
         } catch {
@@ -147,7 +153,7 @@ class QuestionBankService {
             fallback.id = `q_bilsem_g${item.grade}_seq_${i + 1}`;
             fallback.targetGrade = item.grade;
             fallback.targetGrades = [item.grade];
-            fallback.status = 'published';
+            fallback.status = isQuestionReadyForStudents(fallback) ? 'published' : 'draft';
             fallback.isCustom = true;
             starterPool.push(fallback);
           } catch {}
@@ -168,7 +174,8 @@ class QuestionBankService {
 
   private save() {
     try {
-      safeStorage.setItem(STORAGE_KEY, JSON.stringify(this.questions));
+      // Avoid storing the full 4,000-question editorial bank in browser storage.
+      safeStorage.setItem(STORAGE_KEY, JSON.stringify(this.questions.filter(q => q.status === 'published').slice(0, 50)));
     } catch (e) {
       console.warn('Failed to save questions to safeStorage', e);
     }
@@ -185,10 +192,11 @@ class QuestionBankService {
   public createCustomQuestion(question: BaseQuestion, syncToCloud = true): BaseQuestion {
     const publishedQ: BaseQuestion = {
       ...question,
-      status: question.status || 'published',
+      status: question.status || 'draft',
       isCustom: true,
       updatedAt: new Date().toISOString(),
     };
+    if (publishedQ.status === 'published') assertQuestionReadyForStudents(publishedQ);
     const existingIdx = this.questions.findIndex((q) => q.id === publishedQ.id);
     if (existingIdx !== -1) {
       this.questions[existingIdx] = { ...this.questions[existingIdx], ...publishedQ };
@@ -198,7 +206,7 @@ class QuestionBankService {
     this.save();
     this.notify();
 
-    // Live sync to Firestore
+    // Live sync to Supabase
     if (syncToCloud) {
       void setDoc(doc(db, 'questions', publishedQ.id), publishedQ).catch((err) => {
         console.warn('Soru Supabase ile senkronize edilemedi:', err);
@@ -260,7 +268,7 @@ class QuestionBankService {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       isCustom: true,
-      status: 'published',
+      status: 'draft',
     };
 
     if (payload.customExplanationSummary || payload.customExplanationSteps) {
@@ -275,10 +283,10 @@ class QuestionBankService {
     this.save();
     this.notify();
 
-    // Live Sync to Firebase Firestore
+    // Live Sync to Supabase
     try {
       setDoc(doc(db, 'questions', newQuestion.id), newQuestion).catch((err) => {
-        console.warn('Live Firestore sync error (addQuestion):', err);
+        console.warn('Live Supabase sync error (addQuestion):', err);
       });
     } catch {}
 
@@ -290,7 +298,7 @@ class QuestionBankService {
     
     const preparedQuestions: BaseQuestion[] = newQuestions.map((q) => ({
       ...q,
-      status: q.status || 'published',
+      status: 'draft',
       isCustom: true,
       createdAt: q.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -301,7 +309,7 @@ class QuestionBankService {
     this.save();
     this.notify();
 
-    // Live Batch Sync to Firebase Firestore
+    // Live Batch Sync to Supabase
     if (typeof window !== 'undefined') {
       try {
         for (let i = 0; i < preparedQuestions.length; i += 400) {
@@ -311,11 +319,11 @@ class QuestionBankService {
             batch.set(doc(db, 'questions', q.id), q);
           });
           batch.commit().catch((err) => {
-            console.warn('Live Firestore batch sync error (addBulkQuestions):', err);
+            console.warn('Live Supabase batch sync error (addBulkQuestions):', err);
           });
         }
       } catch (e) {
-        console.warn('Firebase batch error:', e);
+        console.warn('Supabase batch error:', e);
       }
     }
 
@@ -334,14 +342,18 @@ class QuestionBankService {
       updatedAt: new Date().toISOString(),
     };
 
+    // Editing invalidates prior review; publication goes through the editorial gate.
+    updated.status = 'draft';
+    delete updated.reviewedBy;
+    delete updated.verificationStatus;
     this.questions[idx] = updated;
     this.save();
     this.notify();
 
-    // Live Sync update to Firebase Firestore
+    // Live Sync update to Supabase
     try {
       setDoc(doc(db, 'questions', id), updated, { merge: true }).catch((err) => {
-        console.warn('Live Firestore update error:', err);
+        console.warn('Live Supabase update error:', err);
       });
     } catch {}
 
@@ -355,10 +367,10 @@ class QuestionBankService {
       this.save();
       this.notify();
 
-      // Live delete from Firebase Firestore
+      // Live delete from Supabase
       try {
         deleteDoc(doc(db, 'questions', id)).catch((err) => {
-          console.warn('Live Firestore delete error:', err);
+          console.warn('Live Supabase delete error:', err);
         });
       } catch {}
 
@@ -375,7 +387,7 @@ class QuestionBankService {
     this.save();
     this.notify();
 
-    // Live Batch Delete from Firebase Firestore
+    // Live Batch Delete from Supabase
     if (typeof window !== 'undefined') {
       try {
         for (let i = 0; i < ids.length; i += 400) {
@@ -385,11 +397,11 @@ class QuestionBankService {
             batch.delete(doc(db, 'questions', id));
           });
           batch.commit().catch((err) => {
-            console.warn('Live Firestore batch delete error:', err);
+            console.warn('Live Supabase batch delete error:', err);
           });
         }
       } catch (e) {
-        console.warn('Firebase batch delete error:', e);
+        console.warn('Supabase toplu silme hatası:', e);
       }
     }
 
@@ -401,29 +413,28 @@ class QuestionBankService {
     if (!source) return null;
 
     const grade = targetGrade || source.targetGrade || 1;
-    const newSeed = Math.floor(Math.random() * 900000) + 100000;
     const clone: BaseQuestion = {
       ...source,
       id: `q_gr${grade}_copy_${Date.now()}`,
       targetGrade: grade,
       targetGrades: [grade],
-      seed: newSeed,
+      seed: source.seed,
       ageGroup: grade <= 2 ? '1-2' : '3-4',
       estimatedSeconds: GRADE_CONFIGS[grade].timeLimitSeconds,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       isCustom: true,
-      status: 'published',
+      status: 'draft',
     };
 
     this.questions.unshift(clone);
     this.save();
     this.notify();
 
-    // Live Sync clone to Firebase Firestore
+    // Live Sync clone to Supabase
     try {
       setDoc(doc(db, 'questions', clone.id), clone).catch((err) => {
-        console.warn('Live Firestore duplicate error:', err);
+        console.warn('Live Supabase duplicate error:', err);
       });
     } catch {}
 
@@ -436,7 +447,7 @@ class QuestionBankService {
     this.save();
     this.notify();
 
-    // Live Wipe from Firebase Firestore
+    // Live Wipe from Supabase
     if (typeof window !== 'undefined' && existingIds.length > 0) {
       try {
         getDocs(collection(db, 'questions')).then((snapshot) => {
@@ -594,3 +605,4 @@ class QuestionBankService {
 }
 
 export const questionBankService = new QuestionBankService();
+

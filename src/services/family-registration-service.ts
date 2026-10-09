@@ -9,6 +9,9 @@ export interface FamilyRegistrationInput {
   studentPassword: string;
   grade: number;
   examFocus: string;
+  consentAccepted: boolean;
+  termsAccepted: boolean;
+  guardianConfirmed: boolean;
 }
 export interface FamilyRegistrationResult {
   parentProfile: UserProfile;
@@ -16,7 +19,7 @@ export interface FamilyRegistrationResult {
   verificationSent: boolean;
 }
 
-export async function registerFamilyInFirebase(input: FamilyRegistrationInput): Promise<FamilyRegistrationResult> {
+export async function registerFamilyInSupabase(input: FamilyRegistrationInput): Promise<FamilyRegistrationResult> {
   const response = await fetch(apiUrl('/api/register-family'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -26,3 +29,4 @@ export async function registerFamilyInFirebase(input: FamilyRegistrationInput): 
   if (!response.ok || !result.success) throw new Error(result.error || 'Aile hesabı oluşturulamadı.');
   return { parentProfile: result.parentProfile, student: result.student, verificationSent: true };
 }
+

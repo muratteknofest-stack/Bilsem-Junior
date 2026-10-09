@@ -10,16 +10,6 @@ export interface AuthenticatedRequest extends Request {
 export function getAdminAuth() {
   const admin = getServiceClient().auth.admin;
   return {
-    async getUserByEmail(email: string) {
-      for (let page = 1; page <= 100; page++) {
-        const { data, error } = await admin.listUsers({ page, perPage: 1000 });
-        if (error) throw error;
-        const user = data.users.find(item => item.email?.toLowerCase() === email.toLowerCase());
-        if (user) return { uid: user.id };
-        if (data.users.length < 1000) break;
-      }
-      throw Object.assign(new Error('User not found'), { code: 'auth/user-not-found' });
-    },
     async createUser(options: { email: string; password: string; phoneNumber?: string; emailVerified?: boolean; displayName?: string }) {
       const { data, error } = await admin.createUser({
         email: options.email, password: options.password,
@@ -46,7 +36,7 @@ export function getAdminAuth() {
   };
 }
 
-export async function requireFirebaseAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+export async function requireSupabaseAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const match = (req.header('authorization') || '').match(/^Bearer\s+(.+)$/i);
   if (!match) return res.status(401).json({ error: 'Oturum doğrulaması gerekli.' });
   const { data, error } = await getServiceClient().auth.getUser(match[1]);
@@ -121,3 +111,4 @@ export function normalizeStudentCode(name: string): string {
     .slice(0, 12)
     .toUpperCase() || 'OGRENCI';
 }
+

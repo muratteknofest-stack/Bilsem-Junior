@@ -141,8 +141,8 @@ export const AdminQuestionManager: React.FC<AdminQuestionManagerProps> = ({
                 if (window.confirm('DİKKAT: Supabase veritabanındaki TÜM SORULARI kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz!')) {
                   try {
                     sound.playClick();
-                    const { clearAllFirestoreQuestions } = await import('../../services/question-publishing-service');
-                    const count = await clearAllFirestoreQuestions();
+                    const { clearAllSupabaseQuestions } = await import('../../services/question-publishing-service');
+                    const count = await clearAllSupabaseQuestions();
                     alert(`Başarılı: Supabase veritabanından ${count} adet soru kalıcı olarak silindi. Sayfa yenileniyor...`);
                     window.location.reload();
                   } catch (e: any) {

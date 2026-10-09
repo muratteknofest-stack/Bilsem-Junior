@@ -224,7 +224,7 @@ export const AiMistakeModal: React.FC<AiMistakeModalProps> = ({
 
                   <div className="max-w-[180px] mx-auto py-1">
                     {selectedOption && (
-                      <OptionRenderer
+                      <OptionRenderer question={question}
                         option={selectedOption}
                         isSelected={true}
                         onSelect={() => {}}
@@ -250,7 +250,7 @@ export const AiMistakeModal: React.FC<AiMistakeModalProps> = ({
 
                   <div className="max-w-[180px] mx-auto py-1">
                     {correctOption && (
-                      <OptionRenderer
+                      <OptionRenderer question={question}
                         option={correctOption}
                         isSelected={false}
                         onSelect={() => {}}
