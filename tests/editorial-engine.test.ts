@@ -67,6 +67,22 @@ test('published pool excludes drafts and wrong grades and avoids duplicates', ()
   assert.equal(selectPublishedPool([q], [{ ...published, targetGrade: 4 }])[0].id, q.id);
 });
 
+test('a large approved pool rotates across sessions and never repeats a published visual', () => {
+  const approved = [101, 202, 303, 404, 505, 606].map(seed => ({
+    ...generateProfessionalQuestion('matrix_2x2', seed, 2),
+    targetGrade: 2 as const, status: 'published' as const,
+  }));
+  const sessions = [701, 702, 703, 704, 705, 706].map(seed => {
+    const fallback = { ...generateProfessionalQuestion('matrix_2x2', seed, 2), targetGrade: 2 as const };
+    return selectPublishedPool([fallback], approved)[0].id;
+  });
+  assert.ok(new Set(sessions).size >= 3, 'later approved questions should be reachable');
+  const repeated = { ...generateProfessionalQuestion('matrix_2x2', 811, 2), targetGrade: 2 as const };
+  const batch = selectPublishedPool(Array(approved.length).fill(repeated), approved);
+  assert.equal(new Set(batch.map(q => q.id)).size, approved.length);
+  assert.equal(new Set(batch.map(questionVisualKey)).size, approved.length);
+});
+
 test('every upgraded visual renders a populated question surface at each level', () => {
   for (const type of VERIFIED_TYPES) for (const difficulty of [1, 3, 6] as const) {
     const q = generateProfessionalQuestion(type, 83471, difficulty);

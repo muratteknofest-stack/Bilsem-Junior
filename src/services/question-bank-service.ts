@@ -18,7 +18,8 @@ import {
   onSnapshot,
   getDocs,
 } from '../lib/supabase-data';
-import { db } from '../lib/platform';
+import { auth, db } from '../lib/platform';
+import { onAuthStateChanged } from '../lib/supabase';
 import { z } from 'zod';
 
 const STORAGE_KEY = 'bilsem_admin_managed_questions_v2';
@@ -80,7 +81,9 @@ class QuestionBankService {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          this.questions = parsed;
+          // Legacy caches may contain thousands of pending editorial questions.
+          // Keep only previously published entries while auth state loads.
+          this.questions = parsed.filter((q: BaseQuestion) => q.status === 'published');
         }
       }
     } catch (e) {
@@ -94,29 +97,31 @@ class QuestionBankService {
 
     this.initialized = true;
 
-    // Real-time live Supabase synchronization
+    // The student question hook loads only its own grade's published rows.
+    // The full editorial bank is loaded only for verified administrators.
     if (typeof window !== 'undefined') {
-      try {
-        onSnapshot(
-          collection(db, 'questions'),
-          (snapshot) => {
-            if (!snapshot.empty) {
-              const liveList = snapshot.docs.map((d: { data: () => BaseQuestion; id: string }) => ({
-                ...(d.data() as BaseQuestion),
-                id: d.id,
-              }));
-              this.questions = liveList;
-              this.save();
-              this.notify();
-            }
-          },
-          (err) => {
-            console.warn('Supabase live sync notice (fallback to local cache):', err);
+      let stopRemote: (() => void) | undefined;
+      let authVersion = 0;
+      onAuthStateChanged(auth, (user) => {
+        const version = ++authVersion;
+        void (async () => {
+          let isAdmin = false;
+          if (user?.emailVerified) {
+            try { isAdmin = (await user.getIdTokenResult()).claims.role === 'admin'; } catch {}
           }
-        );
-      } catch (err) {
-        console.warn('Supabase snapshot setup skipped:', err);
-      }
+          if (version !== authVersion) return;
+          stopRemote?.();
+          this.questions = [];
+          this.notify();
+          if (!isAdmin) return;
+          stopRemote = onSnapshot(collection(db, 'questions'), (snapshot) => {
+            this.questions = snapshot.docs.map((d: { data: () => BaseQuestion; id: string }) => ({
+              ...(d.data() as BaseQuestion), id: d.id,
+            }));
+            this.notify();
+          }, (err) => console.warn('Supabase soru havuzu yüklenemedi:', err));
+        })();
+      }, (err) => console.warn('Soru havuzu oturum kontrolü başarısız:', err));
     }
   }
 
@@ -169,7 +174,8 @@ class QuestionBankService {
 
   private save() {
     try {
-      safeStorage.setItem(STORAGE_KEY, JSON.stringify(this.questions));
+      // Avoid storing the full 4,000-question editorial bank in browser storage.
+      safeStorage.setItem(STORAGE_KEY, JSON.stringify(this.questions.filter(q => q.status === 'published').slice(0, 50)));
     } catch (e) {
       console.warn('Failed to save questions to safeStorage', e);
     }

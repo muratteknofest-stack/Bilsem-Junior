@@ -3,14 +3,23 @@ import { auditQuestion, questionVisualKey, isQuestionReadyForStudents, assertQue
 
 export function selectPublishedPool(generated: BaseQuestion[], published: BaseQuestion[]): BaseQuestion[] {
   const used = new Set<string>();
-  published = published.filter(isQuestionReadyForStudents);
-  return generated.map(fallback => {
+  const usedVisuals = new Set<string>();
+  published = published.filter(q => q.status === 'published' && isQuestionReadyForStudents(q));
+  return generated.map((fallback, index) => {
     assertQuestionReadyForStudents(fallback);
-    const matching = published.find(q => q.status === 'published' && !used.has(q.id) && q.category === fallback.category &&
+    const candidates = published.filter(q => !used.has(q.id) && !usedVisuals.has(questionVisualKey(q)) && q.category === fallback.category &&
       q.difficulty === fallback.difficulty &&
       (!fallback.targetGrade || q.targetGrade === fallback.targetGrade || q.targetGrades?.includes(fallback.targetGrade)));
-    if (!matching) return fallback;
+    if (!candidates.length) {
+      usedVisuals.add(questionVisualKey(fallback));
+      return fallback;
+    }
+    // Generated seeds vary by session; rotate through the approved bank rather
+    // than giving every student the first matching question on every attempt.
+    const offset = ((fallback.seed ?? index) + index * 101) >>> 0;
+    const matching = candidates[offset % candidates.length];
     used.add(matching.id);
+    usedVisuals.add(questionVisualKey(matching));
     return JSON.parse(JSON.stringify(matching));
   });
 }
