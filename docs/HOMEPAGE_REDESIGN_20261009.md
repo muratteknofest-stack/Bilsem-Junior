@@ -2,7 +2,7 @@
 
 ## Temel alınan sürüm
 
-GitHub deposunun varsayılan `main` dalı eski Firebase sürümünü içeriyor. Güncel öğrenci, soru ve aile akışları `feature/supabase-fresh-start-20261006` dalında bulunuyor. Bu çalışma o dalın `0cefeda508db46fb778087fa9e7a317c44e460a0` commit'i üzerine kuruludur. Sunucu, kimlik doğrulama ve veri şeması değiştirilmedi.
+Güncel `main` dalı Supabase sürümünü içeriyor. Bu tasarım çalışmasının ilk kaynağı `feature/supabase-fresh-start-20261006` dalıdır. Bu çalışma o dalın `0cefeda508db46fb778087fa9e7a317c44e460a0` commit'i üzerine kuruludur. Sunucu, kimlik doğrulama ve veri şeması değiştirilmedi.
 
 ## İnceleme bulguları
 

@@ -67,6 +67,8 @@ function aistudioMediaPlugin(): Plugin {
 
 export default defineConfig(() => {
   return {
+    // Expose only the application's Supabase and API settings to browser code.
+    envPrefix: ['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY', 'VITE_API_BASE_URL'],
     plugins: [react(), tailwindcss(), aistudioMediaPlugin(), blogPlugin()],
     // Vercel serves /api in this project. Ignore stale external API settings there.
     define: process.env.VERCEL === '1' ? { 'import.meta.env.VITE_API_BASE_URL': JSON.stringify('') } : {},

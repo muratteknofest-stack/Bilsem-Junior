@@ -10,7 +10,7 @@ React, Vite, Express, Supabase Auth/Postgres and Gemini based learning app.
 3. Set server-only `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in the API
    environment. Never put the service key in a `VITE_` variable.
 4. Run `npm run dev`. The Express service hosts `/api/*` and the app.
-5. Run `npm run build` and the focused migration tests before deployment.
+5. Run `npm run lint`, `npm test`, `npm run test:student` and the build before deployment.
 
 The new Supabase project is `vehhvsdkifwstbjhnhao`. Its fresh schema is
 already applied. For another new project, apply
@@ -27,7 +27,7 @@ step. Invite only the verified administrator for the new project.
 
 ## Hosting
 
-On Vercel, `api/index.ts` exposes the Express API through a Function and
+On Vercel, `api/index.js` exposes the Express API through a Function and
 `vercel.json` routes `/api/*` to it. Set `VITE_SUPABASE_URL` and
 `VITE_SUPABASE_PUBLISHABLE_KEY` for the Vite build, plus server-only
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` for the Function. Leave
@@ -50,8 +50,11 @@ email service is unavailable.
 
 ## Supabase-only start
 
-New accounts use Supabase Auth and Postgres directly. Firebase data and Google
-account access are not required. The previous ZekaPark Supabase project and its
+All accounts, family links, questions and learning records use Supabase Auth
+and Postgres directly. No alternate identity or database provider is used.
+Only the Supabase public URL/key and the API origin are exposed in browser
+builds; unrelated hosting variables are excluded. The previous ZekaPark Supabase
+project and its
 records remain untouched during a new-project installation. Old accounts are
 not automatically available in the new project; their owners create new
 accounts, or an administrator migrates them separately after identity checks.
@@ -61,3 +64,5 @@ API with its server-only environment variables. Set `VITE_API_BASE_URL` only
 for a separate API origin. Check parent registration, email confirmation,
 student login, progress sync, question publishing, and admin AI using dedicated
 test accounts before replacing the live deployment.
+
+Database operations and migration history: [supabase/MIGRATION.md](supabase/MIGRATION.md).

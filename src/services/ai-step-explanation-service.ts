@@ -1,21 +1,5 @@
 import { BaseQuestion, AiStepByStepExplanation, AiExplanationStep } from '../types';
 import { authenticatedFetch } from '../lib/api-client';
-import { generateClientAiJson } from '../lib/client-ai-fallback';
-import { z } from 'zod';
-
-const aiStepResponseSchema = z.object({
-  headlineTitle: z.string().min(3).max(120),
-  pedagogicalSummary: z.string().min(10).max(650),
-  steps: z.array(z.object({
-    stepNumber: z.number().int().min(1).max(4),
-    title: z.string().min(3).max(120),
-    badge: z.string().min(2).max(80),
-    type: z.enum(['focus', 'rule', 'elimination', 'tactic']),
-    explanation: z.string().min(10).max(650),
-    keyObservation: z.string().min(3).max(350).optional(),
-    visualAnchor: z.string().min(2).max(100).optional(),
-  })).min(3).max(4),
-});
 
 class AiStepExplanationService {
   private cache: Map<string, AiStepByStepExplanation> = new Map();
@@ -82,41 +66,6 @@ class AiStepExplanationService {
       }
     } catch (e) {
       console.warn('AI step explanation server error, using procedural fallback:', e);
-    }
-
-    const firebaseAiExplanation = await generateClientAiJson(
-      [
-        'Bu BİLSEM sorusunun çözümünü 6-10 yaş düzeyine uygun, açık ve kısa adımlarla açıkla.',
-        'Adımlar gözlem, kural, eleme ve mümkünse aktarılabilir bir altın taktik içersin.',
-        `Soru verisi: ${JSON.stringify({
-          type: question.type,
-          category: question.category,
-          difficulty: question.difficulty,
-          prompt: question.prompt,
-          explanation: question.explanation,
-          options: question.options.map((option) => ({ id: option.id, label: option.label })),
-          selectedOptionId,
-          correctOptionId: question.correctOptionId,
-          isCorrect,
-        })}`,
-      ].join('\n'),
-      aiStepResponseSchema,
-    );
-    if (firebaseAiExplanation) {
-      const result: AiStepByStepExplanation = {
-        questionId: question.id,
-        selectedOptionId,
-        correctOptionId: question.correctOptionId,
-        isCorrect,
-        category: question.category,
-        questionType: question.type,
-        difficulty: question.difficulty,
-        ...firebaseAiExplanation,
-        isAiGenerated: true,
-        modelUsed: 'Pedagojik yedek',
-      };
-      this.cache.set(cacheKey, result);
-      return result;
     }
 
     // Procedural Fallback generator if offline, timeout, or no API key
@@ -224,3 +173,4 @@ class AiStepExplanationService {
 }
 
 export const aiStepExplanationService = new AiStepExplanationService();
+

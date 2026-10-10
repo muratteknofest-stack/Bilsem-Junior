@@ -1,40 +1,27 @@
-# ZekaPark Firebase → Supabase
+# ZekaPark Supabase yönetimi
 
-The existing ZekaPark Supabase project is `guixuelbwqgurvmuhkve`. It already
-has Auth users and application tables. Do **not** apply a fresh schema or
-overwrite these records. Its initial migrations were applied in September
-2026. The repository includes the applied `20261005174549_firebase_import_legacy_ids`,
-`20261005180525_admin_claim_only`, and
-`20261005180629_server_session_revocation` migrations. The last two remove
-the former email-based admin exception and allow server-side session revocation.
+Aktif proje: `vehhvsdkifwstbjhnhao`. Kimlik doğrulama Supabase Auth, kalıcı hesap/soru/öğrenme verileri Supabase Postgres üzerindedir. Alternatif kimlik sağlayıcısı, belge veritabanı veya eski dışa/içe aktarma betiği kullanılmaz.
 
-1. Export Firebase from a trusted machine with Application Default Credentials:
-   `FIREBASE_PROJECT_ID=... FIREBASE_DATABASE_ID=... node scripts/export-firebase-for-supabase.mjs ./private-export`.
-   This produces private `firestore-export.json` and `auth-users.json`.
-2. Set the **server-only** `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, then
-   run `node scripts/reconcile-auth-users.mjs private-export/auth-users.json private-export/firestore-export.json private-export/uid-map.json`.
-   The script proposes old UID → existing Supabase UUID matches only for unique,
-   verified email addresses and compatible profile roles. Review its private
-   `.unresolved.json` report; provision missing accounts and verify every
-   unresolved identity before completing `uid-map.json`. Do not infer identities
-   solely from display names. The script never creates accounts or sends email.
-3. Run `node scripts/import-firestore-to-supabase.mjs private-export/firestore-export.json private-export/uid-map.json`.
-   This validates every mapped family link and record without writing.
-4. Review the export counts against the existing Supabase project. Back up
-   existing rows, then set server-only `SUPABASE_URL` and
-   `SUPABASE_SERVICE_ROLE_KEY` and rerun with `--apply`. Import uses
-   conflict-ignore semantics: existing rows are preserved for manual
-   reconciliation, not silently overwritten.
-5. Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_URL`,
-   `SUPABASE_SERVICE_ROLE_KEY`, and the existing server AI and email settings
-   on the application/API host. The service key belongs on the server only.
-   Configure the Supabase Auth Site URL, allowed redirects and SMTP delivery.
-6. Verify per-table counts and sample records, login, parent/student links,
-   progress, question publication, admin AI, and weekly reports. Switch the
-   application runtime only after these checks; retire Firebase last.
+## Çalışan proje
 
-Auth passwords are not part of this JSON export. Arrange a verified password
-reset or a supported credential migration for users who do not yet exist in
-Supabase Auth. Never put service-role keys or the export in the browser,
-repository, or chat. The importer does not configure application deployment.
-The app runtime migration is staged in a draft PR; it has not been deployed.
+Mevcut projeye `schema.sql` veya tarihsel migration dosyalarını topluca yeniden uygulamayın. Canlı kayıtlardaki zamanlar bazı kaynak dosyalardan farklıdır; uygulanmış migration isimlerini/içeriğini eşleştirin. [Canlı yayın raporu](../docs/live-release-blockers-20261010.md) son güvenlik migration eşleştirmesini açıklar.
+
+Tarihsel migration dosyaları yalnızca sürüm geçmişini korur. Bunlar eski sağlayıcıya bağlantı açmaz ve mevcut kullanıcıları yeniden içe aktarmaz. Veri silme, kimlik birleştirme veya kullanıcı yeniden oluşturma bu kurulumun parçası değildir.
+
+## Yapılandırma
+
+- Tarayıcı: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`.
+- API sunucusu: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`; sunucu anahtarı tarayıcıya aktarılmaz.
+- Vercel aynı kaynak `/api` kullanır. Ayrı bir API barındırılıyorsa `VITE_API_BASE_URL` kullanılır.
+- Supabase Auth Site URL, dönüş URL'leri ve e-posta teslimini yapılandırın. Yönetici daveti yalnızca `scripts/bootstrap-admin.mjs` ile yetkili sunucudan gönderilir; yetki sağlayıcının koruduğu app_metadata üzerinden denetlenir.
+- Yapay zekâ model çağrıları uygulamanın yetkili API uçlarından yapılır; model sağlayıcısı bir kimlik/veritabanı servisi değildir. E-posta gönderimi mevcut SMTP servisini kullanır.
+
+## Yeni proje
+
+Yeni, boş bir projede `schema.sql` temel şemadır. Daha sonraki gerekli uygulama/güvenlik migration'larını bir test ortamında sırasıyla uygulayıp doğrulayın. Bu talimat mevcut üretim projesinde şemayı yeniden oluşturma izni değildir.
+
+## Doğrulama
+
+`npm run lint`, `npm test`, `npm run test:student` ve `npm run vercel-build` çalıştırın. Üretimde `npm run verify:live -- https://zekapark.vercel.app COMMIT_SHA vehhvsdkifwstbjhnhao` doğru sürümü ve veritabanını JSON yanıtıyla doğrular. Gerçek aile kaydı, e-posta doğrulaması, öğrenci girişi ve veli raporlarını ayrılmış test hesaplarıyla ayrıca kontrol edin.
+
+Veritabanı rollback testi: `tests/supabase-learning.integration.sql`. Ayrılmış fixture kimlikleriyle çalışır; rollback satırını kaldırmayın. Yapılandırma, bağlantı veya kaynak temizliği mevcut hesap/ilerleme verilerini değiştirmez.

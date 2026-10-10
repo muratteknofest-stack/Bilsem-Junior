@@ -41,6 +41,10 @@ Protect_profile_progress aktif; 13 public tablonun tamamında RLS açık; özel 
 
 Canlı migration zamanları kaynak dosyalardan farklıdır. Mevcut projeye schema.sql veya geçmiş migration'lar topluca yeniden uygulanmamalı; isim/içerik ve migration kaydı eşleştirilmeli. Eski doğrudan puanlayan uygulamaya dönmek güvenlik korumasını kaldırmak için gerekçe değildir.
 
+## Supabase sağlayıcısı
+
+Kullanıcı eski kimlik/veritabanı sağlayıcısının kullanım dışı olduğunu belirtti. Aktif sistem yalnızca Supabase Auth/Postgres kullanır. Eski aktarım betikleri ve kullanılmayan istemci AI bağlantı katmanı kaldırıldı; tarayıcı ortam değişkenleri Supabase/API ile sınırlandırıldı. Eski sağlayıcı yönetimi bu uygulamanın yayın gereksinimi değildir.
+
 ## Testler ve açık kalan sınırlar
 
 - Son npm test: 133/133; gerçek PostgreSQL motoru ile RLS/transaction testi dahil.
@@ -49,7 +53,6 @@ Canlı migration zamanları kaynak dosyalardan farklıdır. Mevcut projeye schem
 - Son Security Advisors: ERROR yok; API'ye açık SECURITY DEFINER uyarıları kalktı. İstemci erişimine kapalı sekiz sunucu tablosundaki RLS Enabled No Policy INFO kasıtlıdır. [Açıklama](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy).
 - Yerleşik Supabase leaked-password koruması Free planda etkin değil; bir WARN sürüyor. Uygulama kontrolü sağlayıcı ayarının yerini bütün dış Auth istemcileri için tutmaz. Pro plan satın alınmadı. [Açıklama](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 - Gerçek test ailesiyle kayıt, e-posta teslimi/doğrulaması, öğrenci aktivasyonu, çalışma/sınav/tekrar ve veli raporu canlı tarayıcıdan tamamlanmadı. SMTP, Auth Site URL ve redirect izinleri bu kontrollerle kanıtlanmaz.
-- Git geçmişindeki eski Firebase yönetici kimlik bilgisinin sağlayıcıda değiştirilmesi ve oturum iptali doğrulanamadı; yetkili Firebase yönetim erişimi yok. Eski değer rapora/loga kopyalanmadı.
 - İşletmeci adı/unvanı, yazışma adresi, resmî e-posta ve hukuki dayanak/saklama/aktarım kararları henüz verilmedi.
 
 Bu rapor hedefli kod, HTTP ve veritabanı kontrollerini kaydeder; tam penetrasyon testi veya bütün açıkların kapandığına dair garanti değildir.

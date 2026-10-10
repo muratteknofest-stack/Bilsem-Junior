@@ -1,19 +1,5 @@
 import { BaseQuestion, QuestionAiHint, AiHintStep, QuestionType } from '../types';
 import { authenticatedFetch } from '../lib/api-client';
-import { generateClientAiJson } from '../lib/client-ai-fallback';
-import { z } from 'zod';
-
-const aiHintResponseSchema = z.object({
-  introEncouragement: z.string().min(5).max(240),
-  steps: z.array(z.object({
-    stepNumber: z.number().int().min(1).max(3),
-    title: z.string().min(3).max(100),
-    type: z.enum(['focus', 'rule', 'elimination']),
-    content: z.string().min(10).max(600),
-    keyObservation: z.string().min(3).max(300).optional(),
-    suggestedAction: z.string().min(3).max(300).optional(),
-  })).length(3),
-});
 
 class AiHintService {
   private cache: Map<string, QuestionAiHint> = new Map();
@@ -83,39 +69,6 @@ class AiHintService {
     } catch (err) {
       // Non-blocking catch; fallback to algorithmic pedagogical hints seamlessly
       console.warn('AI Hint API unavailable or timed out, switching to Socratic engine:', err);
-    }
-
-    const firebaseAiHint = await generateClientAiJson(
-      [
-        'Aşağıdaki BİLSEM sorusu için cevabı doğrudan söylemeden üç aşamalı Sokratik ipucu üret.',
-        'Adımlar sırasıyla focus, rule ve elimination tipinde olsun.',
-        `Soru verisi: ${JSON.stringify({
-          type: question.type,
-          category: question.category,
-          difficulty: question.difficulty,
-          prompt: question.prompt,
-          secondaryPrompt: question.secondaryPrompt,
-          explanation: question.explanation,
-          options: question.options.map((option) => option.label || option.id),
-        })}`,
-      ].join('\n'),
-      aiHintResponseSchema,
-    );
-    if (firebaseAiHint) {
-      const result: QuestionAiHint = {
-        questionId: question.id,
-        category: question.category,
-        questionType: question.type,
-        difficulty: question.difficulty,
-        totalSteps: firebaseAiHint.steps.length,
-        unlockedSteps: Math.min(firebaseAiHint.steps.length, unlockedStepsCount),
-        introEncouragement: firebaseAiHint.introEncouragement,
-        steps: firebaseAiHint.steps,
-        isAiGenerated: true,
-        modelUsed: 'Pedagojik yedek',
-      };
-      this.cache.set(cacheKey, result);
-      return result;
     }
 
     // Fallback: Rich Pedagogical Socratic Hint Generator
@@ -248,3 +201,4 @@ class AiHintService {
 }
 
 export const aiHintService = new AiHintService();
+

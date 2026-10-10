@@ -1,6 +1,6 @@
 # Verified learning rollout
 
-This branch combines the Supabase student application and discovery homepage with server-owned practice, adaptive, exam, review and reward flows. It targets `main`; the older Firebase login and owner-password fallback are replaced by the existing Supabase authentication implementation.
+This branch combines the Supabase student application and discovery homepage with server-owned practice, adaptive, exam, review and reward flows. It is deployed from `main`; Supabase is the only authentication and application database provider.
 
 ## Current production database
 
@@ -27,7 +27,7 @@ After each deployment, run `npm run verify:live -- https://zekapark.vercel.app C
 
 ## Credentials and historical data
 
-The old Firebase administrator password was present in the Git history. Removing the login fallback does not rotate it or erase history. Rotate that credential in the original authentication provider and any account where it was reused; this workspace does not have authenticated Firebase administration access. Do not copy the old password into issues, logs or environment variables.
+The active application has no alternate identity-provider connection, fixed owner password or legacy import tooling. Historical migration records remain for audit continuity; they are not runtime integrations.
 
 Historical XP and progress were retained. Those records predate authoritative scoring and are not retroactively certified. New answers and rewards are evaluated from immutable server sessions.
 
