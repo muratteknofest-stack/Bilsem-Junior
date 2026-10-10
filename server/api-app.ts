@@ -66,7 +66,10 @@ export function createApiApp() {
       if (error) throw error;
       const learning = await getServiceClient().from('learning_sessions').select('id').limit(1);
       if (learning.error) throw learning.error;
-      return res.json({ status: 'ok', database: 'ready', version: '1.0.0', timestamp: Date.now() });
+      const configuredUrl = new URL(process.env.SUPABASE_URL || '');
+      return res.json({ status: 'ok', database: 'ready', version: '1.0.0',
+        projectRef: configuredUrl.hostname.split('.')[0],
+        commit: process.env.VERCEL_GIT_COMMIT_SHA || null, timestamp: Date.now() });
     } catch (error) {
       logServerFailure('API readiness check failed', error);
       return res.status(503).json({ status: 'unavailable', database: 'unavailable' });

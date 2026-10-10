@@ -21,6 +21,8 @@ API zaten no-store önbellek politikası, doğrulanmış oturum, rol/yetki kontr
 
 ## Canlı ortamda kalan bulgular
 
+Sonraki düzeltme turunda uygulama tarafı parola koruması, sunucu üzerinden parola kurtarma ve gerçek sürümü doğrulayan health kontrolü eklendi. Yeni Vercel kapsam bulguları ve halen kapanmamış canlı işlemler için [güncel rapora](live-release-blockers-20261010.md) bakın. Aşağıdaki tablo bu incelemenin ilk canlı durumunu kaydeder; yerleşik Supabase leaked-password koruması ücretsiz planda etkinleşmedi.
+
 | Öncelik | Durum | Kanıt ve gerekli işlem |
 |---|---|---|
 | Yüksek | Son ilerleme koruması etkin değil | Canlı protect_profile_progress trigger'ı yok; protect_verified_progress migration'ı uygulanmamış. İstemcinin eski ilerleme yazma izinleri ve yayımlanmış soru bankasına erişimi nedeniyle puan değiştirme ve cevap anahtarlarına erişme riski devam eder. Yeni uygulama üretime geçirilirken supabase/migrations/20261010090133_protect_verified_progress.sql uygulanmalı. Eski uygulamayı bozacağı için bu incelemede tek başına etkinleştirilmedi. |

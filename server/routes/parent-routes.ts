@@ -1,3 +1,4 @@
+import { PasswordPolicyError } from '../password-policy';
 import { logServerFailure } from '../safe-log';
 import { sharedRateLimit } from '../shared-rate-limit';
 import { weeklyReportMetrics } from '../weekly-report';
@@ -75,7 +76,11 @@ parentRoutes.post(
     if (!isLinked) return res.status(403).json({ error: 'Öğrenci bu veli hesabına bağlı değil.' });
 
     const adminAuth = getAdminAuth();
-    await adminAuth.updateUser(parsed.data.studentId, { password: parsed.data.newPassword });
+    try { await adminAuth.updateUser(parsed.data.studentId, { password: parsed.data.newPassword }); }
+    catch (error) {
+      if (error instanceof PasswordPolicyError) return res.status(error.status).json({ error: error.message, code: error.code });
+      throw error;
+    }
     await adminAuth.revokeRefreshTokens(parsed.data.studentId);
     await adminDb.collection('securityEvents').add({
       type: 'student_password_reset_by_parent',

@@ -68,6 +68,8 @@ function aistudioMediaPlugin(): Plugin {
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss(), aistudioMediaPlugin(), blogPlugin()],
+    // Vercel serves /api in this project. Ignore stale external API settings there.
+    define: process.env.VERCEL === '1' ? { 'import.meta.env.VITE_API_BASE_URL': JSON.stringify('') } : {},
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

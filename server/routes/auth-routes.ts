@@ -1,3 +1,5 @@
+import { assertPasswordNotCompromised, PasswordPolicyError } from '../password-policy';
+import { changeOwnPassword } from '../password-change';
 import { logServerFailure } from '../safe-log';
 import { sharedRateLimit } from '../shared-rate-limit';
 import { Router } from 'express';
@@ -7,6 +9,7 @@ import {
   getAdminAuth,
   getAdminDb,
   normalizeStudentCode,
+  requireSupabaseAuth, requireVerifiedEmail, requireProfileRole,
 } from '../security';
 import { accountSecurityLimiter } from '../rate-limiters';
 import { KVKK_POLICY_VERSION, TERMS_POLICY_VERSION } from '../../src/lib/account-policy';
@@ -74,6 +77,7 @@ authRoutes.post('/register-family', accountSecurityLimiter, sharedRateLimit('fam
   let createdStudentUser: { uid: string } | null = null;
 
   try {
+    await Promise.all([assertPasswordNotCompromised(parentPassword), assertPasswordNotCompromised(studentPassword)]);
     const adminAuth = getAdminAuth();
     const adminDb = getAdminDb();
     createdParentUser = await adminAuth.createUser({
@@ -177,7 +181,7 @@ authRoutes.post('/register-family', accountSecurityLimiter, sharedRateLimit('fam
       },
     });
   } catch (error: any) {
-    logServerFailure('Family registration failed', error);
+    if (!(error instanceof PasswordPolicyError)) logServerFailure('Family registration failed', error);
 
     for (const created of [createdStudentUser, createdParentUser]) {
       if (!created) continue;
@@ -185,12 +189,15 @@ authRoutes.post('/register-family', accountSecurityLimiter, sharedRateLimit('fam
       await getAdminAuth().deleteUser(created.uid).catch(() => undefined);
     }
 
+    if (error instanceof PasswordPolicyError) return res.status(error.status).json({ error: error.message, code: error.code });
     if (isDuplicateEmail(error)) return res.status(409).json({ error: 'Bu e-posta adresiyle kayıtlı bir hesap zaten var.' });
     return res.status(503).json({
       error: 'Aile hesabı veya doğrulama e-postası oluşturulamadı. Lütfen tekrar deneyin.',
     });
   }
 });
+
+authRoutes.post('/auth/change-password', requireSupabaseAuth, requireVerifiedEmail, requireProfileRole('parent', 'admin'), accountSecurityLimiter, sharedRateLimit('own-password-change', 6, 3600), changeOwnPassword);
 
 export default authRoutes;
 

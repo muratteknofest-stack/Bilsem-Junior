@@ -26,7 +26,14 @@ try {
     if (path.startsWith('/api/')) assert.equal(response.headers.get('cache-control'), 'no-store', path);
     await response.arrayBuffer();
   }
-  console.log(`Production HTTP security: ${checks.length} checks passed.`);
+  const reset = await fetch(base + '/api/auth/change-password', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: 'DisposableTest123' }), signal: AbortSignal.timeout(3000),
+  });
+  assert.equal(reset.status, 401, 'Unauthenticated password change');
+  assert.equal(reset.headers.get('cache-control'), 'no-store');
+  await reset.arrayBuffer();
+  console.log(`Production HTTP security: ${checks.length + 1} checks passed.`);
 } finally {
   if (child.exitCode === null) { child.kill('SIGTERM'); await new Promise(resolve => child.once('exit', resolve)); }
 }

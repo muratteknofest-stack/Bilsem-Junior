@@ -1,6 +1,6 @@
 import type { UserProfile } from '../types';
 
-export const KVKK_POLICY_VERSION = '2026-10-10';
+export const KVKK_POLICY_VERSION = '2026-10-10.1';
 export const TERMS_POLICY_VERSION = '2026-10-10';
 
 export function createConsentRecord(

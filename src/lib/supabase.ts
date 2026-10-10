@@ -57,8 +57,19 @@ export async function isPasswordRecoveryReady(): Promise<boolean> {
 
 export async function updateRecoveredPassword(password: string) {
   if (!recoverySessionReady) throw new Error('Sıfırlama bağlantısı geçersiz veya süresi dolmuş.');
-  const { error } = await supabase.auth.updateUser({ password });
-  if (error) throw error;
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data.session) throw new Error('Sıfırlama oturumu doğrulanamadı. Yeni bağlantı isteyin.');
+  const base = String(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+  const response = await fetch(`${base}/api/auth/change-password`, {
+    method: 'POST', credentials: base ? 'omit' : 'same-origin',
+    headers: { Authorization: `Bearer ${data.session.access_token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  });
+  if (response.status !== 204) {
+    let message = 'Şifre yenilenemedi. Biraz sonra tekrar deneyin.';
+    try { const body = await response.json(); if (typeof body.error === 'string') message = body.error; } catch {}
+    throw new Error(message);
+  }
   const { error: signOutError } = await supabase.auth.signOut();
   if (signOutError) throw new Error('Şifre değişti ancak oturum kapatılamadı. Lütfen çıkış yapın.');
   recoverySessionReady = false;
@@ -145,12 +156,6 @@ export async function signInWithEmailAndPassword(_auth: typeof auth, email: stri
   auth.currentUser = asUser(data.user);
   return { user: auth.currentUser };
 }
-export async function createUserWithEmailAndPassword(_auth: typeof auth, email: string, password: string) {
-  const { data, error } = await supabase.auth.signUp({ email, password });
-  if (error || !data.user) throw error ?? new Error('Kayıt başarısız.');
-  auth.currentUser = asUser(data.user);
-  return { user: auth.currentUser };
-}
 export async function signOut(_auth: typeof auth) {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
@@ -167,4 +172,5 @@ export async function sendPasswordResetEmail(_auth: typeof auth, email: string) 
   });
   if (error) throw error;
 }
+
 
