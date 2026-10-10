@@ -16,13 +16,13 @@ export function blogPlugin(): Plugin {
     },
     configureServer(server) {
       let pages = renderBlog().pages;
-      server.watcher.add('content/blog');
+      server.watcher.add(['content/blog', 'src/content/platform-info.ts']);
       server.watcher.on('change', file => {
-        if (file.includes('/content/blog/')) pages = renderBlog().pages;
+        if (file.includes('/content/blog/') || file.endsWith('/platform-info.ts')) pages = renderBlog().pages;
       });
       server.middlewares.use((req, res, next) => {
         const route = (req.url || '/').split(/[?#]/, 1)[0].replace(/\/$/, '');
-        if (!route.startsWith('/blog/') && route !== '/blog' && !['/robots.txt', '/sitemap.xml'].includes(route)) return next();
+        if (!route.startsWith('/bilgi/') && route !== '/bilgi' && !route.startsWith('/blog/') && route !== '/blog' && !['/robots.txt', '/sitemap.xml'].includes(route)) return next();
         if (req.method !== 'GET' && req.method !== 'HEAD') { res.statusCode = 405; res.end(); return; }
         const file = route === '/blog' ? 'blog/index.html' : route.endsWith('.xml') || route.endsWith('.txt') ? route.slice(1) : `${route.slice(1)}/index.html`;
         const page = pages.get(file);

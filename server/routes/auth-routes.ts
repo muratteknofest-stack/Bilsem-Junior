@@ -1,3 +1,4 @@
+import { logServerFailure } from '../safe-log';
 import { sharedRateLimit } from '../shared-rate-limit';
 import { Router } from 'express';
 import { z } from 'zod';
@@ -176,7 +177,7 @@ authRoutes.post('/register-family', accountSecurityLimiter, sharedRateLimit('fam
       },
     });
   } catch (error: any) {
-    console.error('[AuthRoutes] register-family error:', error);
+    logServerFailure('Family registration failed', error);
 
     for (const created of [createdStudentUser, createdParentUser]) {
       if (!created) continue;

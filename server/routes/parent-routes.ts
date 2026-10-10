@@ -1,3 +1,4 @@
+import { logServerFailure } from '../safe-log';
 import { sharedRateLimit } from '../shared-rate-limit';
 import { weeklyReportMetrics } from '../weekly-report';
 import { getServiceClient } from '../supabase-admin';
@@ -189,7 +190,7 @@ parentRoutes.post('/send-weekly-report', requireSupabaseAuth, reportLimiter, req
 
     res.json({ success: true, message: 'Haftalık özet başarıyla gönderildi.' });
   } catch (error: any) {
-    console.error('Weekly report failed', { code: error?.code || 'REPORT_UNAVAILABLE' });
+    logServerFailure('Weekly report failed', error);
     res.status(500).json({ error: 'E-posta gönderilemedi.' });
   }
 });

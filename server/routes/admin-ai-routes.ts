@@ -1,3 +1,4 @@
+import { logServerFailure } from '../safe-log';
 import { sharedRateLimit } from '../shared-rate-limit';
 import { loadQualityComparisonPool } from '../question-quality-store';
 import { auditQuestion, isQuestionReadyForStudents } from '../../src/features/questions/quality';
@@ -67,7 +68,7 @@ adminAiRoutes.post('/admin/ai-generate-question', requireSupabaseAuth, adminAiLi
         createdAt: Date.now(),
       });
     } catch (logErr) {
-      console.warn('AI generation log yazılamadı:', logErr);
+      logServerFailure('AI generation log failed', logErr);
     }
 
     if (result.question) {
@@ -83,7 +84,7 @@ adminAiRoutes.post('/admin/ai-generate-question', requireSupabaseAuth, adminAiLi
           updatedBy: req.authUser.uid,
         });
       } catch (saveErr) {
-        console.warn('AI sorusu kaydedilemedi:', saveErr);
+        logServerFailure('AI question save failed', saveErr);
         return res.status(503).json({ error: 'Denetim sonucu kaydedilemedi. Soru yayımlanmadı.' });
       }
     }
@@ -101,7 +102,7 @@ adminAiRoutes.post('/admin/ai-generate-question', requireSupabaseAuth, adminAiLi
       durationMs: result.durationMs,
     });
   } catch (err: any) {
-    console.error('AI soru üretim hatası:', err);
+    logServerFailure('AI question generation failed', err);
     return res.status(500).json({ error: 'AI soru üretimi başarısız.' });
   }
 });
@@ -195,7 +196,7 @@ adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, adminAiLimi
 
     return res.status(400).json({ error: 'Geçersiz işlem.' });
   } catch (err: any) {
-    console.error('Soru inceleme hatası:', err);
+    logServerFailure('Question review failed', err);
     return res.status(500).json({ error: 'İşlem başarısız.' });
   }
 });

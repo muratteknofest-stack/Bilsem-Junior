@@ -14,16 +14,18 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.get(/^\/blog(?:\/.*)?$/, (req, res) => {
+    app.get(/^\/(?:blog|bilgi)(?:\/.*)?$/, (req, res) => {
       const route = req.path.replace(/\/$/, '');
-      const slug = route.slice('/blog/'.length);
-      const file = route === '/blog' ? 'blog/index.html' : slug === 'feed.xml' ? 'blog/feed.xml' : /^[a-z0-9-]+$/.test(slug) ? `blog/${slug}/index.html` : '';
+      const section = route.startsWith('/bilgi') ? 'bilgi' : 'blog';
+      const slug = route.slice(section.length + 2);
+      const file = route === '/blog' ? 'blog/index.html' : section === 'blog' && slug === 'feed.xml' ? 'blog/feed.xml' : /^[a-z0-9-]+$/.test(slug) ? `${section}/${slug}/index.html` : '';
       if (!file) { res.status(404).send('Yazı bulunamadı'); return; }
       res.sendFile(path.join(distPath, file), error => {
         if (error && !res.headersSent) res.status(404).send('Yazı bulunamadı');
       });
     });
-    app.use(express.static(distPath));
+    app.use(/^\/(?:server(?:\.cjs)?|build|\.(?:env|git))(?:[/.].*)?$/, (_req, res) => { res.sendStatus(404); });
+    app.use(express.static(distPath, { dotfiles: 'deny' }));
     app.use(/^\/(?:robots\.txt|sitemap\.xml|blog-assets\/)/, (_req, res) => { res.sendStatus(404); });
     app.use((_req, res) => res.sendFile(path.join(distPath, 'index.html')));
   }

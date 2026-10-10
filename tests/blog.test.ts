@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { blogConfig, BLOG_CATEGORIES, readArticles, renderBlog } from '../scripts/blog-engine';
 import { blogPlugin } from '../scripts/blog-vite-plugin';
+import { PLATFORM_INFO } from '../src/content/platform-info';
 
 const origin = 'https://example.org';
 const production = { PUBLIC_SITE_URL: origin, VERCEL_ENV: 'production' };
@@ -46,7 +47,7 @@ test('production pages contain complete text, honest author data, unique metadat
     for (const m of html.matchAll(/href="(\/blog\/[a-z0-9-]+)"/g)) assert.ok(pages.has(`${m[1].slice(1)}/index.html`), m[1]);
   }
   assert.equal(descriptions.size, 30);
-  assert.equal((pages.get('sitemap.xml')!.match(/<loc>/g) || []).length, 33);
+  assert.equal((pages.get('sitemap.xml')!.match(/<loc>/g) || []).length, 33 + PLATFORM_INFO.length);
   assert.equal((pages.get('blog/feed.xml')!.match(/<item>/g) || []).length, 30);
   assert.match(pages.get('robots.txt')!, /Allow: \/\nDisallow: \/api\//);
   assert.equal((pages.get('blog/index.html')!.match(/ data-article /g) || []).length, 30);
@@ -65,7 +66,7 @@ test('preview pages cannot be indexed and never use the preview hostname as the 
 test('Vercel keeps blog assets and unknown blog paths outside the SPA fallback', () => {
   const config = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
   const fallback = new RegExp(`^${config.rewrites.at(-1).source}$`);
-  for (const route of ['/blog', '/blog/bilsem-nedir', '/blog/does-not-exist', '/blog-assets/blog.css', '/robots.txt', '/sitemap.xml', '/api/health']) assert.equal(fallback.test(route), false, route);
+  for (const route of ['/bilgi', '/bilgi/gizlilik-ve-veriler', '/bilgi/unknown', '/blog', '/blog/bilsem-nedir', '/blog/does-not-exist', '/blog-assets/blog.css', '/robots.txt', '/sitemap.xml', '/api/health']) assert.equal(fallback.test(route), false, route);
   assert.equal(fallback.test('/dashboard'), true);
 });
 
