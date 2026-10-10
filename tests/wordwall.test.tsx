@@ -48,8 +48,8 @@ test('student class is selected automatically and games are only embedded after 
   assert.match(fourth, /26 test bulundu/);
   assert.equal((fourth.match(/class="ww-card"/g) || []).length, 12);
   assert.doesNotMatch(fourth, /<iframe/);
-  assert.match(fourth, /aria-label="Wordwall sınıf seçimi"/);
-  assert.match(fourth, /Oyun puanları ZekaPark çalışma raporlarına otomatik aktarılmaz/);
+  assert.match(fourth, /aria-label="Testler için sınıf seçimi"/);
+  assert.match(fourth, /Bu testlerin puanları ZekaPark çalışma raporlarına otomatik aktarılmaz/);
   assert.match(renderToStaticMarkup(<WordwallLibrary initialGrade={1} />), /77 test bulundu/);
 });
 

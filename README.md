@@ -77,7 +77,7 @@ single-use; request a new email from `/reset-password` when an old link expires.
 
 ## Wordwall zeka testleri
 
-Öğrenci panelindeki “Wordwall Zeka Testleri” bölümü ve `/wordwall` sayfası, Sayisalmuhakeme hesabının herkese açık 157 etkinliğini içerir: 1. sınıf 77, 2. sınıf 27, 3. sınıf 27, 4. sınıf 26. Öğrencinin sınıfı otomatik seçilir; sınıf, konu ve Türkçe arama filtreleri kullanılabilir. Test seçildiğinde resmi Wordwall oynatıcısı sayfa içinde açılır; aynı anda yalnızca bir oyun yüklenir.
+Öğrenci panelindeki “Zeka Testleri” bölümü ve `/wordwall` sayfası, Sayisalmuhakeme hesabının herkese açık 157 etkinliğini içerir: 1. sınıf 77, 2. sınıf 27, 3. sınıf 27, 4. sınıf 26. Öğrencinin sınıfı otomatik seçilir; sınıf, konu ve Türkçe arama filtreleri kullanılabilir. Test seçildiğinde resmi Wordwall oynatıcısı sayfa içinde açılır; aynı anda yalnızca bir oyun yüklenir.
 
 Katalog `src/content/wordwall-catalog.json` içinde tutulur. `npm run import:wordwall` public klasör ağacını okuyup her etkinliğin sahibini ve gömme adresini resmi oEmbed yanıtıyla doğrular; herhangi bir hata halinde mevcut dosyayı değiştirmez. Yeni etkinlikler için komutu çalıştırıp oluşan kataloğu gözden geçirerek yayımlayın. Gizli veya paylaşılmamış etkinlikler içeri alınmaz.
 
