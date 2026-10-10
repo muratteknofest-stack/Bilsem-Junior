@@ -1,10 +1,13 @@
-import { StrictMode } from 'react';
+import { StrictMode, Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
 import { AuthProvider } from './contexts/AuthContext';
 import { PasswordResetPage } from './features/auth/components/PasswordResetPage';
 import { isRecoveryRedirect } from './lib/supabase';
+import './components/wordwall.css';
+
+const WordwallPage = lazy(() => import('./components/WordwallLibrary').then(module => ({ default: module.WordwallPage })));
 
 // Safely handle unhandled background Supabase Auth network rejections
 if (typeof window !== 'undefined') {
@@ -26,6 +29,8 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {window.location.pathname === '/reset-password' || isRecoveryRedirect ? (
       <PasswordResetPage />
+    ) : window.location.pathname === '/wordwall' ? (
+      <Suspense fallback={<p role="status" className="p-8 text-center">Testler yükleniyor…</p>}><WordwallPage /></Suspense>
     ) : (
       <AuthProvider>
         <App />
@@ -33,3 +38,4 @@ createRoot(document.getElementById('root')!).render(
     )}
   </StrictMode>,
 );
+

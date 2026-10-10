@@ -42,9 +42,10 @@ export function createApiApp() {
     contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
       directives: {
         defaultSrc: ["'self'"], scriptSrc: ["'self'"], frameAncestors: ["'none'"], objectSrc: ["'none'"],
+        frameSrc: ['https://wordwall.net'],
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
-        imgSrc: ["'self'", 'data:', 'blob:', 'https://images.unsplash.com', 'https://images.pexels.com'],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https://images.unsplash.com', 'https://images.pexels.com', 'https://screens.cdn.wordwall.net'],
         connectSrc: ["'self'", 'https://*.googleapis.com', 'https://*.supabase.co', 'wss://*.supabase.co'],
       },
     } : false,

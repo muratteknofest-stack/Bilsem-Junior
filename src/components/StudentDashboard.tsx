@@ -50,6 +50,7 @@ import { WeeklyChallengesView } from './WeeklyChallengesView';
 import { WeeklyChallengesBannerCard } from './WeeklyChallengesBannerCard';
 import { GamificationArena } from './GamificationArena';
 import { StudentStudyHub } from './StudentStudyHub';
+import { WordwallLibrary } from './WordwallLibrary';
 import { levelProgress } from '../features/student/study-hub-model';
 import { getStudyFavorites, saveStudyFavorites } from '../services/student-preferences-service';
 import './landing/design-system.css';
@@ -445,6 +446,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           onMistakes={onOpenMistakes}
           onResumeExam={onStartExam}
         />
+
+        <WordwallLibrary key={`wordwall-${activeUser.id}`} initialGrade={activeUser.grade} />
 
         {/* Modern Segmented Navigation Bar */}
         <div className="zp-dashboard-tabs p-1.5 bg-zinc-200/70 dark:bg-zinc-900/80 rounded-2xl w-full border border-zinc-200/80 dark:border-zinc-800/80 shadow-inner gap-1" role="group" aria-label="Öğrenci paneli bölümleri">
