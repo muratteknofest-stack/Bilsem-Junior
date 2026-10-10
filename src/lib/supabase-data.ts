@@ -72,6 +72,13 @@ export async function setDoc(ref: Ref, value: Record<string, any>, options?: { m
   if (error) throw error;
 }
 export async function updateDoc(ref: Ref, updates: Record<string, any>) {
+  if (ref.table === 'profiles') {
+    const row = toSupabaseRow(ref.table, ref.id!, updates);
+    delete row.id;
+    const { error } = await supabase.from(ref.table).update(row).eq('id', ref.id!);
+    if (error) throw error;
+    return;
+  }
   const old = await getDoc(ref);
   if (!old.exists()) throw new Error('Belge bulunamadı.');
   await setDoc(ref, { ...old.data(), ...updates });
@@ -113,4 +120,5 @@ export function writeBatch(_db: unknown) {
     async commit() { for (const action of actions) await action(); },
   };
 }
+
 

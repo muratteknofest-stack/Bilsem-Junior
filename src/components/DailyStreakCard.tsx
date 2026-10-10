@@ -83,7 +83,7 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
   const nextMilestone = STREAK_MILESTONES.find((m) => m.day > streak);
 
   // Handle claiming a milestone
-  const handleClaim = (milestone: StreakMilestone) => {
+  const handleClaim = async (milestone: StreakMilestone) => {
     setClaimingDay(milestone.day);
     sound.playLevelUp();
 
@@ -96,7 +96,8 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
       });
     } catch {}
 
-    const result = dataService.claimStreakReward(milestone.day);
+    let result;
+    try { result = await dataService.claimStreakReward(milestone.day); } catch (err) { setClaimFeedback(err instanceof Error ? err.message : 'Ödül kaydedilemedi.'); setClaimingDay(null); return; }
     if (result.success) {
       setClaimFeedback(`Tebrikler! ${milestone.title} ödülü alındı: +${milestone.xpReward} XP!`);
       setTimeout(() => setClaimFeedback(null), 4000);
@@ -106,6 +107,7 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
   };
 
   const handleStartQuickChallenge = () => {
+    if (!user.id.startsWith('demo_')) { onStartPractice(); return; }
     sound.playClick();
     const seed = Math.floor(Math.random() * 899999) + 100000;
     // Generate a fun visual odd-one-out question
@@ -579,4 +581,5 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
     </div>
   );
 };
+
 

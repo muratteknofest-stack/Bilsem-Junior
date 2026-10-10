@@ -40,7 +40,7 @@ test('linked student password reset requires verified parent authorization', asy
   assert.match(source, /requireProfileRole\('parent'\)/);
   assert.match(source, /revokeRefreshTokens/);
   assert.match(source, /linkedParentId === req\.authUser\.uid/);
-  assert.match(source, /requireAppCheck/);
+  assert.match(source, /sharedRateLimit/);
   assert.match(source, /student\.linkedParentId !== req\.authUser\.uid/);
   assert.doesNotMatch(source, /AI soru üretimi başarısız:.*err\.message/);
 });
@@ -50,8 +50,8 @@ test('protected AI routes authenticate before applying per-user limits and reche
   const admin = await readFile(new URL('../server/routes/admin-ai-routes.ts', import.meta.url), 'utf8');
   const limits = await readFile(new URL('../server/rate-limiters.ts', import.meta.url), 'utf8');
   assert.match(limits, /keyGenerator: authenticatedRateLimitKey/);
-  assert.match(student, /'\/ai-hint', requireSupabaseAuth, requireAppCheck, aiLimiter, requireProfileRole\('student', 'admin'\)/);
-  assert.match(admin, /'\/admin\/ai-generate-question', requireSupabaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole\('admin'\)/);
+  assert.match(student, /'\/ai-hint', requireSupabaseAuth, aiLimiter, requireProfileRole\('student', 'admin'\)/);
+  assert.match(admin, /'\/admin\/ai-generate-question', requireSupabaseAuth, adminAiLimiter, requireProfileRole\('admin'\)/);
   assert.match(admin, /if \(!isQuestionReadyForStudents\(currentData\) \|\| report\.errors\.length\)/);
 });
 
@@ -76,4 +76,5 @@ test('login validation requires email identifiers for privileged roles', async (
   assert.equal(loginSchema.safeParse({ identifier: 'admin@example.com', password: 'secret', role: 'admin' }).success, true);
   assert.equal(loginSchema.safeParse({ identifier: 'OGRENCI123', password: 'secret', role: 'student' }).success, true);
 });
+
 

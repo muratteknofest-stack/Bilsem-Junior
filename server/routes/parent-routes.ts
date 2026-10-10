@@ -1,3 +1,4 @@
+import { sharedRateLimit } from '../shared-rate-limit';
 import { weeklyReportMetrics } from '../weekly-report';
 import { getServiceClient } from '../supabase-admin';
 import { Router } from 'express';
@@ -6,7 +7,6 @@ import nodemailer from 'nodemailer';
 import {
   getAdminAuth,
   getAdminDb,
-  requireAppCheck,
   requireSupabaseAuth,
   requireProfileRole,
   requireVerifiedEmail,
@@ -18,7 +18,7 @@ import { accountSecurityLimiter, reportLimiter } from '../rate-limiters';
 
 const parentRoutes = Router();
 
-parentRoutes.post('/parent/activate-students', requireSupabaseAuth, requireVerifiedEmail, accountSecurityLimiter, requireProfileRole('parent'), async (req: AuthenticatedRequest, res) => {
+parentRoutes.post('/parent/activate-students', requireSupabaseAuth, requireVerifiedEmail, accountSecurityLimiter, requireProfileRole('parent'), sharedRateLimit('parent-actions', 6, 3600), async (req: AuthenticatedRequest, res) => {
   const client = getServiceClient();
   const parent = await client.from('profiles').select('linked_student_ids').eq('id', req.authUser!.uid).single();
   if (parent.error) throw parent.error;
@@ -50,10 +50,9 @@ const linkedStudentPasswordSchema = z.object({
 parentRoutes.post(
   '/parent/reset-student-password',
   requireSupabaseAuth,
-  requireAppCheck,
   accountSecurityLimiter,
   requireVerifiedEmail,
-  requireProfileRole('parent'),
+  requireProfileRole('parent'), sharedRateLimit('parent-actions', 6, 3600),
   async (req: AuthenticatedRequest, res) => {
     const parsed = linkedStudentPasswordSchema.safeParse(req.body);
     if (!parsed.success || !req.authUser) {
@@ -91,7 +90,7 @@ const reportSchema = z.object({
   studentId: z.string().min(1).max(128),
 }).strict();
 
-parentRoutes.post('/send-weekly-report', requireSupabaseAuth, requireAppCheck, reportLimiter, requireVerifiedEmail, requireProfileRole('parent'), async (req: AuthenticatedRequest, res) => {
+parentRoutes.post('/send-weekly-report', requireSupabaseAuth, reportLimiter, requireVerifiedEmail, requireProfileRole('parent'), sharedRateLimit('parent-actions', 6, 3600), async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = reportSchema.safeParse(req.body);
     if (!parsed.success || !req.authUser) {
@@ -196,4 +195,5 @@ parentRoutes.post('/send-weekly-report', requireSupabaseAuth, requireAppCheck, r
 });
 
 export default parentRoutes;
+
 

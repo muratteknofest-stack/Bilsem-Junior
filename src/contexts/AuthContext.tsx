@@ -65,11 +65,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let unsubSnap: (() => void) | null = null;
     let isMounted = true;
+    let authRevision = 0;
 
     const unsubscribe = onAuthStateChanged(
       auth,
       async (user) => {
         if (!isMounted) return;
+        const revision = ++authRevision;
+        const isCurrent = () => isMounted && revision === authRevision && (user?.uid ?? null) === (auth.currentUser?.uid ?? null);
         if (unsubSnap) {
           unsubSnap();
           unsubSnap = null;
@@ -81,8 +84,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (!isManagedStudentEmail(user.email) && !user.emailVerified) {
             await supabaseSignOut(auth).catch(() => undefined);
             dataService.logout();
-            if (isMounted) setUserProfile(null);
-            if (isMounted) setLoading(false);
+            if (isCurrent()) setUserProfile(null);
+            if (isCurrent()) setLoading(false);
             return;
           }
           // Validate the profile in Supabase before exposing an authenticated session.
@@ -92,29 +95,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           try {
             // Accounts without an application profile are not silently provisioned.
             const docSnap = await getDoc(userDocRef);
+            if (!isCurrent()) return;
             if (!docSnap.exists()) {
               await supabaseSignOut(auth).catch(() => undefined);
               dataService.logout();
-              if (isMounted) setUserProfile(null);
-              if (isMounted) setLoading(false);
+              if (isCurrent()) setUserProfile(null);
+              if (isCurrent()) setLoading(false);
               return;
             } else {
               const profile = docSnap.data() as UserProfile;
               if (profile.id !== user.uid || !['student', 'parent', 'admin'].includes(profile.role)) {
                 await supabaseSignOut(auth).catch(() => undefined);
                 dataService.logout();
-                if (isMounted) setUserProfile(null);
-                if (isMounted) setLoading(false);
+                if (isCurrent()) setUserProfile(null);
+                if (isCurrent()) setLoading(false);
                 return;
               }
               if (profile.role === 'admin') {
                 const token = await user.getIdTokenResult(true);
+                if (!isCurrent()) return;
                 adminAuthorized = user.emailVerified && token.claims.role === 'admin';
                 if (!adminAuthorized) {
                   await supabaseSignOut(auth).catch(() => undefined);
                   dataService.logout();
-                  if (isMounted) setUserProfile(null);
-                  if (isMounted) setLoading(false);
+                  if (isCurrent()) setUserProfile(null);
+                  if (isCurrent()) setLoading(false);
                   return;
                 }
               }
@@ -123,26 +128,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               const activeProfile: UserProfile = { ...profile, role: activeRole };
               dataService.loginAs(activeRole, activeProfile);
               await dataService.hydrateUserStateFromSupabase();
-              if (isMounted) {
+              if (isCurrent()) {
                 setUserProfile(activeProfile);
                 setIsAdminAuthorized(adminAuthorized);
               }
             }
           } catch (err) {
+            if (!isCurrent()) return;
             console.warn('Supabase profili yüklenemedi:', err);
             await supabaseSignOut(auth).catch(() => undefined);
             dataService.logout();
-            if (isMounted) setUserProfile(null);
-            if (isMounted) setIsAdminAuthorized(false);
-            if (isMounted) setLoading(false);
+            if (isCurrent()) setUserProfile(null);
+            if (isCurrent()) setIsAdminAuthorized(false);
+            if (isCurrent()) setLoading(false);
             return;
           }
 
+          if (!isCurrent()) return;
           try {
             unsubSnap = onSnapshot(
               userDocRef,
               (snap) => {
-                if (snap.exists() && isMounted) {
+                if (snap.exists() && isCurrent()) {
                   const profile = snap.data() as UserProfile;
                   if (profile.id === user.uid && ['student', 'parent', 'admin'].includes(profile.role) &&
                       (profile.role !== 'admin' || adminAuthorized)) {
@@ -158,7 +165,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     setUserProfile(null);
                     setIsAdminAuthorized(false);
                   }
-                } else if (isMounted) {
+                } else if (isCurrent()) {
                   void supabaseSignOut(auth).catch(() => undefined);
                   dataService.logout();
                   setUserProfile(null);
@@ -172,15 +179,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } catch {}
           
           updateDoc(userDocRef, { lastLoginAt: Date.now() }).catch(() => {});
-          if (isMounted) setLoading(false);
+          if (isCurrent()) setLoading(false);
         } else {
           dataService.logout();
-          if (isMounted) setUserProfile(null);
-          if (isMounted) setIsAdminAuthorized(false);
-          if (isMounted) setLoading(false);
+          if (isCurrent()) setUserProfile(null);
+          if (isCurrent()) setIsAdminAuthorized(false);
+          if (isCurrent()) setLoading(false);
         }
       },
       (authError) => {
+        authRevision++;
         console.warn('Supabase Auth bağlantı hatası:', authError.message || authError);
         dataService.logout();
         if (isMounted) {
@@ -194,6 +202,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       isMounted = false;
+      authRevision++;
       if (unsubSnap) unsubSnap();
       unsubscribe();
     };
@@ -264,3 +273,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     </AuthContext.Provider>
   );
 };
+

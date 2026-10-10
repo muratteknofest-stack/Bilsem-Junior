@@ -59,3 +59,9 @@ test('study hub exposes resume progress and saved category as actionable control
   assert.match(html, /Matris Tamamlama/);
   assert.match(html, /aria-expanded="false"/);
 });
+
+
+test('unverified categories are excluded from recommendations and imported favorites', () => {
+  assert.equal(recommendStudy([skill('memory', 0, 0), skill('verbal', 1, 10), skill('coding', 0, 0)], 0).category, 'coding');
+  assert.deepEqual(readFavoriteCategories('["memory","verbal","matrix"]'), ['matrix']);
+});

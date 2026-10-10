@@ -15,9 +15,8 @@ import { StudyReminderSettingsModal } from './components/StudyReminderSettingsMo
 
 const StudentDashboard = lazy(() => import('./components/StudentDashboard').then((m) => ({ default: m.StudentDashboard })));
 const LandingPage = lazy(() => import('./components/LandingPage').then((m) => ({ default: m.LandingPage })));
+const VerifiedLearningView = lazy(() => import('./components/VerifiedLearningView').then(m => ({ default: m.VerifiedLearningView })));
 const PracticeSessionView = lazy(() => import('./components/PracticeSessionView').then((m) => ({ default: m.PracticeSessionView })));
-const AdaptivePracticeView = lazy(() => import('./components/AdaptivePracticeView').then((m) => ({ default: m.AdaptivePracticeView })));
-const ExamSessionView = lazy(() => import('./components/ExamSessionView').then((m) => ({ default: m.ExamSessionView })));
 const MistakeNotebookView = lazy(() => import('./components/MistakeNotebookView').then((m) => ({ default: m.MistakeNotebookView })));
 const AchievementsView = lazy(() => import('./components/AchievementsView').then((m) => ({ default: m.AchievementsView })));
 const ParentPortalView = lazy(() => import('./components/ParentPortalView').then((m) => ({ default: m.ParentPortalView })));
@@ -356,25 +355,21 @@ export default function App() {
               </div>
             )}
 
-            {currentRoute === 'practice' && (
+            {currentRoute === 'practice' && (isDemoUser(currentUser.id) ? (
               <PracticeSessionView
                 key={`practice-${selectedPracticeCategory}`}
                 initialCategory={selectedPracticeCategory}
                 onNavigateHome={leaveTest}
                 onOpenMistakes={() => navigateTo('mistakes')}
               />
-            )}
+            ) : <VerifiedLearningView key={`verified-${selectedPracticeCategory}`} mode="practice" initialCategory={selectedPracticeCategory} onNavigateHome={leaveTest} />)}
 
             {currentRoute === 'adaptive' && (
-              <AdaptivePracticeView
-                onNavigateHome={leaveTest}
-              />
+              <VerifiedLearningView mode="adaptive" onNavigateHome={leaveTest} />
             )}
 
             {currentRoute === 'exams' && (
-              <ExamSessionView
-                onNavigateHome={leaveTest}
-              />
+              <VerifiedLearningView mode="exam" onNavigateHome={leaveTest} />
             )}
 
             {currentRoute === 'mistakes' && (
@@ -478,4 +473,5 @@ export default function App() {
     </div>
   );
 }
+
 

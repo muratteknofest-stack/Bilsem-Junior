@@ -1,3 +1,4 @@
+import { isAvailableCategory } from '../features/student/available-categories';
 import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import confetti from 'canvas-confetti';
@@ -210,6 +211,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   }, [masteries]);
 
   const visibleMasteries = safeMasteries.filter(m => {
+    if (!isAvailableCategory(m.category)) return false;
     const matches = m.categoryName.toLocaleLowerCase('tr-TR').includes(skillSearch.trim().toLocaleLowerCase('tr-TR'));
     return matches && (skillFilter === 'all' || (skillFilter === 'new' ? !m.attemptCount : m.attemptCount > 0 && m.mastery < 80));
   });
@@ -1094,4 +1096,5 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     </div>
   );
 };
+
 

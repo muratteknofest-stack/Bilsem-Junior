@@ -36,6 +36,17 @@ function integer(value: unknown): number | null {
   return Number.isSafeInteger(n) ? n : null;
 }
 
+/** Public question UI checks completeness only. Correctness is evaluated on the server. */
+export function isResponseComplete(q: Pick<BaseQuestion, 'visualConfig' | 'options'>, response: QuestionResponse | null): boolean {
+  if (!response || !interactionModes(q as BaseQuestion).includes(response.mode)) return false;
+  const b = q.visualConfig as Board;
+  if (response.mode === 'choice' || response.mode === 'place') return q.options.some(o => o.id === response.optionId);
+  if (response.mode === 'order') return Array.isArray(response.slots) && response.slots.length === b.names?.length && response.slots.every(n => typeof n === 'string' && b.names!.includes(n)) && new Set(response.slots).size === response.slots.length;
+  if (response.mode === 'number') return integer(response.value) !== null;
+  if (response.mode === 'match') return integer(response.total) !== null && !!response.pairs && [...new Set(b.symbols!)].every(s => integer(response.pairs[s]) !== null);
+  return false;
+}
+
 /** Incomplete or unsupported submissions never earn credit. No caller-supplied correctness flags. */
 export function evaluateResponse(q: BaseQuestion, response: QuestionResponse | null) {
   const invalid = { complete: false, correct: false };
@@ -65,4 +76,14 @@ export function evaluateResponse(q: BaseQuestion, response: QuestionResponse | n
       symbols.every(s => integer(response.pairs[s]) === b.key!.find(k => k.symbol === s)!.value) };
   }
   return invalid;
+}
+
+
+export function isResponseEmpty(response: QuestionResponse | null): boolean {
+  if (!response) return true;
+  if (response.mode === 'choice' || response.mode === 'place') return !response.optionId;
+  if (response.mode === 'number') return !response.value.trim();
+  if (response.mode === 'order') return response.slots.every(value => !value);
+  if (response.mode === 'match') return !response.total.trim() && Object.values(response.pairs).every(value => !value);
+  return false;
 }

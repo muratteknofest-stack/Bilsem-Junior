@@ -60,20 +60,8 @@ export function getCurrentUser(): UserProfile {
 
 export function setCurrentUser(user: UserProfile) {
   safeStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
-  const {
-    avatar, level, xp, totalPoints, streak, longestStreak, lastActiveDate, todayPracticed,
-    streakFreezeCount, claimedStreakDays, weeklyStreakHistory, dailyGoalMinutes,
-    todayMinutesSpent, dailyGoalQuestions, todayQuestionsSolved, dailyGoalSessions,
-    todaySessionsCompleted, soundEnabled, totalQuestionsSolved, resolvedMistakesCount,
-    featuredBadgeIds, reminderConfig,
-  } = user;
-  void _updateSupabaseProfile({
-    avatar, level, xp, totalPoints, streak, longestStreak, lastActiveDate, todayPracticed,
-    streakFreezeCount, claimedStreakDays, weeklyStreakHistory, dailyGoalMinutes,
-    todayMinutesSpent, dailyGoalQuestions, todayQuestionsSolved, dailyGoalSessions,
-    todaySessionsCompleted, soundEnabled, totalQuestionsSolved, resolvedMistakesCount,
-    featuredBadgeIds, reminderConfig,
-  });
+  const { avatar, dailyGoalMinutes, dailyGoalQuestions, dailyGoalSessions, soundEnabled, featuredBadgeIds, reminderConfig } = user;
+  void _updateSupabaseProfile({ avatar, dailyGoalMinutes, dailyGoalQuestions, dailyGoalSessions, soundEnabled, featuredBadgeIds, reminderConfig });
 }
 
 export function isAuthenticated(): boolean {
@@ -118,6 +106,7 @@ export function loginAs(role: UserRole, customUser?: UserProfile): UserProfile {
 
 export function switchActiveRole(newRole: UserRole): UserProfile {
   const current = getCurrentUser();
+  if (current.role === newRole) return current;
   if (!current.id?.startsWith('demo_')) throw new Error('Gerçek hesap rolü değiştirilemez.');
   const updatedUser: UserProfile = {
     ...current,
@@ -137,6 +126,8 @@ export function addXP(amount: number): { newXP: number; newLevel: number; levele
   const user = getCurrentUser();
   const currentXP = Number.isFinite(user.xp) ? Math.max(0, Math.floor(user.xp)) : 0;
   const oldLevel = Math.floor(currentXP / 250) + 1;
+  // Real account rewards can only come from a verified server attempt.
+  if (!user.id.startsWith('demo_')) return { newXP: currentXP, newLevel: oldLevel, leveledUp: false };
   const newXP = Math.min(Number.MAX_SAFE_INTEGER, currentXP + safeXpAward(amount));
   const newLevel = Math.floor(newXP / 250) + 1;
   if (newXP !== currentXP || user.totalPoints !== newXP || user.level !== newLevel) {
@@ -147,4 +138,5 @@ export function addXP(amount: number): { newXP: number; newLevel: number; levele
   }
   return { newXP, newLevel, leveledUp: newLevel > oldLevel };
 }
+
 

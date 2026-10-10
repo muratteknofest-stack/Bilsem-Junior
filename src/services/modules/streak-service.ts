@@ -1,3 +1,4 @@
+import { claimServerReward } from '../reward-service';
 import { UserProfile, StreakMilestone } from '../../types';
 import { STREAK_MILESTONES } from './shared';
 import { getCurrentUser, setCurrentUser, addXP } from './profile-service';
@@ -69,7 +70,8 @@ export function recordPracticeSession(minutesSpent = 2): { user: UserProfile; st
   return { user, streakIncreased };
 }
 
-export function claimStreakReward(day: number): { success: boolean; xpAwarded: number; milestone?: StreakMilestone; user: UserProfile } {
+export async function claimStreakReward(day: number) {
+  if (!getCurrentUser().id.startsWith('demo_')) { const result = await claimServerReward('streak', String(day)); return { ...result, milestone: STREAK_MILESTONES.find(m => m.day === day) }; }
   const user = getCurrentUser();
   const milestone = STREAK_MILESTONES.find((m) => m.day === day);
   if (!milestone) return { success: false, xpAwarded: 0, user };
@@ -111,4 +113,5 @@ export function useStreakFreeze(): { success: boolean; user: UserProfile } {
   setCurrentUser(user);
   return { success: true, user };
 }
+
 

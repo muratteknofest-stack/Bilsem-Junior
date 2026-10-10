@@ -1,3 +1,4 @@
+import { AVAILABLE_CATEGORIES } from '../features/student/available-categories';
 import React, { useState } from 'react';
 import { ArrowRight, Bookmark, Check, Compass, Play, RotateCcw } from 'lucide-react';
 import { COGNITIVE_CATEGORY_LABELS, type CognitiveCategory, type SkillMastery } from '../types';
@@ -76,7 +77,7 @@ export function StudentStudyHub({ masteries, unresolved, savedExam, favorites,
         {editing && <fieldset id="study-favorite-picker" className="mt-4 border-t border-zinc-100 pt-4 dark:border-zinc-800">
           <legend className="sr-only">Favori çalışma alanları</legend>
           <p className="mb-2 text-xs text-zinc-500 dark:text-zinc-400">{favorites.length}/3 alan seçili{favorites.length === 3 ? ' · Yeni alan eklemek için bir seçimi kaldır.' : ''}</p>
-          <div className="flex flex-wrap gap-2">{(Object.keys(COGNITIVE_CATEGORY_LABELS) as CognitiveCategory[]).map(category => {
+          <div className="flex flex-wrap gap-2">{AVAILABLE_CATEGORIES.map(category => {
             const selected = favorites.includes(category);
             return <button type="button" key={category} aria-pressed={selected} disabled={!selected && favorites.length >= 3} onClick={() => toggle(category)}
               className={`inline-flex min-h-10 items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold disabled:opacity-40 ${selected ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200' : 'border-zinc-200 hover:border-indigo-300 dark:border-zinc-700'}`}>
@@ -89,4 +90,5 @@ export function StudentStudyHub({ masteries, unresolved, savedExam, favorites,
     </section>
   );
 }
+
 

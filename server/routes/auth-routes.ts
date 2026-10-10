@@ -1,10 +1,10 @@
+import { sharedRateLimit } from '../shared-rate-limit';
 import { Router } from 'express';
 import { z } from 'zod';
 import { randomInt } from 'node:crypto';
 import {
   getAdminAuth,
   getAdminDb,
-  requireAppCheck,
   normalizeStudentCode,
 } from '../security';
 import { accountSecurityLimiter } from '../rate-limiters';
@@ -51,7 +51,7 @@ authRoutes.post('/register-student', accountSecurityLimiter, (_req, res) => {
   return res.status(410).json({ error: 'Yeni öğrenci hesabı veli kaydı üzerinden açılır.', code: 'FAMILY_REGISTRATION_REQUIRED' });
 });
 
-authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, async (req, res) => {
+authRoutes.post('/register-family', accountSecurityLimiter, sharedRateLimit('family-registration', 6, 3600), async (req, res) => {
   const parsed = registerFamilySchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Kayıt bilgileri geçersiz.' });
@@ -192,4 +192,5 @@ authRoutes.post('/register-family', requireAppCheck, accountSecurityLimiter, asy
 });
 
 export default authRoutes;
+
 

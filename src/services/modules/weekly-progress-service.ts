@@ -1,3 +1,4 @@
+import { isAvailableCategory } from '../../features/student/available-categories';
 import { CognitiveCategory, UserProfile, LeaderboardPeriod, LeaderboardEntry, WeeklyQuestionProgressData, DayQuestionStats, PastWeekTrendItem, DailyStudyPlan, Achievement } from '../../types';
 import { STORAGE_KEYS } from './shared';
 import { safeStorage } from '../../lib/storage';
@@ -219,7 +220,7 @@ export function recordQuestionSolved(isCorrect: boolean = true, category?: Cogni
 
 export function getDailyPlan(): DailyStudyPlan {
   const user = getCurrentUser();
-  const masteries = getSkillMasteries();
+  const masteries = getSkillMasteries().filter(m => isAvailableCategory(m.category));
   const sorted = [...masteries].sort((a, b) => a.mastery - b.mastery);
   const weak1 = sorted[0]?.category || 'matrix';
   const weak2 = sorted[1]?.category || 'pattern';
@@ -265,4 +266,5 @@ export function getLeaderboard(period: LeaderboardPeriod = 'daily', gradeFilter:
     clapsCount: 0,
   }];
 }
+
 

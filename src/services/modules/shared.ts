@@ -55,6 +55,8 @@ export const STORAGE_KEYS = {
   WEEKLY_QUESTIONS: 'yapyap_weekly_questions_v1',
   WEEKLY_CATEGORIES: 'bilsem_weekly_category_challenges_v1',
   STUDY_FAVORITES: 'zekapark_study_favorites_v1',
+  VERIFIED_CATEGORIES: 'zekapark_verified_categories_v1',
+  REWARD_CLAIMS: 'zekapark_reward_claims_v1',
 };
 
 export const USER_PROGRESS_KEYS = [
@@ -67,7 +69,11 @@ export const USER_PROGRESS_KEYS = [
   STORAGE_KEYS.WEEKLY_QUESTIONS,
   STORAGE_KEYS.WEEKLY_CATEGORIES,
   STORAGE_KEYS.STUDY_FAVORITES,
+  STORAGE_KEYS.VERIFIED_CATEGORIES,
+  STORAGE_KEYS.REWARD_CLAIMS,
 ] as const;
+
+export const CLIENT_PROGRESS_KEYS = [STORAGE_KEYS.ACTIVE_EXAM, STORAGE_KEYS.STUDY_FAVORITES] as const;
 
 export const INITIAL_SKILL_MASTERIES: SkillMastery[] = [
   { category: 'pattern', categoryName: 'Örüntü ve Dizi', mastery: 72, attemptCount: 45, accuracy: 78, recentTrend: 'up' },
@@ -550,3 +556,4 @@ export const createLockedAchievements = (): Achievement[] =>
     progress: 0,
     rewardClaimed: false,
   }));
+

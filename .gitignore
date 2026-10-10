@@ -45,3 +45,5 @@ private-export/
 firestore-export.json
 auth-users.json
 uid-map.json
+supabase/.temp/
+server/generated-api.mjs

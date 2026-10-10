@@ -1,6 +1,7 @@
 import express, { type ErrorRequestHandler } from 'express';
 import { randomUUID } from 'node:crypto';
 import challengeRoutes from './routes/challenge-routes';
+import learningRoutes from './routes/learning-routes';
 import supportRoutes from './routes/support-routes';
 import helmet from 'helmet';
 import parentRoutes from './routes/parent-routes';
@@ -43,7 +44,7 @@ export function createApiApp() {
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
         imgSrc: ["'self'", 'data:', 'blob:', 'https://images.unsplash.com'],
-        connectSrc: ["'self'", 'https://*.googleapis.com', 'https://*.supabase.co'],
+        connectSrc: ["'self'", 'https://*.googleapis.com', 'https://*.supabase.co', 'wss://*.supabase.co'],
       },
     } : false,
     crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -56,10 +57,13 @@ export function createApiApp() {
   app.use('/api', authRoutes);
   app.use('/api', supportRoutes);
   app.use('/api', challengeRoutes);
+  app.use('/api', learningRoutes);
   app.get('/api/health', async (_req, res) => {
     try {
       const { error } = await getServiceClient().from('profiles').select('id').limit(1);
       if (error) throw error;
+      const learning = await getServiceClient().from('learning_sessions').select('id').limit(1);
+      if (learning.error) throw learning.error;
       return res.json({ status: 'ok', database: 'ready', version: '1.0.0', timestamp: Date.now() });
     } catch (error) {
       console.error('API readiness check failed:', error);
@@ -76,4 +80,5 @@ export function createApiApp() {
   app.use('/api', apiErrorHandler);
   return app;
 }
+
 

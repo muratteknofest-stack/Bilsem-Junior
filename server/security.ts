@@ -41,16 +41,19 @@ export async function requireSupabaseAuth(req: AuthenticatedRequest, res: Respon
   if (!match) return res.status(401).json({ error: 'Oturum doğrulaması gerekli.' });
   const { data, error } = await getServiceClient().auth.getUser(match[1]);
   if (error || !data.user) return res.status(401).json({ error: 'Oturum geçersiz veya süresi dolmuş.' });
+  // getUser verifies the JWT but access tokens may outlive a revoked session.
+  let sessionId: unknown;
+  try { sessionId = JSON.parse(Buffer.from(match[1].split('.')[1], 'base64url').toString('utf8')).session_id; } catch { /* Invalid claim. */ }
+  if (typeof sessionId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sessionId)) return res.status(401).json({ error: 'Oturum geçersiz.' });
+  const active = await getServiceClient().rpc('is_user_session_active', { p_user: data.user.id, p_session: sessionId });
+  if (active.error) return res.status(503).json({ error: 'Oturum doğrulanamadı. Yeniden deneyin.' });
+  if (!active.data) return res.status(401).json({ error: 'Oturum kapatılmış. Yeniden giriş yapın.' });
   req.authUser = { uid: data.user.id, email: data.user.email,
     email_verified: Boolean(data.user.email_confirmed_at),
     role: data.user.app_metadata?.role };
   return next();
 }
 
-export function requireAppCheck(_req: Request, _res: Response, next: NextFunction) {
-  // Bearer-token validation, CORS and endpoint rate limits remain in force.
-  return next();
-}
 export function requireVerifiedEmail(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (!req.authUser?.email_verified) return res.status(403).json({ error: 'Veli e-posta adresi doğrulanmalıdır.' });
   return next();
@@ -62,7 +65,7 @@ export function requireProfileRole(...roles: AppRole[]) {
       const profile = (await getAdminDb().doc(`users/${req.authUser.uid}`).get()).data();
       if (!profile || profile.id !== req.authUser.uid || !roles.includes(profile.role))
         return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmuyor.' });
-      if (profile.role === 'admin' && req.authUser.role !== 'admin')
+      if (profile.role === 'admin' && (req.authUser.role !== 'admin' || !req.authUser.email_verified))
         return res.status(403).json({ error: 'Yönetici yetkisi doğrulanamadı.' });
       return next();
     } catch {
@@ -111,4 +114,5 @@ export function normalizeStudentCode(name: string): string {
     .slice(0, 12)
     .toUpperCase() || 'OGRENCI';
 }
+
 

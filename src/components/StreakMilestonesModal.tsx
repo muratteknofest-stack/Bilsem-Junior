@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { UserProfile, StreakMilestone } from '../types';
 import { dataService, STREAK_MILESTONES } from '../services/data-service';
 import { sound } from '../lib/sound';
@@ -40,7 +40,8 @@ export const StreakMilestonesModal: React.FC<StreakMilestonesModalProps> = ({
   const claimedDays = user.claimedStreakDays || [3];
   const streakFreezeCount = user.streakFreezeCount ?? 0;
 
-  const handleClaim = (milestone: StreakMilestone) => {
+  const [claimError, setClaimError] = useState<string | null>(null);
+  const handleClaim = async (milestone: StreakMilestone) => {
     sound.playLevelUp();
     try {
       confetti({
@@ -50,7 +51,8 @@ export const StreakMilestonesModal: React.FC<StreakMilestonesModalProps> = ({
       });
     } catch {}
 
-    const result = dataService.claimStreakReward(milestone.day);
+    let result;
+    try { result = await dataService.claimStreakReward(milestone.day); } catch (err) { setClaimError(err instanceof Error ? err.message : 'Ödül kaydedilemedi.'); return; }
     if (result.success) {
       onUserUpdate(result.user);
     }
@@ -63,6 +65,7 @@ export const StreakMilestonesModal: React.FC<StreakMilestonesModalProps> = ({
         role="dialog"
         aria-modal="true"
       >
+        {claimError && <p role="alert" className="p-3 text-red-700">{claimError}</p>}
         {/* Header */}
         <div className="bg-gradient-to-br from-orange-500 via-amber-500 to-amber-600 text-white p-6 relative">
           <button
@@ -215,3 +218,4 @@ export const StreakMilestonesModal: React.FC<StreakMilestonesModalProps> = ({
     </div>
   );
 };
+

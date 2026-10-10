@@ -1,10 +1,10 @@
+import { sharedRateLimit } from '../shared-rate-limit';
 import { loadQualityComparisonPool } from '../question-quality-store';
 import { auditQuestion, isQuestionReadyForStudents } from '../../src/features/questions/quality';
 import { Router } from 'express';
 import { z } from 'zod';
 import {
   getAdminDb,
-  requireAppCheck,
   requireSupabaseAuth,
   requireProfileRole,
   type AuthenticatedRequest,
@@ -30,7 +30,7 @@ const aiQuestionReviewSchema = z.object({
   action: z.enum(['approve', 'reject', 'regenerate']),
 }).strict();
 
-adminAiRoutes.post('/admin/ai-generate-question', requireSupabaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole('admin'), async (req: AuthenticatedRequest, res) => {
+adminAiRoutes.post('/admin/ai-generate-question', requireSupabaseAuth, adminAiLimiter, requireProfileRole('admin'), sharedRateLimit('admin-ai', 60, 600), async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = aiQuestionGenerateSchema.safeParse(req.body);
     if (!parsed.success || !req.authUser) {
@@ -109,12 +109,12 @@ adminAiRoutes.post('/admin/ai-generate-question', requireSupabaseAuth, requireAp
 // The editor sends each generation as an awaited request to /ai-generate-question.
 // Old background jobs cannot survive a Vercel Function shutdown; reject this
 // legacy endpoint instead of claiming that an in-memory job will finish.
-adminAiRoutes.post('/admin/ai-bulk-generate', requireSupabaseAuth, adminAiLimiter, requireProfileRole('admin'), (_req, res) =>
+adminAiRoutes.post('/admin/ai-bulk-generate', requireSupabaseAuth, adminAiLimiter, requireProfileRole('admin'), sharedRateLimit('admin-ai', 60, 600), (_req, res) =>
   res.status(410).json({ error: 'Eski toplu iş servisi kaldırıldı. Yönetici panelindeki denetimli üretimi kullanın.' }));
-adminAiRoutes.get('/admin/ai-generation-job/:jobId', requireSupabaseAuth, adminAiLimiter, requireProfileRole('admin'), (_req, res) =>
+adminAiRoutes.get('/admin/ai-generation-job/:jobId', requireSupabaseAuth, adminAiLimiter, requireProfileRole('admin'), sharedRateLimit('admin-ai', 60, 600), (_req, res) =>
   res.status(410).json({ error: 'Bellek içi üretim işi artık kullanılmıyor.' }));
 
-adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, requireAppCheck, adminAiLimiter, requireProfileRole('admin'), async (req: AuthenticatedRequest, res) => {
+adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, adminAiLimiter, requireProfileRole('admin'), sharedRateLimit('admin-ai', 60, 600), async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = aiQuestionReviewSchema.safeParse(req.body);
     if (!parsed.success || !req.authUser) {
@@ -201,4 +201,5 @@ adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, requireAppC
 });
 
 export default adminAiRoutes;
+
 

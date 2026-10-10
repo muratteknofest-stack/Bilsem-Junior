@@ -1,3 +1,4 @@
+import { isAvailableCategory } from './available-categories';
 import { COGNITIVE_CATEGORY_LABELS, type CognitiveCategory, type SkillMastery } from '../../types';
 
 export function levelProgress(value: number) {
@@ -11,7 +12,7 @@ export function readFavoriteCategories(raw: string | null): CognitiveCategory[] 
     const value: unknown = JSON.parse(raw || '[]');
     if (!Array.isArray(value)) return [];
     return [...new Set(value.filter((item): item is CognitiveCategory =>
-      typeof item === 'string' && Object.hasOwn(COGNITIVE_CATEGORY_LABELS, item)))].slice(0, 3);
+      isAvailableCategory(item)))].slice(0, 3);
   } catch { return []; }
 }
 
@@ -38,6 +39,7 @@ export function recommendStudy(masteries: SkillMastery[], unresolved: number): S
   if (unresolved > 0) return { kind: 'mistakes', title: 'Bir soruya yeniden şans ver',
     reason: `Defterinde tekrar edebileceğin ${unresolved} soru var. İpuçlarıyla adım adım yeniden deneyebilirsin.`,
     action: 'Tekrar defterimi aç' };
+  masteries = masteries.filter(m => isAvailableCategory(m.category));
   const practiced = masteries.filter(m => m.attemptCount > 0 && Number.isFinite(m.mastery));
   const weakest = [...practiced].sort((a, b) => a.mastery - b.mastery)[0];
   if (weakest && weakest.mastery < 80) return { kind: 'practice', category: weakest.category,
@@ -53,3 +55,4 @@ export function recommendStudy(masteries: SkillMastery[], unresolved: number): S
     reason: 'Karışık pratikle farklı alanları deneyebilir, kendi hızında ilerleyebilirsin.',
     action: 'Karışık pratiğe başla' };
 }
+

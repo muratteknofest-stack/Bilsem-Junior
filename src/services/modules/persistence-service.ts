@@ -2,11 +2,11 @@ import { ProgressOutbox } from '../../lib/progress-outbox';
 import { doc, getDoc } from '../../lib/supabase-data';
 import { db, auth } from '../../lib/platform';
 import { safeStorage } from '../../lib/storage';
-import { STORAGE_KEYS, USER_PROGRESS_KEYS, createEmptyMasteries } from './shared';
+import { STORAGE_KEYS, USER_PROGRESS_KEYS, CLIENT_PROGRESS_KEYS, createEmptyMasteries } from './shared';
 import { supabase } from '../../lib/supabase';
 import { ExamResult, SkillMastery } from '../../types';
 
-const outbox = new ProgressOutbox(safeStorage, USER_PROGRESS_KEYS);
+const outbox = new ProgressOutbox(safeStorage, CLIENT_PROGRESS_KEYS);
 type SyncStatus = 'saved' | 'pending' | 'syncing' | 'error';
 let syncStatus: SyncStatus = 'saved';
 const listeners = new Set<() => void>();
@@ -85,7 +85,7 @@ export function removeProgressItem(key: (typeof USER_PROGRESS_KEYS)[number]) {
 }
 function queueProgressItem(key: string, value: string | null) {
   const userId = auth.currentUser?.uid;
-  if (!userId) return;
+  if (!userId || !(CLIENT_PROGRESS_KEYS as readonly string[]).includes(key)) return;
   activeUserId = userId;
   outbox.enqueue(userId, key, value);
   localWrites.set(userId + ':' + key, ++writeRevision);
@@ -145,4 +145,5 @@ export async function loadRemoteProgressForUser(userId: string): Promise<{
     examResults: parse(STORAGE_KEYS.EXAM_RESULTS, []),
   };
 }
+
 
