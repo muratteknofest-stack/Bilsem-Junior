@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { ArrowRight, ArrowUpRight, Sparkles, Shapes, Brain, ScanEye, Trophy, Check, ChevronDown, Move, Keyboard, ShieldCheck, Heart, Volume2, VolumeX, Target, Zap, Medal, GraduationCap, Rotate3D, Hash, Puzzle } from 'lucide-react';
 import type { QuestionType, UserRole } from '../types';
@@ -15,12 +15,11 @@ import { LandingNav } from './landing/LandingNav';
 import { PremiumButton } from './landing/PremiumUI';
 import { GradeExplorer } from './landing/GradeExplorer';
 import { createGradePreview, type PreviewGrade } from './landing/grade-preview';
-import type { FooterModalTopic } from './FooterInfoModal';
+import { Footer } from './Footer';
 import './landing/landing.css';
 import './landing/design-system.css';
 import './landing/colorful-home.css';
 
-const FooterInfoModal = lazy(() => import('./FooterInfoModal').then(m => ({ default: m.FooterInfoModal })));
 interface LandingPageProps { onStartDemo?: (role: UserRole) => void; onNavigateToLogin: (role: UserRole) => void; onNavigate: (route: string) => void }
 const worlds = [
   { type: 'visual_sequence' as QuestionType, title: 'Örüntü evreni', short: 'Örüntü', text: 'Parçalar arasındaki gizli bağı bul. Sıradaki adımı sen keşfet.', tag: 'Bağlantı kur', icon: Shapes, theme: 'purple', number: '01' },
@@ -63,7 +62,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
   const [pageVisible, setPageVisible] = useState(true);
   const moving = !reducedMotion && !paused && pageVisible;
   const [soundActive, setSoundActive] = useState(sound.enabled);
-  const [topic, setTopic] = useState<FooterModalTopic | null>(null);
   const [category, setCategory] = useState<QuestionType>('visual_sequence');
   const [question, setQuestion] = useState(() => generateQuestionByType('visual_sequence', 4829, 2));
   const [previewGrade, setPreviewGrade] = useState<PreviewGrade | null>(null);
@@ -174,7 +172,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
       <section id="yardim" className="zp-container zp-section zp-faq" aria-labelledby="faq-title"><div><p className="zp-kicker">AKLINDA BİR SORU MU VAR?</p><h2 id="faq-title">Merak etmek<br />işin başlangıcı.</h2></div><div>{faqs.map(([q, a]) => <details key={q}><summary>{q}<ChevronDown size={19} /></summary><p>{a}</p></details>)}</div></section>
       <section className="zp-container zp-final-section"><div className="zp-final-cta"><span aria-hidden="true" className="zp-cta-star">✦</span><p className="zp-kicker">HADİ, BİR ADIM ATALIM.</p><h2>Bir sonraki keşif senin.</h2><PremiumButton tone="lime" onClick={() => onNavigate('register')}>ZekaPark’a katıl <ArrowRight size={19} /></PremiumButton><p className="zp-final-note">Merakını getir. Gerisini birlikte keşfedelim.</p></div></section>
     </main>
-    <footer className="zp-footer"><div className="zp-container"><div className="zp-footer-top"><div><Logo size="md" showTagline={false} /><p>Düşünmenin keyfini keşfet.</p><p className="zp-independence-note">ZekaPark bağımsız bir eğitim platformudur.<br />MEB veya BİLSEM ile kurumsal bağlantısı yoktur.</p></div><div><button type="button" onClick={() => onNavigateToLogin('student')}>Öğrenci girişi</button><button type="button" onClick={() => onNavigateToLogin('parent')}>Veli girişi</button><button type="button" onClick={() => onNavigateToLogin('admin')}>Yönetici girişi</button></div></div><div className="zp-footer-bottom"><span>© {new Date().getFullYear()} ZekaPark</span><div><button type="button" onClick={() => setTopic('kvkk')}>Gizlilik ve KVKK</button><button type="button" onClick={() => setTopic('terms')}>Kullanım koşulları</button><a href="mailto:zeka.kupu.test@gmail.com">İletişim</a></div><span>Merakla büyüyen zihinler için.</span></div></div></footer>
-    {topic && <Suspense fallback={<div role="status" className="zp-modal-loading">Bilgiler yükleniyor… <button type="button" onClick={() => setTopic(null)}>Kapat</button></div>}><FooterInfoModal topic={topic} onClose={() => setTopic(null)} /></Suspense>}
+    <Footer onNavigate={onNavigate} onNavigateToLogin={onNavigateToLogin} />
   </div>;
 };

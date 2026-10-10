@@ -1,3 +1,4 @@
+import { logServerFailure } from './safe-log';
 import { EDUCATION_PROFILES } from '../src/features/questions/quality-policy';
 import { loadQualityComparisonPool } from './question-quality-store';
 import { GoogleGenAI } from '@google/genai';
@@ -86,7 +87,7 @@ export class AiGenerationQueue {
         this.processNext();
       }
     } catch (err) {
-      console.error('[AiGenerationQueue] Failed to hydrate from Supabase:', err);
+      logServerFailure('AI queue hydration failed', err);
     }
   }
 
@@ -113,10 +114,10 @@ export class AiGenerationQueue {
     this.processingQueue.push(jobId);
     
     // Save initial state to Supabase
-    this.saveJobToSupabase(job).catch(console.error);
+    this.saveJobToSupabase(job).catch(error => logServerFailure('AI queue task failed', error));
 
     // Trigger processing asynchronously
-    this.processNext().catch(console.error);
+    this.processNext().catch(error => logServerFailure('AI queue task failed', error));
 
     return jobId;
   }
@@ -208,12 +209,12 @@ export class AiGenerationQueue {
         console.warn(`[AiGenerationQueue] Transient error on job ${jobId}. Retrying attempt ${job.retryCount}/3 after ${delayMs}ms...`);
         // Schedule next process after delay without incrementing failed count
         setTimeout(() => {
-          this.processNext().catch(console.error);
+          this.processNext().catch(error => logServerFailure('AI queue task failed', error));
         }, delayMs);
         return;
       }
 
-      console.error(`[AiGenerationQueue] Error processing job ${jobId} (Retries exhausted):`, error);
+      logServerFailure('AI job retries exhausted', error);
       job.retryCount = 0; // Reset for subsequent questions
       job.progress.completed++;
       job.progress.failed++;
@@ -236,7 +237,7 @@ export class AiGenerationQueue {
       this.activeWorkers--;
       // Only immediately trigger next item if not in backoff delay
       if (!isRetrying) {
-        this.processNext().catch(console.error);
+        this.processNext().catch(error => logServerFailure('AI queue task failed', error));
       }
     }
   }
@@ -248,7 +249,7 @@ export class AiGenerationQueue {
       const { results, ...jobSummary } = job;
       await docRef.set(jobSummary, { merge: true });
     } catch (error) {
-      console.error('Failed to save job status to Supabase:', error);
+      logServerFailure('AI job save failed', error);
     }
   }
 
@@ -282,8 +283,9 @@ export class AiGenerationQueue {
         model: result.model,
       });
     } catch (error) {
-      console.error('Failed to log generation attempt:', error);
+      logServerFailure('AI generation attempt log failed', error);
     }
   }
 }
+
 

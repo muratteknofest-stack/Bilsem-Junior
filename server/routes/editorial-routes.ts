@@ -1,3 +1,4 @@
+import { logServerFailure } from '../safe-log';
 import { Router } from 'express';
 import { z } from 'zod';
 import type { BaseQuestion } from '../../src/types';
@@ -36,9 +37,10 @@ editorialRoutes.post('/admin/questions/save', requireSupabaseAuth, adminAiLimite
     if (error instanceof EditorialValidationError) {
       return res.status(422).json({ error: 'Soru yayıma veya kayda uygun değil.', details: error.details });
     }
-    console.error('Editör soru kaydı başarısız:', error);
+    logServerFailure('Editorial save failed', error);
     return res.status(503).json({ error: 'Soru kaydedilemedi. Tekrar deneyin.' });
   }
 });
 
 export default editorialRoutes;
+

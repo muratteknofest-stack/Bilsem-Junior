@@ -1,3 +1,4 @@
+import { assertPasswordNotCompromised } from './password-policy';
 import type { NextFunction, Request, Response } from 'express';
 import { getServiceClient, getAdminDb } from './supabase-admin';
 export { getAdminDb } from './supabase-admin';
@@ -11,6 +12,7 @@ export function getAdminAuth() {
   const admin = getServiceClient().auth.admin;
   return {
     async createUser(options: { email: string; password: string; phoneNumber?: string; emailVerified?: boolean; displayName?: string }) {
+      await assertPasswordNotCompromised(options.password);
       const { data, error } = await admin.createUser({
         email: options.email, password: options.password,
         email_confirm: options.emailVerified ?? false,
@@ -24,6 +26,7 @@ export function getAdminAuth() {
       if (error) throw error;
     },
     async updateUser(uid: string, updates: { password: string }) {
+      await assertPasswordNotCompromised(updates.password);
       const { error } = await admin.updateUserById(uid, updates);
       if (error) throw error;
     },

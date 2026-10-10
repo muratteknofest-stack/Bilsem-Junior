@@ -1,3 +1,5 @@
+import { PasswordPolicyError } from '../password-policy';
+import { logServerFailure } from '../safe-log';
 import { sharedRateLimit } from '../shared-rate-limit';
 import { weeklyReportMetrics } from '../weekly-report';
 import { getServiceClient } from '../supabase-admin';
@@ -74,7 +76,11 @@ parentRoutes.post(
     if (!isLinked) return res.status(403).json({ error: 'Öğrenci bu veli hesabına bağlı değil.' });
 
     const adminAuth = getAdminAuth();
-    await adminAuth.updateUser(parsed.data.studentId, { password: parsed.data.newPassword });
+    try { await adminAuth.updateUser(parsed.data.studentId, { password: parsed.data.newPassword }); }
+    catch (error) {
+      if (error instanceof PasswordPolicyError) return res.status(error.status).json({ error: error.message, code: error.code });
+      throw error;
+    }
     await adminAuth.revokeRefreshTokens(parsed.data.studentId);
     await adminDb.collection('securityEvents').add({
       type: 'student_password_reset_by_parent',
@@ -189,7 +195,7 @@ parentRoutes.post('/send-weekly-report', requireSupabaseAuth, reportLimiter, req
 
     res.json({ success: true, message: 'Haftalık özet başarıyla gönderildi.' });
   } catch (error: any) {
-    console.error('Weekly report failed', { code: error?.code || 'REPORT_UNAVAILABLE' });
+    logServerFailure('Weekly report failed', error);
     res.status(500).json({ error: 'E-posta gönderilemedi.' });
   }
 });
