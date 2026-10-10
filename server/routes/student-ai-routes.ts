@@ -1,9 +1,9 @@
+import { sharedRateLimit } from '../shared-rate-limit';
 import { Router } from 'express';
 import { z } from 'zod';
 import { Type } from '@google/genai';
 import {
-  requireAppCheck,
-  requireFirebaseAuth,
+  requireSupabaseAuth,
   requireProfileRole,
   sanitizeForPrompt,
 } from '../security';
@@ -67,7 +67,7 @@ const dailyPlanRequestSchema = z.object({
   }).passthrough()).max(20).default([]),
 });
 
-studentAiRoutes.post('/ai-hint', requireFirebaseAuth, requireAppCheck, aiLimiter, requireProfileRole('student', 'admin'), async (req, res) => {
+studentAiRoutes.post('/ai-hint', requireSupabaseAuth, aiLimiter, requireProfileRole('student', 'admin'), sharedRateLimit('student-ai', 30, 600), async (req, res) => {
   try {
     const validation = hintRequestSchema.safeParse(req.body);
     if (!validation.success) {
@@ -187,7 +187,7 @@ Soru Bilgileri:
   }
 });
 
-studentAiRoutes.post('/ai-explain-mistake', requireFirebaseAuth, requireAppCheck, aiLimiter, requireProfileRole('student', 'admin'), async (req, res) => {
+studentAiRoutes.post('/ai-explain-mistake', requireSupabaseAuth, aiLimiter, requireProfileRole('student', 'admin'), sharedRateLimit('student-ai', 30, 600), async (req, res) => {
   try {
     const validation = mistakeRequestSchema.safeParse(req.body);
     if (!validation.success) {
@@ -316,7 +316,7 @@ Soru Bilgileri:
   }
 });
 
-studentAiRoutes.post('/ai-step-explanation', requireFirebaseAuth, requireAppCheck, aiLimiter, requireProfileRole('student', 'admin'), async (req, res) => {
+studentAiRoutes.post('/ai-step-explanation', requireSupabaseAuth, aiLimiter, requireProfileRole('student', 'admin'), sharedRateLimit('student-ai', 30, 600), async (req, res) => {
   try {
     const validation = stepExplanationRequestSchema.safeParse(req.body);
     if (!validation.success) {
@@ -450,7 +450,7 @@ GÖREVİN: Çocuğun zihninde soru çözümünü netleştirecek 4 KADEMELİ ADIM
   }
 });
 
-studentAiRoutes.post('/ai-daily-plan', requireFirebaseAuth, requireAppCheck, aiLimiter, requireProfileRole('student', 'admin'), async (req, res) => {
+studentAiRoutes.post('/ai-daily-plan', requireSupabaseAuth, aiLimiter, requireProfileRole('student', 'admin'), sharedRateLimit('student-ai', 30, 600), async (req, res) => {
   try {
     const validation = dailyPlanRequestSchema.safeParse(req.body);
     if (!validation.success) {
@@ -655,3 +655,4 @@ Plan Şunları İçermelidir:
 });
 
 export default studentAiRoutes;
+

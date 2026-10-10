@@ -1,3 +1,5 @@
+import { claimServerReward } from './reward-service';
+import { isAvailableCategory } from '../features/student/available-categories';
 import {
   CognitiveCategory,
   ALL_COGNITIVE_CATEGORIES,
@@ -239,7 +241,7 @@ export class WeeklyChallengesService {
       },
     ];
 
-    return categoryConfigs.map((cfg) => {
+    return categoryConfigs.filter(cfg => isAvailableCategory(cfg.category)).map((cfg) => {
       const isCompleted = cfg.initialCompleted >= cfg.targetQuestions;
       return {
         id: `challenge-${weekId}-${cfg.category}`,
@@ -326,6 +328,18 @@ export class WeeklyChallengesService {
       state.endDateFormatted = timeCtx.endDateFormatted;
     }
 
+    if (!dataService.getCurrentUser().id.startsWith('demo_')) {
+      let counts: { weekStart?: string; counts?: Record<string, number> } = {}, claims: string[] = [];
+      try { counts = JSON.parse(safeStorage.getItem('zekapark_verified_categories_v1') || '{}'); claims = JSON.parse(safeStorage.getItem('zekapark_reward_claims_v1') || '[]'); } catch { /* Empty verified history. */ }
+      const weekStart = counts.weekStart;
+      const expectedWeek = this.getWeekIdentifier(new Date(`${weekStart || '2000-01-01'}T12:00:00`)).weekId;
+      state.challenges = state.challenges.filter(c => isAvailableCategory(c.category)).map(c => ({ ...c, completedQuestions: expectedWeek === weekId ? Math.min(c.targetQuestions, counts.counts?.[c.category] || 0) : 0, isCompleted: expectedWeek === weekId && (counts.counts?.[c.category] || 0) >= c.targetQuestions, rewardClaimed: claims.includes(`weekly:${weekStart}:${c.category}`) }));
+      state.totalQuestionsCompleted = state.challenges.reduce((n,c) => n+c.completedQuestions,0);
+      state.totalTargetQuestions = state.challenges.reduce((n,c) => n+c.targetQuestions,0);
+      state.completedChallengesCount = state.challenges.filter(c => c.isCompleted).length;
+      state.grandChallenge.isCompleted = state.completedChallengesCount >= 6;
+      state.grandChallenge.rewardClaimed = claims.includes(`grand:${weekStart}:grand`);
+    }
     return state;
   }
 
@@ -379,13 +393,13 @@ export class WeeklyChallengesService {
   /**
    * Claims the badge and XP reward for a completed category challenge
    */
-  claimChallengeReward(challengeId: string): {
-    success: boolean;
-    state: WeeklyChallengesState;
-    user: UserProfile;
-    badge: Achievement;
-    xpAwarded: number;
-  } {
+  async claimChallengeReward(challengeId: string) {
+    const current = this.getWeeklyChallenges().challenges.find(c => c.id === challengeId);
+    if (!dataService.getCurrentUser().id.startsWith('demo_')) {
+      if (!current) throw new Error('Görev bulunamadı.');
+      const result = await claimServerReward('weekly', current.category);
+      return { ...result, state: this.getWeeklyChallenges(), badge: { id: current.badgeReward.id, title: current.badgeReward.title } as Achievement };
+    }
     const state = this.getWeeklyChallenges();
     const challenge = state.challenges.find((c) => c.id === challengeId);
     const user = dataService.getCurrentUser();
@@ -441,13 +455,12 @@ export class WeeklyChallengesService {
   /**
    * Claims the Grand Challenge Diamond Badge reward
    */
-  claimGrandChallengeReward(): {
-    success: boolean;
-    state: WeeklyChallengesState;
-    user: UserProfile;
-    badge: Achievement;
-    xpAwarded: number;
-  } {
+  async claimGrandChallengeReward() {
+    if (!dataService.getCurrentUser().id.startsWith('demo_')) {
+      const result = await claimServerReward('grand', 'grand');
+      const state = this.getWeeklyChallenges();
+      return { ...result, state, badge: { id: state.grandChallenge.badgeReward.id, title: state.grandChallenge.badgeReward.title } as Achievement };
+    }
     const state = this.getWeeklyChallenges();
     const grand = state.grandChallenge;
     const user = dataService.getCurrentUser();
@@ -507,3 +520,4 @@ export class WeeklyChallengesService {
 }
 
 export const weeklyChallengesService = new WeeklyChallengesService();
+

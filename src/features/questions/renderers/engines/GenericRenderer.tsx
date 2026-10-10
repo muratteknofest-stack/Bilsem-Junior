@@ -9,7 +9,7 @@ interface EngineProps {
 }
 
 export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
-  const { visualConfig } = question;
+  const visualConfig = (question.visualConfig || {}) as Record<string, any>;
 
   // -------------------------------------------------------------
   // 4. Single Target Figure (Rotation / Döndürme)
@@ -351,3 +351,4 @@ export const GenericRenderer: React.FC<EngineProps> = ({ question, mode }) => {
 
   return null;
 };
+

@@ -1,49 +1,51 @@
 import { useEffect, useState } from 'react';
 import type { BaseQuestion } from '../../types';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
-import { questionBankService } from '../../services/question-bank-service';
-import { loadPublishedQuestions } from '../../services/question-publishing-service';
-import { auditQuestion } from './quality';
+import { collection, getDocs, onSnapshot, query, where } from '../../lib/supabase-data';
+import { db } from '../../lib/platform';
+import { dataService } from '../../services/data-service';
+import { isSchoolGrade } from './quality-policy';
+import { isQuestionReadyForStudents } from './quality';
+
+export async function loadPublishedQuestionsForGrade(grade: 1 | 2 | 3 | 4): Promise<BaseQuestion[]> {
+  const snapshot = await getDocs(query(collection(db, 'questions'), where('status', '==', 'published'), where('target_grade', '==', grade)));
+  return snapshot.docs
+    .map(d => ({ ...d.data(), id: d.id } as BaseQuestion))
+    .filter((item: BaseQuestion) => item.status === 'published' && item.targetGrade === grade && isQuestionReadyForStudents(item));
+}
 
 export function usePublishedQuestions() {
-  const [questions, setQuestions] = useState<BaseQuestion[]>(() => questionBankService.getAll());
+  const [questions, setQuestions] = useState<BaseQuestion[]>([]);
 
   useEffect(() => {
-    // 1. Subscribe to questionBankService in-memory/cache updates
-    const unsubService = questionBankService.subscribe(() => {
-      setQuestions(questionBankService.getAll());
-    });
-
-    // 2. Subscribe directly to Firestore live snapshot for instant test distribution
-    let unsubFirestore: (() => void) | null = null;
+    const grade = dataService.getCurrentUser().grade;
+    if (!isSchoolGrade(grade)) return;
+    // Only approved questions for the learner's grade reach this screen.
+    let unsubSupabase: (() => void) | null = null;
     if (typeof window !== 'undefined') {
       try {
-        unsubFirestore = onSnapshot(
-          collection(db, 'questions'),
+        unsubSupabase = onSnapshot(
+          query(collection(db, 'questions'), where('status', '==', 'published'), where('target_grade', '==', grade)),
           (snapshot) => {
             const items = snapshot.docs
-              .map((d) => ({ ...d.data(), id: d.id } as BaseQuestion))
-              .filter((item) => auditQuestion(item).errors.length === 0);
-            if (items.length > 0) {
-              setQuestions(items);
-            }
+              .map((d: { data: () => BaseQuestion; id: string }) => ({ ...d.data(), id: d.id } as BaseQuestion))
+              .filter((item: BaseQuestion) => item.status === 'published' && item.targetGrade === grade && isQuestionReadyForStudents(item));
+            setQuestions(items);
           },
           (error) => {
             console.warn('Live published questions listener notice:', error);
-            loadPublishedQuestions().then(setQuestions).catch(() => {});
+            setQuestions([]);
           }
         );
       } catch (e) {
-        loadPublishedQuestions().then(setQuestions).catch(() => {});
+        setQuestions([]);
       }
     }
 
     return () => {
-      unsubService();
-      if (unsubFirestore) unsubFirestore();
+      if (unsubSupabase) unsubSupabase();
     };
   }, []);
 
   return questions;
 }
+

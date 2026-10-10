@@ -1,5 +1,6 @@
 import React from 'react';
 import { BaseQuestion } from '../../../types';
+import type { Board } from '../professional-engine';
 import { ProfessionalBoard } from './ProfessionalBoard';
 import { MatrixRenderer } from './engines/MatrixRenderer';
 import { ScaleRenderer } from './engines/ScaleRenderer';
@@ -8,17 +9,18 @@ import { MechanicsRenderer } from './engines/MechanicsRenderer';
 import { PaperFoldRenderer } from './engines/PaperFoldRenderer';
 import { LogicGridRenderer } from './engines/LogicGridRenderer';
 import { GenericRenderer } from './engines/GenericRenderer';
+import { questionVisualTheme } from '../visual-vocabulary';
 
 interface QuestionRendererProps {
   question: BaseQuestion;
 }
 
 export const QuestionRenderer: React.FC<QuestionRendererProps> = ({ question }) => {
-  const { visualConfig } = question;
-  const mode = visualConfig?.displayMode || 'default';
+  const visualConfig = (question.visualConfig || {}) as Record<string, unknown>;
+  const mode = typeof visualConfig.displayMode === 'string' ? visualConfig.displayMode : 'default';
   
   const renderEngine = () => {
-    if (mode === 'verified_board') return <ProfessionalBoard board={visualConfig} />;
+    if (mode === 'verified_board') return <ProfessionalBoard board={visualConfig as Board} theme={questionVisualTheme(question)} />;
 
     if (['matrix_2x2', 'matrix_3x3', 'raven_matrix', 'shape_grid'].includes(mode)) {
       return <MatrixRenderer question={question} mode={mode} />;
@@ -55,3 +57,4 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({ question }) 
     </div>
   );
 };
+

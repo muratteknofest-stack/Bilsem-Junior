@@ -1,3 +1,6 @@
+import { logServerFailure } from './safe-log';
+import { EDUCATION_PROFILES } from '../src/features/questions/quality-policy';
+import { loadQualityComparisonPool } from './question-quality-store';
 import { GoogleGenAI } from '@google/genai';
 import { z } from 'zod';
 import { 
@@ -12,8 +15,11 @@ export interface GenerationJobConfig {
   questionType?: string;
   targetGrade: 1 | 2 | 3 | 4;
   difficulty: number | 'auto';
+  targetAge?: number;
+  maxAttempts?: number;
   count: number;
   minQualityScore: number;
+  aiModel?: string;
 }
 
 export interface GenerationJob {
@@ -38,20 +44,20 @@ const CONCURRENCY_LIMIT = 3;
 
 export class AiGenerationQueue {
   private aiClient: GoogleGenAI;
-  private firestore: any; // Firebase Admin Firestore instance
+  private store: any; // Supabase server-side data adapter
   private jobs: Map<string, GenerationJob> = new Map();
   private processingQueue: string[] = [];
   private activeWorkers = 0;
 
-  constructor(aiClient: GoogleGenAI, firestore: any) {
+  constructor(aiClient: GoogleGenAI, store: any) {
     this.aiClient = aiClient;
-    this.firestore = firestore;
-    this.hydrateFromFirestore();
+    this.store = store;
+    this.hydrateFromSupabase();
   }
 
-  async hydrateFromFirestore(): Promise<void> {
+  async hydrateFromSupabase(): Promise<void> {
     try {
-      const snapshot = await this.firestore
+      const snapshot = await this.store
         .collection('ai_generation_jobs')
         .where('status', 'in', ['queued', 'processing'])
         .get();
@@ -77,11 +83,11 @@ export class AiGenerationQueue {
         }
       }
       if (this.processingQueue.length > 0) {
-        console.log(`[AiGenerationQueue] Hydrated ${this.processingQueue.length} unfinished jobs from Firestore`);
+        console.log(`[AiGenerationQueue] Hydrated ${this.processingQueue.length} unfinished jobs from Supabase`);
         this.processNext();
       }
     } catch (err) {
-      console.error('[AiGenerationQueue] Failed to hydrate from Firestore:', err);
+      logServerFailure('AI queue hydration failed', err);
     }
   }
 
@@ -107,11 +113,11 @@ export class AiGenerationQueue {
     this.jobs.set(jobId, job);
     this.processingQueue.push(jobId);
     
-    // Save initial state to Firestore
-    this.saveJobToFirestore(job).catch(console.error);
+    // Save initial state to Supabase
+    this.saveJobToSupabase(job).catch(error => logServerFailure('AI queue task failed', error));
 
     // Trigger processing asynchronously
-    this.processNext().catch(console.error);
+    this.processNext().catch(error => logServerFailure('AI queue task failed', error));
 
     return jobId;
   }
@@ -141,20 +147,20 @@ export class AiGenerationQueue {
       job.status = 'completed';
       job.completedAt = Date.now();
       this.processingQueue.shift();
-      await this.saveJobToFirestore(job);
+      await this.saveJobToSupabase(job);
       return this.processNext();
     }
 
     this.activeWorkers++;
     job.status = 'processing';
-    await this.saveJobToFirestore(job);
+    await this.saveJobToSupabase(job);
 
     let isRetrying = false;
 
     try {
       // Determine difficulty
       const diff = job.config.difficulty === 'auto' 
-        ? Math.floor(Math.random() * 6) + 1 
+        ? Math.floor(Math.random() * EDUCATION_PROFILES[job.config.targetGrade].maxDifficulty) + 1 
         : job.config.difficulty;
 
       const pipelineConfig: PipelineConfig = {
@@ -162,19 +168,21 @@ export class AiGenerationQueue {
         questionType: job.config.questionType,
         targetGrade: job.config.targetGrade,
         difficulty: diff,
+        targetAge: job.config.targetAge,
+        maxAttempts: job.config.maxAttempts,
         minQualityScore: job.config.minQualityScore,
+        aiModel: job.config.aiModel,
       };
 
-      const result = await runQuestionPipeline(this.aiClient, pipelineConfig);
+      const result = await runQuestionPipeline(this.aiClient, pipelineConfig, { existingQuestions: await loadQualityComparisonPool() });
       
       // Reset retry count on successful pipeline completion
       job.retryCount = 0;
+      if (result.question) await this.saveQuestionToSupabase(result.question);
       job.progress.completed++;
       job.results.push(result);
-
       if (result.success && result.question) {
         job.progress.approved++;
-        await this.saveQuestionToFirestore(result.question);
       } else {
         if (result.validationErrors.length > 0 || result.rejectionReasons.length > 0) {
           job.progress.rejected++;
@@ -184,7 +192,7 @@ export class AiGenerationQueue {
       }
 
       await this.logGenerationAttempt(job.jobId, result);
-      await this.saveJobToFirestore(job);
+      await this.saveJobToSupabase(job);
 
     } catch (error: any) {
       const isTransient = String(error).includes('429') ||
@@ -201,12 +209,12 @@ export class AiGenerationQueue {
         console.warn(`[AiGenerationQueue] Transient error on job ${jobId}. Retrying attempt ${job.retryCount}/3 after ${delayMs}ms...`);
         // Schedule next process after delay without incrementing failed count
         setTimeout(() => {
-          this.processNext().catch(console.error);
+          this.processNext().catch(error => logServerFailure('AI queue task failed', error));
         }, delayMs);
         return;
       }
 
-      console.error(`[AiGenerationQueue] Error processing job ${jobId} (Retries exhausted):`, error);
+      logServerFailure('AI job retries exhausted', error);
       job.retryCount = 0; // Reset for subsequent questions
       job.progress.completed++;
       job.progress.failed++;
@@ -224,56 +232,60 @@ export class AiGenerationQueue {
       };
       job.results.push(errorResult);
       await this.logGenerationAttempt(job.jobId, errorResult);
-      await this.saveJobToFirestore(job);
+      await this.saveJobToSupabase(job);
     } finally {
       this.activeWorkers--;
       // Only immediately trigger next item if not in backoff delay
       if (!isRetrying) {
-        this.processNext().catch(console.error);
+        this.processNext().catch(error => logServerFailure('AI queue task failed', error));
       }
     }
   }
 
-  private async saveJobToFirestore(job: GenerationJob) {
+  private async saveJobToSupabase(job: GenerationJob) {
     try {
-      const docRef = this.firestore.collection('ai_generation_jobs').doc(job.jobId);
+      const docRef = this.store.collection('ai_generation_jobs').doc(job.jobId);
       // Omit results array for summary document to avoid exceeding 1MB limit for large jobs
       const { results, ...jobSummary } = job;
       await docRef.set(jobSummary, { merge: true });
     } catch (error) {
-      console.error('Failed to save job status to Firestore:', error);
+      logServerFailure('AI job save failed', error);
     }
   }
 
-  private async saveQuestionToFirestore(question: BaseQuestion) {
+  private async saveQuestionToSupabase(question: BaseQuestion) {
     try {
       // Enforce draft status for newly generated questions
-      question.status = 'draft';
-      const docRef = this.firestore.collection('questions').doc(question.id);
+      question.status = question.aiMeta?.solverVerified ? 'draft' : 'review';
+      const docRef = this.store.collection('questions').doc(question.id);
       await docRef.set(question);
     } catch (error) {
-      console.error('Failed to save generated question to Firestore:', error);
+      throw new Error('Denetlenen soru kaydedilemedi; üretim başarılı sayılmadı.');
     }
   }
 
   private async logGenerationAttempt(jobId: string, result: PipelineResult) {
     try {
-      const logDoc = this.firestore.collection('ai_generation_logs').doc();
+      const logDoc = this.store.collection('ai_generation_logs').doc();
       await logDoc.set({
         jobId,
-        timestamp: Date.now(),
+        adminId: this.jobs.get(jobId)?.adminId,
+        promptVersion: result.promptVersion,
+        createdAt: Date.now(),
         success: result.success,
         qualityScore: result.qualityScore,
         solverVerified: result.solverVerified,
         errors: result.validationErrors,
         warnings: result.validationWarnings,
-        rejectionReasons: result.rejectionReasons,
+        rejectionReasons: [...result.rejectionReasons, ...(result.attempts || []).map(a => `Deneme ${a.attempt} (${a.seed}): ${a.outcome}; ${a.reasons.join(" ")}`)],
         durationMs: result.durationMs,
         questionId: result.question?.id || null,
         model: result.model,
       });
     } catch (error) {
-      console.error('Failed to log generation attempt:', error);
+      logServerFailure('AI generation attempt log failed', error);
     }
   }
 }
+
+

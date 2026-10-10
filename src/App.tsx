@@ -1,10 +1,13 @@
-import React, { lazy, Suspense, useState, useEffect } from 'react';
+import { ProgressSyncBanner } from './components/ProgressSyncBanner';
+import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useAuth } from './contexts/AuthContext';
 
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { UserProfile, UserRole, SkillMastery, MistakeItem, DailyStudyPlan, ReminderAlertEvent, CognitiveCategory } from './types';
 import { dataService } from './services/data-service';
+import { sound } from './lib/sound';
 import { reminderService } from './services/reminder-service';
+import { demoQuestionsRemaining, isDemoUser } from './lib/demo-access';
 import { Navbar } from './components/Navbar';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { StudyReminderInAppAlert } from './components/StudyReminderInAppAlert';
@@ -12,9 +15,8 @@ import { StudyReminderSettingsModal } from './components/StudyReminderSettingsMo
 
 const StudentDashboard = lazy(() => import('./components/StudentDashboard').then((m) => ({ default: m.StudentDashboard })));
 const LandingPage = lazy(() => import('./components/LandingPage').then((m) => ({ default: m.LandingPage })));
+const VerifiedLearningView = lazy(() => import('./components/VerifiedLearningView').then(m => ({ default: m.VerifiedLearningView })));
 const PracticeSessionView = lazy(() => import('./components/PracticeSessionView').then((m) => ({ default: m.PracticeSessionView })));
-const AdaptivePracticeView = lazy(() => import('./components/AdaptivePracticeView').then((m) => ({ default: m.AdaptivePracticeView })));
-const ExamSessionView = lazy(() => import('./components/ExamSessionView').then((m) => ({ default: m.ExamSessionView })));
 const MistakeNotebookView = lazy(() => import('./components/MistakeNotebookView').then((m) => ({ default: m.MistakeNotebookView })));
 const AchievementsView = lazy(() => import('./components/AchievementsView').then((m) => ({ default: m.AchievementsView })));
 const ParentPortalView = lazy(() => import('./components/ParentPortalView').then((m) => ({ default: m.ParentPortalView })));
@@ -22,8 +24,10 @@ const AdminPanelView = lazy(() => import('./components/AdminPanelView').then((m)
 const LeaderboardView = lazy(() => import('./components/LeaderboardView').then((m) => ({ default: m.LeaderboardView })));
 const CognitiveGlossaryView = lazy(() => import('./components/CognitiveGlossaryView').then((m) => ({ default: m.CognitiveGlossaryView })));
 const LoginPage = lazy(() => import('./components/LoginPage').then((m) => ({ default: m.LoginPage })));
+const isTestPage = (route: string) => ['practice', 'adaptive', 'exams'].includes(route);
 
 export default function App() {
+  const reducedMotion = useReducedMotion();
   // Auth context
   const { currentUser: authUser, userProfile, loading: authLoading, logout: authLogout, switchRole: authSwitchRole } = useAuth();
   
@@ -40,14 +44,19 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => dataService.getCurrentUser());
   const [isAuth, setIsAuth] = useState<boolean>(() => dataService.isAuthenticated());
   const [loginRole, setLoginRole] = useState<UserRole>('student');
+  const [loginMode, setLoginMode] = useState<'login' | 'register'>('login');
   const [currentRoute, setCurrentRoute] = useState<string>(() => {
     if (!dataService.isAuthenticated()) return 'landing';
     const u = dataService.getCurrentUser();
+    if (isDemoUser(u.id) && u.role !== 'student') return 'demo-limit';
     if (u?.role === 'parent') return 'parent';
     if (u?.role === 'admin') return 'admin';
     if (u?.role === 'student') return 'dashboard';
     return 'landing';
   });
+  const previousRouteRef = useRef(currentRoute);
+  const testReturnRouteRef = useRef('dashboard');
+  const hasTestHistoryEntryRef = useRef(false);
   const [masteries, setMasteries] = useState<SkillMastery[]>(() => dataService.getSkillMasteries());
   const [mistakes, setMistakes] = useState<MistakeItem[]>(() => dataService.getMistakes());
   const [dailyPlan, setDailyPlan] = useState<DailyStudyPlan>(() => dataService.getDailyPlan());
@@ -55,13 +64,41 @@ export default function App() {
   const [activeAlert, setActiveAlert] = useState<ReminderAlertEvent | null>(null);
   const [showGlobalReminderModal, setShowGlobalReminderModal] = useState(false);
 
+  // These pages render without the main navigation. Give mobile browser Back a
+  // real history entry and remember the screen that opened the test.
+  useEffect(() => {
+    const handlePopState = () => {
+      if (!hasTestHistoryEntryRef.current || !isTestPage(previousRouteRef.current)) return;
+      hasTestHistoryEntryRef.current = false;
+      setCurrentRoute(dataService.isAuthenticated() ? testReturnRouteRef.current : 'landing');
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
+    const previous = previousRouteRef.current;
+    if (isTestPage(currentRoute) && !isTestPage(previous)) {
+      testReturnRouteRef.current = previous;
+      window.history.pushState({ ...window.history.state, zekaparkTestPage: true }, '', window.location.href);
+      hasTestHistoryEntryRef.current = true;
+    } else if (!isTestPage(currentRoute) && isTestPage(previous) && hasTestHistoryEntryRef.current) {
+      // An in-app link left the test without using Back (for example, Mistakes).
+      // Do not leave a stale test marker on the current history entry.
+      window.history.replaceState({ ...window.history.state, zekaparkTestPage: false }, '', window.location.href);
+      hasTestHistoryEntryRef.current = false;
+    }
+    previousRouteRef.current = currentRoute;
+  }, [currentRoute]);
+
 
   useEffect(() => {
     if (userProfile) {
       setCurrentUser(userProfile);
       setIsAuth(true);
       if (currentRoute === 'login' || currentRoute === 'landing' || (userProfile.role === 'admin' && currentRoute === 'dashboard')) {
-        setCurrentRoute(userProfile.role === 'student' ? 'dashboard' : (userProfile.role === 'parent' ? 'parent' : 'admin'));
+        setCurrentRoute(isDemoUser(userProfile.id) && userProfile.role !== 'student' ? 'demo-limit' : userProfile.role === 'student' ? 'dashboard' : (userProfile.role === 'parent' ? 'parent' : 'admin'));
       }
     } else {
       if (dataService.isAuthenticated()) {
@@ -105,6 +142,8 @@ export default function App() {
   
 
   const handleNavigateToLogin = (role: UserRole) => {
+    setLoginMode('login');
+    window.scrollTo({ top: 0, behavior: 'instant' });
     setLoginRole(role);
     setCurrentRoute('login');
   };
@@ -112,7 +151,15 @@ export default function App() {
   const navigateTo = (targetRoute: string) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
+    if (targetRoute === 'register') {
+      setLoginMode('register');
+      setLoginRole('parent');
+      setCurrentRoute('login');
+      return;
+    }
+
     if (targetRoute.startsWith('login:')) {
+      setLoginMode('login');
       const role = targetRoute.split(':')[1] as UserRole;
       setLoginRole(role);
       setCurrentRoute('login');
@@ -120,6 +167,7 @@ export default function App() {
     }
 
     if (targetRoute === 'login') {
+      setLoginMode('login');
       setCurrentRoute('login');
       return;
     }
@@ -145,8 +193,23 @@ export default function App() {
       return;
     }
 
+    if (isDemoUser(u.id)) {
+      if (targetRoute === 'practice' && demoQuestionsRemaining() === 0) {
+        setCurrentRoute('demo-limit');
+        return;
+      }
+      if (['adaptive', 'exams', 'mistakes', 'achievements', 'leaderboard', 'glossary', 'parent'].includes(targetRoute)) {
+        setCurrentRoute('demo-limit');
+        return;
+      }
+    }
+
     // Bidirectional switching between student and parent:
     if (targetRoute === 'parent') {
+      if (userProfile?.role !== 'parent' && !u.id.startsWith('demo_')) {
+        setCurrentRoute('dashboard');
+        return;
+      }
       const updated = { ...u, role: 'parent' as UserRole };
       setCurrentUser(updated);
       dataService.switchRole('parent');
@@ -157,6 +220,10 @@ export default function App() {
     }
 
     if (targetRoute === 'dashboard') {
+      if (userProfile?.role === 'parent' && !u.id.startsWith('demo_')) {
+        setCurrentRoute('parent');
+        return;
+      }
       const updated = { ...u, role: 'student' as UserRole };
       setCurrentUser(updated);
       dataService.switchRole('student');
@@ -168,7 +235,7 @@ export default function App() {
 
     // If parent navigates to student test/practice/achievements, allow it in student role
     if (['practice', 'adaptive', 'exams', 'mistakes', 'achievements', 'leaderboard', 'glossary'].includes(targetRoute)) {
-      if (u.role === 'parent') {
+      if (u.role === 'parent' && u.id.startsWith('demo_')) {
         const updated = { ...u, role: 'student' as UserRole };
         setCurrentUser(updated);
         dataService.switchRole('student');
@@ -180,7 +247,7 @@ export default function App() {
     }
 
     // Admin route protection
-    if (targetRoute === 'admin' && u.role !== 'admin' && u.email !== 'muratteknofest@gmail.com') {
+    if (targetRoute === 'admin' && (!authUser || userProfile?.role !== 'admin')) {
       setCurrentRoute(u.role === 'parent' ? 'parent' : 'dashboard');
       syncState();
       return;
@@ -191,6 +258,12 @@ export default function App() {
   };
 
   const handleSwitchRole = (newRole: UserRole) => {
+    if (isDemoUser(currentUser.id) && newRole !== 'student') {
+      setCurrentRoute('demo-limit');
+      return;
+    }
+    if (!currentUser.id.startsWith('demo_') && userProfile?.role !== newRole) return;
+    if (newRole === 'admin' && (!authUser || userProfile?.role !== 'admin')) return;
     sound.playClick();
     const updated = { ...currentUser, role: newRole };
     setCurrentUser(updated);
@@ -207,11 +280,18 @@ export default function App() {
   };
 
   const isTestRoute = currentRoute === 'practice' || currentRoute === 'adaptive' || currentRoute === 'exams';
+  const leaveTest = () => {
+    if (hasTestHistoryEntryRef.current && window.history.state?.zekaparkTestPage) {
+      window.history.back();
+      return;
+    }
+    navigateTo(isAuth ? (currentUser.role === 'parent' ? 'parent' : currentUser.role === 'admin' ? 'admin' : 'dashboard') : 'landing');
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
-      {/* Universal Header - hidden on mobile/tablet during tests for distraction-free full-screen test experience */}
-      {!isTestRoute && (
+      {/* Workspace navigation; public pages own their header. Tests stay distraction-free. */}
+      {!isTestRoute && currentRoute !== 'landing' && currentRoute !== 'login' && (
         <Navbar
           currentUser={currentUser}
           onNavigateHome={() => navigateTo(isAuth ? (currentUser?.role === 'parent' ? 'parent' : currentUser?.role === 'admin' ? 'admin' : 'dashboard') : 'landing')}
@@ -223,16 +303,17 @@ export default function App() {
         />
       )}
 
+      {isAuth && <ProgressSyncBanner />}
       {/* Main View Router */}
-      <main className="flex-1 w-full overflow-x-hidden">
+      <div role={currentRoute === 'landing' ? undefined : 'main'} className={`flex-1 w-full ${currentRoute === 'landing' ? '' : 'overflow-x-hidden'}`}>
         <Suspense fallback={<div className="min-h-[50vh] flex items-center justify-center" role="status">Yükleniyor…</div>}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={currentRoute === 'practice' ? `practice-${selectedPracticeCategory}` : currentRoute}
-            initial={{ opacity: 0, y: 10 }}
+            initial={reducedMotion ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -10 }}
+            transition={{ duration: reducedMotion ? 0 : 0.22, ease: [0.22, 1, 0.36, 1] }}
             className="w-full flex-1 flex flex-col"
           >
             {currentRoute === 'landing' && (
@@ -261,25 +342,34 @@ export default function App() {
               />
             )}
 
-            {currentRoute === 'practice' && (
+            {currentRoute === 'demo-limit' && (
+              <div className="mx-auto w-full max-w-2xl px-5 py-20 text-center" role="status">
+                <span className="text-5xl" aria-hidden="true">✦</span>
+                <h1 className="mt-6 text-3xl font-bold text-slate-900">Bu alan deneme hesabında kapalı</h1>
+                <p className="mt-4 text-slate-600">Deneme hesabı toplam üç örnek soru içerir. Adaptif çalışma, sınavlar, raporlar ve veli portalı tam üyelik içindir.</p>
+                <p className="mt-2 text-sm text-slate-500">Kalan örnek soru: {demoQuestionsRemaining()}</p>
+                <div className="mt-8 flex flex-wrap justify-center gap-3">
+                  {demoQuestionsRemaining() > 0 && <button type="button" onClick={() => navigateTo('practice')} className="rounded-xl bg-violet-700 px-5 py-3 font-semibold text-white">Örnek soruları çöz</button>}
+                  <button type="button" onClick={() => navigateTo('register')} className="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-900">Hesap oluştur</button>
+                </div>
+              </div>
+            )}
+
+            {currentRoute === 'practice' && (isDemoUser(currentUser.id) ? (
               <PracticeSessionView
                 key={`practice-${selectedPracticeCategory}`}
                 initialCategory={selectedPracticeCategory}
-                onNavigateHome={() => navigateTo('dashboard')}
+                onNavigateHome={leaveTest}
                 onOpenMistakes={() => navigateTo('mistakes')}
               />
-            )}
+            ) : <VerifiedLearningView key={`verified-${selectedPracticeCategory}`} mode="practice" initialCategory={selectedPracticeCategory} onNavigateHome={leaveTest} />)}
 
             {currentRoute === 'adaptive' && (
-              <AdaptivePracticeView
-                onNavigateHome={() => navigateTo('dashboard')}
-              />
+              <VerifiedLearningView mode="adaptive" onNavigateHome={leaveTest} />
             )}
 
             {currentRoute === 'exams' && (
-              <ExamSessionView
-                onNavigateHome={() => navigateTo('dashboard')}
-              />
+              <VerifiedLearningView mode="exam" onNavigateHome={leaveTest} />
             )}
 
             {currentRoute === 'mistakes' && (
@@ -326,6 +416,8 @@ export default function App() {
 
             {currentRoute === 'login' && (
               <LoginPage
+                key={`${loginMode}-${loginRole}`}
+                initialMode={loginMode}
                 initialRole={loginRole}
                 onLoginSuccess={(role, profile) => {
                   setIsAuth(true);
@@ -344,7 +436,7 @@ export default function App() {
           </motion.div>
         </AnimatePresence>
         </Suspense>
-      </main>
+      </div>
 
       {/* Mobile Bottom Navigation Bar - Hidden during test routes for full screen test view */}
       {currentRoute !== 'landing' && currentRoute !== 'login' && !isTestRoute && (
@@ -381,3 +473,5 @@ export default function App() {
     </div>
   );
 }
+
+

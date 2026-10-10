@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import fs from 'fs';
 import path from 'path';
 import {defineConfig, Plugin} from 'vite';
+import { blogPlugin } from './scripts/blog-vite-plugin';
 
 // LINT.IfChange(aistudio_media_plugin)
 function aistudioMediaPlugin(): Plugin {
@@ -66,7 +67,9 @@ function aistudioMediaPlugin(): Plugin {
 
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss(), aistudioMediaPlugin()],
+    plugins: [react(), tailwindcss(), aistudioMediaPlugin(), blogPlugin()],
+    // Vercel serves /api in this project. Ignore stale external API settings there.
+    define: process.env.VERCEL === '1' ? { 'import.meta.env.VITE_API_BASE_URL': JSON.stringify('') } : {},
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
@@ -78,8 +81,7 @@ export default defineConfig(() => {
         output: {
           manualChunks(id) {
             if (!id.includes('node_modules')) return undefined;
-            if (id.includes('/@firebase/ai/') || id.includes('/firebase/ai/')) return 'firebase-ai-sdk';
-            if (id.includes('/firebase/') || id.includes('/@firebase/')) return 'firebase';
+            if (id.includes('/@supabase/')) return 'supabase';
             if (id.includes('/motion/') || id.includes('/framer-motion/')) return 'motion';
             if (id.includes('/react/') || id.includes('/react-dom/')) return 'react';
             if (id.includes('/recharts/') || id.includes('/d3-')) return 'charts';
@@ -97,3 +99,4 @@ export default defineConfig(() => {
     },
   };
 });
+

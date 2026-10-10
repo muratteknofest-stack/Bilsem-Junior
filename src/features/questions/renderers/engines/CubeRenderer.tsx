@@ -8,7 +8,7 @@ interface EngineProps {
 }
 
 export const CubeRenderer: React.FC<EngineProps> = ({ question, mode }) => {
-  const { visualConfig } = question;
+  const visualConfig = (question.visualConfig || {}) as Record<string, any>;
   const reactId = useId().replace(/:/g, '_');
 
   // -------------------------------------------------------------
@@ -390,3 +390,4 @@ export const CubeRenderer: React.FC<EngineProps> = ({ question, mode }) => {
 
   return null;
 };
+

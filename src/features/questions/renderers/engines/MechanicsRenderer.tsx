@@ -8,7 +8,7 @@ interface EngineProps {
 }
 
 export const MechanicsRenderer: React.FC<EngineProps> = ({ question, mode }) => {
-  const { visualConfig } = question;
+  const visualConfig = (question.visualConfig || {}) as Record<string, any>;
   const reactId = useId().replace(/:/g, '_');
 
   // -------------------------------------------------------------
@@ -213,3 +213,4 @@ export const MechanicsRenderer: React.FC<EngineProps> = ({ question, mode }) => 
 
   return null;
 };
+

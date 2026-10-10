@@ -115,7 +115,7 @@ export const QuestionDetailModal: React.FC<QuestionDetailModalProps> = ({
                       )}
                     </div>
                     <div className="h-20 flex items-center justify-center pointer-events-none">
-                      <OptionRenderer option={opt} questionType={question.type} />
+                      <OptionRenderer question={question} option={opt} questionType={question.type} />
                     </div>
                   </div>
                 );

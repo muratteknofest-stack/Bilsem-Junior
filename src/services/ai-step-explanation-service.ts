@@ -1,6 +1,6 @@
 import { BaseQuestion, AiStepByStepExplanation, AiExplanationStep } from '../types';
 import { authenticatedFetch } from '../lib/api-client';
-import { generateFirebaseAiJson } from '../lib/firebase-ai';
+import { generateClientAiJson } from '../lib/client-ai-fallback';
 import { z } from 'zod';
 
 const aiStepResponseSchema = z.object({
@@ -84,7 +84,7 @@ class AiStepExplanationService {
       console.warn('AI step explanation server error, using procedural fallback:', e);
     }
 
-    const firebaseAiExplanation = await generateFirebaseAiJson(
+    const firebaseAiExplanation = await generateClientAiJson(
       [
         'Bu BİLSEM sorusunun çözümünü 6-10 yaş düzeyine uygun, açık ve kısa adımlarla açıkla.',
         'Adımlar gözlem, kural, eleme ve mümkünse aktarılabilir bir altın taktik içersin.',
@@ -113,7 +113,7 @@ class AiStepExplanationService {
         difficulty: question.difficulty,
         ...firebaseAiExplanation,
         isAiGenerated: true,
-        modelUsed: 'Firebase AI Logic · Gemini 3.8 Flash',
+        modelUsed: 'Pedagojik yedek',
       };
       this.cache.set(cacheKey, result);
       return result;

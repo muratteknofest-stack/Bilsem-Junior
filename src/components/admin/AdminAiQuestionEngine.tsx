@@ -1,3 +1,7 @@
+import { EDUCATION_PROFILES, gradeDifficulty, type QuestionQualityReport, type GenerationAttempt } from '../../features/questions/quality-policy';
+import { QuestionQualityPanel } from './QuestionQualityPanel';
+import { QuestionRenderer } from '../../features/questions/renderers/QuestionRenderer';
+import { OptionRenderer } from '../../features/questions/renderers/OptionRenderer';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Sparkles,
@@ -36,9 +40,7 @@ import {
   ALL_COGNITIVE_CATEGORIES,
   BaseQuestion
 } from '../../types';
-import { ALL_QUESTION_TYPES, CATEGORY_TYPES_MAP, generateQuestionByType } from '../../features/questions/generators';
-import { runMultiPassQuestionTests, stampQuestionVerification } from '../../features/questions/verifier';
-import { questionBankService } from '../../services/question-bank-service';
+import { ALL_QUESTION_TYPES, STUDENT_CATEGORY_TYPES } from '../../features/questions/generators';
 
 export interface AdminAiQuestionEngineProps {}
 
@@ -61,14 +63,16 @@ interface GeneratedQuestionResult {
   category: CognitiveCategory;
   difficulty: DifficultyLevel;
   qualityScore: number;
-  status: 'queued' | 'planning' | 'generating' | 'validating' | 'approved' | 'rejected' | 'failed';
+  status: 'queued' | 'planning' | 'generating' | 'validating' | 'approved' | 'draft' | 'rejected' | 'failed';
   solverVerified: boolean;
   validationWarnings: string[];
   options: { id: string; label: string; text?: string }[];
   correctOptionId: string;
   explanation: { summary: string; steps: string[] };
   distractorNotes: Record<string, string>;
-  rawOutput?: any;
+  qualityReport?: QuestionQualityReport;
+  attempts?: GenerationAttempt[];
+  rawOutput?: BaseQuestion;
 }
 
 export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () => {
@@ -79,7 +83,11 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
   const [difficulty, setDifficulty] = useState<DifficultyLevel>(3);
   const [questionCount, setQuestionCount] = useState<number>(5);
   const [minQuality, setMinQuality] = useState<number>(85);
-  const [selectedAiModel, setSelectedAiModel] = useState<string>('gemini-3.1-pro');
+  const [selectedAiModel, setSelectedAiModel] = useState<string>('');
+
+  const [targetAge, setTargetAge] = useState<number | undefined>();
+  const [maxAttempts, setMaxAttempts] = useState(3);
+  const profile = EDUCATION_PROFILES[targetGrade];
 
   // Runtime State
   const [isApiAvailable, setIsApiAvailable] = useState<boolean>(true);
@@ -87,222 +95,71 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<GenerationJobStatus | null>(null);
   const [results, setResults] = useState<GeneratedQuestionResult[]>([]);
+  const [errorMessage, setErrorMessage] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // Polling interval ref
-  const pollingRef = useRef<number | null>(null);
-
-  const startPolling = useCallback((jobId: string) => {
-    if (pollingRef.current) clearInterval(pollingRef.current);
-    
-    pollingRef.current = window.setInterval(async () => {
-      try {
-        const res = await authenticatedFetch(`/api/admin/ai-generation-job/${jobId}`);
-        if (!res.ok) {
-          if (res.status === 404) setIsApiAvailable(false);
-          return;
-        }
-        const data = await res.json();
-        setJobStatus(data.status);
-        if (data.results) {
-          setResults(data.results);
-        }
-        if (data.status.status === 'completed' || data.status.status === 'failed') {
-          clearInterval(pollingRef.current!);
-          setIsGenerating(false);
-          if (data.status.status === 'completed') {
-            sound.playSuccess();
-            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-          } else {
-            sound.playError();
-          }
-        }
-      } catch (err) {
-        console.error('Polling error', err);
-        setIsApiAvailable(false);
-      }
-    }, 2000);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-    };
-  }, []);
-
-  const runClientSideAiGeneration = async () => {
-    setIsApiAvailable(true);
-    setJobStatus({
-      id: `ai-job-${Date.now()}`,
-      status: 'planning',
-      progress: 25,
-      total: questionCount,
-      completed: 0,
-      approved: 0,
-      rejected: 0,
-      failed: 0,
-      averageQuality: 94,
-    });
-    await new Promise((r) => setTimeout(r, 350));
-
-    setJobStatus((prev) => (prev ? { ...prev, status: 'generating', progress: 60 } : null));
-    await new Promise((r) => setTimeout(r, 400));
-
-    const candidateTypes =
-      selectedType !== 'auto'
-        ? [selectedType]
-        : (CATEGORY_TYPES_MAP[selectedCategory] || ['matrix_2x2']);
-
-    const generatedItems: GeneratedQuestionResult[] = [];
-
-    for (let i = 0; i < questionCount; i++) {
-      const t = candidateTypes[i % candidateTypes.length];
-      const s = Math.floor(Math.random() * 900000) + 100000;
-      let baseQ: BaseQuestion;
-      try {
-        baseQ = generateQuestionByType(t, s, difficulty);
-      } catch {
-        baseQ = generateQuestionByType('visual_sequence', s, 2);
-      }
-
-      baseQ.id = `ai_q_${targetGrade}_${Date.now()}_${i + 1}`;
-      baseQ.targetGrade = targetGrade;
-      baseQ.targetGrades = [targetGrade];
-      baseQ.category = selectedCategory;
-      baseQ.difficulty = difficulty;
-      baseQ.status = 'published';
-      baseQ.isCustom = true;
-
-      // 5-Pass Automated Verification & Solver Testing
-      const report = runMultiPassQuestionTests(baseQ);
-      const verifiedBaseQ = stampQuestionVerification(baseQ, report);
-
-      // Automatically add to Question Bank!
-      questionBankService.createCustomQuestion(verifiedBaseQ);
-
-      const qScore = Math.floor(Math.random() * 6) + 93;
-      generatedItems.push({
-        id: baseQ.id,
-        prompt: baseQ.prompt,
-        type: baseQ.type,
-        category: baseQ.category,
-        difficulty: baseQ.difficulty,
-        qualityScore: qScore,
-        status: 'approved',
-        solverVerified: true,
-        validationWarnings: [],
-        options: baseQ.options.map((o) => ({ id: o.id, label: `Seçenek ${o.id}` })),
-        correctOptionId: baseQ.correctOptionId,
-        explanation: {
-          summary: baseQ.explanation.summary,
-          steps: baseQ.explanation.steps,
-        },
-        distractorNotes: {
-          A: 'A seçeneği şekil rotasyonunu veya kuralını ters yönde uygulamıştır.',
-          B: 'B seçeneği renk ve eleman döngüsünü ihlal etmektedir.',
-          C: 'C seçeneği simetri eksenini karşılamamaktadır.',
-          D: 'D seçeneği eleman sayısını yanlış hesaplamıştır.',
-        },
-        rawOutput: baseQ,
-      });
-    }
-
-    setJobStatus({
-      id: `ai-job-${Date.now()}`,
-      status: 'validating',
-      progress: 90,
-      total: questionCount,
-      completed: questionCount,
-      approved: questionCount,
-      rejected: 0,
-      failed: 0,
-      averageQuality: 95,
-    });
-    await new Promise((r) => setTimeout(r, 300));
-
-    setResults(generatedItems);
-    setJobStatus({
-      id: `ai-job-${Date.now()}`,
-      status: 'completed',
-      progress: 100,
-      total: questionCount,
-      completed: questionCount,
-      approved: questionCount,
-      rejected: 0,
-      failed: 0,
-      averageQuality: 95,
-    });
-    setIsGenerating(false);
-    sound.playSuccess();
-    confetti({ particleCount: 65, spread: 75, origin: { y: 0.5 } });
+  const toResult = (data: any): GeneratedQuestionResult | null => {
+    const q = data.question;
+    if (!q) return null;
+    return { id: q.id, prompt: q.prompt, type: q.type, category: q.category,
+      difficulty: q.difficulty, qualityScore: data.qualityScore || 0,
+      status: data.success ? 'draft' : 'rejected', solverVerified: data.success === true && data.solverVerified === true,
+      validationWarnings: [...(data.validationErrors || []), ...(data.validationWarnings || []), ...(data.rejectionReasons || [])],
+      options: q.options, correctOptionId: q.correctOptionId, explanation: q.explanation,
+      qualityReport: data.qualityReport || q.qualityReport, attempts: data.attempts || q.generationAttempts,
+      distractorNotes: q.authoring?.distractorNotes || {}, rawOutput: q };
   };
 
   const handleGenerate = async () => {
     sound.playClick();
-    setIsGenerating(true);
-    setResults([]);
-    setJobStatus({
-      id: 'temp',
-      status: 'queued',
-      progress: 0,
-      total: questionCount,
-      completed: 0,
-      approved: 0,
-      rejected: 0,
-      failed: 0,
-      averageQuality: 0,
-    });
-
+    setIsGenerating(true); setResults([]); setErrorMessage('');
+    let approved = 0, rejected = 0, qualityTotal = 0;
+    const id = `request-${Date.now()}`;
+    setJobStatus({ id, status: 'generating', progress: 0, total: questionCount, completed: 0, approved: 0, rejected: 0, failed: 0, averageQuality: 0 });
     try {
-      const endpoint = questionCount > 1 ? '/api/admin/ai-bulk-generate' : '/api/admin/ai-generate-question';
-      const res = await authenticatedFetch(endpoint, {
-        method: 'POST',
-        body: JSON.stringify({
-          category: selectedCategory,
-          type: selectedType === 'auto' ? undefined : selectedType,
-          targetGrade,
-          difficulty,
-          count: questionCount,
-          minQuality,
-          aiModel: selectedAiModel,
-        })
-      });
-
-      if (!res.ok) {
-        throw new Error('API unavailable, falling back to autonomous engine');
+      // Await each durable request. No simulated AI, invented scores or background
+      // in-memory polling that can disappear when a Vercel Function shuts down.
+      for (let i = 0; i < questionCount; i++) {
+        const response = await authenticatedFetch('/api/admin/ai-generate-question', {
+          method: 'POST', body: JSON.stringify({ category: selectedCategory,
+            questionType: selectedType === 'auto' ? undefined : selectedType,
+            targetGrade, targetAge, maxAttempts, difficulty, minQualityScore: minQuality, aiModel: selectedAiModel || undefined }) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Soru servisine ulaşılamadı.');
+        setIsApiAvailable(true);
+        const item = toResult(data);
+        if (item) setResults(previous => [...previous, item]);
+        if (data.success) approved++; else rejected++;
+        qualityTotal += data.qualityScore || 0;
+        setJobStatus({ id, status: i + 1 === questionCount ? 'completed' : 'generating',
+          progress: Math.round((i + 1) / questionCount * 100), total: questionCount, completed: i + 1,
+          approved, rejected, failed: 0, averageQuality: Math.round(qualityTotal / (i + 1)) });
+        if (!item && !data.success) setErrorMessage((data.rejectionReasons || data.validationErrors || ['Soru üretilemedi.']).join(' '));
       }
-
-      const data = await res.json();
-      const jobId = data.jobId;
-      setActiveJobId(jobId);
-      startPolling(jobId);
-    } catch {
-      // Graceful and powerful fallback to client-side generative synthesis
-      await runClientSideAiGeneration();
-    }
+    } catch (error) {
+      setIsApiAvailable(false);
+      setErrorMessage(error instanceof Error ? error.message : 'Denetim tamamlanamadı. Tekrar deneyin.');
+      setJobStatus(previous => previous ? { ...previous, status: 'failed', failed: previous.failed + 1 } : null);
+    } finally { setIsGenerating(false); }
   };
 
   const handleReview = async (id: string, action: 'approve' | 'reject' | 'regenerate') => {
-    sound.playClick();
-    setResults((prev) =>
-      prev.map((r) => {
-        if (r.id === id) {
-          if (action === 'approve' && r.rawOutput) {
-            questionBankService.createCustomQuestion(r.rawOutput);
-            sound.playSuccess();
-          }
-          return {
-            ...r,
-            status: action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'generating',
-          };
-        }
-        return r;
-      })
-    );
+    setErrorMessage('');
+    try {
+      const response = await authenticatedFetch('/api/admin/ai-question-review', {
+        method: 'POST', body: JSON.stringify({ questionId: id, action }) });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error([data.error || data.message || 'İşlem tamamlanamadı.', ...(data.details || [])].join(' '));
+      if (action === 'regenerate' && data.question) {
+        const replacement = toResult({ ...data, solverVerified: data.question.aiMeta?.solverVerified });
+        if (replacement) setResults(previous => previous.map(item => item.id === id ? replacement : item));
+      } else setResults(previous => previous.map(item => item.id === id ? { ...item, status: action === 'approve' ? 'approved' : 'rejected' } : item));
+    } catch (error) { setErrorMessage(error instanceof Error ? error.message : 'İşlem tamamlanamadı.'); }
   };
 
   return (
     <div className="space-y-6">
+      {errorMessage && <p role="alert" className="rounded-xl border border-red-400/40 bg-red-950/40 p-4 text-red-200">{errorMessage}</p>}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -317,7 +174,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
 
         <div className="px-3 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-bold flex items-center gap-2">
           <Zap className="w-3.5 h-3.5 text-purple-400" />
-          <span>Otonom Sentezleme Aktif</span>
+          <span>Denetimli taslak üretimi</span>
         </div>
       </div>
 
@@ -356,10 +213,10 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
               <label className="block text-xs font-bold text-slate-400 mb-1.5">Bilişsel Kategori</label>
               <select 
                 value={selectedCategory}
-                onChange={e => setSelectedCategory(e.target.value as CognitiveCategory)}
+                onChange={e => { setSelectedCategory(e.target.value as CognitiveCategory); setSelectedType('auto'); }}
                 className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
               >
-                {ALL_COGNITIVE_CATEGORIES.map(c => (
+                {ALL_COGNITIVE_CATEGORIES.filter(c => STUDENT_CATEGORY_TYPES[c]).map(c => (
                   <option key={c} value={c}>{COGNITIVE_CATEGORY_LABELS[c]}</option>
                 ))}
               </select>
@@ -373,7 +230,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                 className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
               >
                 <option value="auto">✨ Yapay Zeka Seçsin (Otomatik)</option>
-                {ALL_QUESTION_TYPES.map(t => (
+                {(STUDENT_CATEGORY_TYPES[selectedCategory] || []).filter(t => !(targetGrade === 1 && ['operation_machine','matrix_3x3','raven_matrix'].includes(t))).map(t => (
                   <option key={t} value={t}>{QUESTION_TYPE_LABELS[t]}</option>
                 ))}
               </select>
@@ -385,7 +242,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                 {[1, 2, 3, 4].map(g => (
                   <button
                     key={g}
-                    onClick={() => setTargetGrade(g as 1|2|3|4)}
+                    onClick={() => { setTargetGrade(g as 1|2|3|4); setDifficulty(gradeDifficulty(g as 1|2|3|4, difficulty)); setTargetAge(undefined); setSelectedType('auto'); }}
                     className={`py-1.5 rounded-lg text-xs font-bold transition-colors ${
                       targetGrade === g 
                         ? 'bg-purple-600 text-white shadow-sm' 
@@ -404,13 +261,22 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                 <span className="text-purple-400">{DIFFICULTY_LABELS[difficulty]}</span>
               </label>
               <input 
-                type="range" min="1" max="6" step="1"
+                aria-label="Zorluk seviyesi" type="range" min="1" max={profile.maxDifficulty} step="1"
                 value={difficulty}
                 onChange={e => setDifficulty(parseInt(e.target.value) as DifficultyLevel)}
                 className="w-full accent-purple-500"
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <label className="text-xs font-bold text-slate-400">Hedef yaş
+                <select aria-label="Hedef yaş" value={targetAge ?? ''} onChange={e => setTargetAge(e.target.value ? Number(e.target.value) : undefined)} className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-800 p-2 text-white"><option value="">Sınıf profili ({profile.ages.join('–')})</option>{Array.from({ length: profile.ages[1] - profile.ages[0] + 1 }, (_, i) => profile.ages[0] + i).map(age => <option key={age} value={age}>{age} yaş</option>)}</select>
+              </label>
+              <label className="text-xs font-bold text-slate-400">En fazla deneme
+                <select aria-label="En fazla deneme" value={maxAttempts} onChange={e => setMaxAttempts(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-800 p-2 text-white">{[1,2,3,4].map(n => <option key={n} value={n}>{n} deneme</option>)}</select>
+              </label>
+            </div>
+            <p className="text-xs text-slate-400">Uygun olmayan aday yeni varyasyonla üretilir. Sınıf ve doğruluk kuralları her denemede yeniden denetlenir.</p>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-400 mb-1.5">Üretim Sayısı</label>
@@ -439,11 +305,8 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                 onChange={e => setSelectedAiModel(e.target.value)}
                 className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
               >
-                <option value="gemini-3.1-pro">🧠 Google Gemini 3.1 Pro (Varsayılan)</option>
-                <option value="gemini-3.5-flash">⚡ Google Gemini 3.5 Flash (Çok Hızlı)</option>
-                <option value="qwen3.8-max">🔥 Qwen 3.8 Max (Gelişmiş Mantık)</option>
-                <option value="gpt-5">🤖 OpenAI GPT-5 (Yeni Nesil)</option>
-                <option value="claude-4-opus">🎯 Anthropic Claude 4 Opus</option>
+                <option value="">Sunucuda yapılandırılan model</option>
+                <option value="gemini-3.1-pro-preview">Google Gemini 3.1 Pro Preview</option>
               </select>
             </div>
 
@@ -532,7 +395,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                           res.solverVerified ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border-red-500/30 text-red-400'
                         }`}>
                           <ShieldCheck className="w-3.5 h-3.5" />
-                          <span>5 Aşamalı Test: {res.solverVerified ? '%100 Doğrulandı' : 'Başarısız'}</span>
+                          <span>Çok Aşamalı Test: {res.solverVerified ? 'Kontroller geçti' : 'Başarısız'}</span>
                         </div>
                       </div>
                     </div>
@@ -557,9 +420,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                             <CheckCircle2 className="w-4 h-4" /> Onaylandı
                           </span>
                         ) : res.status === 'rejected' ? (
-                          <span className="text-xs font-bold text-red-400 flex items-center gap-1">
-                            <X className="w-4 h-4" /> Reddedildi
-                          </span>
+                          <button onClick={() => handleReview(res.id, 'regenerate')} className="rounded-lg border border-amber-500/30 px-3 py-2 text-xs font-bold text-amber-300">Yeni varyasyonla tekrar dene</button>
                         ) : (
                           <>
                             <button onClick={() => handleReview(res.id, 'regenerate')} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors" title="Yeniden Üret">
@@ -568,7 +429,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                             <button onClick={() => handleReview(res.id, 'reject')} className="px-3 py-1.5 rounded-lg text-xs font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 transition-colors flex items-center gap-1">
                               <X className="w-3.5 h-3.5" /> Reddet
                             </button>
-                            <button onClick={() => handleReview(res.id, 'approve')} className="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors flex items-center gap-1">
+                            <button disabled={!res.solverVerified} onClick={() => handleReview(res.id, 'approve')} className="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors flex items-center gap-1">
                               <CheckCircle2 className="w-3.5 h-3.5" /> Onayla
                             </button>
                           </>
@@ -581,6 +442,8 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                   {expandedId === res.id && (
                     <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} className="border-t border-slate-800 bg-slate-900/50">
                       <div className="p-4 space-y-4 text-xs text-slate-300">
+                        <QuestionQualityPanel report={res.qualityReport} attempts={res.attempts} />
+                        {res.rawOutput && <div className="rounded-xl bg-white p-3"><QuestionRenderer question={res.rawOutput} /><div className="grid grid-cols-2 gap-3">{res.rawOutput.options.map(option => <OptionRenderer question={res.rawOutput} key={option.id} option={option} disabled showCorrect isCorrectOption={option.id === res.correctOptionId} />)}</div></div>}
                         {res.validationWarnings && res.validationWarnings.length > 0 && (
                           <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl space-y-1">
                             <strong className="text-amber-400 flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> Uyarılar:</strong>
@@ -590,18 +453,6 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                           </div>
                         )}
                         
-                        <div>
-                          <strong className="text-slate-400 block mb-2">Seçenekler:</strong>
-                          <div className="grid grid-cols-2 gap-2">
-                            {res.options.map(opt => (
-                              <div key={opt.id} className={`p-2 rounded-lg border ${opt.id === res.correctOptionId ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-slate-700 bg-slate-800'}`}>
-                                <span className="font-bold mr-2">{opt.label})</span>
-                                {opt.text || 'Görsel Seçenek'}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
                         {res.explanation && (
                           <div className="bg-indigo-500/5 border border-indigo-500/20 p-3 rounded-xl">
                             <strong className="text-indigo-400 mb-1 block">Çözüm / Açıklama:</strong>
@@ -642,3 +493,4 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
     </div>
   );
 };
+

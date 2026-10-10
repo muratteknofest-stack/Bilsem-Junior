@@ -1,3 +1,4 @@
+import { AdminSupportQueue } from './admin/AdminSupportQueue';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   Users,
@@ -81,6 +82,7 @@ type AdminTab =
   | 'analytics'
   | 'curriculum'
   | 'stresstest'
+  | 'support'
   | 'settings';
 
 const CATEGORY_ICONS_CONFIG: Record<string, { icon: any; color: string; bg: string }> = {
@@ -183,6 +185,7 @@ export const AdminPanelView: React.FC = () => {
     { id: 'analytics', label: 'Bilişsel Analitik', icon: BarChart4 },
     { id: 'curriculum', label: 'BİLSEM Müfredat Matrisi', icon: Compass },
     { id: 'stresstest', label: 'Motor Stres Testi', icon: Zap },
+    { id: 'support', label: 'Soru ve Hesap Bildirimleri', icon: FileQuestion },
     { id: 'settings', label: 'Sistem Parametreleri', icon: Settings },
   ];
 
@@ -519,6 +522,7 @@ export const AdminPanelView: React.FC = () => {
                 />
               )}
 
+              {activeTab === 'support' && <AdminSupportQueue />}
               {/* TAB 4: DEEP ANALYTICS */}
               {activeTab === 'analytics' && (
                 <AdminQuestionAnalyticsDashboard
@@ -971,3 +975,4 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
     </div>
   );
 };
+

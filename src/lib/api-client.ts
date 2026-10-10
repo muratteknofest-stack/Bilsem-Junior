@@ -1,32 +1,15 @@
-import { getToken } from 'firebase/app-check';
-import { appCheck, auth } from './firebase';
+import { auth } from './supabase';
 
-const env = typeof import.meta !== 'undefined' && import.meta.env
-  ? import.meta.env
-  : ((process.env as Record<string, string | undefined>) || {});
-const apiBaseUrl = String(env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-
-function resolveApiUrl(input: RequestInfo | URL): RequestInfo | URL {
-  if (!apiBaseUrl || typeof input !== 'string' || !input.startsWith('/api/')) return input;
-  return `${apiBaseUrl}${input}`;
+const apiBaseUrl = String(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+export function apiUrl(path: string): string {
+  return apiBaseUrl && path.startsWith('/api/') ? `${apiBaseUrl}${path}` : path;
 }
-
 export async function authenticatedFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
   const user = auth.currentUser;
   if (!user) throw new Error('Bu işlem için giriş yapmalısınız.');
-
-  const token = await user.getIdToken();
   const headers = new Headers(init.headers);
-  headers.set('Authorization', `Bearer ${token}`);
-  if (appCheck) {
-    const appCheckToken = await getToken(appCheck);
-    headers.set('X-Firebase-AppCheck', appCheckToken.token);
-  }
+  headers.set('Authorization', `Bearer ${await user.getIdToken()}`);
   if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-
-  return fetch(resolveApiUrl(input), {
-    ...init,
-    headers,
-    credentials: apiBaseUrl ? 'omit' : 'same-origin',
-  });
+  const url = typeof input === 'string' ? apiUrl(input) : input;
+  return fetch(url, { ...init, headers, credentials: apiBaseUrl ? 'omit' : 'same-origin' });
 }

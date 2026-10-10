@@ -1,3 +1,5 @@
+import { VerifiedLearningView } from './VerifiedLearningView';
+import { isQuestionReadyForStudents } from '../features/questions/quality';
 import React, { useState } from 'react';
 import { MistakeItem, BaseQuestion, CognitiveCategory } from '../types';
 import { dataService } from '../services/data-service';
@@ -34,6 +36,7 @@ interface MistakeNotebookViewProps {
 }
 
 export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavigateHome }) => {
+  const [serverReview, setServerReview] = useState<MistakeItem | null>(null);
   const [mistakes, setMistakes] = useState<MistakeItem[]>(() => dataService.getMistakes());
   const [activeRetryMistake, setActiveRetryMistake] = useState<MistakeItem | null>(null);
   const [retryQuestion, setRetryQuestion] = useState<BaseQuestion | null>(null);
@@ -65,6 +68,7 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
   });
 
   const handleClearAllMistakes = () => {
+    if (!dataService.getCurrentUser().id.startsWith('demo_')) { setUnlockedNotice('Sorularını tek tek yeniden çözerek defterini temizleyebilirsin.'); return; }
     sound.playLevelUp();
     try {
       confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
@@ -75,9 +79,14 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
   };
 
   const startRetry = (item: MistakeItem) => {
+    if (!dataService.getCurrentUser().id.startsWith('demo_')) { setServerReview(item); return; }
     sound.playClick();
     // Recreate the EXACT same question using its seed & difficulty!
     const q = generateQuestionByType(item.questionType, item.questionSeed, item.difficulty);
+    if (!isQuestionReadyForStudents(q)) {
+      setUnlockedNotice('Bu soru yeniden inceleniyor. Şimdilik alıştırmalardaki doğrulanmış sorularla devam edebilirsin.');
+      return;
+    }
     setActiveRetryMistake(item);
     setRetryQuestion(q);
     setSelectedOptionId(null);
@@ -115,6 +124,8 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
     setShowAiHint(false);
     setShowAiMistakeModal(false);
   };
+
+  if (serverReview) return <VerifiedLearningView mode="practice" reviewMistakeId={serverReview.id} onNavigateHome={() => { setServerReview(null); setMistakes(dataService.getMistakes()); }} />;
 
   // RETRY MODAL/VIEW
   if (activeRetryMistake && retryQuestion) {
@@ -167,7 +178,7 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             {retryQuestion.options.map((opt) => (
-              <OptionRenderer
+              <OptionRenderer question={retryQuestion}
                 key={opt.id}
                 option={opt}
                 isSelected={selectedOptionId === opt.id}
@@ -543,3 +554,5 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
     </div>
   );
 };
+
+

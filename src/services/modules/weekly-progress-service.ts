@@ -1,3 +1,4 @@
+import { isAvailableCategory } from '../../features/student/available-categories';
 import { CognitiveCategory, UserProfile, LeaderboardPeriod, LeaderboardEntry, WeeklyQuestionProgressData, DayQuestionStats, PastWeekTrendItem, DailyStudyPlan, Achievement } from '../../types';
 import { STORAGE_KEYS } from './shared';
 import { safeStorage } from '../../lib/storage';
@@ -151,16 +152,16 @@ export function getWeeklyQuestionProgressData(passedUser?: UserProfile, remoteDa
   };
 }
 
-export function incrementWeeklyQuestionCount() {
+export function incrementWeeklyQuestionCount(user: UserProfile = getCurrentUser()) {
   try {
     const now = new Date();
     const todayIdx = (now.getDay() + 6) % 7;
     const raw = safeStorage.getItem(STORAGE_KEYS.WEEKLY_QUESTIONS);
     let data: any;
     if (raw) {
-      try { data = JSON.parse(raw); } catch { data = getDefaultWeeklyQuestionsData(getCurrentUser(), todayIdx); }
+      try { data = JSON.parse(raw); } catch { data = getDefaultWeeklyQuestionsData(user, todayIdx); }
     } else {
-      data = getDefaultWeeklyQuestionsData(getCurrentUser(), todayIdx);
+      data = getDefaultWeeklyQuestionsData(user, todayIdx);
     }
     if (!Array.isArray(data.thisWeekDays) || data.thisWeekDays.length !== 7) {
       data.thisWeekDays = [0, 0, 0, 0, 0, 0, 0];
@@ -178,6 +179,8 @@ export function recordQuestionSolved(isCorrect: boolean = true, category?: Cogni
 } {
   const user = getCurrentUser();
   markPracticeForToday(user, 0);
+  // Seed a missing weekly cache from the counters before this new answer.
+  incrementWeeklyQuestionCount(user);
   user.totalQuestionsSolved = (user.totalQuestionsSolved || 0) + 1;
   user.todayQuestionsSolved = (user.todayQuestionsSolved || 0) + 1;
   setCurrentUser(user);
@@ -211,14 +214,13 @@ export function recordQuestionSolved(isCorrect: boolean = true, category?: Cogni
   checkMilestone('questions_100', 100);
 
   setProgressItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(achievements));
-  incrementWeeklyQuestionCount();
 
   return { user: getCurrentUser(), newlyUnlocked, totalSolved: user.totalQuestionsSolved };
 }
 
 export function getDailyPlan(): DailyStudyPlan {
   const user = getCurrentUser();
-  const masteries = getSkillMasteries();
+  const masteries = getSkillMasteries().filter(m => isAvailableCategory(m.category));
   const sorted = [...masteries].sort((a, b) => a.mastery - b.mastery);
   const weak1 = sorted[0]?.category || 'matrix';
   const weak2 = sorted[1]?.category || 'pattern';
@@ -264,3 +266,5 @@ export function getLeaderboard(period: LeaderboardPeriod = 'daily', gradeFilter:
     clapsCount: 0,
   }];
 }
+
+

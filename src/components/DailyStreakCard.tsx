@@ -83,7 +83,7 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
   const nextMilestone = STREAK_MILESTONES.find((m) => m.day > streak);
 
   // Handle claiming a milestone
-  const handleClaim = (milestone: StreakMilestone) => {
+  const handleClaim = async (milestone: StreakMilestone) => {
     setClaimingDay(milestone.day);
     sound.playLevelUp();
 
@@ -96,7 +96,8 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
       });
     } catch {}
 
-    const result = dataService.claimStreakReward(milestone.day);
+    let result;
+    try { result = await dataService.claimStreakReward(milestone.day); } catch (err) { setClaimFeedback(err instanceof Error ? err.message : 'Ödül kaydedilemedi.'); setClaimingDay(null); return; }
     if (result.success) {
       setClaimFeedback(`Tebrikler! ${milestone.title} ödülü alındı: +${milestone.xpReward} XP!`);
       setTimeout(() => setClaimFeedback(null), 4000);
@@ -106,10 +107,11 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
   };
 
   const handleStartQuickChallenge = () => {
+    if (!user.id.startsWith('demo_')) { onStartPractice(); return; }
     sound.playClick();
     const seed = Math.floor(Math.random() * 899999) + 100000;
     // Generate a fun visual odd-one-out question
-    const q = generateQuestionByType('odd_one_out', seed, 2);
+    const q = generateQuestionByType('shape_counting', seed, 2);
     setQuickQuestion(q);
     setSelectedQuickOption(null);
     setIsQuickSubmitted(false);
@@ -193,7 +195,7 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
       )}
 
       {/* Top Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-zinc-200">
+      <div className="flex flex-col justify-between gap-4 pb-5 border-b border-zinc-200">
         <div className="flex items-center gap-3.5">
           {/* Animated Flame Icon Container */}
           <div className="relative">
@@ -235,7 +237,7 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
         </div>
 
         {/* Action Badges & Shield Status */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2 self-start">
           {/* Streak Shield Status with click for explanation */}
           <button
             onClick={() => setShowShieldInfo(true)}
@@ -366,7 +368,7 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
         </div>
 
         {/* Milestone Cards Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <div className="zp-streak-milestones grid gap-2">
           {STREAK_MILESTONES.map((m) => {
             const isUnlocked = streak >= m.day;
             const isClaimed = claimedDays.includes(m.day);
@@ -491,7 +493,7 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
               {/* Options Grid */}
               <div className="grid grid-cols-2 gap-2.5 pt-2">
                 {quickQuestion.options.map((opt) => (
-                  <OptionRenderer
+                  <OptionRenderer question={quickQuestion}
                     key={opt.id}
                     option={opt}
                     isSelected={selectedQuickOption === opt.id}
@@ -579,3 +581,5 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
     </div>
   );
 };
+
+

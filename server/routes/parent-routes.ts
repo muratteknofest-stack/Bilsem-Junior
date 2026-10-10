@@ -1,11 +1,15 @@
+import { PasswordPolicyError } from '../password-policy';
+import { logServerFailure } from '../safe-log';
+import { sharedRateLimit } from '../shared-rate-limit';
+import { weeklyReportMetrics } from '../weekly-report';
+import { getServiceClient } from '../supabase-admin';
 import { Router } from 'express';
 import { z } from 'zod';
 import nodemailer from 'nodemailer';
 import {
   getAdminAuth,
   getAdminDb,
-  requireAppCheck,
-  requireFirebaseAuth,
+  requireSupabaseAuth,
   requireProfileRole,
   requireVerifiedEmail,
   escapeHtml,
@@ -16,7 +20,28 @@ import { accountSecurityLimiter, reportLimiter } from '../rate-limiters';
 
 const parentRoutes = Router();
 
-const strongPassword = z.string().min(8).max(128).regex(/^(?=.*[A-Za-z])(?=.*\d)/, {
+parentRoutes.post('/parent/activate-students', requireSupabaseAuth, requireVerifiedEmail, accountSecurityLimiter, requireProfileRole('parent'), sharedRateLimit('parent-actions', 6, 3600), async (req: AuthenticatedRequest, res) => {
+  const client = getServiceClient();
+  const parent = await client.from('profiles').select('linked_student_ids').eq('id', req.authUser!.uid).single();
+  if (parent.error) throw parent.error;
+  const ids = parent.data.linked_student_ids || [];
+  if (!ids.length) return res.json({ activated: 0 });
+  const children = await client.from('profiles').select('id').in('id', ids).eq('linked_parent_id', req.authUser!.uid).eq('role', 'student');
+  if (children.error) throw children.error;
+  let activated = 0;
+  for (const child of children.data || []) {
+    const user = await client.auth.admin.getUserById(child.id);
+    if (user.error) throw user.error;
+    if (!user.data.user.email_confirmed_at) {
+      const result = await client.auth.admin.updateUserById(child.id, { email_confirm: true });
+      if (result.error) throw result.error;
+      activated++;
+    }
+  }
+  return res.json({ activated });
+});
+
+const strongPassword = z.string().min(8).max(128).regex(/^(?=.*[A-Za-zğüşıöçĞÜŞİÖÇ])(?=.*\d)/, {
   message: 'Şifre en az bir harf ve bir rakam içermelidir.',
 });
 const linkedStudentPasswordSchema = z.object({
@@ -26,11 +51,10 @@ const linkedStudentPasswordSchema = z.object({
 
 parentRoutes.post(
   '/parent/reset-student-password',
-  requireFirebaseAuth,
-  requireAppCheck,
+  requireSupabaseAuth,
   accountSecurityLimiter,
   requireVerifiedEmail,
-  requireProfileRole('parent'),
+  requireProfileRole('parent'), sharedRateLimit('parent-actions', 6, 3600),
   async (req: AuthenticatedRequest, res) => {
     const parsed = linkedStudentPasswordSchema.safeParse(req.body);
     if (!parsed.success || !req.authUser) {
@@ -52,7 +76,11 @@ parentRoutes.post(
     if (!isLinked) return res.status(403).json({ error: 'Öğrenci bu veli hesabına bağlı değil.' });
 
     const adminAuth = getAdminAuth();
-    await adminAuth.updateUser(parsed.data.studentId, { password: parsed.data.newPassword });
+    try { await adminAuth.updateUser(parsed.data.studentId, { password: parsed.data.newPassword }); }
+    catch (error) {
+      if (error instanceof PasswordPolicyError) return res.status(error.status).json({ error: error.message, code: error.code });
+      throw error;
+    }
     await adminAuth.revokeRefreshTokens(parsed.data.studentId);
     await adminDb.collection('securityEvents').add({
       type: 'student_password_reset_by_parent',
@@ -68,7 +96,7 @@ const reportSchema = z.object({
   studentId: z.string().min(1).max(128),
 }).strict();
 
-parentRoutes.post('/send-weekly-report', requireFirebaseAuth, requireAppCheck, reportLimiter, requireVerifiedEmail, requireProfileRole('parent'), async (req: AuthenticatedRequest, res) => {
+parentRoutes.post('/send-weekly-report', requireSupabaseAuth, reportLimiter, requireVerifiedEmail, requireProfileRole('parent'), sharedRateLimit('parent-actions', 6, 3600), async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = reportSchema.safeParse(req.body);
     if (!parsed.success || !req.authUser) {
@@ -99,22 +127,7 @@ parentRoutes.post('/send-weekly-report', requireFirebaseAuth, requireAppCheck, r
     const studentName = escapeHtml(student.name || 'Öğrenci');
     const studentNameHeader = sanitizeHeaderValue(student.name || 'Öğrenci');
     const persistedValues = (stateSnap.data()?.values || {}) as Record<string, unknown>;
-    const parsePersisted = <T>(key: string, fallback: T): T => {
-      const raw = persistedValues[key];
-      if (typeof raw !== 'string') return fallback;
-      try { return JSON.parse(raw) as T; } catch { return fallback; }
-    };
-    const weekly = parsePersisted<{ thisWeekDays?: number[] }>('yapyap_weekly_questions_v1', {});
-    const masteries = parsePersisted<Array<{ attemptCount?: number; accuracy?: number }>>('yapyap_mastery', []);
-    const attempted = masteries.filter((item) => (item.attemptCount || 0) > 0);
-    const weeklyData = {
-      totalMinutes: Number(student.todayMinutesSpent || 0),
-      totalQuestions: (weekly.thisWeekDays || []).reduce((sum, count) => sum + Number(count || 0), 0),
-      accuracy: attempted.length
-        ? Math.round(attempted.reduce((sum, item) => sum + Number(item.accuracy || 0), 0) / attempted.length)
-        : 0,
-      streak: Number(student.streak || 0),
-    };
+    const weeklyData = weeklyReportMetrics(student, persistedValues);
 
     // HTML Email Template
     const emailHtml = `
@@ -124,7 +137,7 @@ parentRoutes.post('/send-weekly-report', requireFirebaseAuth, requireAppCheck, r
         </div>
         <div style="padding: 24px; background-color: #ffffff;">
           <p style="font-size: 16px; line-height: 1.5;">Merhaba,</p>
-          <p style="font-size: 16px; line-height: 1.5;">Öğrencimiz <strong>${studentName}</strong>'ın bu haftaki çalışma performansı başarıyla analiz edildi:</p>
+          <p style="font-size: 16px; line-height: 1.5;">Öğrencimiz <strong>${studentName}</strong>'ın kayıtlı çalışma özeti:</p>
           
           <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin: 24px 0;">
             <ul style="list-style-type: none; padding: 0; margin: 0;">
@@ -137,8 +150,8 @@ parentRoutes.post('/send-weekly-report', requireFirebaseAuth, requireAppCheck, r
                 <strong style="color: #0f172a;">${weeklyData.totalQuestions} soru</strong>
               </li>
               <li style="margin-bottom: 12px; font-size: 15px; display: flex; justify-content: space-between;">
-                <span style="color: #64748b;">✅ Doğru Oranı:</span>
-                <strong style="color: #10b981;">%${weeklyData.accuracy}</strong>
+                <span style="color: #64748b;">✅ Kayıtlı Denemelerde Doğru Oranı:</span>
+                <strong style="color: #10b981;">${weeklyData.accuracy === null ? 'Henüz deneme kaydı yok' : '%' + weeklyData.accuracy}</strong>
               </li>
               <li style="font-size: 15px; display: flex; justify-content: space-between;">
                 <span style="color: #64748b;">🔥 Güncel Öğrenme Serisi:</span>
@@ -182,9 +195,11 @@ parentRoutes.post('/send-weekly-report', requireFirebaseAuth, requireAppCheck, r
 
     res.json({ success: true, message: 'Haftalık özet başarıyla gönderildi.' });
   } catch (error: any) {
-    console.error('Email sending error:', error);
+    logServerFailure('Weekly report failed', error);
     res.status(500).json({ error: 'E-posta gönderilemedi.' });
   }
 });
 
 export default parentRoutes;
+
+

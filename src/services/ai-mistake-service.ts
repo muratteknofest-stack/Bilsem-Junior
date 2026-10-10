@@ -1,6 +1,6 @@
 import { BaseQuestion, AiMistakeExplanation, QuestionType } from '../types';
 import { authenticatedFetch } from '../lib/api-client';
-import { generateFirebaseAiJson } from '../lib/firebase-ai';
+import { generateClientAiJson } from '../lib/client-ai-fallback';
 import { z } from 'zod';
 
 const aiMistakeResponseSchema = z.object({
@@ -77,7 +77,7 @@ class AiMistakeService {
       console.warn('AI Mistake service API call failed, falling back to procedural analyzer:', err);
     }
 
-    const firebaseAiExplanation = await generateFirebaseAiJson(
+    const firebaseAiExplanation = await generateClientAiJson(
       [
         'Bir çocuğun yanlış BİLSEM cevabını yargılamadan analiz et ve kısa, somut bir geri bildirim üret.',
         'Seçilen şıkla doğru şık arasındaki farkı açıklarken sorunun kendi açıklamasına sadık kal.',
@@ -105,7 +105,7 @@ class AiMistakeService {
         difficulty: question.difficulty,
         ...firebaseAiExplanation,
         isAiGenerated: true,
-        modelUsed: 'Firebase AI Logic · Gemini 3.8 Flash',
+        modelUsed: 'Pedagojik yedek',
       };
       this.cache.set(cacheKey, result);
       return result;

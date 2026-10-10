@@ -1,3 +1,5 @@
+import { claimServerReward, refreshServerRewards } from '../services/reward-service';
+import { safeStorage } from '../lib/storage';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Achievement, DailyMission, UserProfile, BadgeTier } from '../types';
 import { dataService } from '../services/data-service';
@@ -67,6 +69,18 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
   const [selectedBadge, setSelectedBadge] = useState<Achievement | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  useEffect(() => {
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul' }).format(new Date());
+    let counts: { day?: string; todayCounts?: Record<string, number> } = {}, claims: string[] = [];
+    try { counts = JSON.parse(safeStorage.getItem('zekapark_verified_categories_v1') || '{}'); claims = JSON.parse(safeStorage.getItem('zekapark_reward_claims_v1') || '[]'); } catch { /* No completed work. */ }
+    const daily = counts.day === today ? counts.todayCounts || {} : {};
+    let alive = true;
+    void refreshServerRewards().then(result => { if (!alive) return; setAchievements(result.badges); setMissions(previous => previous.map(m => m.id === 'm3' ? { ...m, current: result.reviewToday, completed: result.reviewToday >= m.target } : m)); }).catch(err => { if (alive) setToastMessage(err instanceof Error ? err.message : 'Rozetler yüklenemedi.'); });
+    setMissions(previous => previous.map(m => { const current = m.id === 'm1' ? Object.values(daily).reduce((n,v) => n+v,0) : m.id === 'm2' ? daily.matrix || 0 : 0; return { ...m, current, completed: current >= m.target }; }));
+    setClaimedMissions(Object.fromEntries(['m1','m2','m3'].map(id => [id, claims.includes(`mission:${today}:${id}`)])));
+    return () => { alive = false; };
+  }, [activeUser.id, activeUser.totalQuestionsSolved, activeUser.resolvedMistakesCount, activeUser.xp]);
+
   // Keep achievements updated if user changes
   useEffect(() => {
     setAchievements(dataService.syncBadgesWithProgress());
@@ -86,22 +100,26 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const handleClaimMissionReward = (mission: DailyMission) => {
+  const handleClaimMissionReward = async (mission: DailyMission) => {
     if (claimedMissions[mission.id] || !mission.completed) return;
     sound.playLevelUp();
     try {
       confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
     } catch {}
-    const res = dataService.addXP(mission.rewardXP);
+    try {
+      if (!activeUser.id.startsWith('demo_')) await claimServerReward('mission', mission.id);
+      else dataService.addXP(mission.rewardXP);
+    } catch (err) { setToastMessage(err instanceof Error ? err.message : 'Ödül kaydedilemedi.'); return; }
     setClaimedMissions((prev) => ({ ...prev, [mission.id]: true }));
     if (onUserUpdate) {
       onUserUpdate(dataService.getCurrentUser());
     }
   };
 
-  const handleClaimBadgeReward = (badge: Achievement) => {
+  const handleClaimBadgeReward = async (badge: Achievement) => {
     if (!badge.unlocked || badge.rewardClaimed) return;
-    const result = dataService.claimBadgeReward(badge.id);
+    let result;
+    try { result = await dataService.claimBadgeReward(badge.id); } catch (err) { setToastMessage(err instanceof Error ? err.message : 'Ödül kaydedilemedi.'); return; }
     if (result.success) {
       setAchievements(dataService.getAchievements());
       if (onUserUpdate) {
@@ -1079,3 +1097,4 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
     </div>
   );
 };
+

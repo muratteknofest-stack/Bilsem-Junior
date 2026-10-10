@@ -1,80 +1,63 @@
 # ZekaPark
 
-ZekaPark is a React, TypeScript, Express and Firebase learning application with
-procedurally generated cognitive-skill questions.
+React, Vite, Express, Supabase Auth/Postgres and Gemini based learning app.
 
-## Local setup
+## Local development
 
-Prerequisites: Node.js 22+, a Firebase project with Email/Password Authentication
-and Cloud Firestore enabled, and Application Default Credentials for server-side
-Firebase Admin operations.
+1. Install Node.js 22+ and run `npm ci`.
+2. Copy `.env.example` to `.env.local`. Set the Supabase project URL and a
+   **publishable** key in `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`.
+3. Set server-only `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in the API
+   environment. Never put the service key in a `VITE_` variable.
+4. Run `npm run dev`. The Express service hosts `/api/*` and the app.
+5. Run `npm run build` and the focused migration tests before deployment.
 
-1. Copy `.env.example` to `.env.local` and fill in the values.
-2. Install the locked dependencies with `npm ci`.
-3. Run `npm run dev`.
-4. Before a release, run `npm run check`.
+The new Supabase project is `vehhvsdkifwstbjhnhao`. Its fresh schema is
+already applied. For another new project, apply
+[supabase/schema.sql](supabase/schema.sql) once before registering accounts.
+The schema enables RLS for every application
+table and grants browser access only to the necessary roles. Configure the
+project's publishable key and URL in both the Vite and API environments.
+Set Auth's site URL, redirects and SMTP delivery before inviting users. On a
+trusted server, run `node scripts/bootstrap-admin.mjs admin@example.com` with
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in the server environment. The
+script sends an invitation, sets the server-controlled `app_metadata.role` and
+creates the matching admin profile. The publishable key cannot perform this
+step. Invite only the verified administrator for the new project.
 
-The Express server hosts both `/api/*` and the Vite application. AI endpoints use
-the procedural fallback when `GEMINI_API_KEY` is not configured. Weekly email
-reports require the SMTP variables.
+## Hosting
 
-## Sites mode
+On Vercel, `api/index.ts` exposes the Express API through a Function and
+`vercel.json` routes `/api/*` to it. Set `VITE_SUPABASE_URL` and
+`VITE_SUPABASE_PUBLISHABLE_KEY` for the Vite build, plus server-only
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` for the Function. Leave
+`VITE_API_BASE_URL` empty for this same-origin deployment. Other static hosts
+need a separately deployed Express API and `VITE_API_BASE_URL` set to its
+origin at build time. Configure Supabase Auth's site and redirect URLs for
+the deployed origin. The frontend accesses Supabase under RLS.
 
-The static Sites deployment keeps Firebase Authentication and Firestore in the
-browser. Family registration creates the parent and linked student as two separate
-Firebase accounts without exposing an admin credential. Deploy `firestore.rules`
-before accepting registrations.
+The API uses the service role key only on the server. It checks bearer tokens,
+profile roles and, for admin routes, the server controlled Auth
+`app_metadata.role=admin` claim. Parent and child have separate Auth
+accounts. Confirmation email is required before the parent can sign in;
+managed child codes use a separate password. Admin access is never inferred
+from an email address.
 
-Real-email student and parent accounts must verify their email before the first
-login. Code-based child accounts are managed through the linked parent profile.
-The parent password-reset action uses the authenticated API endpoint
-`POST /api/parent/reset-student-password`; it verifies the family link, requires a
-verified parent email, changes the password, revokes the child's other sessions,
-and records a security event. Set `VITE_API_BASE_URL` to the deployed API origin
-when the frontend is hosted as a static Site.
+AI endpoints require `GEMINI_API_KEY`. Weekly emails require SMTP settings.
+If an AI endpoint is unavailable, the existing deterministic teaching
+fallback runs in the client. The parent can use the device share flow when
+email service is unavailable.
 
-AI hints first use the configured server API, then Firebase AI Logic, and finally
-the deterministic pedagogical engine. To enable Firebase AI Logic for production,
-enable it in the Firebase console and set up App Check with
-`VITE_FIREBASE_APPCHECK_SITE_KEY`. Weekly reports can be shared through the device's
-share sheet or opened as a pre-filled email without sending student data through a
-third-party mail server.
+## Supabase-only start
 
-If an external API service is deployed, set `VITE_API_BASE_URL` when building the
-frontend and add the Sites origin to `CORS_ALLOWED_ORIGINS` on the server.
+New accounts use Supabase Auth and Postgres directly. Firebase data and Google
+account access are not required. The previous ZekaPark Supabase project and its
+records remain untouched during a new-project installation. Old accounts are
+not automatically available in the new project; their owners create new
+accounts, or an administrator migrates them separately after identity checks.
 
-## Authorization model
-
-- Browser clients can create only their own non-admin profile.
-- Parent/child account pairs use separate Firebase Auth sessions and passwords;
-  the rules accept a parent link only after the student profile points back to it.
-- Admin access normally requires an `admin` Firebase custom claim. The initial
-  verified owner account (`iomegagame@gmail.com`) is explicitly allowlisted in
-  Firestore rules so it can bootstrap administration when Admin SDK access is not
-  available. A profile document alone never grants admin access.
-- User progress is stored under `users/{uid}/private/state`; linked parents have
-  read-only access to their child's profile and progress.
-
-Deploy `firestore.rules` before enabling real accounts. Existing admin accounts
-must receive their matching custom claim through a trusted admin script or the
-Firebase Admin SDK.
-
-## Deployment
-
-Build and deploy the API container to Cloud Run, granting the service account
-Firebase access and supplying server-only secrets there:
-
-```sh
-gcloud run deploy zekapark-api --source . --region europe-west1 --allow-unauthenticated
-```
-
-The service itself is public so the app can reach it, while protected endpoints
-verify Firebase ID tokens. Then deploy the static site and Firestore rules:
-
-```sh
-npm run check
-firebase deploy --only firestore:rules,hosting
-```
-
-`firebase.json` routes `/api/**` to the `zekapark-api` Cloud Run service and all
-remaining routes to the single-page application.
+Set Auth site/redirect URLs and email delivery in Supabase. Deploy the Express
+API with its server-only environment variables. Set `VITE_API_BASE_URL` only
+for a separate API origin. Check parent registration, email confirmation,
+student login, progress sync, question publishing, and admin AI using dedicated
+test accounts before replacing the live deployment.

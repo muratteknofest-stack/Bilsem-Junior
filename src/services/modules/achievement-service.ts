@@ -1,3 +1,4 @@
+import { claimServerReward } from '../reward-service';
 import { Achievement, UserProfile } from '../../types';
 import { STORAGE_KEYS, INITIAL_ACHIEVEMENTS, createLockedAchievements } from './shared';
 import { safeStorage } from '../../lib/storage';
@@ -15,7 +16,7 @@ export function getAchievements(): Achievement[] {
       INITIAL_ACHIEVEMENTS.forEach((initAch) => {
         const exists = stored.find((s) => s.id === initAch.id);
         if (!exists) {
-          stored.push({ ...initAch });
+          stored.push({ ...initAch, unlocked: false, unlockedAt: undefined, progress: 0, rewardClaimed: false });
           changed = true;
         } else {
           if (exists.tier !== initAch.tier && initAch.tier) { exists.tier = initAch.tier; changed = true; }
@@ -54,7 +55,8 @@ export function unlockAchievement(id: string): Achievement | null {
   return null;
 }
 
-export function claimBadgeReward(id: string): { success: boolean; xpAwarded: number; achievement: Achievement | null; user: UserProfile } {
+export async function claimBadgeReward(id: string) {
+  if (!getCurrentUser().id.startsWith('demo_')) { const result = await claimServerReward('badge', id); return { ...result, achievement: getAchievements().find(a => a.id === id) || null }; }
   const items = getAchievements();
   const idx = items.findIndex((a) => a.id === id);
   if (idx !== -1 && items[idx].unlocked && !items[idx].rewardClaimed) {
@@ -158,3 +160,4 @@ export function upsertAchievement(achievement: Achievement): void {
   else achievements.unshift(achievement);
   setProgressItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(achievements));
 }
+

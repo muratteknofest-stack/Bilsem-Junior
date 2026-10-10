@@ -1,28 +1,14 @@
-import { doc, updateDoc } from 'firebase/firestore';
-import { db, auth } from '../../lib/firebase';
+import { doc, updateDoc } from '../../lib/supabase-data';
+import { db, auth } from '../../lib/platform';
 import { safeStorage } from '../../lib/storage';
 import { STORAGE_KEYS } from './shared';
 import { UserProfile, UserRole } from '../../types';
 import { clearUserProgress } from './persistence-service';
+import { safeXpAward } from '../../features/student/gamification-model';
 
-export function syncUserFromFirebase(profile: UserProfile | null) {
+export function syncUserFromSupabase(profile: UserProfile | null) {
   if (profile) {
-    // Preserve currently active family role (student or parent) if the user has chosen one
-    const raw = safeStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-    let activeRole = profile.role;
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (parsed.role && (parsed.role === 'student' || parsed.role === 'parent')) {
-          activeRole = parsed.role;
-        }
-      } catch {}
-    }
-    const merged: UserProfile = {
-      ...profile,
-      role: activeRole,
-    };
-    safeStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(merged));
+    safeStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(profile));
     safeStorage.setItem(STORAGE_KEYS.AUTH_SESSION, 'true');
   } else {
     safeStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
@@ -30,7 +16,7 @@ export function syncUserFromFirebase(profile: UserProfile | null) {
   }
 }
 
-export async function _updateFirebaseProfile(updates: Partial<UserProfile>) {
+export async function _updateSupabaseProfile(updates: Partial<UserProfile>) {
   if (!auth.currentUser) return;
   try {
     const ref = doc(db, 'users', auth.currentUser.uid);
@@ -39,7 +25,7 @@ export async function _updateFirebaseProfile(updates: Partial<UserProfile>) {
     );
     await updateDoc(ref, { ...definedUpdates, updatedAt: Date.now() });
   } catch (e) {
-    console.error('Failed to update firebase', e);
+    console.error('Supabase profil güncellemesi başarısız:', e);
   }
 }
 
@@ -53,6 +39,7 @@ export function getCurrentUser(): UserProfile {
       if (parsed.streakFreezeCount === undefined) parsed.streakFreezeCount = 0;
       if (parsed.longestStreak === undefined) parsed.longestStreak = parsed.streak || 0;
       if (parsed.totalQuestionsSolved === undefined) parsed.totalQuestionsSolved = 0;
+      if (Number.isFinite(parsed.xp)) parsed.totalPoints = Math.max(0, Math.floor(parsed.xp));
       if (parsed.resolvedMistakesCount === undefined) parsed.resolvedMistakesCount = 0;
       if (parsed.dailyGoalQuestions === undefined) parsed.dailyGoalQuestions = 10;
       if (parsed.todayQuestionsSolved === undefined) parsed.todayQuestionsSolved = 0;
@@ -64,7 +51,7 @@ export function getCurrentUser(): UserProfile {
   }
   return {
     id: 'guest', name: 'Misafir', role: 'student', avatar: '🦊', grade: 1,
-    level: 1, xp: 0, streak: 0, lastActiveDate: '', dailyGoalMinutes: 15,
+    level: 1, xp: 0, totalPoints: 0, streak: 0, lastActiveDate: '', dailyGoalMinutes: 15,
     todayMinutesSpent: 0, soundEnabled: true, totalQuestionsSolved: 0,
     todayQuestionsSolved: 0, dailyGoalQuestions: 10, dailyGoalSessions: 2,
     todaySessionsCompleted: 0,
@@ -73,27 +60,12 @@ export function getCurrentUser(): UserProfile {
 
 export function setCurrentUser(user: UserProfile) {
   safeStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
-  const {
-    avatar, level, xp, streak, longestStreak, lastActiveDate, todayPracticed,
-    streakFreezeCount, claimedStreakDays, weeklyStreakHistory, dailyGoalMinutes,
-    todayMinutesSpent, dailyGoalQuestions, todayQuestionsSolved, dailyGoalSessions,
-    todaySessionsCompleted, soundEnabled, totalQuestionsSolved, resolvedMistakesCount,
-    featuredBadgeIds, reminderConfig,
-  } = user;
-  void _updateFirebaseProfile({
-    avatar, level, xp, streak, longestStreak, lastActiveDate, todayPracticed,
-    streakFreezeCount, claimedStreakDays, weeklyStreakHistory, dailyGoalMinutes,
-    todayMinutesSpent, dailyGoalQuestions, todayQuestionsSolved, dailyGoalSessions,
-    todaySessionsCompleted, soundEnabled, totalQuestionsSolved, resolvedMistakesCount,
-    featuredBadgeIds, reminderConfig,
-  });
+  const { avatar, dailyGoalMinutes, dailyGoalQuestions, dailyGoalSessions, soundEnabled, featuredBadgeIds, reminderConfig } = user;
+  void _updateSupabaseProfile({ avatar, dailyGoalMinutes, dailyGoalQuestions, dailyGoalSessions, soundEnabled, featuredBadgeIds, reminderConfig });
 }
 
 export function isAuthenticated(): boolean {
   const current = getCurrentUser();
-  if (current?.email === 'muratteknofest@gmail.com' && current?.role === 'admin' && safeStorage.getItem(STORAGE_KEYS.AUTH_SESSION) === 'true') {
-    return true;
-  }
   if (current?.id?.startsWith('demo_') && safeStorage.getItem(STORAGE_KEYS.AUTH_SESSION) === 'true') {
     return true;
   }
@@ -105,7 +77,9 @@ export function loginAs(role: UserRole, customUser?: UserProfile): UserProfile {
     throw new Error('Kimliği doğrulanmamış yerel oturum engellendi.');
   }
 
-  // Allow family account to access either student or parent role smoothly
+  if (!customUser.id?.startsWith('demo_') && role !== customUser.role) {
+    throw new Error('Hesap rolü profil ile eşleşmiyor.');
+  }
   const user: UserProfile = {
     ...customUser,
     role: role,
@@ -113,7 +87,6 @@ export function loginAs(role: UserRole, customUser?: UserProfile): UserProfile {
 
   if (
     user.id !== auth.currentUser?.uid && 
-    user.email !== 'muratteknofest@gmail.com' &&
     !user.id?.startsWith('demo_')
   ) {
     throw new Error('Kimliği doğrulanmamış yerel oturum engellendi.');
@@ -133,6 +106,8 @@ export function loginAs(role: UserRole, customUser?: UserProfile): UserProfile {
 
 export function switchActiveRole(newRole: UserRole): UserProfile {
   const current = getCurrentUser();
+  if (current.role === newRole) return current;
+  if (!current.id?.startsWith('demo_')) throw new Error('Gerçek hesap rolü değiştirilemez.');
   const updatedUser: UserProfile = {
     ...current,
     role: newRole,
@@ -149,11 +124,19 @@ export function logout(): void {
 
 export function addXP(amount: number): { newXP: number; newLevel: number; leveledUp: boolean } {
   const user = getCurrentUser();
-  const oldLevel = user.level;
-  user.xp += amount;
-  const newLevel = Math.floor(user.xp / 250) + 1;
-  const leveledUp = newLevel > oldLevel;
-  user.level = newLevel;
-  setCurrentUser(user);
-  return { newXP: user.xp, newLevel, leveledUp };
+  const currentXP = Number.isFinite(user.xp) ? Math.max(0, Math.floor(user.xp)) : 0;
+  const oldLevel = Math.floor(currentXP / 250) + 1;
+  // Real account rewards can only come from a verified server attempt.
+  if (!user.id.startsWith('demo_')) return { newXP: currentXP, newLevel: oldLevel, leveledUp: false };
+  const newXP = Math.min(Number.MAX_SAFE_INTEGER, currentXP + safeXpAward(amount));
+  const newLevel = Math.floor(newXP / 250) + 1;
+  if (newXP !== currentXP || user.totalPoints !== newXP || user.level !== newLevel) {
+    user.xp = newXP;
+    user.totalPoints = newXP;
+    user.level = newLevel;
+    setCurrentUser(user);
+  }
+  return { newXP, newLevel, leveledUp: newLevel > oldLevel };
 }
+
+

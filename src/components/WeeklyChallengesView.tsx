@@ -147,9 +147,10 @@ export const WeeklyChallengesView: React.FC<WeeklyChallengesViewProps> = ({
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  const handleClaimReward = (challengeId: string) => {
+  const handleClaimReward = async (challengeId: string) => {
     sound.playSuccess();
-    const result = weeklyChallengesService.claimChallengeReward(challengeId);
+    let result;
+    try { result = await weeklyChallengesService.claimChallengeReward(challengeId); } catch (err) { setToastMessage(err instanceof Error ? err.message : 'Ödül kaydedilemedi.'); return; }
     if (result.success) {
       setChallengesState(result.state);
       if (onUserUpdate) onUserUpdate(result.user);
@@ -159,9 +160,10 @@ export const WeeklyChallengesView: React.FC<WeeklyChallengesViewProps> = ({
     }
   };
 
-  const handleClaimGrandChallenge = () => {
+  const handleClaimGrandChallenge = async () => {
     sound.playComboMilestone(10);
-    const result = weeklyChallengesService.claimGrandChallengeReward();
+    let result;
+    try { result = await weeklyChallengesService.claimGrandChallengeReward(); } catch (err) { setToastMessage(err instanceof Error ? err.message : 'Ödül kaydedilemedi.'); return; }
     if (result.success) {
       setChallengesState(result.state);
       if (onUserUpdate) onUserUpdate(result.user);
@@ -664,3 +666,4 @@ export const WeeklyChallengesView: React.FC<WeeklyChallengesViewProps> = ({
     </div>
   );
 };
+

@@ -1,6 +1,6 @@
 import { BaseQuestion, QuestionAiHint, AiHintStep, QuestionType } from '../types';
 import { authenticatedFetch } from '../lib/api-client';
-import { generateFirebaseAiJson } from '../lib/firebase-ai';
+import { generateClientAiJson } from '../lib/client-ai-fallback';
 import { z } from 'zod';
 
 const aiHintResponseSchema = z.object({
@@ -85,7 +85,7 @@ class AiHintService {
       console.warn('AI Hint API unavailable or timed out, switching to Socratic engine:', err);
     }
 
-    const firebaseAiHint = await generateFirebaseAiJson(
+    const firebaseAiHint = await generateClientAiJson(
       [
         'Aşağıdaki BİLSEM sorusu için cevabı doğrudan söylemeden üç aşamalı Sokratik ipucu üret.',
         'Adımlar sırasıyla focus, rule ve elimination tipinde olsun.',
@@ -112,7 +112,7 @@ class AiHintService {
         introEncouragement: firebaseAiHint.introEncouragement,
         steps: firebaseAiHint.steps,
         isAiGenerated: true,
-        modelUsed: 'Firebase AI Logic · Gemini 3.8 Flash',
+        modelUsed: 'Pedagojik yedek',
       };
       this.cache.set(cacheKey, result);
       return result;

@@ -10,7 +10,7 @@ import {
 import { dataService } from './data-service';
 import { safeStorage } from '../lib/storage';
 import { authenticatedFetch } from '../lib/api-client';
-import { generateFirebaseAiJson } from '../lib/firebase-ai';
+import { generateClientAiJson } from '../lib/client-ai-fallback';
 import { z } from 'zod';
 
 const STORAGE_KEY_AI_DAILY_PLAN = 'bilsem_ai_personalized_daily_plan';
@@ -210,7 +210,7 @@ class AiDailyPlanService {
       console.warn('AI Daily Plan API call failed, generating procedural pedagogical plan:', err);
     }
 
-    const firebaseAiPlan = await generateFirebaseAiJson(
+    const firebaseAiPlan = await generateClientAiJson(
       [
         'Gerçek öğrenme verilerine göre bir günlük BİLSEM çalışma planı üret.',
         'Plan kısa, uygulanabilir ve öğrencinin en zayıf alanlarına öncelik veren 2-5 görev içersin.',
@@ -240,7 +240,7 @@ class AiDailyPlanService {
     );
     if (firebaseAiPlan) {
       const tasks: DailyPlanTask[] = firebaseAiPlan.tasks.map((task, index) => ({
-        id: task.id || `firebase-ai-task-${index + 1}`,
+        id: task.id || `client-ai-fallback-task-${index + 1}`,
         title: task.title,
         description: task.description,
         category: task.category,
@@ -269,7 +269,7 @@ class AiDailyPlanService {
         estimatedMinutes: firebaseAiPlan.estimatedMinutes,
         dailySuperpowerTarget: firebaseAiPlan.dailySuperpowerTarget,
         isAiGenerated: true,
-        modelUsed: 'Firebase AI Logic · Gemini 3.8 Flash',
+        modelUsed: 'Pedagojik yedek',
       };
       return this.syncTaskProgressWithUser(plan, user);
     }
