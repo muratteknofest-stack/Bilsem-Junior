@@ -4,6 +4,10 @@
   "framework": "vite",
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/index?__path=:path*" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/blog", "destination": "/blog/index.html" },
+    { "source": "/blog/feed.xml", "destination": "/blog/feed.xml" },
+    { "source": "/blog/:slug", "destination": "/blog/:slug/index.html" },
+    { "source": "/((?!api/|blog(?:/|$)|blog-assets/|robots\\.txt$|sitemap\\.xml$).*)", "destination": "/index.html" }
   ]
 }
+

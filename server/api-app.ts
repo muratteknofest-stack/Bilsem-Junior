@@ -43,7 +43,7 @@ export function createApiApp() {
         defaultSrc: ["'self'"], scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
-        imgSrc: ["'self'", 'data:', 'blob:', 'https://images.unsplash.com'],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https://images.unsplash.com', 'https://images.pexels.com'],
         connectSrc: ["'self'", 'https://*.googleapis.com', 'https://*.supabase.co', 'wss://*.supabase.co'],
       },
     } : false,
