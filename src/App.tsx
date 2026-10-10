@@ -5,6 +5,7 @@ import { useAuth } from './contexts/AuthContext';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { UserProfile, UserRole, SkillMastery, MistakeItem, DailyStudyPlan, ReminderAlertEvent, CognitiveCategory } from './types';
 import { dataService } from './services/data-service';
+import { openLinkedStudentSession } from './services/account-security-service';
 import { sound } from './lib/sound';
 import { reminderService } from './services/reminder-service';
 import { demoQuestionsRemaining, isDemoUser } from './lib/demo-access';
@@ -36,12 +37,19 @@ export default function App() {
   // if (authLoading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>;
 
   const handleLogout = async () => {
+    pendingStudentIdRef.current = null;
+    setIsSwitchingStudent(false);
+    setStudentSwitchError(null);
     await authLogout();
     setIsAuth(false);
     setCurrentRoute('login');
   };
 
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => dataService.getCurrentUser());
+  const [isSwitchingStudent, setIsSwitchingStudent] = useState(false);
+  const [studentSwitchError, setStudentSwitchError] = useState<string | null>(null);
+  const pendingStudentIdRef = useRef<string | null>(null);
+  const previousAccountIdRef = useRef(userProfile?.id);
   const [isAuth, setIsAuth] = useState<boolean>(() => dataService.isAuthenticated());
   const [loginRole, setLoginRole] = useState<UserRole>('student');
   const [loginMode, setLoginMode] = useState<'login' | 'register'>('login');
@@ -97,7 +105,23 @@ export default function App() {
     if (userProfile) {
       setCurrentUser(userProfile);
       setIsAuth(true);
-      if (currentRoute === 'login' || currentRoute === 'landing' || (userProfile.role === 'admin' && currentRoute === 'dashboard')) {
+      const accountChanged = previousAccountIdRef.current !== userProfile.id;
+      previousAccountIdRef.current = userProfile.id;
+      if (accountChanged) {
+        setStudentSwitchError(null);
+        setMasteries(dataService.getSkillMasteries());
+        setMistakes(dataService.getMistakes());
+        setDailyPlan(dataService.getDailyPlan());
+      }
+      if (pendingStudentIdRef.current === userProfile.id && userProfile.role === 'student') {
+        pendingStudentIdRef.current = null;
+        setIsSwitchingStudent(false);
+        setStudentSwitchError(null);
+        setMasteries(dataService.getSkillMasteries());
+        setMistakes(dataService.getMistakes());
+        setDailyPlan(dataService.getDailyPlan());
+        setCurrentRoute('dashboard');
+      } else if (accountChanged || currentRoute === 'login' || currentRoute === 'landing' || (userProfile.role === 'admin' && currentRoute === 'dashboard')) {
         setCurrentRoute(isDemoUser(userProfile.id) && userProfile.role !== 'student' ? 'demo-limit' : userProfile.role === 'student' ? 'dashboard' : (userProfile.role === 'parent' ? 'parent' : 'admin'));
       }
     } else {
@@ -112,6 +136,36 @@ export default function App() {
       }
     }
   }, [userProfile]);
+
+  useEffect(() => {
+    if (!isSwitchingStudent) return;
+    const timeout = window.setTimeout(() => {
+      pendingStudentIdRef.current = null;
+      setIsSwitchingStudent(false);
+      setStudentSwitchError('Öğrenci profili yüklenemedi. Lütfen yeniden giriş yapın.');
+    }, 30000);
+    return () => window.clearTimeout(timeout);
+  }, [isSwitchingStudent]);
+
+  const openStudentPanel = async () => {
+    if (pendingStudentIdRef.current) return;
+    const studentId = userProfile?.role === 'parent' ? userProfile.linkedStudentIds?.[0] : undefined;
+    if (!studentId) {
+      setStudentSwitchError('Bu veli hesabına bağlı öğrenci bulunamadı. Lütfen destek bölümünden yardım isteyin.');
+      return;
+    }
+    pendingStudentIdRef.current = studentId;
+    setIsSwitchingStudent(true);
+    setStudentSwitchError(null);
+    try {
+      await openLinkedStudentSession(studentId);
+      // AuthContext loads the student's own profile and progress before routing.
+    } catch (error) {
+      pendingStudentIdRef.current = null;
+      setIsSwitchingStudent(false);
+      setStudentSwitchError(error instanceof Error ? error.message : 'Öğrenci paneli açılamadı. Tekrar deneyin.');
+    }
+  };
 
   // Subscribe to background/instant study reminder alerts
   useEffect(() => {
@@ -207,7 +261,7 @@ export default function App() {
     // Bidirectional switching between student and parent:
     if (targetRoute === 'parent') {
       if (userProfile?.role !== 'parent' && !u.id.startsWith('demo_')) {
-        setCurrentRoute('dashboard');
+        handleNavigateToLogin('parent');
         return;
       }
       const updated = { ...u, role: 'parent' as UserRole };
@@ -221,7 +275,7 @@ export default function App() {
 
     if (targetRoute === 'dashboard') {
       if (userProfile?.role === 'parent' && !u.id.startsWith('demo_')) {
-        setCurrentRoute('parent');
+        void openStudentPanel();
         return;
       }
       const updated = { ...u, role: 'student' as UserRole };
@@ -262,6 +316,14 @@ export default function App() {
       setCurrentRoute('demo-limit');
       return;
     }
+    if (newRole === 'student' && userProfile?.role === 'parent') {
+      void openStudentPanel();
+      return;
+    }
+    if (newRole === 'parent' && userProfile?.role === 'student') {
+      handleNavigateToLogin('parent');
+      return;
+    }
     if (!currentUser.id.startsWith('demo_') && userProfile?.role !== newRole) return;
     if (newRole === 'admin' && (!authUser || userProfile?.role !== 'admin')) return;
     sound.playClick();
@@ -297,6 +359,7 @@ export default function App() {
           onNavigateHome={() => navigateTo(isAuth ? (currentUser?.role === 'parent' ? 'parent' : currentUser?.role === 'admin' ? 'admin' : 'dashboard') : 'landing')}
           onNavigate={navigateTo}
           onSwitchRole={handleSwitchRole}
+          isSwitchingStudent={isSwitchingStudent}
           currentRoute={currentRoute}
           onOpenReminderSettings={() => setShowGlobalReminderModal(true)}
           onLogout={handleLogout}
@@ -304,6 +367,8 @@ export default function App() {
       )}
 
       {isAuth && <ProgressSyncBanner />}
+      {studentSwitchError && <div role="alert" className="mx-auto my-3 w-full max-w-7xl rounded-xl border border-rose-200 bg-rose-50 px-5 py-3 text-sm text-rose-800">{studentSwitchError}</div>}
+      {isSwitchingStudent && <div role="status" className="mx-auto my-3 w-full max-w-7xl rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-3 text-sm text-indigo-800">Öğrenci oturumu açılıyor…</div>}
       {/* Main View Router */}
       <div role={currentRoute === 'landing' ? undefined : 'main'} className={`flex-1 w-full ${currentRoute === 'landing' ? '' : 'overflow-x-hidden'}`}>
         <Suspense fallback={<div className="min-h-[50vh] flex items-center justify-center" role="status">Yükleniyor…</div>}>
@@ -407,6 +472,7 @@ export default function App() {
                 student={currentUser}
                 masteries={masteries}
                 onNavigate={navigateTo}
+                isSwitchingStudent={isSwitchingStudent}
               />
             )}
 

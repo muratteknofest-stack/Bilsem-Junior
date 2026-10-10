@@ -16,6 +16,7 @@ interface NavbarProps {
   onOpenReminderSettings: () => void;
   onLogout?: () => void;
   onSwitchRole?: (role: UserRole) => void;
+  isSwitchingStudent?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -24,7 +25,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNavigate,
   currentRoute,
   onLogout,
-  onSwitchRole
+  onSwitchRole,
+  isSwitchingStudent = false
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [soundOn, setSoundOn] = useState(sound.enabled === true);
@@ -89,6 +91,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="hidden sm:flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
             <button
               type="button"
+              disabled={isSwitchingStudent}
+              aria-busy={isSwitchingStudent}
               onClick={() => {
                 sound.playClick();
                 if (onSwitchRole) onSwitchRole('student');
@@ -105,6 +109,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
             <button
               type="button"
+              disabled={isSwitchingStudent}
               onClick={() => {
                 sound.playClick();
                 if (onSwitchRole) onSwitchRole('parent');
@@ -183,6 +188,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {!isLanding && currentUser && (
             <button 
+              disabled={isSwitchingStudent}
               onClick={() => {
                 sound.playClick();
                 if(onLogout) onLogout();
@@ -252,6 +258,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {role !== 'admin' && (
                     <div className="grid grid-cols-2 gap-2 pb-2 border-b border-zinc-200 dark:border-slate-800">
                       <button
+                        disabled={isSwitchingStudent}
+                        aria-busy={isSwitchingStudent}
                         onClick={() => {
                           setIsMobileMenuOpen(false);
                           sound.playClick();
@@ -265,6 +273,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <GraduationCap className="w-4 h-4" /> Öğrenci Paneli
                       </button>
                       <button
+                        disabled={isSwitchingStudent}
                         onClick={() => {
                           setIsMobileMenuOpen(false);
                           sound.playClick();
@@ -309,6 +318,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
                   )}
                   <button 
+                    disabled={isSwitchingStudent}
                     onClick={() => {
                       setIsMobileMenuOpen(false);
                       sound.playClick();
@@ -326,3 +336,4 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
+

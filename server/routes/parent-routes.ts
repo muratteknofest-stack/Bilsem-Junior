@@ -17,8 +17,33 @@ import {
   type AuthenticatedRequest,
 } from '../security';
 import { accountSecurityLimiter, reportLimiter } from '../rate-limiters';
+import { createStudentSessionHandler } from '../student-session';
 
 const parentRoutes = Router();
+
+parentRoutes.post('/parent/student-session', requireSupabaseAuth, requireVerifiedEmail,
+  requireProfileRole('parent'), accountSecurityLimiter, sharedRateLimit('student-panel-switch', 20, 3600),
+  createStudentSessionHandler({
+    async profile(id) {
+      const data = (await getAdminDb().doc(`users/${id}`).get()).data();
+      return data ? { id: data.id, role: data.role, linkedStudentIds: data.linkedStudentIds, linkedParentId: data.linkedParentId } : undefined;
+    },
+    async audit(parentId, studentId) {
+      await getAdminDb().collection('securityEvents').add({ type: 'student_session_requested_by_parent', actorId: parentId, studentId, createdAt: Date.now() });
+    },
+    async createSession(studentId) {
+      // getServiceClient returns an isolated, non-persistent client for this request.
+      const client = getServiceClient();
+      const existing = await client.auth.admin.getUserById(studentId);
+      if (existing.error || !existing.data.user?.email) throw new Error('Student account unavailable');
+      const link = await client.auth.admin.generateLink({ type: 'magiclink', email: existing.data.user.email });
+      if (link.error || link.data.user?.id !== studentId || !link.data.properties?.hashed_token) throw new Error('Student link unavailable');
+      const verified = await client.auth.verifyOtp({ token_hash: link.data.properties.hashed_token, type: 'email' });
+      if (verified.error || !verified.data.session || verified.data.user?.id !== studentId) throw new Error('Student session unavailable');
+      return { studentId, access_token: verified.data.session.access_token, refresh_token: verified.data.session.refresh_token };
+    },
+  }),
+);
 
 parentRoutes.post('/parent/activate-students', requireSupabaseAuth, requireVerifiedEmail, accountSecurityLimiter, requireProfileRole('parent'), sharedRateLimit('parent-actions', 6, 3600), async (req: AuthenticatedRequest, res) => {
   const client = getServiceClient();

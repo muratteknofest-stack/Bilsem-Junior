@@ -77,9 +77,10 @@ interface ParentPortalViewProps {
   student?: UserProfile | null;
   masteries: SkillMastery[];
   onNavigate?: (route: string) => void;
+  isSwitchingStudent?: boolean;
 }
 
-export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: parentOrStudent, masteries, onNavigate }) => {
+export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: parentOrStudent, masteries, onNavigate, isSwitchingStudent = false }) => {
   const prefersReducedMotion = useReducedMotion();
   const [currentStudent, setCurrentStudent] = useState<UserProfile>(() => {
     return parentOrStudent || dataService.getCurrentUser() || {
@@ -397,17 +398,22 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
           {/* Action Hub */}
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-2.5 w-full md:w-auto justify-start md:justify-end">
             {onNavigate && (
+              <div className="col-span-2 sm:col-span-1">
               <button
                 type="button"
+                disabled={isSwitchingStudent}
+                aria-busy={isSwitchingStudent}
                 onClick={() => {
                   sound.playClick();
                   onNavigate('dashboard');
                 }}
-                className="zp-dashboard-primary col-span-2 sm:col-span-1 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center justify-center gap-2 text-xs sm:text-sm shadow-xs transition-colors cursor-pointer min-h-[42px]"
+                className="zp-dashboard-primary w-full px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center justify-center gap-2 text-xs sm:text-sm shadow-xs transition-colors cursor-pointer min-h-[42px] disabled:opacity-60 disabled:cursor-wait"
               >
                 <GraduationCap className="w-4 h-4" />
-                <span>Öğrenci Paneline Geç</span>
+                <span>{isSwitchingStudent ? 'Öğrenci paneli açılıyor…' : 'Öğrenci Paneline Geç'}</span>
               </button>
+              <p className="mt-2 max-w-xs text-xs text-zinc-500 dark:text-zinc-400">Bu cihazda öğrenci oturumu açılır. Veli paneline dönmek için yeniden giriş yapın.</p>
+              </div>
             )}
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -1327,4 +1333,5 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
     </div>
   );
 };
+
 

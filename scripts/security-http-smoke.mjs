@@ -33,7 +33,14 @@ try {
   assert.equal(reset.status, 401, 'Unauthenticated password change');
   assert.equal(reset.headers.get('cache-control'), 'no-store');
   await reset.arrayBuffer();
-  console.log(`Production HTTP security: ${checks.length + 1} checks passed.`);
+  const studentSwitch = await fetch(base + '/api/parent/student-session', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ studentId: '22222222-2222-4222-8222-222222222222' }), signal: AbortSignal.timeout(3000),
+  });
+  assert.equal(studentSwitch.status, 401, 'Unauthenticated student-session switch');
+  assert.equal(studentSwitch.headers.get('cache-control'), 'no-store');
+  await studentSwitch.arrayBuffer();
+  console.log(`Production HTTP security: ${checks.length + 2} checks passed.`);
 } finally {
   if (child.exitCode === null) { child.kill('SIGTERM'); await new Promise(resolve => child.once('exit', resolve)); }
 }
