@@ -112,7 +112,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return;
               }
               if (profile.role === 'admin') {
-                const token = await user.getIdTokenResult(true);
+                // Refreshing inside every Auth event emits another event and
+                // starts an endless token-refresh loop. Verify the current JWT;
+                // privileged API routes independently check the protected role.
+                const token = await user.getIdTokenResult();
                 if (!isCurrent()) return;
                 adminAuthorized = user.emailVerified && token.claims.role === 'admin';
                 if (!adminAuthorized) {

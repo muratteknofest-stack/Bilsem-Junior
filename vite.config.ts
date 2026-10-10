@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import {defineConfig, Plugin} from 'vite';
 import { blogPlugin } from './scripts/blog-vite-plugin';
+import { blogConfig } from './scripts/blog-engine';
 
 // LINT.IfChange(aistudio_media_plugin)
 function aistudioMediaPlugin(): Plugin {
@@ -71,7 +72,10 @@ export default defineConfig(() => {
     envPrefix: ['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY', 'VITE_API_BASE_URL'],
     plugins: [react(), tailwindcss(), aistudioMediaPlugin(), blogPlugin()],
     // Vercel serves /api in this project. Ignore stale external API settings there.
-    define: process.env.VERCEL === '1' ? { 'import.meta.env.VITE_API_BASE_URL': JSON.stringify('') } : {},
+    define: {
+      ...(process.env.VERCEL === '1' ? { 'import.meta.env.VITE_API_BASE_URL': JSON.stringify('') } : {}),
+      'import.meta.env.VITE_PUBLIC_SITE_URL': JSON.stringify(blogConfig().origin),
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { registerFamilySchema, registerStudentSchema } from '../server/routes/auth-routes';
 import { passwordResetSchema } from '../src/lib/validations';
+import { hasRecoveryClaims, isPasswordRecoveryLocation, passwordRecoveryRedirect } from '../src/lib/password-recovery';
 
 const family = {
   parentEmail: '  VELI@example.com  ',
@@ -42,4 +43,32 @@ test('password reset needs a strong password and matching confirmation', () => {
   assert.equal(passwordResetSchema.safeParse({ password: 'YeniŞifre123', confirmPassword: 'wrong123' }).success, false);
   assert.equal(passwordResetSchema.safeParse({ password: '12345678', confirmPassword: '12345678' }).success, false);
 });
+
+test('recovery errors returning to the home page still open the recovery screen', () => {
+  for (const url of [
+    'https://zekapark.vercel.app/#error=access_denied&error_code=otp_expired',
+    'https://zekapark.vercel.app/?error_code=otp_expired',
+    'https://zekapark.vercel.app/#type=recovery&access_token=test-only',
+    'https://zekapark.vercel.app/reset-password',
+  ]) assert.equal(isPasswordRecoveryLocation(new URL(url)), true);
+  assert.equal(isPasswordRecoveryLocation(new URL('https://zekapark.vercel.app/')), false);
+  assert.equal(isPasswordRecoveryLocation(new URL('https://zekapark.vercel.app/#type=signup')), false);
+});
+
+test('a verified recovery session remains eligible after reload; other sessions do not', () => {
+  assert.equal(hasRecoveryClaims({ sub: 'owner', amr: [{ method: 'recovery' }, { method: 'token_refresh' }] }), true);
+  for (const claims of [undefined, {}, { amr: [{ method: 'recovery' }] },
+    { sub: 'owner', amr: [{ method: 'password' }], user_metadata: { amr: [{ method: 'recovery' }] } },
+    { sub: 'owner', amr: [{ method: 'email/signup' }] }, { sub: 'owner', amr: 'recovery' },
+  ]) assert.equal(hasRecoveryClaims(claims), false);
+});
+
+test('reset requests from previews use the configured production recovery page', () => {
+  assert.equal(passwordRecoveryRedirect('https://old-preview.vercel.app', 'https://zekapark.vercel.app'), 'https://zekapark.vercel.app/reset-password');
+  assert.equal(passwordRecoveryRedirect('http://localhost:3000'), 'http://localhost:3000/reset-password');
+  for (const origin of ['http://example.com', 'https://user:secret@example.com', 'https://example.com/path', 'https://example.com/?next=evil']) {
+    assert.throws(() => passwordRecoveryRedirect('https://zekapark.vercel.app', origin));
+  }
+});
+
 

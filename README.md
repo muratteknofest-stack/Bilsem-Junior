@@ -66,3 +66,11 @@ student login, progress sync, question publishing, and admin AI using dedicated
 test accounts before replacing the live deployment.
 
 Database operations and migration history: [supabase/MIGRATION.md](supabase/MIGRATION.md).
+
+## Password recovery
+
+Supabase Auth Site URL must be `https://zekapark.vercel.app`; explicitly allow
+`https://zekapark.vercel.app/reset-password` in Redirect URLs. Set
+`PUBLIC_SITE_URL=https://zekapark.vercel.app` at build time so new preview builds
+also send recovery links to the current production page. Recovery links are
+single-use; request a new email from `/reset-password` when an old link expires.

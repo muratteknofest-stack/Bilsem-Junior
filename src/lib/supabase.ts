@@ -1,4 +1,5 @@
 import { createClient, type User as SupabaseUser } from '@supabase/supabase-js';
+import { hasRecoveryClaims, isPasswordRecoveryLocation, passwordRecoveryRedirect } from './password-recovery';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -25,7 +26,7 @@ const browserStorage = {
 };
 
 export const isRecoveryRedirect = typeof window !== 'undefined' &&
-  new URLSearchParams(window.location.hash.slice(1)).get('type') === 'recovery';
+  isPasswordRecoveryLocation(window.location);
 
 export const supabase = createClient(url, key, {
   auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true, storage: browserStorage },
@@ -52,7 +53,13 @@ export async function isPasswordRecoveryReady(): Promise<boolean> {
   // Wait for Supabase to consume the redirect token before judging the link.
   // A fixed wall-clock timeout can reject valid links on slower connections.
   const { error } = await supabase.auth.initialize();
-  return !error && recoverySessionReady;
+  if (error) return false;
+  if (recoverySessionReady) return true;
+  // A reload loses the in-memory event flag, but not the verified recovery
+  // session. Ordinary password/sign-up sessions must not unlock this form.
+  const { data, error: claimsError } = await supabase.auth.getClaims();
+  recoverySessionReady = !claimsError && hasRecoveryClaims(data?.claims);
+  return recoverySessionReady;
 }
 
 export async function updateRecoveredPassword(password: string) {
@@ -168,7 +175,7 @@ export async function sendEmailVerification(_user: User) {
 }
 export async function sendPasswordResetEmail(_auth: typeof auth, email: string) {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/reset-password`,
+    redirectTo: passwordRecoveryRedirect(window.location.origin, import.meta.env.VITE_PUBLIC_SITE_URL),
   });
   if (error) throw error;
 }
