@@ -14,7 +14,8 @@ test('Postgres enforces private answer snapshots, atomic rewards, account isolat
       create function auth.jwt() returns jsonb language sql stable as $$select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb$$;
       create function auth.uid() returns uuid language sql stable as $$select nullif(auth.jwt()->>'sub','')::uuid$$;
       grant execute on function auth.jwt(),auth.uid() to anon,authenticated,service_role;`);
-    for (const file of ['schema.sql', 'migrations/20261005180525_admin_claim_only.sql', 'migrations/20261010085952_server_verified_learning.sql', 'migrations/20261010090133_protect_verified_progress.sql', 'migrations/20261010091235_distributed_api_limits.sql']) await db.exec(await readFile(new URL('../supabase/' + file, import.meta.url), 'utf8'));
+    // Match the live fresh-project schema: there is no historical is_admin helper.
+    for (const file of ['schema.sql', 'migrations/20261010085952_server_verified_learning.sql', 'migrations/20261010090133_protect_verified_progress.sql', 'migrations/20261010091235_distributed_api_limits.sql', 'migrations/20261010122109_private_security_helpers.sql']) await db.exec(await readFile(new URL('../supabase/' + file, import.meta.url), 'utf8'));
     const result = await db.exec(await readFile(new URL('./supabase-learning.integration.sql', import.meta.url), 'utf8'));
     assert.match(String(result.at(-1)?.rows[0]?.status), /checks passed/);
     assert.equal((await db.query<{ count: number }>('select count(*) from auth.users')).rows[0].count, 0);

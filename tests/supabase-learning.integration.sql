@@ -1,6 +1,11 @@
 -- Run against a project with both learning migrations installed.
 -- All fixtures and changes are rolled back.
 begin;
+do $$ begin
+  if to_regprocedure('public.is_admin()') is not null or to_regprocedure('public.has_active_session()') is not null then raise exception 'internal helpers exposed as public RPCs'; end if;
+  if (select prosecdef from pg_proc where oid='public.patch_user_progress(jsonb)'::regprocedure) then raise exception 'public progress wrapper has definer privileges'; end if;
+  if has_schema_privilege('anon','zekapark_private','USAGE') or has_function_privilege('anon','zekapark_private.is_admin()','EXECUTE') or has_function_privilege('anon','zekapark_private.has_active_session()','EXECUTE') or has_function_privilege('anon','zekapark_private.patch_user_progress(jsonb)','EXECUTE') then raise exception 'anonymous private helper access'; end if;
+end $$;
 insert into auth.users(id,email,role,aud,email_confirmed_at) values
 ('11111111-1111-4111-8111-111111111111','learning-test@example.invalid','authenticated','authenticated',now()),
 ('22222222-2222-4222-8222-222222222222','other-test@example.invalid','authenticated','authenticated',now());
@@ -59,7 +64,7 @@ do $$
 begin
   if (select count(*) from public.questions) <> 0 then raise exception 'published answer keys visible'; end if;
   if (select count(*) from public.profiles) <> 1 then raise exception 'other profile visible'; end if;
-  if not public.has_active_session() then raise exception 'active session rejected'; end if;
+  if not zekapark_private.has_active_session() then raise exception 'active session rejected'; end if;
   update public.profiles set avatar='Test' where id='11111111-1111-4111-8111-111111111111';
   perform public.patch_user_progress('{"zekapark_study_favorites_v1":"[\"matrix\"]"}');
   begin
@@ -87,18 +92,34 @@ reset role;
 update auth.sessions set not_after=now()-interval '1 second' where id='33333333-3333-4333-8333-333333333333';
 set local role authenticated;
 do $$ begin
- if public.has_active_session() or (select count(*) from public.profiles)<>0 then raise exception 'expired session still authorized'; end if;
+ if zekapark_private.has_active_session() or (select count(*) from public.profiles)<>0 then raise exception 'expired session still authorized'; end if;
 end $$;
 reset role;
 delete from auth.sessions where id='33333333-3333-4333-8333-333333333333';
 set local role authenticated;
 do $$
 begin
-  if public.has_active_session() or (select count(*) from public.profiles) <> 0 then raise exception 'revoked session still authorized'; end if;
+  if zekapark_private.has_active_session() or (select count(*) from public.profiles) <> 0 then raise exception 'revoked session still authorized'; end if;
   begin
     perform public.patch_user_progress('{"zekapark_study_favorites_v1":"[]"}');
     raise exception 'revoked session write accepted';
   exception when invalid_parameter_value then null; end;
+end $$;
+reset role;
+-- Admin question access must track current, provider-owned metadata.
+update auth.users set raw_app_meta_data='{"role":"admin"}' where id='22222222-2222-4222-8222-222222222222';
+insert into auth.sessions(id,user_id,created_at,updated_at) values
+('88888888-8888-4888-8888-888888888888','22222222-2222-4222-8222-222222222222',now(),now());
+select set_config('request.jwt.claims','{"role":"authenticated","sub":"22222222-2222-4222-8222-222222222222","session_id":"88888888-8888-4888-8888-888888888888","app_metadata":{"role":"admin"}}',true);
+set local role authenticated;
+do $$ begin
+  if not zekapark_private.is_admin() or not exists(select 1 from public.questions where id='learning-test-answer-key') then raise exception 'verified admin cannot read question bank'; end if;
+end $$;
+reset role;
+update auth.users set raw_app_meta_data='{}' where id='22222222-2222-4222-8222-222222222222';
+set local role authenticated;
+do $$ begin
+  if zekapark_private.is_admin() or exists(select 1 from public.questions where id='learning-test-answer-key') then raise exception 'stale admin JWT still grants question access'; end if;
 end $$;
 reset role;
 rollback;

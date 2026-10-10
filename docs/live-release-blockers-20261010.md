@@ -1,38 +1,55 @@
-# Canlı yayın için doğrulanan eksikler — 10 Ekim 2026
+# Canlı yayın ve kalan doğrulamalar — 10 Ekim 2026
 
-## Tamamlanan kod değişiklikleri
+## Yayın sonucu
 
-- Aile kaydında veli ve öğrenci parolaları, hesap açılmadan önce Have I Been Pwned Pwned Passwords range API üzerinden denetlenir. Öğrenci parola yenilemesi ve veli/yönetici kurtarma akışı aynı kontrolden geçer. Tam parola veya tam hash gönderilmez; yalnızca SHA-1 özetinin ilk beş karakteri gönderilir. Padding istenir; yanıt boyutu, zaman aşımı, eşzamanlı istek ve önbellek sınırlandırılmıştır.
-- Sızdırılmış parola 422; ulaşılamayan veya geçersiz kontrol servisi 503 döndürür ve parola işlemi yapılmaz. Bu dış servise bağımlılık, güvenlik kontrolü kesildiğinde kayıt ve parola yenilemeyi geçici olarak durdurur. Kayıt öncesinde iki parola kontrol edilerek yarım hesap oluşturma riski azaltılır.
-- Kendi parolasını değiştiren doğrulanmış veli/yönetici, kullanıcı JWT'si ile sağlayıcının kullanıcı endpoint'inden geçirilir. Böylece sağlayıcının kurtarma ve yeniden doğrulama politikaları korunur. İşlem sonrası eski oturumlar iptal edilir. İstemci yalnızca 204 cevabını başarı kabul eder.
-- Kullanılmayan doğrudan istemci signUp yardımcısı kaldırıldı. Bu uygulama koruması Supabase Auth'ın bütün dış istemcilerine uygulanan yerleşik bir politika değildir; ücretsiz planda yerleşik leaked-password uyarısı devam eder. Pro plan satın alınmadı.
-- Gizlilik açıklamasına parola kontrolü aktarımı eklendi; yeni kayıtların KVKK metin sürümü 2026-10-10.1 oldu. Geçmiş onaylar değiştirilmedi. Bu teknik açıklama, işletmecinin hukuki dayanak ve aktarım değerlendirmesini tamamlamaz.
-- `/api/health` veritabanı erişiminin yanında public proje referansı ve Vercel commit kimliği döndürür. `npm run verify:live -- ORIGIN COMMIT_SHA PROJECT_REF`, HTML giriş sayfasını ve yönlendirmeleri reddeder; yalnızca doğru commit ve veritabanına bağlı JSON yanıtını kabul eder. Bu kontrol oturumlu uçtan uca test yerine geçmez.
-- Vercel derlemesi aynı proje içindeki /api uç noktalarını kullanır. VERCEL=1 ve kasıtlı yanlış VITE_API_BASE_URL ile derleme başarılı oldu; 52 tarayıcı paketinde bu eski adres bulunmadı. Mevcut korunan önizleme üzerinde yeni yayın kontrolü çalıştırıldı ve beklenen şekilde başarısız oldu; giriş duvarını sağlıklı API saymadı.
+PR #14 ve #13 birleştirildi. Uygulama https://zekapark.vercel.app/ ve blog https://zekapark.vercel.app/blog adreslerinde yayında. İlk üretim commit'i 22eeda86bfbe485071175ba6e212ac7c334576f3; Vercel dağıtımı 5wgSXFP1QAVtnJM6NYCN5NDXV8K3 READY olarak doğrulandı. Bu raporu içeren takip değişikliği, uygulanan son migration kaynaklarını ve testleri ana dala kaydeder.
 
-## Vercel yönetim ekranında doğrulanan yapılandırma
+Altı kategoride 30 özgün yazı, ilgili gerçek Pexels fotoğrafları, kaynak/görsel bilgileri ve yayın ilkeleri eklendi. Tam yazılar statik HTML ile okunuyor; canonical, BlogPosting/Breadcrumb, robots.txt, 40 URL'lik sitemap ve RSS mevcut. Teknik hazırlık aramalarda gösterim veya sıralama garantisi değildir.
 
-Kod doğrulaması: 133 test başarılı (14 yeni parola/yayın regresyon kontrolü dahil); öğrenci akışları 7/7; üretim HTTP güvenlik kontrolleri 12/12; TypeScript kontrolü ve Vercel derlemesi başarılı. npm audit geliştirme bağımlılıkları dahil bilinen açık 0 döndürdü. Parola testi gerçek parolalara veya hesaplara erişmez; sahte range yanıtları ve bağımlılık taklitleri kullanır.
+Ana sayfa/blog ortak gerçek uygulama bilgileriyle güncellenmiş footer kullanıyor. Yedi bilgi sayfası hesap, veli, destek, gizlilik ve güvenlik akışlarını açıklıyor. Desteklenmeyen bilgiler ve vaatler kaldırıldı; mobil menü ve kayıt açıklamaları güncellendi. Eksik işletmeci bilgileri uydurulmadı.
 
-Proje: `zekapark`, takım: `dyds-projects-c415ba7a`. Üretim adresi: `https://zekapark.vercel.app/`. Üretim hâlâ `main` dalındaki `d662710cdab75f368f5d3edcdbc695845cb4c8ed` sürümünü kullanıyor. Yönetim ekranı mevcut yetkili hesapla okunabildi; connector isteği 403 ve önizleme testi giriş duvarında kaldı. Gizli değişken değerleri okunmadı veya kopyalanmadı.
+Sunucu doğrulamalı çalışma, sınav, tekrar ve ödül akışları yayında. Puanlar sunucuda hesaplanır; öğrenciye cevap anahtarı gönderilmez. Eski ilerleme silinmedi ve geçmiş puanlar geriye dönük doğrulanmış sayılmaz. CSP, frame-ancestors none, DENY, nosniff ve API no-store doğrulandı. Sunucu paketi/haritası public dist dışında; hassas hata nesneleri loglanmıyor.
 
-| Değişken | Gözlenen kapsam | Yeni sürümün ihtiyaç duyduğu kapsam/değer |
+Parola işlemleri Pwned Passwords range kontrolünden geçer. Yalnızca SHA-1 özetinin beş karakterlik ön eki gönderilir; tam parola/hash aktarılmaz. Padding, yanıt boyutu, zaman aşımı, önbellek ve eşzamanlı istek sınırı var. Sızdırılmış parola 422, kontrol hatası 503 döndürür; işlem durur. Aile kaydında iki parola hesap açılmadan denetlenir. Veli/yönetici kurtarması sağlayıcının kullanıcı endpoint'ini kullanıcı JWT'si ile kullanır; oturumlar iptal edilir. İstemci yalnızca 204 cevabını başarı sayar. Yeni KVKK sürümü 2026-10-10.1; eski onaylar değişmedi.
+
+## Vercel yapılandırması ve canlı kanıt
+
+Proje zekapark, takım dyds-projects-c415ba7a, veritabanı vehhvsdkifwstbjhnhao. Kullanıcının onayıyla mevcut SUPABASE_SERVICE_ROLE_KEY yalnızca Production kapsamına taşındı; değeri okunmadı, kopyalanmadı veya değiştirilmedi. Bütün Preview dallarına açılmadı. Güvenilir blog önizlemesine ayrı anahtar girdisi oluşturulmadı; önizleme sağlığı doğrulanmış değildir.
+
+Production Supabase URL/public publishable yapılandırması ve PUBLIC_SITE_URL eklendi. APP_BASE_URL üretim adresine güncellendi. Eski VITE_API_BASE_URL değerleri okunmadı/değiştirilmedi; Vercel derlemesi bunları yok sayıp aynı kaynak /api kullanır. Vercel dışı ayrı sunucu ayarı korunur.
+
+`npm run verify:live -- https://zekapark.vercel.app 22eeda86bfbe485071175ba6e212ac7c334576f3 vehhvsdkifwstbjhnhao` başarılı: doğru commit, doğru proje ve hazır veritabanı JSON ile doğrulandı. HTML giriş sayfası ve yönlendirme sağlık kanıtı sayılmaz. Sonraki dağıtımda gerçek yeni commit ile tekrar çalıştırılmalıdır.
+
+Canlı 13 HTTP/SEO kontrolü başarılı: ana sayfa/blog/gizlilik 200, bilinmeyen blog/API 404, yetkisiz hesap/yönetici 401, yetkisiz öğrenme/parola POST 401, robots/sitemap/RSS 200 ve hostile Origin 403. Güvenlik başlıkları, API no-store, doğru sitemap/canonical ve üretim noindex bulunmaması doğrulandı. Blog masaüstü görünümü canlı tarayıcıda kontrol edildi; mobil, ekran okuyucu veya oturumlu aile testi değildir.
+
+## Canlı veritabanı koruması
+
+Yeni API üretime alındıktan sonra son iki migration uygulandı:
+
+| Kaynak dosya | Canlı migration kaydı | Sonuç |
 |---|---|---|
-| SUPABASE_SERVICE_ROLE_KEY | Yalnızca Preview, feature/supabase-fresh-start-20261006 | Aynı ZekaPark projesinin Production sunucusu ve yalnızca test edilen güvenilir önizleme dalı. Değer gizli kalmalı; bütün önizleme dallarına açılmamalı. |
-| SUPABASE_URL | Önce yalnızca Preview; Production Config eklendi ve listede doğrulandı | https://vehhvsdkifwstbjhnhao.supabase.co |
-| VITE_SUPABASE_URL | Önce yalnızca Preview; Production Config eklendi ve listede doğrulandı | Aynı Supabase URL'si |
-| VITE_SUPABASE_PUBLISHABLE_KEY | Önce yalnızca Preview; Production Config eklendi ve listede doğrulandı | Aynı projenin public publishable anahtarı |
-| VITE_API_BASE_URL | Eski dal için ayrı Config; eski Production/Preview Secret girdisi de var | Değer okunmadı/değiştirilmedi. Vercel derlemesi artık bu eski ayarı yok sayıp aynı kaynak /api kullanır. Vercel dışındaki ayrı sunucu dağıtımlarının ayarı korunur. |
-| APP_BASE_URL | İlk görünür listede yer almıyordu; isimle filtrelenince mevcut Production/Preview Secret girdisi doğrulandı | https://zekapark.vercel.app olarak güncellendi; başarı bildirimi ve Updated just now gözlendi. Bu bir adres ayarıdır; kimlik bilgisi değildir. |
-| PUBLIC_SITE_URL | Önce yoktu; Production Config eklendi ve listede doğrulandı | https://zekapark.vercel.app; önizleme canonical üretimi hedeflemeli ve noindex kalmalı. |
+| 20261010085952_server_verified_learning.sql | 20261010085952 server_verified_learning | Sunucuya özel çalışma/ödül işlemleri |
+| 20261010091235_distributed_api_limits.sql | 20261010091235 distributed_api_limits | İşçiler arasında ortak istek limiti |
+| 20261010090133_protect_verified_progress.sql | 20261010121716 protect_verified_progress | XP/ilerleme koruması, gizli soru bankası, aktif oturum RLS |
+| 20261010122109_private_security_helpers.sql | 20261010122154 private_security_helpers | Yetkili yardımcılar zekapark_private şemasına taşındı; public progress RPC SECURITY INVOKER |
 
-SMTP/doğrulama e-postası gönderimi ve Supabase Auth Site URL/izin verilen dönüş URL'leri ayrıca sınanmalı; liste görünümü e-posta teslimini kanıtlamaz. Dört açık Production Config girdisi eklendi ve APP_BASE_URL adresi güncellendi; yeni dağıtım yapılana kadar mevcut sürümü etkilemezler. Gizli sunucu anahtarı değiştirilmedi. Anahtarın üretime ve yeni önizleme dalına kapsam genişletmesi, tarayıcı güvenlik politikası gereği kaydetme anında kullanıcı onayı ister. Preview için yalnızca feature/professional-blog-20261010 dalına ayrı girdi kullanılmalı; Production + bütün Preview dalları seçilmemelidir. Yeni kimlik bilgisi girilecekse kullanıcı devralmalıdır.
+Yeni proje tarihsel is_admin migration'ını içermiyordu. Koruma migration'ı kendi doğrulanmış yönetici yardımcısını oluşturacak şekilde düzeltildi. Yetki auth.users üzerindeki güncel sağlayıcı metadata'sı ve doğrulanmış e-postadan okunur; eski JWT yönetici rolü erişim vermez. PostgreSQL test başlangıcı canlı yeni şemayı yansıtır.
 
-## Kapanması için dış işlem gereken bulgular
+Son `tests/supabase-learning.integration.sql` canlıda başarılı çalıştı. Ayrılmış sahte hesaplar tek transaction içinde kullanıldı ve rollback yapıldı. Tek seferlik XP/ödül, revision çakışması, değiştirilemeyen sonuç, hesap sahipliği, cevap anahtarı/snapshot gizliliği, sahte XP/mastery reddi, avatar/favori izni, süresi geçmiş/iptal edilmiş oturum reddi ve yönetici yetkisi kaldırılınca eski JWT reddi doğrulandı. Public yetkili yardımcıların kaldırılması, anonim private erişim reddi ve invoker wrapper da test edildi.
 
-1. Yukarıdaki yapılandırma tamamlanıp test ailesiyle kayıt, doğrulama, öğrenci aktivasyonu, çalışma, sınav, tekrar ve veli raporu sınanmalı. Ardından PR #14 fix dalına, PR #13 main dalına alınabilir. Ana dal değişikliği üretim dağıtımı tetikler; yeni üretim commit'i ayrıca doğrulanmalı.
-2. `20261010090133_protect_verified_progress.sql` yeni uygulamaya geçişle birlikte uygulanmalı. Eski uygulama çalışırken tek başına uygulanmaz; mevcut istemci akışını bozar. Sonrasında istemci XP yazımı, soru cevap anahtarlarına erişim ve iptal edilmiş oturumların reddi canlı kontrol edilmelidir.
-3. Git geçmişindeki eski Firebase yönetici parolası ilgili sağlayıcıda değiştirilmeli ve oturumlar iptal edilmelidir. Firebase yönetim bağlantısı kurulmadı; bu değişiklik doğrulanmadı. Değer buraya yazılmadı.
-4. İşletmeci adı/unvanı, yazışma adresi, resmî iletişim e-postası ve veri işleme dayanak/saklama/aktarım kararları işletmeci tarafından sağlanmalıdır. Kullanıcı bilgileri paylaşacağını belirtti; henüz değer vermedi. Bilgi uydurulmadı.
+Protect_profile_progress aktif; 13 public tablonun tamamında RLS açık; özel öğrenme tablolarında istemci grant'ı yok. Test hesabı kalmadı. Dört mevcut profilin işlem öncesi/sonrası içerik parmak izi aynı; kullanıcı verileri rapora alınmadı.
 
-Bu rapor tamamlanmış bir canlı penetrasyon testi veya bütün açıkların kapandığına dair garanti değildir. Kod düzeltmeleri GitHub değişiklik dalında incelenebilir; canlı kapsam, izin ve kimlik bilgisi işlemleri ayrı doğrulanmalıdır.
+Canlı migration zamanları kaynak dosyalardan farklıdır. Mevcut projeye schema.sql veya geçmiş migration'lar topluca yeniden uygulanmamalı; isim/içerik ve migration kaydı eşleştirilmeli. Eski doğrudan puanlayan uygulamaya dönmek güvenlik korumasını kaldırmak için gerekçe değildir.
+
+## Testler ve açık kalan sınırlar
+
+- Son npm test: 133/133; gerçek PostgreSQL motoru ile RLS/transaction testi dahil.
+- Öğrenci testleri 7/7; TypeScript, bağımsız ve Vercel derlemeleri başarılı. Son SQL/test değişikliklerinden sonra tüm 133 test yeniden geçti.
+- Yerel üretim HTTP 12/12; canlı HTTP/SEO 13/13. npm audit geliştirme bağımlılıkları dahil bilinen açık 0; önceki OSV 362 pakette 0. Yeni uygulama bağımlılığı eklenmedi.
+- Son Security Advisors: ERROR yok; API'ye açık SECURITY DEFINER uyarıları kalktı. İstemci erişimine kapalı sekiz sunucu tablosundaki RLS Enabled No Policy INFO kasıtlıdır. [Açıklama](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy).
+- Yerleşik Supabase leaked-password koruması Free planda etkin değil; bir WARN sürüyor. Uygulama kontrolü sağlayıcı ayarının yerini bütün dış Auth istemcileri için tutmaz. Pro plan satın alınmadı. [Açıklama](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
+- Gerçek test ailesiyle kayıt, e-posta teslimi/doğrulaması, öğrenci aktivasyonu, çalışma/sınav/tekrar ve veli raporu canlı tarayıcıdan tamamlanmadı. SMTP, Auth Site URL ve redirect izinleri bu kontrollerle kanıtlanmaz.
+- Git geçmişindeki eski Firebase yönetici kimlik bilgisinin sağlayıcıda değiştirilmesi ve oturum iptali doğrulanamadı; yetkili Firebase yönetim erişimi yok. Eski değer rapora/loga kopyalanmadı.
+- İşletmeci adı/unvanı, yazışma adresi, resmî e-posta ve hukuki dayanak/saklama/aktarım kararları henüz verilmedi.
+
+Bu rapor hedefli kod, HTTP ve veritabanı kontrollerini kaydeder; tam penetrasyon testi veya bütün açıkların kapandığına dair garanti değildir.

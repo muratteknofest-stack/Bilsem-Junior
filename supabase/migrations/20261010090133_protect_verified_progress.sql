@@ -1,5 +1,17 @@
 -- Activate ONLY after the learning API has been deployed and smoke-tested.
 -- This removes legacy client authority over scoring and published answer keys.
+-- Fresh production projects may not contain the older admin-helper migration.
+-- Read provider-owned metadata, so stale/client-edited JWT metadata cannot grant admin access.
+create or replace function public.is_admin() returns boolean
+language sql stable security definer set search_path = '' as $$
+  select auth.uid() is not null and exists (
+    select 1 from auth.users u where u.id=auth.uid()
+      and u.email_confirmed_at is not null and u.raw_app_meta_data->>'role'='admin'
+  );
+$$;
+revoke all on function public.is_admin() from public,anon;
+grant execute on function public.is_admin() to authenticated,service_role;
+
 create or replace function public.protect_profile_progress() returns trigger
 language plpgsql security invoker set search_path = '' as $$
 begin

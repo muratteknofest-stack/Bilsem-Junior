@@ -19,7 +19,9 @@ Doğrulanmamış telefon, ofis adresi, çalışma saati, dört saatte yanıt vaa
 
 API zaten no-store önbellek politikası, doğrulanmış oturum, rol/yetki kontrolü, sunucu puanlama ve ortak istek limiti kullanıyor. Bu kontroller yeniden test edildi; var olan korumaların eklenmiş olduğu iddia edilmedi.
 
-## Canlı ortamda kalan bulgular
+## İlk incelemenin tarihsel bulguları
+
+**Son durum:** PR #14 ve #13 birleşti; üretim yayında. Son ilerleme koruması ve private yardımcı migration'ı uygulandı; canlı transaction testi geçti. 133 test ve 13 canlı HTTP/SEO kontrolü başarılı. Blog masaüstü görünümü tarayıcıda incelendi. Aşağıdaki ilk kayıtlar güncel yayın durumunu temsil etmez; [güncel rapor](live-release-blockers-20261010.md) esas alınmalıdır.
 
 Sonraki düzeltme turunda uygulama tarafı parola koruması, sunucu üzerinden parola kurtarma ve gerçek sürümü doğrulayan health kontrolü eklendi. Yeni Vercel kapsam bulguları ve halen kapanmamış canlı işlemler için [güncel rapora](live-release-blockers-20261010.md) bakın. Aşağıdaki tablo bu incelemenin ilk canlı durumunu kaydeder; yerleşik Supabase leaked-password koruması ücretsiz planda etkinleşmedi.
 
