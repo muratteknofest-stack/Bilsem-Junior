@@ -73,3 +73,19 @@ test('exam answers can be cleared before finish without revealing correctness', 
   assert.equal(finishLearningSession(cleared, now+3000).result!.blankAnswers, 1);
   assert.throws(() => answerLearningSession(fixture(), 0, null, now+1000));
 });
+import { difficultyChoices, fitsLearningSelection, learningStartSchema, sameLearningSelection, ACTIVE_BANK_VERSION, type LearningSelection } from '../src/features/student/learning-selection';
+test('grade and difficulty selections reject stale sessions and out-of-scope questions', () => {
+  const selection: LearningSelection = { grade: 2, difficulty: 2, category: 'mixed', exam: 'mini', count: 15, bankVersion: ACTIVE_BANK_VERSION };
+  const q = generateQuestion({ targetGrade: 2, difficulty: 2, seed: 213546, type: 'visual_sequence' });
+  assert.equal(fitsLearningSelection(q, selection), true);
+  assert.equal(fitsLearningSelection({ ...q, targetGrade: 1 }, selection), false);
+  assert.equal(fitsLearningSelection({ ...q, difficulty: 3 }, selection), false);
+  for (const override of [{ grade: 3 }, { difficulty: 'mixed' }, { category: 'pattern' }, { exam: 'standard' }, { bankVersion: 'old' }]) assert.equal(sameLearningSelection({ ...selection, ...override } as LearningSelection, selection), false);
+  assert.equal(sameLearningSelection(undefined, selection), false);
+  assert.equal(sameLearningSelection(selection, selection), true);
+  assert.deepEqual([1,2,3,4].map(g => difficultyChoices(g as 1|2|3|4).length), [2,3,4,6]);
+  assert.equal(learningStartSchema.safeParse({ mode: 'exam', difficulty: 7 }).success, false);
+  assert.equal(learningStartSchema.safeParse({ mode: 'practice', expectedGrade: 5 }).success, false);
+  assert.equal(learningStartSchema.safeParse({ mode: 'practice', studentId: 'other' }).success, false);
+  assert.equal(learningStartSchema.parse({ mode: 'exam' }).difficulty, 'mixed');
+});

@@ -93,6 +93,10 @@ test('unfinished registrations clean up only newly created identities, including
   for (const fail of ['profiles','cleanup'] as const) { const result=await run({ fail }); assert.equal(result.status,503); assert.deepEqual(result.actions.filter(a=>a.startsWith('delete:')),[`delete:${studentId}`,`delete:${parentId}`]); assert.ok(!result.actions.includes('mail')); }
 });
 const draft: RegistrationDraft = { parentEmail:' VELI@example.com ',password:'VeliGüvenli937',passwordConfirmation:'VeliGüvenli937',studentName:'Deniz',grade:2,studentPassword:'ÖğrenciGüvenli938',studentPasswordConfirmation:'ÖğrenciGüvenli938',kvkkConsent:true,termsAccepted:true,guardianConfirmed:true };
+test('registration requires an explicit supported school grade', () => {
+  for (const grade of [0,5]) assert.ok(validateRegistrationDraft({ ...draft, grade },1).grade);
+  for (const grade of [1,2,3,4]) assert.equal(validateRegistrationDraft({ ...draft, grade },1).grade,undefined);
+});
 test('registration steps validate only their fields; final review catches earlier edits and missing consent', () => {
   assert.deepEqual(validateRegistrationDraft(draft),{});
   const broken={...draft,parentEmail:'wrong',passwordConfirmation:'wrong',studentPassword:draft.password,studentPasswordConfirmation:draft.password,guardianConfirmed:false};

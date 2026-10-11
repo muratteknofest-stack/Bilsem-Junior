@@ -136,4 +136,17 @@ do $$ begin
 end $$;
 reset role;
 rollback;
+begin;
+insert into auth.users(id,email) values ('99999999-9999-4999-8999-999999999999','grade-test@example.invalid');
+insert into public.profiles(id,name,role,grade,xp) values ('99999999-9999-4999-8999-999999999999','Grade test','student',1,27);
+insert into public.learning_sessions(student_id,mode,title,questions,created_at,expires_at,selection) values ('99999999-9999-4999-8999-999999999999','practice','Old grade','[{"targetGrade":1}]',now()-interval '1 minute',now()+interval '10 minutes','{"grade":1}');
+select set_config('request.jwt.claims','{"role":"service_role"}',true);
+do $$ declare p jsonb; begin
+  if has_function_privilege('anon','public.change_student_grade(uuid,integer)','EXECUTE') or has_function_privilege('authenticated','public.change_student_grade(uuid,integer)','EXECUTE') then raise exception 'grade RPC exposed'; end if;
+  p:=public.change_student_grade('99999999-9999-4999-8999-999999999999',4);
+  if p->>'grade'<>'4' or p->>'xp'<>'27' then raise exception 'grade or XP incorrect'; end if;
+  if exists(select 1 from public.learning_sessions where student_id='99999999-9999-4999-8999-999999999999' and expires_at>clock_timestamp()) then raise exception 'old grade remains active'; end if;
+  begin perform public.change_student_grade('99999999-9999-4999-8999-999999999999',5); raise exception 'invalid grade accepted'; exception when invalid_parameter_value then null; end;
+end $$;
+rollback;
 select 'learning integration checks passed; fixtures rolled back' as status;

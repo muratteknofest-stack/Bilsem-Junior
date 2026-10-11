@@ -19,7 +19,7 @@ interface Props {
 }
 const field = 'mt-2 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500';
 const steps = ['Veli bilgileri', 'Öğrenci bilgileri', 'Kontrol ve onay'];
-const emptyDraft: RegistrationDraft = { parentEmail: '', password: '', passwordConfirmation: '', studentName: '', grade: 2, studentPassword: '', studentPasswordConfirmation: '', kvkkConsent: false, termsAccepted: false, guardianConfirmed: false };
+const emptyDraft: RegistrationDraft = { parentEmail: '', password: '', passwordConfirmation: '', studentName: '', grade: 0, studentPassword: '', studentPasswordConfirmation: '', kvkkConsent: false, termsAccepted: false, guardianConfirmed: false };
 
 export function RegistrationForm({ setErrorMessage, onRegisterSuccess, onBusyChange, onLogin }: Props) {
   const [draft, setDraft] = useState<RegistrationDraft>(emptyDraft);
@@ -110,7 +110,8 @@ export function RegistrationForm({ setErrorMessage, onRegisterSuccess, onBusyCha
         {step === 1 && <>
           <label className="block text-sm font-semibold text-slate-700" htmlFor="child-alias">Öğrencinin takma adı<input id="child-alias" required minLength={2} maxLength={50} autoComplete="off" value={draft.studentName} onChange={e => update('studentName', e.target.value)} aria-invalid={Boolean(errors.studentName)} aria-describedby="alias-help alias-error" className={field} /><span id="alias-help" className="mt-1 block text-xs font-normal text-slate-600">Ad soyad, okul veya adres yazmanız gerekmez.</span></label>
           <p id="alias-error" className="text-sm text-rose-700">{errors.studentName}</p>
-          <label className="block text-sm font-semibold text-slate-700" htmlFor="child-grade">Sınıf<select id="child-grade" className={field} value={draft.grade} onChange={e => update('grade', Number(e.target.value))} aria-invalid={Boolean(errors.grade)} aria-describedby="grade-error">{[1,2,3,4].map(g => <option key={g} value={g}>{g}. sınıf</option>)}</select></label>
+          <label className="block text-sm font-semibold text-slate-700" htmlFor="child-grade">Öğrencinin sınıf düzeyi<select id="child-grade" required className={field} value={draft.grade} onChange={e => update('grade', Number(e.target.value))} aria-invalid={Boolean(errors.grade)} aria-describedby="grade-error grade-help"><option value={0} disabled>Sınıf seçin</option>{[1,2,3,4].map(g => <option key={g} value={g}>{g}. sınıf</option>)}</select></label>
+          <p id="grade-help" className="text-xs text-slate-600">Sorular bu sınıfa göre seçilir. Daha sonra öğrenci profilinden değiştirebilirsiniz.</p>
           <p id="grade-error" className="text-sm text-rose-700">{errors.grade}</p>
           <NewPasswordFields label="Öğrenci şifresi" value={draft.studentPassword} confirmation={draft.studentPasswordConfirmation} onChange={v => update('studentPassword', v)} onConfirmation={v => update('studentPasswordConfirmation', v)} error={errors.studentPassword} confirmationError={errors.studentPasswordConfirmation} disabled={controls.fieldsDisabled} />
           <p className="text-xs text-slate-600">Öğrenci şifresi veli şifresinden farklı olmalıdır. Öğrenci hesabı, veli e-postası doğrulanıp veli paneline giriş yapıldığında etkinleşir.</p>

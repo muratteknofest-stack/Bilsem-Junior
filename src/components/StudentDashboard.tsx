@@ -1,4 +1,5 @@
 import { isAvailableCategory } from '../features/student/available-categories';
+import { StudentGradeSelector } from './StudentGradeSelector';
 import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import confetti from 'canvas-confetti';
@@ -331,6 +332,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                   Bilişsel hedeflerine bugün de bir adım daha yaklaşmaya hazır mısın?
                 </p>
 
+                <StudentGradeSelector key={activeUser.id} user={activeUser} onSaved={onUserUpdate} />
                 {/* XP & Next Level Bar */}
                 <div className="mt-3 sm:mt-4 max-w-md w-full">
                   <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">
@@ -447,7 +449,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           onResumeExam={onStartExam}
         />
 
-        <WordwallLibrary key={`wordwall-${activeUser.id}`} initialGrade={activeUser.grade} />
+        <WordwallLibrary key={`wordwall-${activeUser.id}-${activeUser.grade}`} initialGrade={activeUser.grade} />
 
         {/* Modern Segmented Navigation Bar */}
         <div className="zp-dashboard-tabs p-1.5 bg-zinc-200/70 dark:bg-zinc-900/80 rounded-2xl w-full border border-zinc-200/80 dark:border-zinc-800/80 shadow-inner gap-1" role="group" aria-label="Öğrenci paneli bölümleri">

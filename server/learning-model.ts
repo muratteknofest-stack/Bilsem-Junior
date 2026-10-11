@@ -4,10 +4,12 @@ import { evaluateResponse, type QuestionResponse } from '../src/features/questio
 import { isQuestionReadyForStudents } from '../src/features/questions/quality';
 import { answerXp } from '../src/features/student/gamification-model';
 import type { LearningMode, LearningResult, LearningSessionView, PublicLearningQuestion } from '../src/features/student/learning-contract';
+import type { LearningSelection } from '../src/features/student/learning-selection';
 
 export interface LearningSession {
   id: string; student_id: string; mode: LearningMode; title: string; questions: BaseQuestion[];
   review_mistake_id?: string | null;
+  selection?: LearningSelection;
   answers: Record<string, { response: QuestionResponse; correct: boolean; xp: number }>;
   created_at: string; expires_at: string; finished_at: string | null; revision: number; rewarded_xp: number; result: LearningResult | null;
 }

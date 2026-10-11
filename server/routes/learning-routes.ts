@@ -7,7 +7,8 @@ import { getServiceClient } from '../supabase-admin';
 import { requireSupabaseAuth, requireVerifiedEmail, requireProfileRole, type AuthenticatedRequest } from '../security';
 import { authenticatedRateLimitKey } from '../rate-limiters';
 import { generateQuestion } from '../../src/features/questions/generators';
-import { isSchoolGrade } from '../../src/features/questions/quality-policy';
+import { EDUCATION_PROFILES, isSchoolGrade } from '../../src/features/questions/quality-policy';
+import { ACTIVE_BANK_VERSION, fitsLearningSelection, learningStartSchema, sameLearningSelection, type LearningDifficulty, type LearningSelection } from '../../src/features/student/learning-selection';
 import { isQuestionReadyForStudents, questionContentKey } from '../../src/features/questions/quality';
 import { AVAILABLE_CATEGORIES } from '../../src/features/student/available-categories';
 import { COGNITIVE_CATEGORY_LABELS, type BaseQuestion, type SkillMastery } from '../../src/types';
@@ -22,7 +23,7 @@ import { configuredExams } from '../../src/lib/platform-settings';
 
 const routes = Router();
 routes.use('/learning', requireSupabaseAuth, requireVerifiedEmail, requireProfileRole('student'), sharedRateLimit('student-learning', 600, 600), rateLimit({ windowMs: 10 * 60_000, limit: 600, standardHeaders: 'draft-8', legacyHeaders: false, keyGenerator: authenticatedRateLimitKey, message: { error: 'Çalışma istek sınırına ulaşıldı. Biraz sonra yeniden dene.' } }));
-const startSchema = z.object({ mode: z.enum(['practice', 'adaptive', 'exam']), category: z.enum(['mixed', ...AVAILABLE_CATEGORIES]).default('mixed'), exam: z.enum(['mini', 'standard', 'marathon']).default('mini') }).strict();
+const startSchema = learningStartSchema;
 const responseSchema = z.discriminatedUnion('mode', [
   z.object({ mode: z.enum(['choice', 'place']), optionId: z.string().min(1).max(20) }).strict(),
   z.object({ mode: z.literal('number'), value: z.string().max(16) }).strict(),
@@ -53,18 +54,24 @@ function handleError(error: unknown, res: import('express').Response) {
   if (error instanceof LearningError) return res.status(error.status).json({ error: error.message });
   throw error;
 }
+routes.patch('/learning/grade', async (req: AuthenticatedRequest, res) => {
+  const parsed = z.object({ grade: z.number().int().min(1).max(4) }).strict().safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: '1–4 arasında bir sınıf seçmelisin.' });
+  const { data, error } = await getServiceClient().rpc('change_student_grade', { p_student: req.authUser!.uid, p_grade: parsed.data.grade });
+  if (error) throw error;
+  return res.json({ profile: fromSupabaseRow('profiles', data) });
+});
 routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, keyGenerator: authenticatedRateLimitKey, message: { error: 'Biraz dinlenip yeniden çalışmaya başlayabilirsin.' } }), async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = startSchema.safeParse(req.body);
     if (!parsed.success) throw new LearningError('Çalışma seçenekleri geçersiz.', 400);
     const { mode, exam } = parsed.data, student = req.authUser!.uid, client = getServiceClient();
-    const active = await client.from('learning_sessions').select('*').eq('student_id', student).eq('mode', mode).is('finished_at', null).maybeSingle();
-    if (active.error) throw active.error;
-    if (active.data && Date.parse(active.data.expires_at) > Date.now()) return res.json(learningView(active.data as LearningSession));
-    if (active.data) await commit(student, active.data.id, finishLearningSession);
     const profile = await client.from('profiles').select('grade').eq('id', student).single();
     if (profile.error) throw profile.error;
     if (!isSchoolGrade(profile.data.grade)) throw new LearningError('Çalışma için 1–4. sınıf bilgisi gerekli.');
+    if (parsed.data.expectedGrade !== undefined && parsed.data.expectedGrade !== profile.data.grade) throw new LearningError('Sınıfın başka bir ekranda değişti. Ana sayfaya dönüp yeniden başla.', 409);
+    const difficulty = parsed.data.difficulty as LearningDifficulty;
+    if (difficulty !== 'mixed' && difficulty > EDUCATION_PROFILES[profile.data.grade].maxDifficulty) throw new LearningError('Bu zorluk seçtiğin sınıf için uygun değil.', 400);
     let category = mode === 'exam' ? 'mixed' : parsed.data.category;
     if (mode === 'adaptive') {
       const progress = await client.from('user_private_state').select('values').eq('user_id', student).maybeSingle();
@@ -76,24 +83,33 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const configuration = await readPlatformSettings();
     const settings = configuredExams(configuration.settings).find(e => e.id === exam)!;
     const count = mode === 'exam' ? settings.count : mode === 'adaptive' ? 1 : 5;
-    let bank = client.from('questions').select('data').eq('status', 'published').eq('target_grade', profile.data.grade).limit(300);
+    const selection: LearningSelection = { grade: profile.data.grade, difficulty, category, exam: mode === 'exam' ? exam : '', count, bankVersion: ACTIVE_BANK_VERSION };
+    const active = await client.from('learning_sessions').select('*').eq('student_id', student).eq('mode', mode).is('finished_at', null).maybeSingle();
+    if (active.error) throw active.error;
+    if (active.data && Date.parse(active.data.expires_at) > Date.now() && sameLearningSelection(active.data.selection, selection)) return res.json(learningView(active.data as LearningSession));
+    if (active.data) await commit(student, active.data.id, finishLearningSession);
+    let bank = client.from('questions').select('data').eq('status', 'published').eq('target_grade', profile.data.grade).order('id').range(0, 999);
     if (category !== 'mixed') bank = bank.eq('category', category);
+    if (difficulty !== 'mixed') bank = bank.eq('difficulty', difficulty);
     const pool = await bank;
     if (pool.error) throw pool.error;
-    const candidates = (pool.data || []).map(row => row.data).filter(isQuestionReadyForStudents);
+    const candidates = (pool.data || []).map(row => row.data).filter(q => fitsLearningSelection(q, selection));
     for (let i = candidates.length - 1; i > 0; i--) { const j = randomInt(i + 1); [candidates[i], candidates[j]] = [candidates[j], candidates[i]]; }
     const questions: BaseQuestion[] = [], seen = new Set<string>();
-    for (const q of candidates) { const key = questionContentKey(q); if (!seen.has(key)) { seen.add(key); questions.push(q); } if (questions.length === count) break; }
+    for (const q of candidates) { if (!isQuestionReadyForStudents(q)) continue; const key = questionContentKey(q); if (!seen.has(key)) { seen.add(key); questions.push(q); } if (questions.length === count) break; }
     for (let tries = 0; questions.length < count && tries < count * 50; tries++) {
-      const q = generateQuestion({ targetGrade: profile.data.grade, category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number], seed: randomInt(1, 2147483647) });
+      const q = generateQuestion({ targetGrade: profile.data.grade, difficulty: difficulty === 'mixed' ? randomInt(1, EDUCATION_PROFILES[profile.data.grade].maxDifficulty + 1) as import('../../src/types').DifficultyLevel : difficulty, category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number], seed: randomInt(1, 2147483647) });
       const key = questionContentKey(q);
-      if (!seen.has(key)) { seen.add(key); questions.push(q); }
+      if (!seen.has(key) && fitsLearningSelection(q, selection) && isQuestionReadyForStudents(q)) { seen.add(key); questions.push(q); }
     }
     if (questions.length !== count) throw new LearningError('Bu çalışma için yeterli doğrulanmış soru hazır değil.');
+    const latestProfile = await client.from('profiles').select('grade').eq('id', student).single();
+    if (latestProfile.error) throw latestProfile.error;
+    if (latestProfile.data.grade !== selection.grade) throw new LearningError('Sınıfın değişti. Yeni sınıfınla tekrar başla.', 409);
     const now = new Date(), seconds = mode === 'exam' ? settings.seconds : 3600;
     const session = { id: randomUUID(), student_id: student, mode, title: mode === 'exam' ? settings.title : mode === 'adaptive' ? 'Adaptif çalışma' : category === 'mixed' ? 'Karışık pratik' : COGNITIVE_CATEGORY_LABELS[category as keyof typeof COGNITIVE_CATEGORY_LABELS], questions: prepareLearningQuestions(questions), answers: {}, created_at: now.toISOString(), expires_at: new Date(now.getTime() + seconds * 1000).toISOString(), finished_at: null, result: null };
-    const inserted = await client.from('learning_sessions').insert(session).select('*').single();
-    if (inserted.error?.code === '23505') { const concurrent = await client.from('learning_sessions').select('*').eq('student_id', student).eq('mode', mode).is('finished_at', null).single(); if (concurrent.error) throw concurrent.error; return res.json(learningView(concurrent.data as LearningSession)); }
+    const inserted = await client.from('learning_sessions').insert({ ...session, selection }).select('*').single();
+    if (inserted.error?.code === '23505') { const concurrent = await client.from('learning_sessions').select('*').eq('student_id', student).eq('mode', mode).is('finished_at', null).single(); if (concurrent.error) throw concurrent.error; if (!sameLearningSelection(concurrent.data.selection, selection)) throw new LearningError('Başka bir ekranda farklı bir çalışma başlatıldı. Yeniden dene.', 409); return res.json(learningView(concurrent.data as LearningSession)); }
     if (inserted.error) throw inserted.error;
     return res.status(201).json(learningView(inserted.data as LearningSession));
   } catch (error) { return handleError(error, res); }
@@ -128,6 +144,9 @@ routes.post('/learning/review', async (req: AuthenticatedRequest, res) => {
     const mistakes = JSON.parse(progress.data?.values?.yapyap_mistakes || '[]') as Array<{ id: string; resolved: boolean; cachedQuestion: BaseQuestion }>;
     const mistake = mistakes.find(m => m.id === parsed.data.mistakeId);
     if (!mistake || mistake.resolved || !isQuestionReadyForStudents(mistake.cachedQuestion)) throw new LearningError('Bu soru tamamlanmış veya yeniden inceleme bekliyor.');
+    const profile = await client.from('profiles').select('grade').eq('id', student).single();
+    if (profile.error) throw profile.error;
+    if (mistake.cachedQuestion.targetGrade !== profile.data.grade) throw new LearningError('Bu tekrar farklı bir sınıfa ait. İncelemek için profilinden o sınıfı seçebilirsin.', 409);
     const active = await client.from('learning_sessions').select('*').eq('student_id', student).eq('mode', 'practice').is('finished_at', null).maybeSingle();
     if (active.error) throw active.error;
     if (active.data?.review_mistake_id === mistake.id && Date.parse(active.data.expires_at) > Date.now()) return res.json(learningView(active.data as LearningSession));

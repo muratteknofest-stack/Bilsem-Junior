@@ -12,12 +12,18 @@ import { apiUrl } from '../lib/api-client';
 import { learningService } from '../services/learning-service';
 import { AnswerRequestGate, nextUnansweredIndex, saveAndAdvance } from '../features/student/answer-progression';
 import { AnswerHistory, type ReviewedAnswer } from './AnswerHistory';
+import { dataService } from '../services/data-service';
+import { difficultyChoices, type LearningDifficulty } from '../features/student/learning-selection';
+import { isSchoolGrade } from '../features/questions/quality-policy';
 
 const button = 'min-h-11 rounded-xl bg-indigo-700 px-5 py-3 font-bold text-white disabled:opacity-50 focus-visible:outline-4 focus-visible:outline-indigo-300';
 interface Props { mode: LearningMode; initialCategory?: LearningCategory; reviewMistakeId?: string; onNavigateHome: () => void; }
 export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMistakeId, onNavigateHome }: Props) {
   const [category, setCategory] = useState<LearningCategory>(isAvailableCategory(initialCategory) ? initialCategory : 'mixed');
   const [exam, setExam] = useState('mini');
+  const [difficulty, setDifficulty] = useState<LearningDifficulty>('mixed');
+  const selectedGrade = dataService.getCurrentUser().grade;
+  const grade = isSchoolGrade(selectedGrade) ? selectedGrade : 1;
   const [exams, setExams] = useState<Array<{id: string; title: string; count: number; seconds: number}>>([...LEARNING_EXAMS]);
   useEffect(() => {
     const controller = new AbortController();
@@ -50,7 +56,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
   };
   const start = async () => { const saved = await run(() => {
     if (mode === 'adaptive' && session?.result) remember(session);
-    return reviewMistakeId ? learningService.review(reviewMistakeId) : learningService.start(mode, category, exam);
+    return reviewMistakeId ? learningService.review(reviewMistakeId) : learningService.start(mode, category, exam, difficulty);
   }); if (saved && mounted.current) { const next = mode === 'exam' ? 0 : nextUnansweredIndex(saved); setIndex(next < 0 ? saved.questions.length - 1 : next); } };
   const savePending = async () => {
     if (!session || mode !== 'exam' || session.result || Date.now() >= Date.parse(session.expiresAt)) return true;
@@ -102,7 +108,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
         if (!mounted.current) return advanced.session;
         // Keep the completed question visible and retryable if loading the next one fails.
         setSession(advanced.session);
-        const nextSession = await learningService.start(mode, category, exam);
+        const nextSession = await learningService.start(mode, category, exam, difficulty);
         if (mounted.current) setIndex(0);
         return nextSession;
       }
@@ -121,6 +127,11 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
     else await finish();
   };
   const restart = () => { setSession(null); setResponse(null); setIndex(0); setError(''); };
+  const chooseNewDifficulty = async () => {
+    if (!session || busy || !await savePending()) return;
+    const completed = session.result ? session : await run(() => learningService.finish(session.id));
+    if (completed && mounted.current) { remember(completed); restart(); }
+  };
   return <main className="mx-auto w-full max-w-5xl space-y-5 px-4 py-6 sm:px-6">
     <header className="flex flex-wrap items-center justify-between gap-3">
       <div><p className="text-sm font-bold text-indigo-600">ZekaPark</p><h1 className="text-2xl font-extrabold">{session?.title || title}</h1></div>
@@ -130,8 +141,10 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
     <AnswerHistory items={history} />
     {!session ? <section className="space-y-5 rounded-3xl border border-indigo-100 bg-white p-5 sm:p-8">
       <h2 className="text-xl font-bold">{mode === 'exam' ? 'Denemeni seç' : mode === 'adaptive' ? 'Sana uygun sorularla ilerle' : 'Bugün hangi alanda çalışalım?'}</h2>
+      <p className="font-semibold text-indigo-700">{grade}. sınıf soruları · Sınıfını öğrenci profilinden değiştirebilirsin.</p>
       <p className="text-slate-600">{mode === 'exam' ? 'Cevaplarını sınav boyunca değiştirebilirsin. Sonuç ve açıklamalar bitirdiğinde gösterilir. Devam eden denemen varsa kaldığın yerden açılır.' : mode === 'adaptive' ? 'Çalışma geçmişine göre tekrar edebileceğin bir alan seçilir. Her sorudan sonra açıklamasını inceleyebilirsin.' : 'Beş soruluk bir çalışma seni bekliyor. Yarım kalan çalışman varsa önce ona devam edebilirsin.'}</p>
       {mode === 'practice' && <label className="block font-semibold">Çalışma alanı<select value={category} onChange={e => setCategory(e.target.value as LearningCategory)} disabled={busy} className="mt-2 block min-h-12 w-full rounded-xl border border-slate-300 bg-white p-3"><option value="mixed">Karışık pratik</option>{AVAILABLE_CATEGORIES.map(c => <option key={c} value={c}>{COGNITIVE_CATEGORY_LABELS[c]}</option>)}</select></label>}
+      {!reviewMistakeId && <label className="block font-semibold">Zorluk düzeyi<select value={difficulty} onChange={e => setDifficulty(e.target.value === 'mixed' ? 'mixed' : Number(e.target.value) as LearningDifficulty)} disabled={busy} className="mt-2 block min-h-12 w-full rounded-xl border border-slate-300 bg-white p-3"><option value="mixed">Karışık zorluk</option>{difficultyChoices(grade).map(d => <option key={d.value} value={d.value}>{d.label}</option>)}</select><span className="mt-1 block text-sm font-normal text-slate-600">Yalnızca sınıfına uygun seviyeler gösterilir. Seçimini değiştirirsen yeni bir çalışma başlar.</span></label>}
       {mode === 'exam' && <fieldset className="flex flex-wrap gap-3"><legend className="mb-2 font-semibold">Deneme süresi</legend>{exams.map(e => <label key={e.id} className="flex min-h-12 items-center gap-2 rounded-xl border border-slate-200 p-4"><input type="radio" name="learning-exam" value={e.id} checked={exam === e.id} disabled={busy} onChange={() => setExam(e.id)} />{e.title} · {e.count} soru · {e.seconds / 60} dakika</label>)}</fieldset>}
       <button type="button" disabled={busy} onClick={() => void start()} className={button}>{busy ? 'Çalışman hazırlanıyor…' : 'Başla / devam et'}</button>
     </section> : <>
@@ -140,7 +153,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
         <p className="text-sm">Sorular arasında geçerek çözüm açıklamalarını inceleyebilirsin.</p><button type="button" disabled={busy} onClick={mode === 'adaptive' ? () => void start() : restart} className={button}>{mode === 'adaptive' ? 'Sıradaki soruya geç' : 'Yeni çalışma'}</button>
       </section>}
       {q && renderQuestion && <section className="space-y-5 rounded-3xl border border-indigo-100 bg-white p-4 sm:p-7">
-        <div className="flex flex-wrap justify-between gap-2 text-sm font-semibold"><span>Soru {index + 1} / {session.questions.length} · {COGNITIVE_CATEGORY_LABELS[q.category]}</span>{!session.result && <span aria-label="Kalan süre">{Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}</span>}</div>
+        <div className="flex flex-wrap justify-between gap-2 text-sm font-semibold"><span>Soru {index + 1} / {session.questions.length} · {q.targetGrade}. sınıf · Zorluk {q.difficulty} · {COGNITIVE_CATEGORY_LABELS[q.category]}</span>{!session.result && <span aria-label="Kalan süre">{Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}</span>}</div>
         <nav aria-label="Soru seçimi" className="flex flex-wrap gap-2">{session.questions.map((item, i) => {
           const saved = session.answers[String(i)];
           const label = saved?.correct === undefined ? saved ? 'Yanıtlandı' : 'Boş' : saved.correct ? 'Doğru' : 'Yanlış';
@@ -158,6 +171,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
         {solution && <VisualExplanationOverlay explanation={solution.explanation} correctOptionId={solution.correctOptionId} />}
         {!submitted && mode !== 'exam' && <><button type="button" onClick={() => setHint(!hint)} className="min-h-11 font-semibold text-indigo-700 underline">Bir ipucu göster</button>{hint && <p className="rounded-xl bg-amber-50 p-4">Önce değişen ve aynı kalan özellikleri karşılaştır. Bulduğun kuralın bütün adımlarda çalıştığını kontrol et; sonra seçenekleri tek tek dene.</p>}</>}
         <div className="flex flex-wrap gap-3">
+          {!session.result && !reviewMistakeId && <button type="button" disabled={busy} onClick={() => void chooseNewDifficulty()} className="min-h-11 rounded-xl border border-indigo-300 px-4 py-2 font-semibold text-indigo-800">Zorluğu değiştir / yeni çalışma</button>}
           {!session.result && mode !== 'exam' && revealed && <button type="button" disabled={busy} onClick={() => nextUnansweredIndex(session) >= 0 ? void goTo(nextUnansweredIndex(session)) : void next()} className={button}>{nextUnansweredIndex(session) >= 0 ? 'Çalışmaya devam et' : 'Sonuçları gör'}</button>}
           {!session.result && <button type="button" disabled={busy} onClick={() => void finish()} className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 font-semibold">{mode === 'exam' ? 'Denemeyi bitir' : 'Çalışmayı bitir'}</button>}
         </div>
