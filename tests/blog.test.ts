@@ -9,6 +9,17 @@ import { PLATFORM_INFO } from '../src/content/platform-info';
 const origin = 'https://example.org';
 const production = { PUBLIC_SITE_URL: origin, VERCEL_ENV: 'production' };
 
+test('production cannot publish static copies of database-backed policy pages', () => {
+  const emitted: string[] = [];
+  const generate = blogPlugin().generateBundle as Function;
+  generate.call({ emitFile(asset: { fileName: string }) { emitted.push(asset.fileName); } });
+  for (const slug of ['gizlilik-ve-veriler', 'kullanim-kosullari', 'iletisim-ve-destek']) {
+    assert.ok(!emitted.includes(`bilgi/${slug}/index.html`), slug);
+  }
+  assert.ok(emitted.includes('bilgi/hesap-guvenligi/index.html'));
+  assert.ok(emitted.includes('blog/index.html'));
+});
+
 test('30 complete original guides cover all six categories with unique relevant photo sources', () => {
   const articles = readArticles();
   const photos = JSON.parse(fs.readFileSync('content/blog/photos.json', 'utf8'));

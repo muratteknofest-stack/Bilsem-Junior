@@ -28,6 +28,7 @@ routes.get("/public/platform", async (_req, res) => {
   });
 });
 routes.get("/public/policy/:slug", async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
   // An unavailable database must not silently publish a previously completed policy.
   const { settings } = await readPlatformSettings().catch(() => ({
     settings: defaultPlatformSettings(),

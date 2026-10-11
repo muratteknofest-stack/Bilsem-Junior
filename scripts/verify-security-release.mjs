@@ -18,9 +18,9 @@ async function checkHeaders(response, privateRoute = false) {
   if(privateRoute) assert.equal(response.headers.get('cache-control'),'no-store');
   count++;
 }
-for (const route of ['/','/blog','/bilgi/hesap-guvenligi','/api/health']) {
+for (const route of ['/','/blog','/bilgi/hesap-guvenligi','/bilgi/gizlilik-ve-veriler','/bilgi/kullanim-kosullari','/bilgi/iletisim-ve-destek','/api/health']) {
   const response = await fetch(new URL(route, origin), {...fetchOptions,signal:AbortSignal.timeout(15000)});
-  assert.equal(response.status,200,route);await checkHeaders(response,route.startsWith('/api/'));
+  assert.equal(response.status,200,route);await checkHeaders(response,route.startsWith('/api/') || ['/bilgi/gizlilik-ve-veriler','/bilgi/kullanim-kosullari','/bilgi/iletisim-ve-destek'].includes(route));
   if(route==='/api/health') await verifyHealthResponse(response,{commit,projectRef});else await response.arrayBuffer();
 }
 for (const [route, extraHeaders, status] of [

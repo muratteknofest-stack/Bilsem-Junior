@@ -30,7 +30,7 @@ try {
     assert.match(csp, /script-src-attr 'none'/);
     assert.match(csp, /style-src-elem 'self' https:\/\/fonts.googleapis.com/);
     assert.ok(!csp.includes('*.') && !csp.includes('unsafe-eval'), path);
-    if (path.startsWith('/api/')) assert.equal(response.headers.get('cache-control'), 'no-store', path);
+    if (path.startsWith('/api/') || path === '/bilgi/gizlilik-ve-veriler') assert.equal(response.headers.get('cache-control'), 'no-store', path);
     if (path.startsWith('/admin') || path === '/reset-password') {
       assert.equal(response.headers.get('cache-control'), 'no-store', path);
       assert.equal(response.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive', path);

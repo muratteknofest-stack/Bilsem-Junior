@@ -108,6 +108,15 @@
           "value": "no-store"
         }
       ]
+    },
+    {
+      "source": "/bilgi/:slug(gizlilik-ve-veriler|kullanim-kosullari|iletisim-ve-destek)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
     }
   ]
 }

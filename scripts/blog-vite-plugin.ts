@@ -13,7 +13,11 @@ export function blogPlugin(): Plugin {
       ];
     },
     generateBundle() {
-      for (const [fileName, source] of renderBlog().pages) this.emitFile({ type: 'asset', fileName, source });
+      for (const [fileName, source] of renderBlog().pages) {
+        // Vercel's filesystem must not serve a stale policy instead of the database-backed route.
+        if (/^bilgi\/(?:gizlilik-ve-veriler|kullanim-kosullari|iletisim-ve-destek)\/index\.html$/.test(fileName)) continue;
+        this.emitFile({ type: 'asset', fileName, source });
+      }
     },
     configureServer(server) {
       let pages = renderBlog().pages;
