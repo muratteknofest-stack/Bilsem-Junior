@@ -72,9 +72,12 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
 
     // 1. Direct numerical or text badge (e.g. counting, equation, or number pattern)
     if (vd.textNumber !== undefined && vd.textNumber !== null) {
+      const text = String(vd.textNumber);
+      const numeric = /^-?\d+(?:[.,]\d+)?$/.test(text);
+      const size = numeric && text.length <= 4 ? 'text-xl sm:text-2xl md:text-3xl font-mono' : text.length <= 4 ? 'text-lg sm:text-xl' : text.length <= 8 ? 'text-sm sm:text-base' : 'text-sm';
       return (
-        <div className={`flex items-center justify-center w-full min-w-0 min-h-[60px] font-bold text-slate-800 ${String(vd.textNumber).length > 8 ? 'text-sm sm:text-base text-center' : 'text-xl sm:text-2xl md:text-3xl font-mono'}`}>
-          <span className="max-w-full break-words px-3 py-2.5 rounded-2xl bg-gradient-to-b from-white to-slate-50 border-2 border-slate-200 shadow-[0_4px_0_0_#cbd5e1]">
+        <div className={`flex items-center justify-center w-full min-w-0 min-h-[60px] font-bold text-center text-slate-800 ${size}`}>
+          <span className="max-w-full break-words px-2 py-2.5 rounded-2xl bg-gradient-to-b from-white to-slate-50 border-2 border-slate-200 shadow-[0_4px_0_0_#cbd5e1]">
             {vd.textNumber}
           </span>
         </div>
@@ -504,7 +507,7 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
       aria-pressed={isSelected}
       aria-disabled={disabled}
       aria-label={optionLabelText}
-      className={`relative flex flex-col items-center justify-center p-3 sm:p-5 rounded-2xl sm:rounded-3xl border-2 transition-all duration-200 cursor-pointer text-left w-full min-h-[120px] sm:min-h-[140px] md:min-h-[155px] min-w-[56px] touch-manipulation focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/50 ${cardStyle} ${disabled && !showCorrect ? 'opacity-70 pointer-events-none shadow-none translate-y-1' : ''}`}
+      className={`relative flex flex-col items-center justify-center ${optionValue?.textNumber !== undefined ? 'p-3' : 'p-3 sm:p-5'} rounded-2xl sm:rounded-3xl border-2 transition-all duration-200 cursor-pointer text-left w-full min-h-[120px] sm:min-h-[140px] md:min-h-[155px] min-w-[56px] touch-manipulation focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/50 ${cardStyle} ${disabled && !showCorrect ? 'opacity-70 pointer-events-none shadow-none translate-y-1' : ''}`}
     >
       {/* Option Identifier Badge */}
       <span
