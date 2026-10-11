@@ -69,7 +69,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { sound } from '../lib/sound';
 import { shareWeeklyReport } from '../services/weekly-report-service';
 import { resetLinkedStudentPassword } from '../services/account-security-service';
-import { evaluatePasswordStrength } from '../lib/validations';
+import { strongPasswordSchema } from '../lib/validations';
+import { NewPasswordFields } from '../features/auth/components/NewPasswordFields';
 import './landing/design-system.css';
 import './dashboard-design-system.css';
 
@@ -78,9 +79,10 @@ interface ParentPortalViewProps {
   masteries: SkillMastery[];
   onNavigate?: (route: string) => void;
   isSwitchingStudent?: boolean;
+  onOpenStudent?: (studentId: string) => void;
 }
 
-export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: parentOrStudent, masteries, onNavigate, isSwitchingStudent = false }) => {
+export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: parentOrStudent, masteries, onNavigate, onOpenStudent, isSwitchingStudent = false }) => {
   const prefersReducedMotion = useReducedMotion();
   const [currentStudent, setCurrentStudent] = useState<UserProfile>(() => {
     return parentOrStudent || dataService.getCurrentUser() || {
@@ -105,6 +107,11 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
   });
 
   const [isLoadingStudent, setIsLoadingStudent] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState(parentOrStudent?.linkedStudentIds?.[0] || '');
+  const [linkedStudents, setLinkedStudents] = useState<UserProfile[]>([]);
+  const [studentLoadError, setStudentLoadError] = useState('');
+  const [studentReload, setStudentReload] = useState(0);
+  const [passwordResetNotice, setPasswordResetNotice] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'preferences'>('overview');
   const [chartViewMode, setChartViewMode] = useState<'radar' | 'momentum'>('radar');
   const [skillFilter, setSkillFilter] = useState<'all' | 'strengths' | 'weaknesses'>('all');
@@ -124,34 +131,54 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
   const [reportSendStatus, setReportSendStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   useEffect(() => {
+    let active = true;
+    const ids = parentOrStudent?.role === 'parent' ? parentOrStudent.linkedStudentIds || [] : [];
+    setSelectedStudentId(previous => ids.includes(previous) ? previous : ids[0] || '');
+    setLinkedStudents([]);
+    Promise.all(ids.map(async id => {
+      const snap = await getDoc(doc(db, 'users', id));
+      const child = snap.exists() ? snap.data() as UserProfile : null;
+      return child?.id === id && child.role === 'student' && child.linkedParentId === parentOrStudent?.id ? child : null;
+    })).then(profiles => { if (active) setLinkedStudents(profiles.filter((p): p is UserProfile => !!p)); }).catch(() => {});
+    return () => { active = false; };
+  }, [parentOrStudent, studentReload]);
+
+  useEffect(() => {
     let isSubscribed = true;
     const fetchStudent = async () => {
       const activeUser = parentOrStudent || dataService.getCurrentUser();
       if (!activeUser) return;
       
-      if (activeUser.role === 'parent' && activeUser.linkedStudentIds && activeUser.linkedStudentIds.length > 0) {
+      if (activeUser.role === 'parent') {
+        setStudentLoadError(''); setPasswordResetNotice(''); setWeeklyData(null); setDisplayMasteries([]);
+        if (!selectedStudentId || !activeUser.linkedStudentIds?.includes(selectedStudentId)) {
+          setStudentLoadError('Bu veli hesabına bağlı öğrenci bulunamadı.'); return;
+        }
         setIsLoadingStudent(true);
         try {
-          const docRef = doc(db, 'users', activeUser.linkedStudentIds[0]);
+          const docRef = doc(db, 'users', selectedStudentId);
           const snap = await getDoc(docRef);
           if (snap.exists() && isSubscribed) {
             const child = snap.data() as UserProfile;
+            if (child.id !== selectedStudentId || child.role !== 'student' || child.linkedParentId !== activeUser.id) throw new Error('Linked student unavailable');
             setCurrentStudent(child);
             const progress = await dataService.loadRemoteProgressForUser(child.id);
             if (isSubscribed) {
-              const childMasteries = progress.masteries && progress.masteries.length > 0 ? progress.masteries : dataService.getSkillMasteries();
+              const childMasteries = progress.masteries || [];
               setDisplayMasteries(childMasteries);
               setWeeklyData(dataService.getWeeklyQuestionProgressData(child, progress.weeklyQuestions));
               return;
             }
           }
-        } catch(e) {
-          console.error('Error loading linked student data in ParentPortalView:', e);
+          if (isSubscribed) setStudentLoadError('Öğrenci bilgileri yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.');
+        } catch {
+          if (isSubscribed) setStudentLoadError('Öğrenci bilgileri yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.');
         } finally {
           if (isSubscribed) {
             setIsLoadingStudent(false);
           }
         }
+        return;
       }
       
       // Fallback: single-user / student view or parent without distinct remote linked account
@@ -167,7 +194,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
     return () => {
       isSubscribed = false;
     };
-  }, [parentOrStudent, masteries]);
+  }, [parentOrStudent, masteries, selectedStudentId, studentReload]);
 
   useEffect(() => {
     if (parentOrStudent?.role !== 'parent') {
@@ -251,9 +278,10 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
   const handleResetStudentPassword = async (event: React.FormEvent) => {
     event.preventDefault();
     setPasswordResetError(null);
-    const strength = evaluatePasswordStrength(newStudentPassword);
-    if (!strength.hasMinLength || !strength.hasLetter || !strength.hasNumber) {
-      setPasswordResetError('Yeni şifre en az 8 karakter, bir harf ve bir rakam içermelidir.');
+    if (isResettingPassword) return;
+    const parsed = strongPasswordSchema.safeParse(newStudentPassword);
+    if (!parsed.success) {
+      setPasswordResetError(parsed.error.issues[0].message);
       return;
     }
     if (newStudentPassword !== confirmStudentPassword) {
@@ -268,6 +296,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
       setShowPasswordResetModal(false);
       setNewStudentPassword('');
       setConfirmStudentPassword('');
+      setPasswordResetNotice(`${currentStudent.name} için şifre yenilendi. Öğrenci, giriş kodu ve yeni şifresiyle giriş yapabilir.`);
     } catch (error) {
       sound.playError();
       setPasswordResetError(error instanceof Error ? error.message : 'Öğrenci şifresi yenilenemedi.');
@@ -287,9 +316,13 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
   const spentMins = currentStudent.todayMinutesSpent || 0;
   const goalProgressPct = Math.min(100, Math.round((spentMins / targetMins) * 100));
 
+  const studentSelector = parentOrStudent?.role === 'parent' && linkedStudents.length > 1 ? <label className="mb-4 block text-sm font-semibold">Öğrenci seçin<select value={selectedStudentId} disabled={isSwitchingStudent || isResettingPassword} onChange={e => { setSelectedStudentId(e.target.value); setShowPasswordResetModal(false); setShowStudentSettingsModal(false); setNewStudentPassword(''); setConfirmStudentPassword(''); }} className="ml-3 rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900">{linkedStudents.map(child => <option key={child.id} value={child.id}>{child.name} · {child.grade}. sınıf</option>)}</select></label> : null;
+  if (parentOrStudent?.role === 'parent' && (isLoadingStudent || !!studentLoadError || currentStudent.role !== 'student' || currentStudent.id !== selectedStudentId)) return <div className="mx-auto max-w-6xl space-y-4 p-5"><h1 className="text-2xl font-bold">Veli paneli</h1>{studentSelector}<p role={studentLoadError ? 'alert' : 'status'}>{studentLoadError || 'Bağlı öğrencinin bilgileri yükleniyor…'}</p>{studentLoadError && <button type="button" onClick={() => setStudentReload(v => v + 1)} className="min-h-11 rounded-xl bg-indigo-700 px-4 py-2 text-white">Tekrar dene</button>}<AccountCenter /></div>;
+
   return (
     <div className="zp-dashboard-page zp-parent-dashboard min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24 text-zinc-900 dark:text-zinc-100 selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
       
+      <div className="relative z-10 mx-auto max-w-6xl px-5 pt-4">{studentSelector}{passwordResetNotice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{passwordResetNotice}</p>}</div>
       {/* Animated Subtle Background Ambience */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <motion.div 
@@ -381,6 +414,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                           type="button"
                           onClick={() => {
                             setPasswordResetError(null);
+                            setNewStudentPassword(''); setConfirmStudentPassword('');
                             setShowPasswordResetModal(true);
                           }}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700 hover:bg-indigo-100"
@@ -397,7 +431,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
 
           {/* Action Hub */}
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-2.5 w-full md:w-auto justify-start md:justify-end">
-            {onNavigate && (
+            {(onNavigate || onOpenStudent) && (
               <div className="col-span-2 sm:col-span-1">
               <button
                 type="button"
@@ -405,14 +439,14 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                 aria-busy={isSwitchingStudent}
                 onClick={() => {
                   sound.playClick();
-                  onNavigate('dashboard');
+                  if (onOpenStudent) onOpenStudent(currentStudent.id); else onNavigate?.('dashboard');
                 }}
                 className="zp-dashboard-primary w-full px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center justify-center gap-2 text-xs sm:text-sm shadow-xs transition-colors cursor-pointer min-h-[42px] disabled:opacity-60 disabled:cursor-wait"
               >
                 <GraduationCap className="w-4 h-4" />
                 <span>{isSwitchingStudent ? 'Öğrenci paneli açılıyor…' : 'Öğrenci Paneline Geç'}</span>
               </button>
-              <p className="mt-2 max-w-xs text-xs text-zinc-500 dark:text-zinc-400">Bu cihazda öğrenci oturumu açılır. Veli paneline dönmek için yeniden giriş yapın.</p>
+              <p className="mt-2 max-w-xs text-xs text-zinc-500 dark:text-zinc-400">{currentStudent.name} için öğrenci oturumu açılır. Veli paneline dönüşte veli şifresi doğrulanır.</p>
               </div>
             )}
             <motion.button
@@ -1297,21 +1331,14 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                   <h2 id="student-password-title" className="text-lg font-black text-zinc-950 dark:text-white">Öğrenci şifresini yenile</h2>
                   <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">İşlemden sonra öğrencinin diğer cihazlardaki oturumları kapatılır.</p>
                 </div>
-                <button type="button" onClick={() => setShowPasswordResetModal(false)} aria-label="Kapat" className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"><X className="h-5 w-5" /></button>
+                <button type="button" disabled={isResettingPassword} onClick={() => { setShowPasswordResetModal(false); setNewStudentPassword(''); setConfirmStudentPassword(''); }} aria-label="Kapat" className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"><X className="h-5 w-5" /></button>
               </div>
               <div className="mt-5 space-y-3">
-                <div>
-                  <label htmlFor="parent-new-student-password" className="mb-1.5 block text-sm font-bold">Yeni şifre</label>
-                  <input id="parent-new-student-password" type="password" autoComplete="new-password" value={newStudentPassword} onChange={(e) => setNewStudentPassword(e.target.value)} aria-invalid={Boolean(passwordResetError)} aria-describedby={passwordResetError ? 'parent-password-error' : undefined} className="w-full rounded-xl border border-zinc-300 px-3.5 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-950" />
-                </div>
-                <div>
-                  <label htmlFor="parent-confirm-student-password" className="mb-1.5 block text-sm font-bold">Yeni şifreyi tekrar girin</label>
-                  <input id="parent-confirm-student-password" type="password" autoComplete="new-password" value={confirmStudentPassword} onChange={(e) => setConfirmStudentPassword(e.target.value)} aria-invalid={Boolean(passwordResetError)} aria-describedby={passwordResetError ? 'parent-password-error' : undefined} className="w-full rounded-xl border border-zinc-300 px-3.5 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-950" />
-                </div>
+                <NewPasswordFields label="Yeni öğrenci şifresi" value={newStudentPassword} confirmation={confirmStudentPassword} onChange={setNewStudentPassword} onConfirmation={setConfirmStudentPassword} disabled={isResettingPassword} />
                 {passwordResetError && <p id="parent-password-error" role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700">{passwordResetError}</p>}
               </div>
               <div className="mt-5 flex justify-end gap-2">
-                <button type="button" onClick={() => setShowPasswordResetModal(false)} className="rounded-xl px-4 py-2 text-sm font-bold text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800">Vazgeç</button>
+                <button type="button" disabled={isResettingPassword} onClick={() => { setShowPasswordResetModal(false); setNewStudentPassword(''); setConfirmStudentPassword(''); }} className="rounded-xl px-4 py-2 text-sm font-bold text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800">Vazgeç</button>
                 <button type="submit" disabled={isResettingPassword} className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-60">{isResettingPassword ? 'Yenileniyor…' : 'Şifreyi Güvenle Yenile'}</button>
               </div>
             </motion.form>

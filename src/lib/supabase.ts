@@ -164,7 +164,7 @@ export async function signInWithEmailAndPassword(_auth: typeof auth, email: stri
   return { user: auth.currentUser };
 }
 export async function signOut(_auth: typeof auth) {
-  const { error } = await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut({ scope: 'local' });
   if (error) throw error;
   auth.currentUser = null;
 }

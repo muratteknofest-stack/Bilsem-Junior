@@ -1,8 +1,21 @@
 import { authenticatedFetch } from '../lib/api-client';
 import { auth, supabase } from '../lib/supabase';
-import { activateStudentSession } from '../lib/student-session';
+import { activateStudentSession, activateParentSession } from '../lib/student-session';
+import { beginAccountSwitch } from '../lib/account-switch';
+export { cancelAccountSwitch } from '../lib/account-switch';
+
+export async function openLinkedParentSession(parentId: string, password: string): Promise<void> {
+  const isCurrent = beginAccountSwitch();
+  const studentId = auth.currentUser?.uid;
+  let response: Response;
+  try { response = await authenticatedFetch('/api/parent/return-session', { method: 'POST', body: JSON.stringify({ password }) }); }
+  catch { throw new Error('Veli paneli açılamadı. Bağlantınızı kontrol edin.'); }
+  if (!studentId || auth.currentUser?.uid !== studentId) throw new Error('Hesap değişti. Veli panelini yeniden açın.');
+  await activateParentSession(response, parentId, supabase.auth, isCurrent);
+}
 
 export async function openLinkedStudentSession(studentId: string): Promise<void> {
+  const isCurrent = beginAccountSwitch();
   const parentId = auth.currentUser?.uid;
   let response: Response;
   try {
@@ -13,7 +26,7 @@ export async function openLinkedStudentSession(studentId: string): Promise<void>
     throw new Error('Öğrenci paneli açılamadı. Bağlantınızı kontrol edip tekrar deneyin.');
   }
   if (!parentId || auth.currentUser?.uid !== parentId) throw new Error('Hesap değişti. Öğrenci panelini yeniden açın.');
-  await activateStudentSession(response, studentId, supabase.auth);
+  await activateStudentSession(response, studentId, supabase.auth, isCurrent);
 }
 
 export async function resetLinkedStudentPassword(studentId: string, newPassword: string): Promise<void> {

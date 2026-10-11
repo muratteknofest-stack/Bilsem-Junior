@@ -1,3 +1,4 @@
+import { NewPasswordFields } from './NewPasswordFields';
 import React, { useEffect, useState } from 'react';
 import { auth, isPasswordRecoveryReady, onPasswordRecovery, sendPasswordResetEmail, updateRecoveredPassword } from '../../../lib/supabase';
 import { forgotPasswordSchema, passwordResetSchema, formatZodError } from '../../../lib/validations';
@@ -110,18 +111,7 @@ export const PasswordResetPage: React.FC = () => {
         {state === 'ready' && (
           <form onSubmit={submit} className="mt-5 space-y-4">
             <p className="text-sm text-slate-600">Yeni şifrenizi belirleyin. En az 8 karakter, bir harf ve bir rakam kullanın.</p>
-            <div>
-              <label htmlFor="new-password" className="block text-sm font-semibold text-slate-700">Yeni şifre</label>
-              <input id="new-password" type="password" autoComplete="new-password" minLength={8}
-                value={password} onChange={event => setPassword(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" required />
-            </div>
-            <div>
-              <label htmlFor="confirm-password" className="block text-sm font-semibold text-slate-700">Yeni şifreyi tekrar girin</label>
-              <input id="confirm-password" type="password" autoComplete="new-password" minLength={8}
-                value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" required />
-            </div>
+            <NewPasswordFields label="Yeni şifre" value={password} confirmation={confirmPassword} onChange={setPassword} onConfirmation={setConfirmPassword} disabled={submitting} />
             {error && <p role="alert" className="text-sm text-rose-700">{error}</p>}
             <button type="submit" disabled={submitting}
               className="w-full rounded-lg bg-slate-900 px-4 py-2.5 font-semibold text-white disabled:opacity-60">

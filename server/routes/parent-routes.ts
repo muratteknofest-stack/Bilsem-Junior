@@ -1,4 +1,3 @@
-import { PasswordPolicyError } from '../password-policy';
 import { logServerFailure } from '../safe-log';
 import { sharedRateLimit } from '../shared-rate-limit';
 import { weeklyReportMetrics } from '../weekly-report';
@@ -18,8 +17,35 @@ import {
 } from '../security';
 import { accountSecurityLimiter, reportLimiter } from '../rate-limiters';
 import { createStudentSessionHandler } from '../student-session';
+import { createParentSessionHandler, ParentSignInError } from '../parent-session';
+import { createStudentPasswordHandler } from '../student-password';
 
 const parentRoutes = Router();
+
+parentRoutes.post('/parent/return-session', requireSupabaseAuth, requireProfileRole('student'),
+  accountSecurityLimiter, sharedRateLimit('parent-panel-return', 6, 3600),
+  createParentSessionHandler({
+    async profile(id) { return (await getAdminDb().doc(`users/${id}`).get()).data() as any; },
+    async audit(studentId, parentId) {
+      await getAdminDb().collection('securityEvents').add({ type: 'parent_session_requested_by_student', actorId: studentId, parentId, createdAt: Date.now() });
+    },
+    async signIn(parentId, password) {
+      const client = getServiceClient();
+      const existing = await client.auth.admin.getUserById(parentId);
+      if (existing.error || !existing.data.user?.email || !existing.data.user.email_confirmed_at) throw new ParentSignInError();
+      const result = await client.auth.signInWithPassword({ email: existing.data.user.email, password });
+      if (result.error) {
+        if (['invalid_credentials', 'email_not_confirmed'].includes(result.error.code || '')) throw new ParentSignInError();
+        throw new Error('Parent authentication unavailable');
+      }
+      if (!result.data.session || result.data.user?.id !== parentId || !result.data.user.email_confirmed_at) {
+        await client.auth.signOut({ scope: 'local' });
+        throw new Error('Parent identity unavailable');
+      }
+      return { parentId, access_token: result.data.session.access_token, refresh_token: result.data.session.refresh_token, verified: true };
+    },
+  }),
+);
 
 parentRoutes.post('/parent/student-session', requireSupabaseAuth, requireVerifiedEmail,
   requireProfileRole('parent'), accountSecurityLimiter, sharedRateLimit('student-panel-switch', 20, 3600),
@@ -66,55 +92,16 @@ parentRoutes.post('/parent/activate-students', requireSupabaseAuth, requireVerif
   return res.json({ activated });
 });
 
-const strongPassword = z.string().min(8).max(128).regex(/^(?=.*[A-Za-zğüşıöçĞÜŞİÖÇ])(?=.*\d)/, {
-  message: 'Şifre en az bir harf ve bir rakam içermelidir.',
-});
-const linkedStudentPasswordSchema = z.object({
-  studentId: z.string().min(1).max(128),
-  newPassword: strongPassword,
-}).strict();
-
-parentRoutes.post(
-  '/parent/reset-student-password',
-  requireSupabaseAuth,
-  accountSecurityLimiter,
-  requireVerifiedEmail,
-  requireProfileRole('parent'), sharedRateLimit('parent-actions', 6, 3600),
-  async (req: AuthenticatedRequest, res) => {
-    const parsed = linkedStudentPasswordSchema.safeParse(req.body);
-    if (!parsed.success || !req.authUser) {
-      return res.status(400).json({ error: parsed.success ? 'Oturum doğrulanamadı.' : parsed.error.issues[0]?.message });
-    }
-
-    const adminDb = getAdminDb();
-    const [parentSnapshot, studentSnapshot] = await Promise.all([
-      adminDb.doc(`users/${req.authUser.uid}`).get(),
-      adminDb.doc(`users/${parsed.data.studentId}`).get(),
-    ]);
-    const parent = parentSnapshot.data();
-    const student = studentSnapshot.data();
-    const isLinked = Array.isArray(parent?.linkedStudentIds)
-      && parent.linkedStudentIds.includes(parsed.data.studentId)
-      && student?.linkedParentId === req.authUser.uid
-      && student?.role === 'student';
-
-    if (!isLinked) return res.status(403).json({ error: 'Öğrenci bu veli hesabına bağlı değil.' });
-
-    const adminAuth = getAdminAuth();
-    try { await adminAuth.updateUser(parsed.data.studentId, { password: parsed.data.newPassword }); }
-    catch (error) {
-      if (error instanceof PasswordPolicyError) return res.status(error.status).json({ error: error.message, code: error.code });
-      throw error;
-    }
-    await adminAuth.revokeRefreshTokens(parsed.data.studentId);
-    await adminDb.collection('securityEvents').add({
-      type: 'student_password_reset_by_parent',
-      actorId: req.authUser.uid,
-      studentId: parsed.data.studentId,
-      createdAt: Date.now(),
-    });
-    return res.status(204).send();
-  },
+parentRoutes.post('/parent/reset-student-password', requireSupabaseAuth, accountSecurityLimiter,
+  requireVerifiedEmail, requireProfileRole('parent'), sharedRateLimit('parent-actions', 6, 3600),
+  createStudentPasswordHandler({
+    async profile(id) { return (await getAdminDb().doc(`users/${id}`).get()).data() as any; },
+    async update(studentId, password) { await getAdminAuth().updateUser(studentId, { password }); },
+    async revoke(studentId) { await getAdminAuth().revokeRefreshTokens(studentId); },
+    async audit(parentId, studentId) {
+      await getAdminDb().collection('securityEvents').add({ type: 'student_password_reset_by_parent', actorId: parentId, studentId, createdAt: Date.now() });
+    },
+  }),
 );
 
 const reportSchema = z.object({

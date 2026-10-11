@@ -35,11 +35,13 @@ test('Supabase authorization uses protected app claims and immutable family iden
 
 test('linked student password reset requires verified parent authorization', async () => {
   const source = await readFile(new URL('../server/routes/parent-routes.ts', import.meta.url), 'utf8');
+  const passwordHandler = await readFile(new URL('../server/student-password.ts', import.meta.url), 'utf8');
   assert.match(source, /\/parent\/reset-student-password/);
   assert.match(source, /requireVerifiedEmail/);
   assert.match(source, /requireProfileRole\('parent'\)/);
   assert.match(source, /revokeRefreshTokens/);
-  assert.match(source, /linkedParentId === req\.authUser\.uid/);
+  assert.match(passwordHandler, /parent\.linkedStudentIds\?\.includes\(parsed\.data\.studentId\)/);
+  assert.match(passwordHandler, /student\.linkedParentId !== parent\.id/);
   assert.match(source, /sharedRateLimit/);
   assert.match(source, /student\.linkedParentId !== req\.authUser\.uid/);
   assert.doesNotMatch(source, /AI soru üretimi başarısız:.*err\.message/);

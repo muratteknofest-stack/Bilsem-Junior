@@ -12,6 +12,7 @@ import { UserProfile, UserRole } from '../types';
 import { dataService } from '../services/data-service';
 import { userProfileUpdateSchema, formatZodError } from '../lib/validations';
 import { isManagedStudentEmail } from '../lib/account-identifiers';
+import { cancelAccountSwitch } from '../lib/account-switch';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -66,6 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let unsubSnap: (() => void) | null = null;
     let isMounted = true;
     let authRevision = 0;
+    let activeAccountId: string | null = null;
 
     const unsubscribe = onAuthStateChanged(
       auth,
@@ -80,6 +82,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         setCurrentUser(user);
         setIsAdminAuthorized(false);
+        if (activeAccountId !== (user?.uid ?? null)) {
+          activeAccountId = user?.uid ?? null;
+          setUserProfile(null); setLoading(true);
+          dataService.logout();
+          if (!user) cancelAccountSwitch();
+        }
         if (user) {
           if (!isManagedStudentEmail(user.email) && !user.emailVerified) {
             await supabaseSignOut(auth).catch(() => undefined);
@@ -212,11 +220,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const logout = async () => {
-    try {
-      await supabaseSignOut(auth);
-    } catch (e) {
-      console.warn('Supabase oturumu kapatılamadı:', e);
-    }
+    cancelAccountSwitch();
+    await supabaseSignOut(auth);
     dataService.logout();
     setCurrentUser(null);
     setUserProfile(null);

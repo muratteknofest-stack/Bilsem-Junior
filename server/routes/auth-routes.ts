@@ -14,6 +14,7 @@ import {
 import { accountSecurityLimiter } from '../rate-limiters';
 import { KVKK_POLICY_VERSION, TERMS_POLICY_VERSION } from '../../src/lib/account-policy';
 import { getServiceClient } from '../supabase-admin';
+import { strongPasswordSchema } from '../../src/lib/validations';
 
 const authRoutes = Router();
 
@@ -23,9 +24,7 @@ function isDuplicateEmail(error: unknown) {
     /already registered|already been registered|already exists/i.test(candidate?.message ?? '');
 }
 
-const strongPassword = z.string().min(8).max(128)
-  .regex(/[A-Za-zğüşıöçĞÜŞİÖÇ]/, 'Şifre en az bir harf içermelidir.')
-  .regex(/\d/, 'Şifre en az bir rakam içermelidir.');
+const strongPassword = strongPasswordSchema;
 
 export const registerFamilySchema = z.object({
   parentEmail: z.string().trim().toLowerCase().email('Geçerli bir veli e-posta adresi giriniz.'),

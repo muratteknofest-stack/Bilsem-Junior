@@ -40,7 +40,16 @@ try {
   assert.equal(studentSwitch.status, 401, 'Unauthenticated student-session switch');
   assert.equal(studentSwitch.headers.get('cache-control'), 'no-store');
   await studentSwitch.arrayBuffer();
-  console.log(`Production HTTP security: ${checks.length + 2} checks passed.`);
+  for (const path of ['/api/parent/return-session', '/api/parent/reset-student-password']) {
+    const response = await fetch(base + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}', signal: AbortSignal.timeout(3000) });
+    assert.equal(response.status, 401, `Unauthenticated ${path}`);
+    assert.equal(response.headers.get('cache-control'), 'no-store', path);
+    const payload = await response.json();
+    assert.equal(typeof payload.error, 'string', path);
+    assert.equal(payload.access_token, undefined, path);
+    assert.equal(payload.refresh_token, undefined, path);
+  }
+  console.log(`Production HTTP security: ${checks.length + 4} checks passed.`);
 } finally {
   if (child.exitCode === null) { child.kill('SIGTERM'); await new Promise(resolve => child.once('exit', resolve)); }
 }

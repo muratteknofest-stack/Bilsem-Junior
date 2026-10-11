@@ -15,6 +15,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { isManagedStudentEmail, studentCodeToEmail } from '../../../lib/account-identifiers';
 import { loginSchema, formatZodError } from '../../../lib/validations';
 import { loginAuthError } from '../auth-error-messages';
+import { cancelAccountSwitch } from '../../../lib/account-switch';
 import { 
   Eye, 
   EyeOff, 
@@ -115,6 +116,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     }
 
     setIsSubmitting(true);
+    cancelAccountSwitch();
     let authenticated = false;
     try {
       let loginEmail = identifier.trim();
@@ -479,4 +481,5 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     </div>
   );
 };
+
 

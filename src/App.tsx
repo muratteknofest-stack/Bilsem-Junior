@@ -5,7 +5,8 @@ import { useAuth } from './contexts/AuthContext';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { UserProfile, UserRole, SkillMastery, MistakeItem, DailyStudyPlan, ReminderAlertEvent, CognitiveCategory } from './types';
 import { dataService } from './services/data-service';
-import { openLinkedStudentSession } from './services/account-security-service';
+import { openLinkedStudentSession, openLinkedParentSession, cancelAccountSwitch } from './services/account-security-service';
+import { ParentAccessDialog } from './features/auth/components/ParentAccessDialog';
 import { sound } from './lib/sound';
 import { reminderService } from './services/reminder-service';
 import { demoQuestionsRemaining, isDemoUser } from './lib/demo-access';
@@ -37,10 +38,14 @@ export default function App() {
   // if (authLoading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>;
 
   const handleLogout = async () => {
+    cancelAccountSwitch();
+    switchAttemptRef.current++;
     pendingStudentIdRef.current = null;
     setIsSwitchingStudent(false);
     setStudentSwitchError(null);
-    await authLogout();
+    setShowParentAccess(false);
+    try { await authLogout(); }
+    catch { setStudentSwitchError('Oturum kapatılamadı. Bağlantınızı kontrol edip tekrar deneyin.'); return; }
     setIsAuth(false);
     setCurrentRoute('login');
   };
@@ -48,7 +53,10 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => dataService.getCurrentUser());
   const [isSwitchingStudent, setIsSwitchingStudent] = useState(false);
   const [studentSwitchError, setStudentSwitchError] = useState<string | null>(null);
+  const [showParentAccess, setShowParentAccess] = useState(false);
+  const [switchTarget, setSwitchTarget] = useState<'student' | 'parent'>('student');
   const pendingStudentIdRef = useRef<string | null>(null);
+  const switchAttemptRef = useRef(0);
   const previousAccountIdRef = useRef(userProfile?.id);
   const [isAuth, setIsAuth] = useState<boolean>(() => dataService.isAuthenticated());
   const [loginRole, setLoginRole] = useState<UserRole>('student');
@@ -113,14 +121,15 @@ export default function App() {
         setMistakes(dataService.getMistakes());
         setDailyPlan(dataService.getDailyPlan());
       }
-      if (pendingStudentIdRef.current === userProfile.id && userProfile.role === 'student') {
+      if (pendingStudentIdRef.current === userProfile.id && ['student', 'parent'].includes(userProfile.role)) {
         pendingStudentIdRef.current = null;
         setIsSwitchingStudent(false);
         setStudentSwitchError(null);
         setMasteries(dataService.getSkillMasteries());
         setMistakes(dataService.getMistakes());
         setDailyPlan(dataService.getDailyPlan());
-        setCurrentRoute('dashboard');
+        setShowParentAccess(false);
+        setCurrentRoute(userProfile.role === 'parent' ? 'parent' : 'dashboard');
       } else if (accountChanged || currentRoute === 'login' || currentRoute === 'landing' || (userProfile.role === 'admin' && currentRoute === 'dashboard')) {
         setCurrentRoute(isDemoUser(userProfile.id) && userProfile.role !== 'student' ? 'demo-limit' : userProfile.role === 'student' ? 'dashboard' : (userProfile.role === 'parent' ? 'parent' : 'admin'));
       }
@@ -140,30 +149,55 @@ export default function App() {
   useEffect(() => {
     if (!isSwitchingStudent) return;
     const timeout = window.setTimeout(() => {
+      cancelAccountSwitch();
+      switchAttemptRef.current++;
       pendingStudentIdRef.current = null;
       setIsSwitchingStudent(false);
-      setStudentSwitchError('Öğrenci profili yüklenemedi. Lütfen yeniden giriş yapın.');
+      setStudentSwitchError('Hesap bilgileri yüklenemedi. Lütfen yeniden giriş yapın.');
     }, 30000);
     return () => window.clearTimeout(timeout);
   }, [isSwitchingStudent]);
 
-  const openStudentPanel = async () => {
+  const openStudentPanel = async (selectedStudentId?: string) => {
     if (pendingStudentIdRef.current) return;
-    const studentId = userProfile?.role === 'parent' ? userProfile.linkedStudentIds?.[0] : undefined;
-    if (!studentId) {
+    const studentId = userProfile?.role === 'parent' ? selectedStudentId ?? userProfile.linkedStudentIds?.[0] : undefined;
+    if (!studentId || !userProfile?.linkedStudentIds?.includes(studentId)) {
       setStudentSwitchError('Bu veli hesabına bağlı öğrenci bulunamadı. Lütfen destek bölümünden yardım isteyin.');
       return;
     }
     pendingStudentIdRef.current = studentId;
+    const attempt = ++switchAttemptRef.current;
+    setSwitchTarget('student');
     setIsSwitchingStudent(true);
     setStudentSwitchError(null);
     try {
       await openLinkedStudentSession(studentId);
       // AuthContext loads the student's own profile and progress before routing.
     } catch (error) {
+      if (attempt !== switchAttemptRef.current) return;
       pendingStudentIdRef.current = null;
       setIsSwitchingStudent(false);
       setStudentSwitchError(error instanceof Error ? error.message : 'Öğrenci paneli açılamadı. Tekrar deneyin.');
+    }
+  };
+
+  const requestParentPanel = () => {
+    if (isSwitchingStudent) return;
+    if (userProfile?.role === 'student' && userProfile.linkedParentId) {
+      setStudentSwitchError(null); setShowParentAccess(true);
+    } else handleNavigateToLogin('parent');
+  };
+  const openParentPanel = async (password: string) => {
+    const parentId = userProfile?.role === 'student' ? userProfile.linkedParentId : undefined;
+    if (!parentId || pendingStudentIdRef.current) throw new Error('Bağlı veli hesabı doğrulanamadı.');
+    pendingStudentIdRef.current = parentId;
+    const attempt = ++switchAttemptRef.current;
+    setSwitchTarget('parent'); setIsSwitchingStudent(true); setStudentSwitchError(null);
+    try { await openLinkedParentSession(parentId, password); }
+    catch (error) {
+      if (attempt !== switchAttemptRef.current) throw new Error('Hesap geçişi iptal edildi. Yeniden deneyin.');
+      pendingStudentIdRef.current = null; setIsSwitchingStudent(false);
+      throw error;
     }
   };
 
@@ -261,7 +295,7 @@ export default function App() {
     // Bidirectional switching between student and parent:
     if (targetRoute === 'parent') {
       if (userProfile?.role !== 'parent' && !u.id.startsWith('demo_')) {
-        handleNavigateToLogin('parent');
+        requestParentPanel();
         return;
       }
       const updated = { ...u, role: 'parent' as UserRole };
@@ -321,7 +355,7 @@ export default function App() {
       return;
     }
     if (newRole === 'parent' && userProfile?.role === 'student') {
-      handleNavigateToLogin('parent');
+      requestParentPanel();
       return;
     }
     if (!currentUser.id.startsWith('demo_') && userProfile?.role !== newRole) return;
@@ -350,6 +384,8 @@ export default function App() {
     navigateTo(isAuth ? (currentUser.role === 'parent' ? 'parent' : currentUser.role === 'admin' ? 'admin' : 'dashboard') : 'landing');
   };
 
+  if (authLoading && authUser && !userProfile) return <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6"><p role="status">Hesap ve ilerleme bilgileri yükleniyor…</p></main>;
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
       {/* Workspace navigation; public pages own their header. Tests stay distraction-free. */}
@@ -368,7 +404,8 @@ export default function App() {
 
       {isAuth && <ProgressSyncBanner />}
       {studentSwitchError && <div role="alert" className="mx-auto my-3 w-full max-w-7xl rounded-xl border border-rose-200 bg-rose-50 px-5 py-3 text-sm text-rose-800">{studentSwitchError}</div>}
-      {isSwitchingStudent && <div role="status" className="mx-auto my-3 w-full max-w-7xl rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-3 text-sm text-indigo-800">Öğrenci oturumu açılıyor…</div>}
+      {showParentAccess && <ParentAccessDialog busy={isSwitchingStudent} onVerify={openParentPanel} onClose={() => setShowParentAccess(false)} onLogin={() => { setShowParentAccess(false); handleNavigateToLogin('parent'); }} />}
+      {isSwitchingStudent && <div role="status" className="mx-auto my-3 w-full max-w-7xl rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-3 text-sm text-indigo-800">{switchTarget === 'parent' ? 'Veli oturumu açılıyor…' : 'Öğrenci oturumu açılıyor…'}</div>}
       {/* Main View Router */}
       <div role={currentRoute === 'landing' ? undefined : 'main'} className={`flex-1 w-full ${currentRoute === 'landing' ? '' : 'overflow-x-hidden'}`}>
         <Suspense fallback={<div className="min-h-[50vh] flex items-center justify-center" role="status">Yükleniyor…</div>}>
@@ -473,6 +510,7 @@ export default function App() {
                 masteries={masteries}
                 onNavigate={navigateTo}
                 isSwitchingStudent={isSwitchingStudent}
+                onOpenStudent={studentId => void openStudentPanel(studentId)}
               />
             )}
 
