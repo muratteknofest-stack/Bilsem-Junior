@@ -1,3 +1,5 @@
+import { ArrowLeft, ArrowRight, Clock3, Gamepad2, Sparkles, Trophy, Tablet, CheckCircle2 } from 'lucide-react';
+import './VerifiedLearningView.css';
 import React, { useEffect, useRef, useState } from 'react';
 import type { BaseQuestion } from '../types';
 import { COGNITIVE_CATEGORY_LABELS } from '../types';
@@ -132,45 +134,57 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
     const completed = session.result ? session : await run(() => learningService.finish(session.id));
     if (completed && mounted.current) { remember(completed); restart(); }
   };
-  return <main className="mx-auto w-full max-w-5xl space-y-5 px-4 py-6 sm:px-6">
-    <header className="flex flex-wrap items-center justify-between gap-3">
-      <div><p className="text-sm font-bold text-indigo-600">ZekaPark</p><h1 className="text-2xl font-extrabold">{session?.title || title}</h1></div>
+  const answeredCount = session ? Object.keys(session.answers).length : 0;
+  const isExam = mode === 'exam';
+  return <main className={`zp-learning ${isExam ? 'zp-exam' : 'zp-game'} mx-auto w-full max-w-6xl space-y-5 px-3 py-6 sm:px-6`}>
+    <header className="zp-page-header flex flex-wrap items-center justify-between gap-3">
+      <div><p className="zp-eyebrow">ZekaPark · {isExam ? 'Sınav merkezi' : 'Oyun alanı'}</p><h1 className="text-2xl font-extrabold">{session?.title || title}</h1></div>
       <button type="button" disabled={busy} onClick={() => void leave()} className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 py-2 font-semibold">Ana sayfaya dön</button>
     </header>
+    <div className={isExam ? 'zp-tablet' : 'zp-game-shell'}>
+    {isExam && <div className="zp-tablet-camera" aria-hidden="true"><span /></div>}
+    <div className="zp-screen">
+    <div className="zp-screen-bar"><span>{isExam ? <Tablet size={17} aria-hidden="true" /> : <Gamepad2 size={19} aria-hidden="true" />} {isExam ? 'ZEKA PARK / DENEME' : 'KEŞFET · DÜŞÜN · ÇÖZ'}</span><span>{grade}. SINIF</span></div>
     {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{error}</div>}
     <AnswerHistory items={history} />
-    {!session ? <section className="space-y-5 rounded-3xl border border-indigo-100 bg-white p-5 sm:p-8">
+    {!session ? <section className="zp-setup space-y-5 p-5 sm:p-8">
+      <div className="zp-welcome"><div className="zp-welcome-icon" aria-hidden="true">{isExam ? <Tablet size={42} /> : <Sparkles size={42} />}</div><div><p className="zp-eyebrow">{isExam ? 'Kendi hızında, gerçek sınav deneyimi' : 'Küçük adımlar, büyük keşifler'}</p><p className="zp-welcome-title">{isExam ? 'Tabletini hazırla.' : 'Zihnini oyuna davet et!'}</p></div></div>
       <h2 className="text-xl font-bold">{mode === 'exam' ? 'Denemeni seç' : mode === 'adaptive' ? 'Sana uygun sorularla ilerle' : 'Bugün hangi alanda çalışalım?'}</h2>
       <p className="font-semibold text-indigo-700">{grade}. sınıf soruları · Sınıfını öğrenci profilinden değiştirebilirsin.</p>
       <p className="text-slate-600">{mode === 'exam' ? 'Cevaplarını sınav boyunca değiştirebilirsin. Sonuç ve açıklamalar bitirdiğinde gösterilir. Devam eden denemen varsa kaldığın yerden açılır.' : mode === 'adaptive' ? 'Çalışma geçmişine göre tekrar edebileceğin bir alan seçilir. Her sorudan sonra açıklamasını inceleyebilirsin.' : 'Beş soruluk bir çalışma seni bekliyor. Yarım kalan çalışman varsa önce ona devam edebilirsin.'}</p>
       {mode === 'practice' && <label className="block font-semibold">Çalışma alanı<select value={category} onChange={e => setCategory(e.target.value as LearningCategory)} disabled={busy} className="mt-2 block min-h-12 w-full rounded-xl border border-slate-300 bg-white p-3"><option value="mixed">Karışık pratik</option>{AVAILABLE_CATEGORIES.map(c => <option key={c} value={c}>{COGNITIVE_CATEGORY_LABELS[c]}</option>)}</select></label>}
       {!reviewMistakeId && <label className="block font-semibold">Zorluk düzeyi<select value={difficulty} onChange={e => setDifficulty(e.target.value === 'mixed' ? 'mixed' : Number(e.target.value) as LearningDifficulty)} disabled={busy} className="mt-2 block min-h-12 w-full rounded-xl border border-slate-300 bg-white p-3"><option value="mixed">Karışık zorluk</option>{difficultyChoices(grade).map(d => <option key={d.value} value={d.value}>{d.label}</option>)}</select><span className="mt-1 block text-sm font-normal text-slate-600">Yalnızca sınıfına uygun seviyeler gösterilir. Seçimini değiştirirsen yeni bir çalışma başlar.</span></label>}
-      {mode === 'exam' && <fieldset className="flex flex-wrap gap-3"><legend className="mb-2 font-semibold">Deneme süresi</legend>{exams.map(e => <label key={e.id} className="flex min-h-12 items-center gap-2 rounded-xl border border-slate-200 p-4"><input type="radio" name="learning-exam" value={e.id} checked={exam === e.id} disabled={busy} onChange={() => setExam(e.id)} />{e.title} · {e.count} soru · {e.seconds / 60} dakika</label>)}</fieldset>}
+      {mode === 'exam' && <fieldset className="flex flex-wrap gap-3"><legend className="mb-2 font-semibold">Deneme süresi</legend>{exams.map(e => <label key={e.id} className={`zp-exam-choice flex min-h-12 items-center gap-2 rounded-xl border border-slate-200 p-4 ${exam === e.id ? 'is-selected' : ''}`}><input type="radio" name="learning-exam" value={e.id} checked={exam === e.id} disabled={busy} onChange={() => setExam(e.id)} />{e.title} · {e.count} soru · {e.seconds / 60} dakika</label>)}</fieldset>}
       <button type="button" disabled={busy} onClick={() => void start()} className={button}>{busy ? 'Çalışman hazırlanıyor…' : 'Başla / devam et'}</button>
     </section> : <>
-      {session.result && <section aria-label="Çalışma sonucu" className="space-y-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
+      {session.result && <section aria-label="Çalışma sonucu" className="zp-result space-y-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
+        <Trophy size={38} aria-hidden="true" />
         <h2 className="text-xl font-extrabold">Çalışman tamamlandı</h2><p>{session.result.correctAnswers} doğru · {session.result.wrongAnswers} yanlış · {session.result.blankAnswers} boş · %{session.result.scorePercentage} başarı</p><p className="font-bold text-emerald-800">{session.result.xp} XP kazandın</p>
         <p className="text-sm">Sorular arasında geçerek çözüm açıklamalarını inceleyebilirsin.</p><button type="button" disabled={busy} onClick={mode === 'adaptive' ? () => void start() : restart} className={button}>{mode === 'adaptive' ? 'Sıradaki soruya geç' : 'Yeni çalışma'}</button>
       </section>}
-      {q && renderQuestion && <section className="space-y-5 rounded-3xl border border-indigo-100 bg-white p-4 sm:p-7">
-        <div className="flex flex-wrap justify-between gap-2 text-sm font-semibold"><span>Soru {index + 1} / {session.questions.length} · {q.targetGrade}. sınıf · Zorluk {q.difficulty} · {COGNITIVE_CATEGORY_LABELS[q.category]}</span>{!session.result && <span aria-label="Kalan süre">{Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}</span>}</div>
-        <nav aria-label="Soru seçimi" className="flex flex-wrap gap-2">{session.questions.map((item, i) => {
+      {q && renderQuestion && <section className="zp-session space-y-5 p-4 sm:p-7">
+        <div className="zp-round-header"><div><p className="zp-eyebrow">{COGNITIVE_CATEGORY_LABELS[q.category]}</p><p className="zp-round-title">{isExam ? 'Soru' : 'Sıradaki keşfin'} <span>{index + 1} / {session.questions.length}</span></p><p className="zp-round-detail">{q.targetGrade}. sınıf · Zorluk {q.difficulty}</p></div>{!session.result && <div className={`zp-timer ${remaining <= 60 ? 'zp-timer-low' : ''}`} role="timer" aria-label="Kalan süre"><Clock3 size={21} aria-hidden="true" /><span><small>Kalan süre</small>{Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}</span></div>}</div>
+        <div className="zp-progress-row"><span><CheckCircle2 size={16} aria-hidden="true" /> {answeredCount} / {session.questions.length} cevaplandı</span><progress aria-label="Çalışma ilerlemesi" max={session.questions.length} value={answeredCount} /></div>
+        <nav aria-label="Soru seçimi" className="zp-question-nav flex flex-wrap gap-2">{session.questions.map((item, i) => {
           const saved = session.answers[String(i)];
           const label = saved?.correct === undefined ? saved ? 'Yanıtlandı' : 'Boş' : saved.correct ? 'Doğru' : 'Yanlış';
-          return <button key={item.id} type="button" disabled={busy || (mode !== 'exam' && !session.result && !saved && i !== nextUnansweredIndex(session))} aria-current={index === i ? 'step' : undefined} aria-label={`${i + 1}. soru, ${label}`} onClick={() => void goTo(i)} className={`min-h-11 rounded-lg border px-3 disabled:opacity-50 ${index === i ? 'border-indigo-700 bg-indigo-700 text-white' : saved?.correct === false ? 'border-amber-300 bg-amber-50' : saved?.correct ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300'}`}>{i + 1} · {label}</button>;
+          return <button key={item.id} type="button" disabled={busy || (mode !== 'exam' && !session.result && !saved && i !== nextUnansweredIndex(session))} aria-current={index === i ? 'step' : undefined} aria-label={`${i + 1}. soru, ${label}`} onClick={() => void goTo(i)} className={`min-h-11 rounded-lg border px-3 disabled:opacity-50 ${index === i ? 'border-indigo-700 bg-indigo-700 text-white' : saved?.correct === false ? 'border-amber-300 bg-amber-50' : saved?.correct ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300'}`} data-state={saved?.correct === false ? 'incorrect' : saved?.correct ? 'correct' : saved ? 'answered' : 'empty'}><span>{i + 1}</span><small>{label}</small></button>;
         })}</nav>
-        <h2 ref={heading} tabIndex={-1} className="text-lg font-bold focus:outline-none">{q.prompt}</h2>{q.secondaryPrompt && <p>{q.secondaryPrompt}</p>}
+        <div className="zp-puzzle-card">
+        <h2 ref={heading} tabIndex={-1} className="zp-prompt text-lg font-bold focus:outline-none">{q.prompt}</h2>{q.secondaryPrompt && <p>{q.secondaryPrompt}</p>}
         {!submitted && <p className="text-sm text-slate-600">Şıkkı seçince cevabın kaydedilir ve sonraki soru açılır. Önceki soruları yukarıdan inceleyebilirsin.{mode === 'exam' ? ' Doğru cevaplar ve çözümler deneme bitince gösterilir.' : ''}</p>}
         <MemoryStudy key={`${session.id}-${index}`} question={renderQuestion} review={submitted}><QuestionRenderer question={renderQuestion} />
-        <fieldset disabled={busy}><legend className="sr-only">Cevabın</legend><AnswerWorkspace key={`${session.id}-${index}`} question={renderQuestion} response={response} onChange={changeResponse} submitted={submitted} /></fieldset></MemoryStudy>
+        <fieldset disabled={busy}><legend className="sr-only">Cevabın</legend><AnswerWorkspace preferredMode="choice" key={`${session.id}-${index}`} question={renderQuestion} response={response} onChange={changeResponse} submitted={submitted} /></fieldset></MemoryStudy>
+        </div>
         {busy && <p role="status" className="text-sm text-indigo-800">Cevabın kaydediliyor…</p>}
-        {!submitted && response?.mode !== 'choice' && <button type="button" onClick={() => void submit()} disabled={busy || remaining === 0 || !isResponseComplete(q as BaseQuestion, response)} className={button}>Cevabımı kaydet ve ilerle</button>}
+        {!submitted && response && response.mode !== 'choice' && <button type="button" onClick={() => void submit()} disabled={busy || remaining === 0 || !isResponseComplete(q as BaseQuestion, response)} className={button}>Cevabımı kaydet ve ilerle</button>}
         {!submitted && response?.mode === 'choice' && response.optionId && error && <button type="button" disabled={busy} onClick={() => void submit()} className={button}>Cevabımı yeniden gönder</button>}
         {mode === 'exam' && answer && !session.result && <p role="status" className="text-sm text-indigo-800">Cevabın kaydedildi. Başka bir şık seçersen kaydedilip sıradaki boş soruya geçilir.</p>}
         {revealed && <p role="status" className={`font-bold ${answer.correct ? 'text-emerald-700' : 'text-amber-800'}`}>{answer.correct ? `Doğru cevap!${answer.xp ? ` +${answer.xp} XP` : ''}` : 'Bu soruyu birlikte yeniden inceleyelim.'}</p>}
         {solution && <VisualExplanationOverlay explanation={solution.explanation} correctOptionId={solution.correctOptionId} />}
         {!submitted && mode !== 'exam' && <><button type="button" onClick={() => setHint(!hint)} className="min-h-11 font-semibold text-indigo-700 underline">Bir ipucu göster</button>{hint && <p className="rounded-xl bg-amber-50 p-4">Önce değişen ve aynı kalan özellikleri karşılaştır. Bulduğun kuralın bütün adımlarda çalıştığını kontrol et; sonra seçenekleri tek tek dene.</p>}</>}
-        <div className="flex flex-wrap gap-3">
+        {isExam && <div className="zp-exam-navigation"><button type="button" disabled={busy || index === 0} onClick={() => void goTo(index - 1)}><ArrowLeft size={18} aria-hidden="true" /> Önceki soru</button><span>{index + 1} / {session.questions.length}</span><button type="button" disabled={busy || index === session.questions.length - 1} onClick={() => void goTo(index + 1)}>Sonraki soru <ArrowRight size={18} aria-hidden="true" /></button></div>}
+        <div className="zp-session-actions flex flex-wrap gap-3">
           {!session.result && !reviewMistakeId && <button type="button" disabled={busy} onClick={() => void chooseNewDifficulty()} className="min-h-11 rounded-xl border border-indigo-300 px-4 py-2 font-semibold text-indigo-800">Zorluğu değiştir / yeni çalışma</button>}
           {!session.result && mode !== 'exam' && revealed && <button type="button" disabled={busy} onClick={() => nextUnansweredIndex(session) >= 0 ? void goTo(nextUnansweredIndex(session)) : void next()} className={button}>{nextUnansweredIndex(session) >= 0 ? 'Çalışmaya devam et' : 'Sonuçları gör'}</button>}
           {!session.result && <button type="button" disabled={busy} onClick={() => void finish()} className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 font-semibold">{mode === 'exam' ? 'Denemeyi bitir' : 'Çalışmayı bitir'}</button>}
@@ -178,5 +192,8 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
         <details className="border-t border-slate-100 pt-4"><summary className="min-h-11 cursor-pointer text-sm font-semibold text-slate-600">Soruyla ilgili sorun bildir</summary><div className="flex flex-wrap gap-2">{([['answer', 'Cevap'], ['unclear', 'Anlatım'], ['visual', 'Görsel'], ['level', 'Seviye']] as const).map(([reason, label]) => <button key={reason} type="button" disabled={reportBusy} onClick={async () => { setReportBusy(true); try { await learningService.report(session.id, index, reason); setReportStatus('Bildirimin alındı. Teşekkür ederiz.'); } catch (err) { setReportStatus(err instanceof Error ? err.message : 'Bildirim gönderilemedi.'); } finally { setReportBusy(false); } }} className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm">{label}</button>)}</div><p role="status" className="mt-2 text-sm">{reportStatus}</p></details>
       </section>}
     </>}
+    </div>
+    {isExam && <div className="zp-tablet-home" aria-hidden="true"><span /></div>}
+    </div>
   </main>;
 }

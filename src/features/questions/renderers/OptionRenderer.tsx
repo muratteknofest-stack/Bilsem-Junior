@@ -499,6 +499,7 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
     <button
       type="button"
       id={`option-card-${id}`}
+      data-feedback={showCorrect ? (isCorrectOption ? 'correct' : isSelected ? 'incorrect' : 'other') : undefined}
       onClick={onSelect}
       onKeyDown={handleKeyDown}
       disabled={disabled}
@@ -507,17 +508,17 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
       aria-pressed={isSelected}
       aria-disabled={disabled}
       aria-label={optionLabelText}
-      className={`relative flex flex-col items-center justify-center ${optionValue?.textNumber !== undefined ? 'p-3' : 'p-3 sm:p-5'} rounded-2xl sm:rounded-3xl border-2 transition-all duration-200 cursor-pointer text-left w-full min-h-[120px] sm:min-h-[140px] md:min-h-[155px] min-w-[56px] touch-manipulation focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/50 ${cardStyle} ${disabled && !showCorrect ? 'opacity-70 pointer-events-none shadow-none translate-y-1' : ''}`}
+      className={`zp-answer-option relative flex flex-col items-center justify-center ${optionValue?.textNumber !== undefined ? 'p-3' : 'p-3 sm:p-5'} rounded-2xl sm:rounded-3xl border-2 transition-all duration-200 cursor-pointer text-left w-full min-h-[120px] sm:min-h-[140px] md:min-h-[155px] min-w-[56px] touch-manipulation focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/50 ${cardStyle} ${disabled && !showCorrect ? 'opacity-70 pointer-events-none shadow-none translate-y-1' : ''}`}
     >
       {/* Option Identifier Badge */}
       <span
-        className={`absolute top-2.5 left-2.5 sm:top-3 sm:left-3 flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-black border transition-colors ${badgeStyle}`}
+        className={`zp-answer-badge absolute top-2.5 left-2.5 sm:top-3 sm:left-3 flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-black border transition-colors ${badgeStyle}`}
       >
         {id}
       </span>
 
       {/* Visual Content Render */}
-      <div className="w-full flex items-center justify-center my-auto pt-7">
+      <div className="zp-answer-content w-full flex items-center justify-center my-auto pt-7">
         {renderVisualContent()}
       </div>
     </button>

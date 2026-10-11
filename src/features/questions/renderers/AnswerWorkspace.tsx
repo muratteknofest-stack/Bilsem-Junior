@@ -11,7 +11,7 @@ import type { WorkshopValue } from '../workshop-mechanics';
 import { useMemoryStudy } from './MemoryStudy';
 
 const labels: Record<AnswerMode, string> = { choice: 'Şık seç', place: 'Sürükle bırak', order: 'Sırayı kur', match: 'Eşleştir', number: 'Cevabı yaz' };
-type Props = { question: BaseQuestion; response: QuestionResponse | null; onChange: (r: QuestionResponse) => void; submitted?: boolean; allowedModes?: AnswerMode[] };
+type Props = { question: BaseQuestion; response: QuestionResponse | null; onChange: (r: QuestionResponse) => void; submitted?: boolean; allowedModes?: AnswerMode[]; preferredMode?: AnswerMode };
 
 function CardValue({ value, theme }: { value: unknown; theme: VisualTheme }) {
   if(value&&typeof value==='object'&&('symbol' in value||'polygon' in value))return <WorkshopShape value={value as WorkshopValue}/>;
@@ -21,11 +21,11 @@ function CardValue({ value, theme }: { value: unknown; theme: VisualTheme }) {
 }
 
 /** Pointer events support mouse, touch and pen; every placement also works with Tab + Enter. */
-export function AnswerWorkspace({ question, response, onChange, submitted = false, allowedModes }: Props) {
+export function AnswerWorkspace({ question, response, onChange, submitted = false, allowedModes, preferredMode }: Props) {
   const memory=useMemoryStudy();
   const theme = questionVisualTheme(question);
   const modes = interactionModes(question).filter(m => !allowedModes || allowedModes.includes(m));
-  const [mode, setMode] = useState<AnswerMode>(response?.mode ?? modes[0]);
+  const [mode, setMode] = useState<AnswerMode>(response?.mode ?? (preferredMode && modes.includes(preferredMode) ? preferredMode : modes[0]));
   const [picked, setPicked] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const [ghost, setGhost] = useState<{ x: number; y: number; token: string } | null>(null);
@@ -65,7 +65,7 @@ export function AnswerWorkspace({ question, response, onChange, submitted = fals
     </label>
   );
   if(memory.locked)return <p role="status" className="text-sm text-indigo-800">Önce deseni belleğinde tut. Deseni gizlediğinde cevap alanı açılır.</p>;
-  return <div ref={root} className="space-y-4 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/60 to-white p-3 sm:p-5" aria-label="Cevap alanı">
+  return <div ref={root} className="zp-answer-workspace space-y-4 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/60 to-white p-3 sm:p-5" aria-label="Cevap alanı">
     <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Çözme biçimi">
       {modes.map(m => <button key={m} type="button" aria-pressed={activeMode === m} disabled={submitted}
         onClick={() => { if (m === activeMode) return; setMode(m); setPicked(null); setGhost(null); onChange(emptyResponse(m, question)); setAnnouncement('Çözme biçimi değişti. Cevap alanı temizlendi.'); }}
@@ -75,7 +75,7 @@ export function AnswerWorkspace({ question, response, onChange, submitted = fals
       {activeMode === 'order' ? 'İpuçlarına göre tüm sırayı soldan sağa kur. Bütün yerleşimler kontrol edilecek. ' : activeMode === 'match' ? 'Sembolleri değerleriyle eşleştir, sonra toplamı yaz. Bir değeri tekrar kullanabilirsin. ' : ''}
       {['place', 'order', 'match'].includes(activeMode) ? 'Kartı sürükle veya önce karta, sonra hedefe dokun. Klavyede Tab ve Enter kullan.' : activeMode === 'choice' ? 'Cevabını seç.' : 'Şıklara bakmadan sonucu bul.'}
     </p>
-    {current.mode === 'choice' ? <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{question.options.map(o =>
+    {current.mode === 'choice' ? <div className="zp-answer-grid grid grid-cols-2 sm:grid-cols-4 gap-3">{question.options.map(o =>
       <OptionRenderer key={o.id} option={o} question={question} questionType={question.type} isSelected={current.optionId === o.id} onSelect={() => onChange({ mode: 'choice', optionId: o.id })}
         disabled={submitted} showCorrect={submitted} isCorrectOption={o.id === question.correctOptionId} />)}</div> : null}
     {current.mode === 'number' ? numberInput(current.value, value => onChange({ mode: 'number', value }), 'Cevabın') : null}
