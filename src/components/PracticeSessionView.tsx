@@ -54,6 +54,7 @@ import {
   Minimize2,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { AnswerHistory, type ReviewedAnswer } from './AnswerHistory';
 
 interface PracticeSessionViewProps {
   initialCategory?: CognitiveCategory | 'mixed';
@@ -106,6 +107,8 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
   const [interactionResponse, setInteractionResponse] = useState<QuestionResponse | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const submissionLock = useRef(false);
+  const solvedIds = useRef(new Set<string>());
+  const [answerHistory, setAnswerHistory] = useState<ReviewedAnswer[]>([]);
   const [isShaking, setIsShaking] = useState(false);
   const [showAiHint, setShowAiHint] = useState(false);
   const [showAiMistakeModal, setShowAiMistakeModal] = useState(false);
@@ -286,6 +289,8 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
       setInteractionResponse(null);
       setIsSubmitted(false);
       submissionLock.current = false;
+      solvedIds.current.clear();
+      setAnswerHistory([]);
       setCorrectCount(0);
       setWrongCount(0);
       setEarnedXP(0);
@@ -346,23 +351,26 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
   const answerResult = currentQuestion ? evaluateResponse(currentQuestion, answerResponse) : { complete: false, correct: false };
   const answerReady = answerResult.complete;
   const handleResponse = (response: QuestionResponse) => {
-    if (isSubmitted) return;
+    if (isSubmitted || submissionLock.current || solvedIds.current.has(currentQuestion.id)) return;
     setInteractionResponse(response);
     setSelectedOptionId(response.mode === 'choice' || response.mode === 'place' ? response.optionId : null);
+    if (response.mode === 'choice' && response.optionId) handleSubmitAnswer(response);
   };
 
-  const handleSubmitAnswer = () => {
-    if (!answerReady || submissionLock.current || isSubmitted || !currentQuestion) return;
+  const handleSubmitAnswer = (pending = answerResponse) => {
+    if (!pending || submissionLock.current || isSubmitted || !currentQuestion || solvedIds.current.has(currentQuestion.id)) return;
 
-    const checkedAnswer = evaluateResponse(currentQuestion, answerResponse);
+    const checkedAnswer = evaluateResponse(currentQuestion, pending);
     if (!checkedAnswer.complete) return;
     if (isDemoUser(dataService.getCurrentUser().id) && !useDemoQuestion()) {
       onNavigateHome();
       return;
     }
     submissionLock.current = true;
+    solvedIds.current.add(currentQuestion.id);
     const isCorrect = checkedAnswer.correct;
     setIsSubmitted(true);
+    setAnswerHistory(previous => [...previous, { id: currentQuestion.id, question: currentQuestion, response: pending, correct: isCorrect }]);
 
     // Update stats and persistence
     dataService.recordQuestionSolved(isCorrect, currentQuestion.category);
@@ -435,6 +443,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
     
     // Refresh user profile for XP bar updates
     setUserProfile(dataService.getCurrentUser());
+    handleNextQuestion();
   };
 
   const handleNextQuestion = () => {
@@ -447,6 +456,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
       submissionLock.current = false;
       setShowAiHint(false);
       setShowAiMistakeModal(false);
+      setIsShaking(false);
       setActiveMilestoneStreak(null); // Clear milestone overlay on next question
     } else {
       // Complete Session
@@ -756,6 +766,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
         </div>
 
         {/* Action Buttons */}
+        <AnswerHistory items={answerHistory} />
         <div className="space-y-3 pt-2">
           {wrongCount > 0 && (
             <button
@@ -792,6 +803,8 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
   // 3. ACTIVE QUESTION RUNNER
   return (
     <div className="w-full max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-28 md:pb-12 space-y-4">
+      <AnswerHistory items={answerHistory} />
+      <p className="text-sm text-slate-600">Şıkkı seçince doğrudan sonraki soruya geçersin. Önceki cevaplarını yukarıdan inceleyebilirsin.</p>
       {/* Animated Combo Milestone Overlay */}
       <ComboBurstOverlay
         streak={activeMilestoneStreak}
@@ -1011,7 +1024,8 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
             </button>
 
             <button
-              onClick={handleSubmitAnswer}
+              onClick={() => handleSubmitAnswer()}
+              hidden={answerResponse?.mode === 'choice'}
               disabled={!answerReady}
               className={`flex-1 w-full py-3.5 rounded-xl font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2 cursor-pointer ${
                 answerReady
