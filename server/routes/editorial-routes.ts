@@ -5,6 +5,7 @@ import type { BaseQuestion } from '../../src/types';
 import { getServiceClient } from '../supabase-admin';
 import { requireSupabaseAuth, requireProfileRole, requireVerifiedEmail, type AuthenticatedRequest } from '../security';
 import { adminAiLimiter } from '../rate-limiters';
+import { sharedRateLimit } from '../shared-rate-limit';
 import { loadQualityComparisonPool } from '../question-quality-store';
 import { EditorialValidationError, prepareEditorialQuestion } from '../editorial-validation';
 
@@ -16,7 +17,7 @@ const saveSchema = z.object({
   confirmedReview: z.boolean(),
 }).strict();
 
-editorialRoutes.post('/admin/questions/save', requireSupabaseAuth, adminAiLimiter, requireVerifiedEmail, requireProfileRole('admin'), async (req: AuthenticatedRequest, res) => {
+editorialRoutes.post('/admin/questions/save', requireSupabaseAuth, adminAiLimiter, requireVerifiedEmail, requireProfileRole('admin'), sharedRateLimit('admin-editorial-save', 60, 600), async (req: AuthenticatedRequest, res) => {
   const parsed = saveSchema.safeParse(req.body);
   if (!parsed.success || !req.authUser) return res.status(400).json({ error: 'Soru kayıt isteği geçersiz.' });
   try {

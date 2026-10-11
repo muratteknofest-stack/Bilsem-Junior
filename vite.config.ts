@@ -2,9 +2,10 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import fs from 'fs';
 import path from 'path';
-import {defineConfig, Plugin} from 'vite';
+import {defineConfig, loadEnv, Plugin} from 'vite';
 import { blogPlugin } from './scripts/blog-vite-plugin';
 import { blogConfig } from './scripts/blog-engine';
+import { publicBuildSettings } from './scripts/public-build-settings';
 
 // LINT.IfChange(aistudio_media_plugin)
 function aistudioMediaPlugin(): Plugin {
@@ -66,15 +67,15 @@ function aistudioMediaPlugin(): Plugin {
 }
 // LINT.ThenChange(//depot/google3/java/com/google/alkali/boq/makersuite/applet_dev_service/templates/initializers/react_theme/vite.config.ts:aistudio_media_plugin)
 
-export default defineConfig(() => {
+export default defineConfig(({ mode }) => {
+  const publicSettings = publicBuildSettings(loadEnv(mode, process.cwd(), 'VITE_'), mode === 'production', process.env.VERCEL === '1', blogConfig().origin);
   return {
-    // Expose only the application's Supabase and API settings to browser code.
-    envPrefix: ['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY', 'VITE_API_BASE_URL'],
+    // Empty prefix list disables automatic exports, including similarly named secrets.
+    envPrefix: [],
     plugins: [react(), tailwindcss(), aistudioMediaPlugin(), blogPlugin()],
     // Vercel serves /api in this project. Ignore stale external API settings there.
     define: {
-      ...(process.env.VERCEL === '1' ? { 'import.meta.env.VITE_API_BASE_URL': JSON.stringify('') } : {}),
-      'import.meta.env.VITE_PUBLIC_SITE_URL': JSON.stringify(blogConfig().origin),
+      ...Object.fromEntries(Object.entries(publicSettings).map(([key, value]) => [`import.meta.env.${key}`, JSON.stringify(value)])),
     },
     resolve: {
       alias: {

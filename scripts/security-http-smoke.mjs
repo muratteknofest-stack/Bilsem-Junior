@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import net from 'node:net';
+import fs from 'node:fs';
 import { setTimeout as pause } from 'node:timers/promises';
 const reservation = net.createServer();
 await new Promise(resolve => reservation.listen(0, '127.0.0.1', resolve));
@@ -8,6 +9,7 @@ const port = reservation.address().port;
 await new Promise(resolve => reservation.close(resolve));
 const child = spawn(process.execPath, ['build/server.cjs'], { env: { ...process.env, NODE_ENV: 'production', PORT: String(port) }, stdio: 'ignore' });
 const base = `http://127.0.0.1:${port}`;
+const configuredHeaders = JSON.parse(fs.readFileSync('vercel.json', 'utf8')).headers[0].headers.filter(header => header.key !== 'Content-Security-Policy');
 try {
   let ready = false;
   for (let attempt = 0; attempt < 50; attempt++) {
@@ -23,6 +25,11 @@ try {
     assert.equal(response.headers.get('x-content-type-options'), 'nosniff', path);
     assert.match(response.headers.get('content-security-policy') || '', /frame-ancestors 'none'/, path);
     assert.equal(response.headers.get('x-powered-by'), null, path);
+    for (const header of configuredHeaders) assert.equal(response.headers.get(header.key), header.value, `${path}: ${header.key}`);
+    const csp = response.headers.get('content-security-policy') || '';
+    assert.match(csp, /script-src-attr 'none'/);
+    assert.match(csp, /style-src-elem 'self' https:\/\/fonts.googleapis.com/);
+    assert.ok(!csp.includes('*.') && !csp.includes('unsafe-eval'), path);
     if (path.startsWith('/api/')) assert.equal(response.headers.get('cache-control'), 'no-store', path);
     await response.arrayBuffer();
   }
@@ -49,7 +56,18 @@ try {
     assert.equal(payload.access_token, undefined, path);
     assert.equal(payload.refresh_token, undefined, path);
   }
-  console.log(`Production HTTP security: ${checks.length + 4} checks passed.`);
+  for (const [headers, expected] of [
+    [{ Origin: 'https://attacker.example', 'Content-Type': 'application/json' }, 403],
+    [{ 'Sec-Fetch-Site': 'cross-site', 'Content-Type': 'application/json' }, 403],
+    [{ 'Content-Type': 'text/plain' }, 415],
+  ]) {
+    const response = await fetch(base + '/api/parent/return-session', { method: 'POST', headers, body: '{}', signal: AbortSignal.timeout(3000) });
+    assert.equal(response.status, expected);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    assert.equal(response.headers.get('cross-origin-resource-policy'), 'same-origin');
+    await response.arrayBuffer();
+  }
+  console.log(`Production HTTP security: ${checks.length + 7} checks passed.`);
 } finally {
   if (child.exitCode === null) { child.kill('SIGTERM'); await new Promise(resolve => child.once('exit', resolve)); }
 }
