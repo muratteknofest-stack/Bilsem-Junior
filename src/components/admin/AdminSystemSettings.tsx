@@ -278,7 +278,7 @@ export function AdminSystemSettings({
                 Eksik:{" "}
                 {releaseBlockers(record.settings).length
                   ? releaseBlockers(record.settings).join(" · ")
-                  : "Zorunlu hazırlık alanları tamamlandı."}
+                  : "Hazırlık alanları tamamlandı."}
               </p>
               <label className="flex items-start gap-3">
                 <input
@@ -304,9 +304,13 @@ export function AdminSystemSettings({
                   className="mt-1 h-5 w-5"
                 />
                 <span>
-                  Hazırlık tamamlandıktan sonra yeni aile kayıtlarını aç.
+                  Yeni aile kayıtlarını aç.
                 </span>
               </label>
+              <p>
+                Kayıt açma ayarı bağımsızdır. Yukarıdaki hazırlık kayıtları
+                eksik işleri gösterir; kayıt açıldığında tamamlandı sayılmaz.
+              </p>
               <p>
                 Ücretli satış etkin değildir. Ödeme sağlayıcısı ve sunucu
                 kullanım hakları kurulana kadar abonelik satışı açılmaz.

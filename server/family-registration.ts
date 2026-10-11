@@ -53,7 +53,7 @@ export function createFamilyRegistrationHandler(deps: RegistrationDependencies) 
     let committed = false;
     try {
       const configuration = await deps.configuration();
-      if (!registrationOpen(configuration.settings)) return res.status(503).json({ error: 'Yeni aile kayıtları hazırlık aşamasında. Mevcut hesabınızla giriş yapabilirsiniz.', code: 'REGISTRATION_NOT_READY' });
+      if (!registrationOpen(configuration.settings)) return res.status(503).json({ error: 'Yeni aile kayıtları şu anda kapalı. Mevcut hesabınızla giriş yapabilirsiniz.', code: 'REGISTRATION_NOT_READY' });
       if (parsed.data.policyVersion !== `2026-10-11.${configuration.revision}`) return res.status(409).json({ error: 'Aydınlatma metni güncellendi. Güncel metni okuyup yeniden onaylayın.', code: 'POLICY_UPDATED' });
       const input = parsed.data;
       await Promise.all([deps.checkPassword(input.parentPassword), deps.checkPassword(input.studentPassword)]);

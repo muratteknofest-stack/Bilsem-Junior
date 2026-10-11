@@ -31,11 +31,15 @@ test('direct registration and login addresses preserve the public account form a
   assert.equal(accountEntryPath('register','parent'),'/register'); assert.equal(accountEntryPath('login','parent'),'/login?role=parent'); assert.equal(accountEntryPath('login','admin'),'/login');
 });
 const input = { parentEmail: ' VELI@example.com ', parentPassword: 'VeliGüvenli937', studentPassword: 'ÖğrenciGüvenli938', studentName: ' Deniz ', grade: 2, examFocus: 'Genel Zihinsel Yetenek', consentAccepted: true, termsAccepted: true, guardianConfirmed: true, policyVersion: '2026-10-11.1' };
-async function run(options: { fail?: 'config'|'password'|'parent'|'student'|'profiles'|'mail'|'cleanup'; closed?: boolean; stale?: boolean; collision?: boolean; body?: unknown } = {}) {
+async function run(options: { fail?: 'config'|'password'|'parent'|'student'|'profiles'|'mail'|'cleanup'; closed?: boolean; stale?: boolean; collision?: boolean; incompleteReadiness?: boolean; body?: unknown } = {}) {
   const actions: string[] = [], profiles: Array<Record<string, unknown>> = [];
   const settings = defaultPlatformSettings();
   settings.business = { legalName: 'Test', address: 'Test', contactEmail: 'test@example.invalid', legalBases: 'Test', retention: 'Test', transfers: 'Test' };
   settings.release = { registrationEnabled: !options.closed, emailTested: true, restoreTested: true, familyPilotTested: true, monitoringTested: true };
+  if (options.incompleteReadiness) {
+    settings.business = defaultPlatformSettings().business;
+    settings.release = { ...defaultPlatformSettings().release, registrationEnabled: true };
+  }
   let attempts = 0;
   const handler = createFamilyRegistrationHandler({
     async configuration() { actions.push('config'); if (options.fail === 'config') throw Error('private-configuration'); return { settings, revision: options.stale ? 2 : 1, updatedAt: null }; },
@@ -65,6 +69,11 @@ test('family registration creates two unverified users and saves reciprocal prof
   assert.deepEqual(result.actions, ['config','parent','student','profiles','mail']);
   assert.equal(result.profiles[0].role, 'parent'); assert.deepEqual(result.profiles[0].linkedStudentIds, [studentId]);
   assert.equal(result.profiles[1].linkedParentId, parentId); assert.equal(result.payload.student.code, 'DENIZ1234');
+});
+test('enabled registration reaches account creation with incomplete readiness and still leaves users unverified', async () => {
+  const result = await run({ incompleteReadiness: true });
+  assert.equal(result.status, 201);
+  assert.deepEqual(result.actions, ['config','parent','student','profiles','mail']);
 });
 test('mail outage keeps completed accounts and reports delivery failure without repeating registration', async () => {
   const result = await run({ fail: 'mail' }); assert.equal(result.status, 201); assert.equal(result.payload.success, true); assert.equal(result.payload.verificationSent, false);

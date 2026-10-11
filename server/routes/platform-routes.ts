@@ -64,17 +64,6 @@ routes.put(
     if (!parsed.success)
       return res.status(400).json({ error: "Ayar bilgileri geçersiz." });
     const { settings, revision } = parsed.data;
-    if (
-      settings.release.registrationEnabled &&
-      releaseBlockers(settings).length
-    )
-      return res
-        .status(422)
-        .json({
-          error:
-            "Kayıt açılmadan önce işletmeci bilgileri ve kabul testleri tamamlanmalıdır.",
-          blockers: releaseBlockers(settings),
-        });
     const { data, error } = await getServiceClient()
       .from("platform_settings")
       .update({

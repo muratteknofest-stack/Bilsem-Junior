@@ -6,6 +6,8 @@ Hedef `https://zekapark.vercel.app`, Supabase projesi `vehhvsdkifwstbjhnhao`.
 Yönetici girişi `/admin/giris`. Yönetici TOTP kurulumu veya doğrulaması tamamlanmadan panel yüklenmez; API ve soru bankası politikaları AAL2 ister.
 Kayıt durumu `/api/public/platform` ile kontrol edilir. Mevcut hesapların giriş ve çalışma erişimi kayıt kapısından etkilenmez.
 
+Yeni aile kayıtlarını yalnızca `release.registrationEnabled` açar veya kapatır. İşletmeci bilgileri ve kabul testi beyanları yönetici panelinde ayrı bir hazırlık listesi olarak kalır; eksik olmaları bu anahtarı geçersiz kılmaz. Kayıt açmak testleri yapılmış olarak işaretlemez. E-posta doğrulama, güçlü şifre, istek sınırı, güncel metin onayı ve aileler arası yetki kontrolleri kayıt açıkken de uygulanır. Ayarlar okunamazsa kayıt açılmaz.
+
 Sistem ayarları Supabase'de sunucuya özel `platform_settings` tablosunda saklanır. Eşzamanlı yönetici değişiklikleri sürüm kontrolüyle reddedilir. Yeni denemeler kaydedilen soru sayısı ve süreyi kullanır; eski oturumların süreleri değiştirilmez.
 
 İşletmeci unvanı, adres, iletişim, amaç/hukuki dayanak, saklama ve aktarım açıklamalarını doğru bilgilerle doldurun. Gizlilik, koşullar ve iletişim sayfaları bunları sunucudan okur. Hukuki açıklamalar uzman incelemesinden geçirilmelidir. Kayıt onayı metin sürümüne bağlanır; metin değişirse eski sürümle yeni kayıt kabul edilmez.
@@ -36,7 +38,7 @@ Haftalık rapor servisi ayrıca SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS ve AP
 8. Profil dışa aktarma ve silme talebi durumunun doğru gösterilmesi.
 9. Android Chrome ve iPhone Safari'de küçük ekran, ekran klavyesi, erişilebilir odak ve kaydırma.
 
-Kayıt kapısı nedeniyle ilk pilotu gerçek kişisel veri içermeyen ayrı staging projesinde yürütün. Sonra üretim için izinli kabul hesapları kullanılabilir. Kabul testleri tamamlanmadan yönetici beyan kutularını işaretlemeyin.
+İlk pilotu gerçek kişisel veri içermeyen ayrı staging projesinde yürütün. Üretimde izinli kabul hesapları kullanılabilir. Kabul testleri tamamlanmadan yönetici beyan kutularını işaretlemeyin.
 
 ## Şifreli yedekleme
 

@@ -15,14 +15,18 @@ test('export can never enumerate storage or request an authentication key', () =
   assert.deepEqual(data.preferences, { zekapark_theme: 'dark' });
   assert.ok(!JSON.stringify(data).includes('sb-'));
 });
-test('registration stays closed until all required fields, evidence flags and explicit enablement agree', () => {
+test('registration uses explicit operator enablement while readiness records remain independent', () => {
   const complete = defaultPlatformSettings();
   assert.equal(registrationOpen(complete), false); assert.equal(releaseBlockers(complete).length, 10);
+  complete.release.registrationEnabled = true;
+  assert.equal(registrationOpen(complete), true);
+  assert.equal(releaseBlockers(complete).length, 10);
+  assert.equal(complete.release.emailTested, false);
   complete.business = { legalName: 'Test İşletmesi', address: 'Yalnızca test adresi', contactEmail: 'test@example.com', legalBases: 'Test amaç ve dayanak', retention: 'Test saklama süresi', transfers: 'Test aktarım açıklaması' };
   complete.release = { registrationEnabled: true, emailTested: true, restoreTested: true, familyPilotTested: true, monitoringTested: true };
   assert.equal(registrationOpen(complete), true);
-  for (const key of Object.keys(complete.business) as Array<keyof typeof complete.business>) assert.equal(registrationOpen({ ...complete, business: { ...complete.business, [key]: '' } }), false, key);
-  for (const key of Object.keys(complete.release) as Array<keyof typeof complete.release>) assert.equal(registrationOpen({ ...complete, release: { ...complete.release, [key]: false } }), false, key);
+  for (const key of Object.keys(complete.business) as Array<keyof typeof complete.business>) assert.equal(registrationOpen({ ...complete, business: { ...complete.business, [key]: '' } }), true, key);
+  for (const key of Object.keys(complete.release) as Array<keyof typeof complete.release>) assert.equal(registrationOpen({ ...complete, release: { ...complete.release, [key]: false } }), key !== 'registrationEnabled', key);
   assert.equal(platformSettingsSchema.safeParse({ ...complete, serviceRoleKey: 'forged' }).success, false);
   assert.equal(platformSettingsSchema.safeParse({ ...complete, exams: { ...complete.exams, mini: { count: 100, seconds: 900 } } }).success, false);
   complete.exams.mini = { count: 7, seconds: 420 }; assert.equal(configuredExams(complete)[0].count, 7); assert.equal(configuredExams(complete)[0].seconds, 420);

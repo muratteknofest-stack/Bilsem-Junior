@@ -92,7 +92,6 @@ export function releaseBlockers(settings: PlatformSettings): string[] {
   return missing;
 }
 export const registrationOpen = (settings: PlatformSettings) =>
-  settings.release.registrationEnabled &&
-  releaseBlockers(settings).length === 0;
+  settings.release.registrationEnabled;
 export const configuredExams = (settings: PlatformSettings) =>
   LEARNING_EXAMS.map((e) => ({ ...e, ...settings.exams[e.id] }));
