@@ -9,13 +9,12 @@ import {
   Sparkles,
   Layers, 
   Compass, 
-  Users, 
-  Copy,
-  Check
+  Users
 } from 'lucide-react';
 
 import { LoginForm } from '../features/auth/components/LoginForm';
-import { RegistrationForm } from '../features/auth/components/RegistrationForm';
+import { RegistrationForm, type RegistrationSuccess } from '../features/auth/components/RegistrationForm';
+import { RegistrationConfirmation } from '../features/auth/components/RegistrationConfirmation';
 import { ForgotPasswordModal } from '../features/auth/components/ForgotPasswordModal';
 import './landing/design-system.css';
 import '../features/auth/auth-design-system.css';
@@ -34,41 +33,28 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   initialMode = 'login',
 }) => {
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(initialMode);
-  const [selectedRole, setSelectedRole] = useState<UserRole>(initialRole === 'parent' ? 'parent' : 'student');
+  const [selectedRole, setSelectedRole] = useState<UserRole>(initialMode === 'register' || initialRole === 'parent' ? 'parent' : 'student');
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
-  const [createdStudentCode, setCreatedStudentCode] = useState<string | null>(null);
-  const [hasCopiedCode, setHasCopiedCode] = useState(false);
+  const [registrationResult, setRegistrationResult] = useState<RegistrationSuccess | null>(null);
+  const [registrationBusy, setRegistrationBusy] = useState(false);
+  const [loginIdentifier, setLoginIdentifier] = useState('');
 
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
-  const handleCopyCode = () => {
-    if (!createdStudentCode) return;
-    navigator.clipboard?.writeText(createdStudentCode);
-    setHasCopiedCode(true);
-    setTimeout(() => setHasCopiedCode(false), 2000);
-  };
-
-  const handleRegisterSuccess = (options: {
-    identifier: string;
-    role: UserRole;
-    successToast: string;
-    createdStudentCode: string | null;
-    autoProfile?: UserProfile;
-  }) => {
-    setSelectedRole(options.role);
-    setSuccessToast(options.successToast);
-    setCreatedStudentCode(options.createdStudentCode);
-
-    if (options.autoProfile) {
-      setTimeout(() => {
-        onLoginSuccess(options.role, options.autoProfile);
-      }, 600);
-      return;
-    }
-
+  const openParentLogin = (email: string) => {
+    setSelectedRole('parent');
+    setLoginIdentifier(email);
     setActiveTab('login');
+    setErrorMessage(null);
+    setSuccessToast(null);
+    setRegistrationResult(null);
+  };
+  const handleRegisterSuccess = (result: RegistrationSuccess) => {
+    setSelectedRole('parent');
+    setRegistrationResult(result);
+    setErrorMessage(null);
   };
 
   return (
@@ -77,6 +63,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         <button
           type="button"
           onClick={onNavigateHome}
+          disabled={registrationBusy}
           className="zp-auth-back inline-flex items-center gap-2 text-sm font-semibold px-3.5 py-2 rounded-xl border transition-all cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -97,7 +84,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 size="md"
                 showText={true}
                 showTagline={false}
-                onClick={onNavigateHome}
+                onClick={registrationBusy ? undefined : onNavigateHome}
               />
               <span className="zp-auth-brand-mark" aria-hidden="true"><Sparkles size={18} /></span>
             </div>
@@ -105,7 +92,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <div className="zp-auth-intro">
               <p className="zp-auth-kicker">ZEKA PARKI / HESAP ALANI</p>
               <h1 id="zp-auth-heading">{activeTab === 'login' ? 'Keşfe kaldığın yerden devam et.' : 'Yeni bir keşif başlasın.'}</h1>
-              <p>{activeTab === 'login' ? 'Hesabına gir, yeni sorular ve küçük zaferler seni bekliyor.' : 'Öğrenci veya veli hesabını oluştur, kendi öğrenme yolculuğunu başlat.'}</p>
+              <p>{activeTab === 'login' ? 'Hesabına gir, yeni sorular ve küçük zaferler seni bekliyor.' : 'Veli bilgilerini gir, öğrenci hesabını ekle ve e-postanı doğrula.'}</p>
             </div>
 
             <div className="zp-auth-mode" role="group" aria-label="Hesap işlemi">
@@ -113,10 +100,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   type="button"
                   onClick={() => {
                     sound.playClick();
+                    if (registrationResult) { openParentLogin(registrationResult.identifier); return; }
                     setActiveTab('login');
                     setErrorMessage(null);
                     setSuccessToast(null);
                   }}
+                  disabled={registrationBusy}
                   aria-pressed={activeTab === 'login'}
                   className="zp-auth-mode-button"
                 >
@@ -127,10 +116,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   onClick={() => {
                     sound.playClick();
                     setActiveTab('register');
-                    if (selectedRole === 'admin') setSelectedRole('student');
+                    setSelectedRole('parent');
+                    setRegistrationResult(null);
                     setErrorMessage(null);
                     setSuccessToast(null);
                   }}
+                  disabled={registrationBusy}
                   aria-pressed={activeTab === 'register'}
                   className="zp-auth-mode-button"
                 >
@@ -146,36 +137,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               </div>
             )}
 
-            {/* Success Message & Student Code Card */}
+            {/* Login feedback */}
             {successToast && (
               <div role="status" aria-live="polite" className="zp-auth-success mb-4 p-4 rounded-xl border font-semibold flex items-start gap-3">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <span>{successToast}</span>
-                  {createdStudentCode && (
-                    <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-lg bg-white p-2.5 border border-emerald-200 shadow-xs">
-                      <span className="text-slate-700 font-medium">
-                        Öğrenci Giriş Kodu: <strong className="text-slate-900 font-mono tracking-wider text-sm">{createdStudentCode}</strong>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleCopyCode}
-                        className="zp-auth-copy ml-auto inline-flex items-center gap-1 rounded-md border px-3 py-2 font-bold transition-colors cursor-pointer"
-                      >
-                        {hasCopiedCode ? (
-                          <>
-                            <Check className="w-3 h-3 text-emerald-700" />
-                            <span>Kopyalandı</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-3 h-3 text-emerald-700" />
-                            <span>Kodu Kopyala</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )}
+
                 </div>
               </div>
             )}
@@ -183,6 +151,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             {/* Active Mode Form */}
             {activeTab === 'login' ? (
               <LoginForm
+                initialIdentifier={loginIdentifier}
                 selectedRole={selectedRole}
                 setSelectedRole={setSelectedRole}
                 onLoginSuccess={onLoginSuccess}
@@ -190,12 +159,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 setErrorMessage={setErrorMessage}
                 setSuccessToast={setSuccessToast}
               />
+            ) : registrationResult ? (
+              <RegistrationConfirmation result={registrationResult} onLogin={openParentLogin} />
             ) : (
               <RegistrationForm
-                selectedRole={selectedRole}
-                setSelectedRole={setSelectedRole}
                 setErrorMessage={setErrorMessage}
                 onRegisterSuccess={handleRegisterSuccess}
+                onBusyChange={setRegistrationBusy}
+                onLogin={openParentLogin}
               />
             )}
           </div>

@@ -16,6 +16,7 @@ import { isManagedStudentEmail, studentCodeToEmail } from '../../../lib/account-
 import { loginSchema, formatZodError } from '../../../lib/validations';
 import { loginAuthError } from '../auth-error-messages';
 import { cancelAccountSwitch } from '../../../lib/account-switch';
+import { ConfirmationEmailAction } from './ConfirmationEmailAction';
 import { 
   Eye, 
   EyeOff, 
@@ -26,12 +27,12 @@ import {
   ArrowRight,
   GraduationCap,
   Users,
-  CheckCircle2
 } from 'lucide-react';
 
 interface LoginFormProps {
   selectedRole: UserRole;
   adminOnly?: boolean;
+  initialIdentifier?: string;
   setSelectedRole: (role: UserRole) => void;
   onLoginSuccess: (role: UserRole, userProfile?: UserProfile) => void;
   onShowForgotPassword: () => void;
@@ -42,6 +43,7 @@ interface LoginFormProps {
 export const LoginForm: React.FC<LoginFormProps> = ({
   selectedRole: requestedRole,
   adminOnly = false,
+  initialIdentifier = '',
   setSelectedRole,
   onLoginSuccess,
   onShowForgotPassword,
@@ -51,56 +53,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const { loginLocally, sendEmailVerification } = useAuth();
   const selectedRole: UserRole = adminOnly ? 'admin' : requestedRole === 'parent' ? 'parent' : 'student';
 
-  const [identifier, setIdentifier] = useState('');
+  const [identifier, setIdentifier] = useState(initialIdentifier);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(!adminOnly);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  const handleQuickDemo = () => {
-    sound.playClick();
-    setSelectedRole('student');
-    setErrorMessage(null);
-    setFieldErrors({});
-
-    {
-      // Demo student account
-      const demoProfile: UserProfile = {
-        id: 'demo_student_user',
-        email: 'ogrenci@zekapark.com',
-        name: 'Deniz Acar',
-        role: 'student',
-        grade: 2,
-        examFocus: 'Genel Zihinsel Yetenek',
-        avatar: '🦊',
-        level: 1,
-        xp: 0,
-        streak: 0,
-        lastActiveDate: new Date().toISOString(),
-        dailyGoalMinutes: 15,
-        todayMinutesSpent: 0,
-        soundEnabled: true,
-        createdAt: Date.now() - 86400000 * 7,
-        updatedAt: Date.now(),
-        totalPoints: 0,
-        claimedStreakDays: [],
-        totalQuestionsSolved: 0,
-        resolvedMistakesCount: 0,
-      };
-      dataService.loginAs('student', demoProfile);
-      loginLocally(demoProfile);
-      sound.playSuccess();
-      setSuccessToast('Deneme hesabında toplam üç örnek soru kullanılabilir.');
-      setTimeout(() => onLoginSuccess('student', demoProfile), 300);
-    }
-  };
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
     setErrorMessage(null);
     setFieldErrors({});
+    setNeedsConfirmation(false);
 
     const validationResult = loginSchema.safeParse({
       identifier: identifier.trim(),
@@ -179,6 +145,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       console.warn('Login notice (handled):', error.code || error.message);
       let errMsg = 'Giriş yapılamadı.';
       const authMessage = loginAuthError(error);
+      if (selectedRole === 'parent' && (error.code === 'email_not_confirmed' || /^EMAIL_NOT_VERIFIED_/.test(error.message || ''))) setNeedsConfirmation(true);
       if (authMessage) {
          errMsg = authMessage;
       } else if (error.message === 'PROFILE_NOT_FOUND') {
@@ -430,23 +397,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         </button>
       </form>
 
-      {/* Minimalist Quick Demo Section */}
-      {!adminOnly && <div className="mt-5 pt-4 border-t border-slate-200/80">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-semibold text-slate-500">Hızlı Deneme & Önizleme:</span>
-          <span className="text-[10px] text-slate-400">Toplam 3 örnek soru</span>
-        </div>
-        <div>
-          <button
-            type="button"
-            onClick={handleQuickDemo}
-            className="zp-auth-demo-button py-1.5 px-2 rounded-lg border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100/60 text-indigo-700 text-[11px] font-bold transition-colors cursor-pointer flex items-center justify-center gap-1"
-          >
-            <CheckCircle2 className="w-3 h-3 text-indigo-600" />
-            <span>Öğrenci denemesini aç</span>
-          </button>
-        </div>
-      </div>}
+      {needsConfirmation && selectedRole === 'parent' && <div className="mt-5 border-t border-slate-200 pt-4"><ConfirmationEmailAction key={identifier.trim().toLowerCase()} email={identifier.trim().toLowerCase()} /></div>}
+
     </div>
   );
 };

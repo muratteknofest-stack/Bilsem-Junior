@@ -1,9 +1,7 @@
 import { auth } from './supabase';
 
-const apiBaseUrl = String(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-export function apiUrl(path: string): string {
-  return apiBaseUrl && path.startsWith('/api/') ? `${apiBaseUrl}${path}` : path;
-}
+import { apiBaseUrl, apiUrl } from './api-url';
+export { apiUrl } from './api-url';
 export async function authenticatedFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
   const user = auth.currentUser;
   if (!user) throw new Error('Bu işlem için giriş yapmalısınız.');
@@ -13,3 +11,4 @@ export async function authenticatedFetch(input: RequestInfo | URL, init: Request
   const url = typeof input === 'string' ? apiUrl(input) : input;
   return fetch(url, { ...init, headers, credentials: apiBaseUrl ? 'omit' : 'same-origin' });
 }
+

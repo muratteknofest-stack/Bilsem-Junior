@@ -104,6 +104,8 @@ export const registerParentSchema = z.object({
     .string()
     .trim()
     .min(1, 'Lütfen veli e-posta adresinizi giriniz.')
+    .max(254, 'E-posta adresi en fazla 254 karakter olabilir.')
+    .toLowerCase()
     .email('Lütfen geçerli bir e-posta formatı giriniz (Örn: veli@ornek.com).'),
   parentPhone: z
     .string()
@@ -119,9 +121,9 @@ export const registerParentSchema = z.object({
   studentName: z
     .string()
     .trim()
-    .min(1, 'Lütfen öğrencinin adını giriniz.')
-    .min(2, 'Öğrenci adı en az 2 karakter olmalıdır.')
-    .max(50, 'Öğrenci adı en fazla 50 karakter olabilir.'),
+    .min(1, 'Lütfen öğrencinin takma adını giriniz.')
+    .min(2, 'Takma ad en az 2 karakter olmalıdır.')
+    .max(50, 'Takma ad en fazla 50 karakter olabilir.'),
   grade: z
     .number()
     .int()
@@ -269,4 +271,5 @@ export function formatZodError(error: z.ZodError<any>): {
     fieldErrors,
   };
 }
+
 

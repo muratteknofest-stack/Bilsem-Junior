@@ -12,6 +12,10 @@ Sistem ayarları Supabase'de sunucuya özel `platform_settings` tablosunda sakla
 
 ## Türkçe e-postalar ve SMTP
 
+Kayıt ekranı veli bilgileri, öğrenci bilgileri ve onay olmak üzere üç adımdır. Başarılı kayıttan sonra öğrenci kodu ve doğrulama yönergeleri gösterilir. İki profil tek veritabanı yazımıyla oluşturulur; kayıt yarıda kalırsa yalnızca yeni oluşturulan Auth hesapları temizlenir. Profil kaydı tamamlandıktan sonra e-posta gönderimi başarısız olursa hesaplar silinmez: `verificationSent: false` döner ve kullanıcı doğrulama ekranından yeniden gönderim ister. Öğrenci denemesi genel giriş ekranından kaldırılmıştır.
+
+`POST /api/auth/resend-confirmation` yalnızca veli e-postası alır; uygulama ve sağlayıcı istek sınırları uygulanır. Hesabın bulunup bulunmadığını açıklamayan bir yanıt verir. E-posta doğrulanmadan öğrenci hesabı etkinleşmez; veli doğrulama sonrası veli paneline giriş yapmalıdır. E-posta gönderim isteğinin kabul edilmesi, gelen kutusuna teslim edildiğinin kanıtı değildir; kabul testi gerçek teslimatı da doğrulamalıdır.
+
 `supabase/templates` altındaki altı şablonun içerik ve konuları `subjects.json` içinde sürümlenir. Hosted Supabase dashboard > Authentication > Emails bölümünde aynı projeye uygulanmalıdır. Yerel config veya dosya değişikliği hosted ayarı kendiliğinden değiştirmez.
 
 Auth Site URL `https://zekapark.vercel.app` olmalı; Redirect URLs listesinde `https://zekapark.vercel.app/reset-password` bulunmalıdır. Üretim SMTP sağlayıcısında gönderen kimliği, SPF/DKIM/DMARC ve teslimat kontrolü yapılmalıdır. Parola kurtarma e-postalarında link izleme kapatılmalıdır. Varsayılan Supabase SMTP'nin üretim kapasitesi varsayılmamalıdır.

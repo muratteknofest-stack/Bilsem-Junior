@@ -1,51 +1,27 @@
-import { assertPasswordNotCompromised, PasswordPolicyError } from '../password-policy';
+import { assertPasswordNotCompromised } from '../password-policy';
 import { changeOwnPassword } from '../password-change';
 import { logServerFailure } from '../safe-log';
 import { sharedRateLimit } from '../shared-rate-limit';
 import { Router } from 'express';
 import { z } from 'zod';
-import { randomInt } from 'node:crypto';
 import {
   getAdminAuth,
-  getAdminDb,
-  normalizeStudentCode,
   requireSupabaseAuth, requireVerifiedEmail, requireProfileRole,
 } from '../security';
 import { accountSecurityLimiter } from '../rate-limiters';
 import { getServiceClient } from '../supabase-admin';
 import { strongPasswordSchema } from '../../src/lib/validations';
 import { readPlatformSettings } from '../platform-settings';
-import { registrationOpen } from '../../src/lib/platform-settings';
+import { toSupabaseRow } from '../../src/lib/supabase-shape';
+import { isManagedStudentEmail } from '../../src/lib/account-identifiers';
+import { createFamilyRegistrationHandler } from '../family-registration';
+export { registerFamilySchema } from '../family-registration';
 
 const authRoutes = Router();
 
-function isDuplicateEmail(error: unknown) {
-  const candidate = error as { code?: string; message?: string } | null;
-  return candidate?.code === 'email_exists' ||
-    /already registered|already been registered|already exists/i.test(candidate?.message ?? '');
-}
-
-const strongPassword = strongPasswordSchema;
-
-export const registerFamilySchema = z.object({
-  parentEmail: z.string().trim().toLowerCase().email('Geçerli bir veli e-posta adresi giriniz.'),
-  parentPassword: strongPassword,
-  parentPhone: z.string().trim().max(30).optional().refine(value => !value || /^(?:\+90|0)?5\d{9}$/.test(value.replace(/[\s()-]/g, '')), 'Geçerli bir cep telefonu numarası giriniz.'),
-  studentName: z.string().trim().min(2, 'Öğrenci adı en az 2 karakter olmalıdır.').max(50),
-  studentPassword: strongPassword,
-  grade: z.number().int().min(1).max(4),
-  examFocus: z.string().trim().min(1).max(100),
-  consentAccepted: z.literal(true),
-  termsAccepted: z.literal(true),
-  guardianConfirmed: z.literal(true),
-  policyVersion: z.string().regex(/^2026-10-11\.\d+$/),
-}).strict().refine(value => value.parentPassword !== value.studentPassword, {
-  message: 'Veli ve öğrenci şifreleri farklı olmalıdır.', path: ['studentPassword'],
-});
-
 export const registerStudentSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
-  password: strongPassword,
+  password: strongPasswordSchema,
   studentName: z.string().trim().min(2).max(50),
   grade: z.number().int().min(1).max(4),
   examFocus: z.string().trim().min(1).max(100),
@@ -56,149 +32,41 @@ authRoutes.post('/register-student', accountSecurityLimiter, (_req, res) => {
   return res.status(410).json({ error: 'Yeni öğrenci hesabı veli kaydı üzerinden açılır.', code: 'FAMILY_REGISTRATION_REQUIRED' });
 });
 
-authRoutes.post('/register-family', accountSecurityLimiter, sharedRateLimit('family-registration', 6, 3600), async (req, res) => {
-  const parsed = registerFamilySchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Kayıt bilgileri geçersiz.' });
-  }
-
-  const configuration = await readPlatformSettings();
-  if (!registrationOpen(configuration.settings)) return res.status(503).json({ error: 'Yeni aile kayıtları yayın hazırlığı tamamlanana kadar kapalıdır. Mevcut hesabınızla giriş yapabilirsiniz.', code: 'REGISTRATION_NOT_READY' });
-  if (parsed.data.policyVersion !== `2026-10-11.${configuration.revision}`) return res.status(409).json({ error: 'Kayıt bilgileri güncellendi. Sayfayı yenileyip güncel metni okuyarak tekrar deneyin.' });
-
-  const {
-    parentEmail,
-    parentPassword,
-    parentPhone,
-    studentName,
-    studentPassword,
-    grade,
-    examFocus,
-  } = parsed.data;
-
-  const now = Date.now();
-
-  let createdParentUser: { uid: string } | null = null;
-  let createdStudentUser: { uid: string } | null = null;
-
+const sendVerification = async (email: string) => {
+  const { error } = await getServiceClient().auth.resend({ type: 'signup', email,
+    options: { emailRedirectTo: 'https://zekapark.vercel.app' } });
+  if (error) throw error;
+};
+authRoutes.post('/register-family', accountSecurityLimiter, sharedRateLimit('family-registration', 6, 3600), createFamilyRegistrationHandler({
+  configuration: readPlatformSettings,
+  checkPassword: assertPasswordNotCompromised,
+  createUser: input => getAdminAuth().createUser(input),
+  async saveProfiles(profiles) {
+    const { error } = await getServiceClient().from('profiles').insert(profiles.map(profile => toSupabaseRow('profiles', profile.id, profile)), { defaultToNull: false });
+    if (error) throw error;
+  },
+  async deleteUser(id) {
+    // profiles.id cascades from auth.users; avoid leaving an Auth account if a separate profile delete fails.
+    await getAdminAuth().deleteUser(id);
+  },
+  sendVerification,
+  logFailure: logServerFailure,
+}));
+const resendSchema = z.object({ email: z.string().trim().toLowerCase().max(254).email() }).strict();
+authRoutes.post('/auth/resend-confirmation', accountSecurityLimiter, sharedRateLimit('confirmation-email', 6, 3600), async (req, res) => {
+  const parsed = resendSchema.safeParse(req.body);
+  if (!parsed.success || isManagedStudentEmail(parsed.data?.email)) return res.status(400).json({ error: 'Geçerli bir veli e-posta adresi girin.', code: 'INVALID_EMAIL' });
   try {
-    await Promise.all([assertPasswordNotCompromised(parentPassword), assertPasswordNotCompromised(studentPassword)]);
-    const adminAuth = getAdminAuth();
-    const adminDb = getAdminDb();
-    createdParentUser = await adminAuth.createUser({
-      email: parentEmail,
-      password: parentPassword,
-      phoneNumber: parentPhone || undefined,
-      emailVerified: false,
-      displayName: `Veli (${studentName})`,
-    });
-
-    let studentCode = '';
-    let studentEmail = '';
-    const baseCode = normalizeStudentCode(studentName);
-    
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const randomSuffix = randomInt(1000, 10000);
-      studentCode = `${baseCode}${randomSuffix}`;
-      studentEmail = `${studentCode.toLowerCase()}@zekapark.com`;
-      try {
-        createdStudentUser = await adminAuth.createUser({
-          email: studentEmail,
-          password: studentPassword,
-          emailVerified: false,
-          displayName: studentName,
-        });
-        break;
-      } catch (error) {
-        if (!isDuplicateEmail(error)) throw error;
-      }
+    await sendVerification(parsed.data.email);
+    return res.status(202).json({ success: true, message: 'Bu adrese ait doğrulanmamış bir hesap varsa doğrulama bağlantısı gönderildi. Gelen kutusu ve spam klasörünü kontrol edin.' });
+  } catch (error) {
+    const failure = error as { code?: string; status?: number };
+    logServerFailure('Confirmation resend failed', error);
+    if (failure.status === 429 || ['over_email_send_rate_limit', 'over_request_rate_limit'].includes(failure.code || '')) {
+      res.setHeader('Retry-After', '60');
+      return res.status(429).json({ error: 'E-posta için istek sınırına ulaşıldı. Bir süre bekleyip tekrar deneyin.', code: 'EMAIL_RATE_LIMIT' });
     }
-    if (!createdStudentUser) throw new Error('Benzersiz öğrenci kodu üretilemedi. Lütfen tekrar deneyiniz.');
-
-    const studentProfile = {
-      id: createdStudentUser.uid,
-      email: studentEmail,
-      name: studentName,
-      role: 'student',
-      studentCode,
-      grade,
-      avatar: '🦊',
-      level: 1,
-      xp: 0,
-      streak: 0,
-      lastActiveDate: new Date(now).toISOString(),
-      dailyGoalMinutes: 15,
-      todayMinutesSpent: 0,
-      soundEnabled: true,
-      linkedParentId: createdParentUser.uid,
-      examFocus,
-      recoveryEmail: parentEmail,
-      consent: {
-        actorRole: 'parent',
-        acceptedAt: now,
-        kvkkVersion: parsed.data.policyVersion,
-        privacyAcknowledged: true,
-        termsAccepted: true,
-        guardianConfirmed: true,
-        termsVersion: parsed.data.policyVersion,
-      },
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const parentProfile = {
-      id: createdParentUser.uid,
-      email: parentEmail,
-      name: `Veli (${studentName})`,
-      role: 'parent',
-      linkedStudentIds: [createdStudentUser.uid],
-      avatar: '🦉',
-      parentPhone: parentPhone || undefined,
-      consent: {
-        actorRole: 'parent',
-        acceptedAt: now,
-        kvkkVersion: parsed.data.policyVersion,
-        privacyAcknowledged: true,
-        termsAccepted: true,
-        guardianConfirmed: true,
-        termsVersion: parsed.data.policyVersion,
-      },
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const batch = adminDb.batch();
-    batch.set(adminDb.doc(`users/${createdStudentUser.uid}`), studentProfile);
-    batch.set(adminDb.doc(`users/${createdParentUser.uid}`), parentProfile);
-    await batch.commit();
-    const { error: mailError } = await getServiceClient().auth.resend({
-      type: 'signup', email: parentEmail,
-    });
-    if (mailError) throw mailError;
-
-    return res.status(201).json({
-      success: true,
-      parentProfile,
-      student: {
-        id: createdStudentUser.uid,
-        code: studentCode,
-        email: studentEmail,
-      },
-    });
-  } catch (error: any) {
-    if (!(error instanceof PasswordPolicyError)) logServerFailure('Family registration failed', error);
-
-    for (const created of [createdStudentUser, createdParentUser]) {
-      if (!created) continue;
-      await getAdminDb().doc(`users/${created.uid}`).delete().catch(() => undefined);
-      await getAdminAuth().deleteUser(created.uid).catch(() => undefined);
-    }
-
-    if (error instanceof PasswordPolicyError) return res.status(error.status).json({ error: error.message, code: error.code });
-    if (isDuplicateEmail(error)) return res.status(409).json({ error: 'Bu e-posta adresiyle kayıtlı bir hesap zaten var.' });
-    return res.status(503).json({
-      error: 'Aile hesabı veya doğrulama e-postası oluşturulamadı. Lütfen tekrar deneyin.',
-    });
+    return res.status(503).json({ error: 'Doğrulama e-postası şu anda gönderilemiyor. Bir süre sonra tekrar deneyin veya destek ile iletişime geçin.', code: 'EMAIL_UNAVAILABLE' });
   }
 });
 
