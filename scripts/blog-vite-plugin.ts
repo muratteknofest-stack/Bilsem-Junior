@@ -8,6 +8,7 @@ export function blogPlugin(): Plugin {
       const config = blogConfig();
       return [
         ...(config.origin ? [{ tag: 'link', attrs: { rel: 'canonical', href: `${config.origin}/` }, injectTo: 'head' as const }] : []),
+        ...(config.origin ? [{ tag: 'script', attrs: { type: 'application/ld+json' }, children: JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebSite', name: 'ZekaPark', url: config.origin + '/', inLanguage: 'tr' }), injectTo: 'head' as const }] : []),
         { tag: 'meta', attrs: { name: 'robots', content: config.indexable ? 'index,follow,max-image-preview:large' : 'noindex,follow' }, injectTo: 'head' as const },
       ];
     },

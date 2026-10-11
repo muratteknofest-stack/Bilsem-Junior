@@ -5,7 +5,7 @@ export { getAdminDb } from './supabase-admin';
 
 export type AppRole = 'student' | 'parent' | 'admin';
 export interface AuthenticatedRequest extends Request {
-  authUser?: { uid: string; email?: string; email_verified: boolean; role?: string };
+  authUser?: { uid: string; email?: string; email_verified: boolean; role?: string; aal?: string };
 }
 
 export function getAdminAuth() {
@@ -46,14 +46,15 @@ export async function requireSupabaseAuth(req: AuthenticatedRequest, res: Respon
   if (error || !data.user) return res.status(401).json({ error: 'Oturum geçersiz veya süresi dolmuş.' });
   // getUser verifies the JWT but access tokens may outlive a revoked session.
   let sessionId: unknown;
-  try { sessionId = JSON.parse(Buffer.from(match[1].split('.')[1], 'base64url').toString('utf8')).session_id; } catch { /* Invalid claim. */ }
+  let aal: unknown;
+  try { const claims = JSON.parse(Buffer.from(match[1].split('.')[1], 'base64url').toString('utf8')); sessionId = claims.session_id; aal = claims.aal; } catch { /* Invalid claim. */ }
   if (typeof sessionId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sessionId)) return res.status(401).json({ error: 'Oturum geçersiz.' });
   const active = await getServiceClient().rpc('is_user_session_active', { p_user: data.user.id, p_session: sessionId });
   if (active.error) return res.status(503).json({ error: 'Oturum doğrulanamadı. Yeniden deneyin.' });
   if (!active.data) return res.status(401).json({ error: 'Oturum kapatılmış. Yeniden giriş yapın.' });
   req.authUser = { uid: data.user.id, email: data.user.email,
     email_verified: Boolean(data.user.email_confirmed_at),
-    role: data.user.app_metadata?.role };
+    role: data.user.app_metadata?.role, aal: typeof aal === 'string' ? aal : undefined };
   return next();
 }
 
@@ -70,6 +71,8 @@ export function requireProfileRole(...roles: AppRole[]) {
         return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmuyor.' });
       if (profile.role === 'admin' && (req.authUser.role !== 'admin' || !req.authUser.email_verified))
         return res.status(403).json({ error: 'Yönetici yetkisi doğrulanamadı.' });
+      if (profile.role === 'admin' && req.authUser.aal !== 'aal2')
+        return res.status(403).json({ error: 'Yönetici işlemleri için iki aşamalı doğrulamayı tamamlayın.', code: 'ADMIN_MFA_REQUIRED' });
       return next();
     } catch {
       return res.status(503).json({ error: 'Hesap yetkisi doğrulanamadı.' });

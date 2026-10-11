@@ -18,6 +18,15 @@ insert into public.learning_sessions(id,student_id,mode,title,questions,expires_
 ('44444444-4444-4444-8444-444444444444','11111111-1111-4111-8111-111111111111','practice','Transaction test','[{"id":"opaque","category":"pattern","difficulty":2,"prompt":"Test","type":"number_pattern","seed":123}]',now()+interval '10 minutes');
 insert into public.questions(id,data) values('learning-test-answer-key','{"status":"published","correctOptionId":"A","targetGrade":2}');
 select set_config('request.jwt.claims','{"role":"service_role"}',true);
+do $$ declare changed int; begin
+  update public.platform_settings set revision=revision+1, settings='{"exams":{"mini":{"count":7,"seconds":420}}}' where id=true and revision=1;
+  get diagnostics changed = row_count;
+  if changed <> 1 then raise exception 'settings update failed'; end if;
+  update public.platform_settings set revision=revision+1 where id=true and revision=1;
+  get diagnostics changed = row_count;
+  if changed <> 0 then raise exception 'stale settings revision accepted'; end if;
+end $$;
+
 do $$
 declare first jsonb; repeated jsonb; stale jsonb; result jsonb;
 begin
@@ -110,9 +119,13 @@ reset role;
 update auth.users set raw_app_meta_data='{"role":"admin"}' where id='22222222-2222-4222-8222-222222222222';
 insert into auth.sessions(id,user_id,created_at,updated_at) values
 ('88888888-8888-4888-8888-888888888888','22222222-2222-4222-8222-222222222222',now(),now());
-select set_config('request.jwt.claims','{"role":"authenticated","sub":"22222222-2222-4222-8222-222222222222","session_id":"88888888-8888-4888-8888-888888888888","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"role":"authenticated","sub":"22222222-2222-4222-8222-222222222222","session_id":"88888888-8888-4888-8888-888888888888","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 set local role authenticated;
+select set_config('request.jwt.claims', (current_setting('request.jwt.claims')::jsonb || '{"aal":"aal1"}'::jsonb)::text, true);
+do $$ begin if zekapark_private.is_admin() or exists(select 1 from public.questions where id='learning-test-answer-key') then raise exception 'AAL1 bypasses admin MFA'; end if; end $$;
+select set_config('request.jwt.claims', (current_setting('request.jwt.claims')::jsonb || '{"aal":"aal2"}'::jsonb)::text, true);
 do $$ begin
+  if has_table_privilege('authenticated','public.platform_settings','SELECT') or has_table_privilege('anon','public.platform_settings','UPDATE') then raise exception 'platform settings exposed'; end if;
   if not zekapark_private.is_admin() or not exists(select 1 from public.questions where id='learning-test-answer-key') then raise exception 'verified admin cannot read question bank'; end if;
 end $$;
 reset role;

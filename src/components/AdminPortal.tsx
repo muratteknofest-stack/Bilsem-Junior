@@ -6,6 +6,7 @@ import { LoginForm } from '../features/auth/components/LoginForm';
 import { ForgotPasswordModal } from '../features/auth/components/ForgotPasswordModal';
 import './landing/design-system.css';
 import '../features/auth/auth-design-system.css';
+import { AdminMfaGate } from './AdminMfaGate';
 
 const AdminPanelView = lazy(() => import('./AdminPanelView').then(module => ({ default: module.AdminPanelView })));
 const ignore = () => {};
@@ -41,7 +42,7 @@ export function AdminPortal() {
       {session.currentUser && <button type="button" disabled={signingOut} onClick={() => void logout()} className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold"><LogOut size={16} aria-hidden="true" />{signingOut ? 'Çıkış yapılıyor…' : 'Oturumu kapat'}</button>}
     </header>
     {error && <p role="alert" className="mx-auto max-w-lg rounded-xl border border-rose-200 bg-rose-50 px-5 py-3 text-rose-800">{error}</p>}
-    {authorized ? <main><Suspense fallback={<p role="status" className="p-8 text-center">Yönetici paneli yükleniyor…</p>}><AdminPanelView /></Suspense></main> :
+    {authorized ? <main><AdminMfaGate><Suspense fallback={<p role="status" className="p-8 text-center">Yönetici paneli yükleniyor…</p>}><AdminPanelView /></Suspense></AdminMfaGate></main> :
       <main className="mx-auto w-full max-w-lg px-5 pb-16 pt-8">
         <section className="zp-auth-form-panel rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8" aria-labelledby="admin-login-heading">
           <p className="zp-auth-kicker">ZEKA PARK / YÖNETİM</p>

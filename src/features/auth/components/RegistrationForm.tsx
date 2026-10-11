@@ -5,6 +5,7 @@ import { registerParentSchema, formatZodError } from '../../../lib/validations';
 import { FooterInfoModal, type FooterModalTopic } from '../../../components/FooterInfoModal';
 import { Users, ArrowRight } from 'lucide-react';
 import { NewPasswordFields } from './NewPasswordFields';
+import { apiUrl } from '../../../lib/api-client';
 import { passwordPairError } from '../../../lib/password-creation';
 
 interface RegistrationFormProps {
@@ -27,12 +28,19 @@ export function RegistrationForm({ setSelectedRole, setErrorMessage, onRegisterS
   const [terms, setTerms] = useState(false);
   const [guardian, setGuardian] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [availability, setAvailability] = useState<{ registrationOpen: boolean; policyVersion: string } | null>(null);
+  const [availabilityError, setAvailabilityError] = useState('');
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(apiUrl('/api/public/platform'), { signal: controller.signal, cache: 'no-store' }).then(async response => { if (!response.ok) throw new Error(); return response.json(); }).then(value => setAvailability(value)).catch(() => { if (!controller.signal.aborted) setAvailabilityError('Kayıt durumu kontrol edilemedi. Sayfayı yenileyip tekrar deneyin.'); });
+    return () => controller.abort();
+  }, []);
   const [topic, setTopic] = useState<FooterModalTopic | null>(null);
   useEffect(() => { setSelectedRole('parent'); }, [setSelectedRole]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (busy) return;
+    if (busy || !availability?.registrationOpen) return;
     setErrorMessage(null);
     const passwordError = passwordPairError(password, passwordConfirmation) || passwordPairError(studentPassword, studentPasswordConfirmation);
     if (passwordError) { setErrorMessage(passwordError); return; }
@@ -44,7 +52,7 @@ export function RegistrationForm({ setSelectedRole, setErrorMessage, onRegisterS
     try {
       const result = await registerFamilyInSupabase({ parentEmail: parsed.data.parentEmail,
         parentPassword: password, studentPassword, studentName: parsed.data.studentName, grade,
-        examFocus: parsed.data.examFocus, consentAccepted: privacy, termsAccepted: terms, guardianConfirmed: guardian });
+        examFocus: parsed.data.examFocus, consentAccepted: privacy, termsAccepted: terms, guardianConfirmed: guardian, policyVersion: availability.policyVersion });
       onRegisterSuccess({ identifier: parsed.data.parentEmail, role: 'parent', createdStudentCode: result.student.code,
         successToast: 'Aile hesabınız oluşturuldu. E-postanızı doğrulayıp veli paneline giriş yaptığınızda öğrenci hesabı etkinleşir.' });
       setPassword(''); setStudentPassword(''); setPasswordConfirmation(''); setStudentPasswordConfirmation('');
@@ -53,8 +61,9 @@ export function RegistrationForm({ setSelectedRole, setErrorMessage, onRegisterS
   }
   return <div className="space-y-5">
     <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-950"><div className="flex items-center gap-2 font-semibold"><Users size={19} /> Veli ve öğrenci hesabı</div><p className="mt-2 leading-6">Hesabı veli oluşturur. Çocuğunuz kendi giriş kodunu kullanır; gelişim ve hesap yönetimi sizde kalır.</p></div>
+    {!availability?.registrationOpen && <p role="status" className="rounded-xl border p-4">{availabilityError || (availability ? 'Yeni aile kayıtları hazırlık aşamasında. Mevcut hesabınızla giriş yapabilir veya ana sayfadaki örnekleri inceleyebilirsiniz.' : 'Kayıt durumu kontrol ediliyor…')}</p>}
     <form onSubmit={submit} className="space-y-4" aria-busy={busy}>
-      <fieldset disabled={busy} className="space-y-4">
+      <fieldset disabled={busy || !availability?.registrationOpen} className="space-y-4">
         <label className="block text-sm font-semibold text-slate-700" htmlFor="parent-email">Veli e-posta adresi<input id="parent-email" type="email" required autoComplete="email" maxLength={254} value={email} onChange={e => setEmail(e.target.value)} className={field + ' mt-2'} /></label>
         <label className="block text-sm font-semibold text-slate-700" htmlFor="child-alias">Öğrencinin takma adı<input id="child-alias" required minLength={2} maxLength={50} autoComplete="off" value={alias} onChange={e => setAlias(e.target.value)} aria-describedby="alias-help" className={field + ' mt-2'} /><span id="alias-help" className="mt-1 block text-xs font-normal text-slate-500">Ad soyad, okul veya adres yazmanız gerekmez.</span></label>
         <label className="block text-sm font-semibold text-slate-700" htmlFor="child-grade">Sınıf<select id="child-grade" className={field + ' mt-2'} value={grade} onChange={e => setGrade(Number(e.target.value))}>{[1,2,3,4].map(g => <option key={g} value={g}>{g}. sınıf</option>)}</select></label>

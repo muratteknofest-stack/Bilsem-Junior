@@ -8,6 +8,10 @@
       "destination": "/api/index?__path=:path*"
     },
     {
+      "source": "/bilgi/:slug(gizlilik-ve-veriler|kullanim-kosullari|iletisim-ve-destek)",
+      "destination": "/api/index?__path=public/policy/:slug&format=html"
+    },
+    {
       "source": "/blog",
       "destination": "/blog/index.html"
     },
@@ -24,7 +28,11 @@
       "destination": "/bilgi/:slug/index.html"
     },
     {
-      "source": "/((?!api/|bilgi(?:/|$)|blog(?:/|$)|blog-assets/|robots\\.txt$|sitemap\\.xml$).*)",
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/((?:admin(?:/giris)?|reset-password|wordwall|dashboard|parent|login|register|practice|exam|adaptive)/?)",
       "destination": "/index.html"
     }
   ],
@@ -77,6 +85,19 @@
     },
     {
       "source": "/admin(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    },
+    {
+      "source": "/reset-password(.*)",
       "headers": [
         {
           "key": "X-Robots-Tag",

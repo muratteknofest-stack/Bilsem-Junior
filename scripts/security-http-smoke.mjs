@@ -17,7 +17,7 @@ try {
     try { const response = await fetch(base, { signal: AbortSignal.timeout(1000) }); await response.arrayBuffer(); ready = true; break; } catch { await pause(100); }
   }
   assert.ok(ready, 'Production server did not start');
-  const checks = [['/', 200], ['/admin', 200], ['/admin/giris', 200], ['/admin/giris/', 200], ['/blog', 200], ['/bilgi/gizlilik-ve-veriler', 200], ['/bilgi/unknown', 404], ['/blog/unknown', 404], ['/server.cjs', 404], ['/server.cjs.map', 404], ['/build/server.cjs', 404], ['/bilgi/%2e%2e/.env', 404], ['/api/account/export', 401], ['/api/admin/support-requests', 401]];
+  const checks = [['/', 200], ['/unknown-release-page', 404], ['/reset-password', 200], ['/admin', 200], ['/admin/giris', 200], ['/admin/giris/', 200], ['/blog', 200], ['/bilgi/gizlilik-ve-veriler', 200], ['/bilgi/unknown', 404], ['/blog/unknown', 404], ['/server.cjs', 404], ['/server.cjs.map', 404], ['/build/server.cjs', 404], ['/bilgi/%2e%2e/.env', 404], ['/api/account/export', 401], ['/api/admin/support-requests', 401]];
   for (const [path, expected] of checks) {
     const response = await fetch(base + path, { signal: AbortSignal.timeout(3000) });
     assert.equal(response.status, expected, path);
@@ -31,7 +31,7 @@ try {
     assert.match(csp, /style-src-elem 'self' https:\/\/fonts.googleapis.com/);
     assert.ok(!csp.includes('*.') && !csp.includes('unsafe-eval'), path);
     if (path.startsWith('/api/')) assert.equal(response.headers.get('cache-control'), 'no-store', path);
-    if (path.startsWith('/admin')) {
+    if (path.startsWith('/admin') || path === '/reset-password') {
       assert.equal(response.headers.get('cache-control'), 'no-store', path);
       assert.equal(response.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive', path);
     }

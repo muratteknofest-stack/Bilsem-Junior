@@ -629,7 +629,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                           <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                         </h3>
                         <p className="text-xs text-indigo-100 mt-1 leading-relaxed">
-                          Yapay zeka başarına göre zorluğu anında ayarlar, eksiklerini kapatır.
+                          Çalışma geçmişine göre daha çok pratik yapabileceğin alanlardan soru seçer.
                         </p>
                       </div>
                     </motion.button>

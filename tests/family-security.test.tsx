@@ -99,7 +99,7 @@ test('all password screens share bounded Turkish-letter rules and confirmation; 
   for (const value of ['abc123','abcdefgh','12345678','a'.repeat(128)+'1']) assert.ok(passwordPairError(value,value));
   const generated = Array.from({ length:100 },suggestPassword); assert.equal(new Set(generated).size,100);
   for (const password of generated) { assert.equal(password.length,16); assert.equal(passwordPairError(password,password),null); }
-  const family = { parentEmail:'test@example.com',parentPassword:'ŞifreYeni937',studentPassword:'ŞifreYeni937',studentName:'Test',grade:2,examFocus:'Genel',consentAccepted:true,termsAccepted:true,guardianConfirmed:true };
+  const family = { parentEmail:'test@example.com',parentPassword:'ŞifreYeni937',studentPassword:'ŞifreYeni937',studentName:'Test',grade:2,examFocus:'Genel',consentAccepted:true,termsAccepted:true,guardianConfirmed:true,policyVersion:'2026-10-11.1' };
   assert.equal(registerFamilySchema.safeParse(family).success,false); assert.equal(registerFamilySchema.safeParse({...family,studentPassword:'ÖğrenciYeni938'}).success,true);
 });
 test('password UI exposes confirmations and rule feedback; parent access starts locked and has an accessible dialog', () => {

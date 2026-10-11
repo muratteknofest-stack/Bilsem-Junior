@@ -8,6 +8,7 @@ import { QuestionRenderer } from '../features/questions/renderers/QuestionRender
 import { MemoryStudy } from '../features/questions/renderers/MemoryStudy';
 import { AnswerWorkspace } from '../features/questions/renderers/AnswerWorkspace';
 import { VisualExplanationOverlay } from '../features/questions/renderers/VisualExplanationOverlay';
+import { apiUrl } from '../lib/api-client';
 import { learningService } from '../services/learning-service';
 import { AnswerRequestGate, nextUnansweredIndex, saveAndAdvance } from '../features/student/answer-progression';
 import { AnswerHistory, type ReviewedAnswer } from './AnswerHistory';
@@ -17,6 +18,12 @@ interface Props { mode: LearningMode; initialCategory?: LearningCategory; review
 export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMistakeId, onNavigateHome }: Props) {
   const [category, setCategory] = useState<LearningCategory>(isAvailableCategory(initialCategory) ? initialCategory : 'mixed');
   const [exam, setExam] = useState('mini');
+  const [exams, setExams] = useState<Array<{id: string; title: string; count: number; seconds: number}>>([...LEARNING_EXAMS]);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(apiUrl('/api/public/platform'), { signal: controller.signal, cache: 'no-store' }).then(async res => { if (!res.ok) throw new Error(); return res.json(); }).then(value => { if (Array.isArray(value.exams)) setExams(value.exams); }).catch(() => { if (!controller.signal.aborted) setError('Deneme ayarları yüklenemedi. Başlatıldığında sunucunun güncel ayarları kullanılacak.'); });
+    return () => controller.abort();
+  }, []);
   const [session, setSession] = useState<LearningSessionView | null>(null);
   const [index, setIndex] = useState(0);
   const [response, setResponse] = useState<QuestionResponse | null>(null);
@@ -125,7 +132,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
       <h2 className="text-xl font-bold">{mode === 'exam' ? 'Denemeni seç' : mode === 'adaptive' ? 'Sana uygun sorularla ilerle' : 'Bugün hangi alanda çalışalım?'}</h2>
       <p className="text-slate-600">{mode === 'exam' ? 'Cevaplarını sınav boyunca değiştirebilirsin. Sonuç ve açıklamalar bitirdiğinde gösterilir. Devam eden denemen varsa kaldığın yerden açılır.' : mode === 'adaptive' ? 'Çalışma geçmişine göre tekrar edebileceğin bir alan seçilir. Her sorudan sonra açıklamasını inceleyebilirsin.' : 'Beş soruluk bir çalışma seni bekliyor. Yarım kalan çalışman varsa önce ona devam edebilirsin.'}</p>
       {mode === 'practice' && <label className="block font-semibold">Çalışma alanı<select value={category} onChange={e => setCategory(e.target.value as LearningCategory)} disabled={busy} className="mt-2 block min-h-12 w-full rounded-xl border border-slate-300 bg-white p-3"><option value="mixed">Karışık pratik</option>{AVAILABLE_CATEGORIES.map(c => <option key={c} value={c}>{COGNITIVE_CATEGORY_LABELS[c]}</option>)}</select></label>}
-      {mode === 'exam' && <fieldset className="flex flex-wrap gap-3"><legend className="mb-2 font-semibold">Deneme süresi</legend>{LEARNING_EXAMS.map(e => <label key={e.id} className="flex min-h-12 items-center gap-2 rounded-xl border border-slate-200 p-4"><input type="radio" name="learning-exam" value={e.id} checked={exam === e.id} disabled={busy} onChange={() => setExam(e.id)} />{e.title} · {e.count} soru · {e.seconds / 60} dakika</label>)}</fieldset>}
+      {mode === 'exam' && <fieldset className="flex flex-wrap gap-3"><legend className="mb-2 font-semibold">Deneme süresi</legend>{exams.map(e => <label key={e.id} className="flex min-h-12 items-center gap-2 rounded-xl border border-slate-200 p-4"><input type="radio" name="learning-exam" value={e.id} checked={exam === e.id} disabled={busy} onChange={() => setExam(e.id)} />{e.title} · {e.count} soru · {e.seconds / 60} dakika</label>)}</fieldset>}
       <button type="button" disabled={busy} onClick={() => void start()} className={button}>{busy ? 'Çalışman hazırlanıyor…' : 'Başla / devam et'}</button>
     </section> : <>
       {session.result && <section aria-label="Çalışma sonucu" className="space-y-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-5">

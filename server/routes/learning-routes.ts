@@ -10,7 +10,6 @@ import { generateQuestion } from '../../src/features/questions/generators';
 import { isSchoolGrade } from '../../src/features/questions/quality-policy';
 import { isQuestionReadyForStudents, questionContentKey } from '../../src/features/questions/quality';
 import { AVAILABLE_CATEGORIES } from '../../src/features/student/available-categories';
-import { LEARNING_EXAMS } from '../../src/features/student/learning-contract';
 import { COGNITIVE_CATEGORY_LABELS, type BaseQuestion, type SkillMastery } from '../../src/types';
 import { prepareQuestionReport } from '../support-validation';
 import { LearningError, answerLearningSession, finishLearningSession, learningTotals, learningView, prepareLearningQuestions, type LearningSession } from '../learning-model';
@@ -18,6 +17,8 @@ import { eligibleReward, type RewardFacts } from '../learning-rewards';
 import { fromSupabaseRow } from '../../src/lib/supabase-shape';
 import type { UserProfile } from '../../src/types';
 import { createLockedAchievements } from '../../src/services/modules/shared';
+import { readPlatformSettings } from '../platform-settings';
+import { configuredExams } from '../../src/lib/platform-settings';
 
 const routes = Router();
 routes.use('/learning', requireSupabaseAuth, requireVerifiedEmail, requireProfileRole('student'), sharedRateLimit('student-learning', 600, 600), rateLimit({ windowMs: 10 * 60_000, limit: 600, standardHeaders: 'draft-8', legacyHeaders: false, keyGenerator: authenticatedRateLimitKey, message: { error: 'Çalışma istek sınırına ulaşıldı. Biraz sonra yeniden dene.' } }));
@@ -72,7 +73,8 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
       try { masteries = JSON.parse(progress.data?.values?.yapyap_mastery || '[]'); } catch { /* Empty history. */ }
       category = [...AVAILABLE_CATEGORIES].sort((a, b) => (masteries.find(m => m.category === a)?.mastery || 0) - (masteries.find(m => m.category === b)?.mastery || 0))[0];
     }
-    const settings = LEARNING_EXAMS.find(e => e.id === exam)!;
+    const configuration = await readPlatformSettings();
+    const settings = configuredExams(configuration.settings).find(e => e.id === exam)!;
     const count = mode === 'exam' ? settings.count : mode === 'adaptive' ? 1 : 5;
     let bank = client.from('questions').select('data').eq('status', 'published').eq('target_grade', profile.data.grade).limit(300);
     if (category !== 'mixed') bank = bank.eq('category', category);

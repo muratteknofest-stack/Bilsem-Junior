@@ -1,3 +1,4 @@
+import { downloadSafePreferences } from '../lib/safe-preferences';
 import { AdminSupportQueue } from './admin/AdminSupportQueue';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
@@ -159,21 +160,8 @@ export const AdminPanelView: React.FC = () => {
 
   const handleExportSystemBackup = () => {
     sound.playClick();
-    const backupObj: Record<string, any> = {};
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key) {
-        backupObj[key] = localStorage.getItem(key);
-      }
-    }
-    const blob = new Blob([JSON.stringify(backupObj, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `zekapark_admin_snapshot_${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('Sistem yedeği başarıyla JSON olarak indirildi.');
+    downloadSafePreferences();
+    showToast('Güvenli tarayıcı tercihleri indirildi. Bu dosya veritabanı yedeği değildir.');
   };
 
   const tabs: { id: AdminTab; label: string; icon: any; badge?: string }[] = [
@@ -349,7 +337,7 @@ export const AdminPanelView: React.FC = () => {
               className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700/70 transition-all cursor-pointer"
             >
               <Download className="w-3.5 h-3.5 text-slate-400" />
-              <span>Yedek Al</span>
+              <span>Tercihleri İndir</span>
             </button>
 
             {/* Quick Diagnostics */}
@@ -963,7 +951,7 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
             >
               <div className="flex items-center gap-2.5">
                 <Settings className="w-4 h-4 text-slate-400" />
-                <span>Sistem Ayarları & Yedek</span>
+                <span>Sistem Ayarları & Yayın</span>
               </div>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
@@ -975,4 +963,5 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
     </div>
   );
 };
+
 

@@ -12,9 +12,10 @@ import {
   requireSupabaseAuth, requireVerifiedEmail, requireProfileRole,
 } from '../security';
 import { accountSecurityLimiter } from '../rate-limiters';
-import { KVKK_POLICY_VERSION, TERMS_POLICY_VERSION } from '../../src/lib/account-policy';
 import { getServiceClient } from '../supabase-admin';
 import { strongPasswordSchema } from '../../src/lib/validations';
+import { readPlatformSettings } from '../platform-settings';
+import { registrationOpen } from '../../src/lib/platform-settings';
 
 const authRoutes = Router();
 
@@ -37,6 +38,7 @@ export const registerFamilySchema = z.object({
   consentAccepted: z.literal(true),
   termsAccepted: z.literal(true),
   guardianConfirmed: z.literal(true),
+  policyVersion: z.string().regex(/^2026-10-11\.\d+$/),
 }).strict().refine(value => value.parentPassword !== value.studentPassword, {
   message: 'Veli ve öğrenci şifreleri farklı olmalıdır.', path: ['studentPassword'],
 });
@@ -59,6 +61,10 @@ authRoutes.post('/register-family', accountSecurityLimiter, sharedRateLimit('fam
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Kayıt bilgileri geçersiz.' });
   }
+
+  const configuration = await readPlatformSettings();
+  if (!registrationOpen(configuration.settings)) return res.status(503).json({ error: 'Yeni aile kayıtları yayın hazırlığı tamamlanana kadar kapalıdır. Mevcut hesabınızla giriş yapabilirsiniz.', code: 'REGISTRATION_NOT_READY' });
+  if (parsed.data.policyVersion !== `2026-10-11.${configuration.revision}`) return res.status(409).json({ error: 'Kayıt bilgileri güncellendi. Sayfayı yenileyip güncel metni okuyarak tekrar deneyin.' });
 
   const {
     parentEmail,
@@ -130,11 +136,11 @@ authRoutes.post('/register-family', accountSecurityLimiter, sharedRateLimit('fam
       consent: {
         actorRole: 'parent',
         acceptedAt: now,
-        kvkkVersion: KVKK_POLICY_VERSION,
+        kvkkVersion: parsed.data.policyVersion,
         privacyAcknowledged: true,
         termsAccepted: true,
         guardianConfirmed: true,
-        termsVersion: TERMS_POLICY_VERSION,
+        termsVersion: parsed.data.policyVersion,
       },
       createdAt: now,
       updatedAt: now,
@@ -151,11 +157,11 @@ authRoutes.post('/register-family', accountSecurityLimiter, sharedRateLimit('fam
       consent: {
         actorRole: 'parent',
         acceptedAt: now,
-        kvkkVersion: KVKK_POLICY_VERSION,
+        kvkkVersion: parsed.data.policyVersion,
         privacyAcknowledged: true,
         termsAccepted: true,
         guardianConfirmed: true,
-        termsVersion: TERMS_POLICY_VERSION,
+        termsVersion: parsed.data.policyVersion,
       },
       createdAt: now,
       updatedAt: now,
