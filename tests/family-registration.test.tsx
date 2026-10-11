@@ -10,7 +10,15 @@ import { PasswordPolicyError } from '../server/password-policy';
 import { validateRegistrationDraft, firstInvalidRegistrationStep, type RegistrationDraft } from '../src/features/auth/registration-draft';
 import { registerFamilyInSupabase, resendFamilyConfirmation } from '../src/services/family-registration-service';
 import { RegistrationConfirmation } from '../src/features/auth/components/RegistrationConfirmation';
+import { accountEntry, accountEntryPath } from '../src/features/auth/account-entry';
 const parentId = '11111111-1111-4111-8111-111111111111', studentId = '22222222-2222-4222-8222-222222222222';
+test('direct registration and login addresses preserve the public account form and never select administrator access', () => {
+  for (const path of ['/register', '/register/']) assert.deepEqual(accountEntry(new URL(path, 'https://zekapark.vercel.app')), { mode:'register',role:'parent' });
+  assert.deepEqual(accountEntry(new URL('https://zekapark.vercel.app/login?role=parent')), { mode:'login',role:'parent' });
+  assert.deepEqual(accountEntry(new URL('https://zekapark.vercel.app/login?role=admin')), { mode:'login',role:'student' });
+  for (const path of ['/', '/admin/giris', '/register/extra', '/blog/login']) assert.equal(accountEntry(new URL(path, 'https://zekapark.vercel.app')), null);
+  assert.equal(accountEntryPath('register','parent'),'/register'); assert.equal(accountEntryPath('login','parent'),'/login?role=parent'); assert.equal(accountEntryPath('login','admin'),'/login');
+});
 const input = { parentEmail: ' VELI@example.com ', parentPassword: 'VeliGüvenli937', studentPassword: 'ÖğrenciGüvenli938', studentName: ' Deniz ', grade: 2, examFocus: 'Genel Zihinsel Yetenek', consentAccepted: true, termsAccepted: true, guardianConfirmed: true, policyVersion: '2026-10-11.1' };
 async function run(options: { fail?: 'config'|'password'|'parent'|'student'|'profiles'|'mail'|'cleanup'; closed?: boolean; stale?: boolean; collision?: boolean; body?: unknown } = {}) {
   const actions: string[] = [], profiles: Array<Record<string, unknown>> = [];

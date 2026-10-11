@@ -24,6 +24,7 @@ interface LoginPageProps {
   onNavigateHome: () => void;
   initialRole?: UserRole;
   initialMode?: 'login' | 'register';
+  onModeChange?: (mode: 'login' | 'register', role: UserRole) => void;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({
@@ -31,6 +32,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   onNavigateHome,
   initialRole = 'student',
   initialMode = 'login',
+  onModeChange,
 }) => {
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(initialMode);
   const [selectedRole, setSelectedRole] = useState<UserRole>(initialMode === 'register' || initialRole === 'parent' ? 'parent' : 'student');
@@ -50,6 +52,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setErrorMessage(null);
     setSuccessToast(null);
     setRegistrationResult(null);
+    onModeChange?.('login', 'parent');
   };
   const handleRegisterSuccess = (result: RegistrationSuccess) => {
     setSelectedRole('parent');
@@ -102,6 +105,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     sound.playClick();
                     if (registrationResult) { openParentLogin(registrationResult.identifier); return; }
                     setActiveTab('login');
+                    onModeChange?.('login', selectedRole);
                     setErrorMessage(null);
                     setSuccessToast(null);
                   }}
@@ -117,6 +121,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     sound.playClick();
                     setActiveTab('register');
                     setSelectedRole('parent');
+                    onModeChange?.('register', 'parent');
                     setRegistrationResult(null);
                     setErrorMessage(null);
                     setSuccessToast(null);
@@ -153,7 +158,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <LoginForm
                 initialIdentifier={loginIdentifier}
                 selectedRole={selectedRole}
-                setSelectedRole={setSelectedRole}
+                setSelectedRole={role => { setSelectedRole(role); onModeChange?.('login', role); }}
                 onLoginSuccess={onLoginSuccess}
                 onShowForgotPassword={() => setShowForgotPasswordModal(true)}
                 setErrorMessage={setErrorMessage}

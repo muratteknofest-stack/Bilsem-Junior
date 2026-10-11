@@ -2,6 +2,7 @@ import { ProgressSyncBanner } from './components/ProgressSyncBanner';
 import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { ADMIN_PANEL_PATH, ADMIN_LOGIN_PATH, hasVerifiedAdminAccess } from './lib/admin-access';
+import { accountEntry, accountEntryPath } from './features/auth/account-entry';
 
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { UserProfile, UserRole, SkillMastery, MistakeItem, DailyStudyPlan, ReminderAlertEvent, CognitiveCategory } from './types';
@@ -59,10 +60,11 @@ export default function App() {
   const switchAttemptRef = useRef(0);
   const previousAccountIdRef = useRef(userProfile?.id);
   const [isAuth, setIsAuth] = useState<boolean>(() => dataService.isAuthenticated());
-  const [loginRole, setLoginRole] = useState<UserRole>('student');
-  const [loginMode, setLoginMode] = useState<'login' | 'register'>('login');
+  const initialAccountEntry = useRef(accountEntry(new URL(window.location.href)));
+  const [loginRole, setLoginRole] = useState<UserRole>(initialAccountEntry.current?.role || 'student');
+  const [loginMode, setLoginMode] = useState<'login' | 'register'>(initialAccountEntry.current?.mode || 'login');
   const [currentRoute, setCurrentRoute] = useState<string>(() => {
-    if (!dataService.isAuthenticated()) return 'landing';
+    if (!dataService.isAuthenticated()) return initialAccountEntry.current ? 'login' : 'landing';
     const u = dataService.getCurrentUser();
     if (isDemoUser(u.id) && u.role !== 'student') return 'demo-limit';
     if (u?.role === 'parent') return 'parent';
@@ -241,6 +243,7 @@ export default function App() {
   const handleNavigateToLogin = (role: UserRole) => {
     if (role === 'admin') { window.location.assign(ADMIN_LOGIN_PATH); return; }
     setLoginMode('login');
+    window.history.replaceState(window.history.state, '', accountEntryPath('login', role));
     window.scrollTo({ top: 0, behavior: 'instant' });
     setLoginRole(role);
     setCurrentRoute('login');
@@ -252,6 +255,7 @@ export default function App() {
     if (targetRoute === 'admin' || targetRoute === 'login:admin') { window.location.assign(ADMIN_PANEL_PATH); return; }
 
     if (targetRoute === 'register') {
+      window.history.replaceState(window.history.state, '', accountEntryPath('register', 'parent'));
       setLoginMode('register');
       setLoginRole('parent');
       setCurrentRoute('login');
@@ -261,18 +265,21 @@ export default function App() {
     if (targetRoute.startsWith('login:')) {
       setLoginMode('login');
       const role = targetRoute.split(':')[1] as UserRole;
+      window.history.replaceState(window.history.state, '', accountEntryPath('login', role));
       setLoginRole(role);
       setCurrentRoute('login');
       return;
     }
 
     if (targetRoute === 'login') {
+      window.history.replaceState(window.history.state, '', accountEntryPath('login', loginRole));
       setLoginMode('login');
       setCurrentRoute('login');
       return;
     }
 
     if (targetRoute === 'landing') {
+      if (accountEntry(new URL(window.location.href))) window.history.replaceState(window.history.state, '', '/');
       setCurrentRoute('landing');
       return;
     }
@@ -524,7 +531,9 @@ export default function App() {
                 key={`${loginMode}-${loginRole}`}
                 initialMode={loginMode}
                 initialRole={loginRole}
+                onModeChange={(mode, role) => window.history.replaceState(window.history.state, '', accountEntryPath(mode, role))}
                 onLoginSuccess={(role, profile) => {
+                  if (accountEntry(new URL(window.location.href))) window.history.replaceState(window.history.state, '', '/');
                   setIsAuth(true);
                   if (profile) {
                     setCurrentUser(profile);
