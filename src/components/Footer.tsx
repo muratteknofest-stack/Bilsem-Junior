@@ -20,7 +20,7 @@ export function Footer({ onNavigate, onNavigateToLogin }: FooterProps) {
         {FOOTER_GROUPS.map(group => <nav key={group.title} aria-label={group.title}><h3>{group.title}</h3>{group.links.map(link => <a key={link.href} href={link.href}>{link.label}</a>)}</nav>)}
       </div>
       <div className="platform-footer-note"><ShieldCheck size={19} aria-hidden="true" /><p>ZekaPark bağımsız bir eğitim platformudur. MEB veya BİLSEM ile kurumsal bağlantısı yoktur. Alıştırmalar tanılama aracı değildir ve sınav başarısı garantisi sunmaz.</p></div>
-      <div className="platform-footer-bottom"><span>© {new Date().getFullYear()} ZekaPark · Merakla büyüyen zihinler için.</span><a href="/blog/feed.xml">Blog RSS</a><button type="button" onClick={() => onNavigateToLogin('admin')}>Yönetici girişi</button></div>
+      <div className="platform-footer-bottom"><span>© {new Date().getFullYear()} ZekaPark · Merakla büyüyen zihinler için.</span><a href="/blog/feed.xml">Blog RSS</a></div>
     </div>
   </footer>;
 }

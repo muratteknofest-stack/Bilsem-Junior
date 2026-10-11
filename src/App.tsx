@@ -1,6 +1,7 @@
 import { ProgressSyncBanner } from './components/ProgressSyncBanner';
 import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useAuth } from './contexts/AuthContext';
+import { ADMIN_PANEL_PATH, ADMIN_LOGIN_PATH, hasVerifiedAdminAccess } from './lib/admin-access';
 
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { UserProfile, UserRole, SkillMastery, MistakeItem, DailyStudyPlan, ReminderAlertEvent, CognitiveCategory } from './types';
@@ -22,7 +23,6 @@ const PracticeSessionView = lazy(() => import('./components/PracticeSessionView'
 const MistakeNotebookView = lazy(() => import('./components/MistakeNotebookView').then((m) => ({ default: m.MistakeNotebookView })));
 const AchievementsView = lazy(() => import('./components/AchievementsView').then((m) => ({ default: m.AchievementsView })));
 const ParentPortalView = lazy(() => import('./components/ParentPortalView').then((m) => ({ default: m.ParentPortalView })));
-const AdminPanelView = lazy(() => import('./components/AdminPanelView').then((m) => ({ default: m.AdminPanelView })));
 const LeaderboardView = lazy(() => import('./components/LeaderboardView').then((m) => ({ default: m.LeaderboardView })));
 const CognitiveGlossaryView = lazy(() => import('./components/CognitiveGlossaryView').then((m) => ({ default: m.CognitiveGlossaryView })));
 const LoginPage = lazy(() => import('./components/LoginPage').then((m) => ({ default: m.LoginPage })));
@@ -31,7 +31,7 @@ const isTestPage = (route: string) => ['practice', 'adaptive', 'exams'].includes
 export default function App() {
   const reducedMotion = useReducedMotion();
   // Auth context
-  const { currentUser: authUser, userProfile, loading: authLoading, logout: authLogout, switchRole: authSwitchRole } = useAuth();
+  const { currentUser: authUser, userProfile, loading: authLoading, isAdminAuthorized, logout: authLogout, switchRole: authSwitchRole } = useAuth();
   
   // We don't block the entire app while auth is loading anymore
   // so we can show a nice skeleton for the dashboard.
@@ -66,7 +66,7 @@ export default function App() {
     const u = dataService.getCurrentUser();
     if (isDemoUser(u.id) && u.role !== 'student') return 'demo-limit';
     if (u?.role === 'parent') return 'parent';
-    if (u?.role === 'admin') return 'admin';
+    if (u?.role === 'admin') return 'landing';
     if (u?.role === 'student') return 'dashboard';
     return 'landing';
   });
@@ -110,9 +110,18 @@ export default function App() {
 
 
   useEffect(() => {
+    if (currentRoute !== 'login' && hasVerifiedAdminAccess({ currentUser: authUser, userProfile, loading: authLoading, isAdminAuthorized })) {
+      window.location.replace(ADMIN_PANEL_PATH);
+    }
+  }, [authUser, userProfile, authLoading, isAdminAuthorized, currentRoute]);
+
+  useEffect(() => {
     if (userProfile) {
       setCurrentUser(userProfile);
       setIsAuth(true);
+      // The public form must finish its role check before any redirect. Existing
+      // verified administrator sessions are routed by the separate effect above.
+      if (userProfile.role === 'admin') return;
       const accountChanged = previousAccountIdRef.current !== userProfile.id;
       previousAccountIdRef.current = userProfile.id;
       if (accountChanged) {
@@ -130,8 +139,8 @@ export default function App() {
         setDailyPlan(dataService.getDailyPlan());
         setShowParentAccess(false);
         setCurrentRoute(userProfile.role === 'parent' ? 'parent' : 'dashboard');
-      } else if (accountChanged || currentRoute === 'login' || currentRoute === 'landing' || (userProfile.role === 'admin' && currentRoute === 'dashboard')) {
-        setCurrentRoute(isDemoUser(userProfile.id) && userProfile.role !== 'student' ? 'demo-limit' : userProfile.role === 'student' ? 'dashboard' : (userProfile.role === 'parent' ? 'parent' : 'admin'));
+      } else if (accountChanged || currentRoute === 'login' || currentRoute === 'landing') {
+        setCurrentRoute(isDemoUser(userProfile.id) && userProfile.role !== 'student' ? 'demo-limit' : userProfile.role === 'student' ? 'dashboard' : 'parent');
       }
     } else {
       if (dataService.isAuthenticated()) {
@@ -230,6 +239,7 @@ export default function App() {
   
 
   const handleNavigateToLogin = (role: UserRole) => {
+    if (role === 'admin') { window.location.assign(ADMIN_LOGIN_PATH); return; }
     setLoginMode('login');
     window.scrollTo({ top: 0, behavior: 'instant' });
     setLoginRole(role);
@@ -238,6 +248,8 @@ export default function App() {
 
   const navigateTo = (targetRoute: string) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    if (targetRoute === 'admin' || targetRoute === 'login:admin') { window.location.assign(ADMIN_PANEL_PATH); return; }
 
     if (targetRoute === 'register') {
       setLoginMode('register');
@@ -269,7 +281,6 @@ export default function App() {
     const authenticated = dataService.isAuthenticated();
     if (!authenticated) {
       if (targetRoute === 'parent') setLoginRole('parent');
-      else if (targetRoute === 'admin') setLoginRole('admin');
       else setLoginRole('student');
       setCurrentRoute('login');
       return;
@@ -334,13 +345,6 @@ export default function App() {
       return;
     }
 
-    // Admin route protection
-    if (targetRoute === 'admin' && (!authUser || userProfile?.role !== 'admin')) {
-      setCurrentRoute(u.role === 'parent' ? 'parent' : 'dashboard');
-      syncState();
-      return;
-    }
-
     setCurrentRoute(targetRoute);
     syncState();
   };
@@ -370,7 +374,7 @@ export default function App() {
     } else if (newRole === 'student') {
       setCurrentRoute('dashboard');
     } else if (newRole === 'admin') {
-      setCurrentRoute('admin');
+      window.location.assign(ADMIN_PANEL_PATH);
     }
     syncState();
   };
@@ -385,6 +389,7 @@ export default function App() {
   };
 
   if (authLoading && authUser && !userProfile) return <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6"><p role="status">Hesap ve ilerleme bilgileri yükleniyor…</p></main>;
+  if (currentRoute !== 'login' && hasVerifiedAdminAccess({ currentUser: authUser, userProfile, loading: authLoading, isAdminAuthorized })) return <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6"><p role="status">Yönetici alanına yönlendiriliyorsunuz…</p></main>;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
@@ -512,10 +517,6 @@ export default function App() {
                 isSwitchingStudent={isSwitchingStudent}
                 onOpenStudent={studentId => void openStudentPanel(studentId)}
               />
-            )}
-
-            {currentRoute === 'admin' && (
-              <AdminPanelView />
             )}
 
             {currentRoute === 'login' && (

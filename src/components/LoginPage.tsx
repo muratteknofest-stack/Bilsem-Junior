@@ -34,7 +34,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   initialMode = 'login',
 }) => {
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(initialMode);
-  const [selectedRole, setSelectedRole] = useState<UserRole>(initialRole);
+  const [selectedRole, setSelectedRole] = useState<UserRole>(initialRole === 'parent' ? 'parent' : 'student');
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
@@ -239,4 +239,5 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     </div>
   );
 };
+
 

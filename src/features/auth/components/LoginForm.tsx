@@ -26,12 +26,12 @@ import {
   ArrowRight,
   GraduationCap,
   Users,
-  ShieldCheck,
   CheckCircle2
 } from 'lucide-react';
 
 interface LoginFormProps {
   selectedRole: UserRole;
+  adminOnly?: boolean;
   setSelectedRole: (role: UserRole) => void;
   onLoginSuccess: (role: UserRole, userProfile?: UserProfile) => void;
   onShowForgotPassword: () => void;
@@ -40,7 +40,8 @@ interface LoginFormProps {
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({
-  selectedRole,
+  selectedRole: requestedRole,
+  adminOnly = false,
   setSelectedRole,
   onLoginSuccess,
   onShowForgotPassword,
@@ -48,11 +49,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   setSuccessToast
 }) => {
   const { loginLocally, sendEmailVerification } = useAuth();
+  const selectedRole: UserRole = adminOnly ? 'admin' : requestedRole === 'parent' ? 'parent' : 'student';
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
+  const [rememberMe, setRememberMe] = useState(!adminOnly);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -199,14 +201,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   return (
     <div>
       {/* Modern Minimalist Role Selector */}
-      <div className="mb-5">
+      {!adminOnly && <div className="mb-5">
         <div className="flex items-center justify-between mb-2">
           <p className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
             Hesap Türü
           </p>
           <span className="text-[11px] text-slate-400 font-medium">Lütfen rolünüzü belirleyin</span>
         </div>
-        <div className="grid grid-cols-3 gap-2" role="group" aria-label="Hesap türü">
+        <div className="grid grid-cols-2 gap-2" role="group" aria-label="Hesap türü">
           <button
             type="button"
             aria-pressed={selectedRole === 'student'}
@@ -275,41 +277,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             </div>
           </button>
 
-          <button
-            type="button"
-            aria-pressed={selectedRole === 'admin'}
-            onClick={() => {
-              sound.playClick();
-              setSelectedRole('admin');
-              setErrorMessage(null);
-            }}
-            className={`zp-auth-role-button p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between ${
-              selectedRole === 'admin'
-                ? 'border-purple-600 bg-purple-50/70 ring-2 ring-purple-500/20 shadow-xs'
-                : 'border-slate-200 hover:border-slate-300 bg-slate-50/40 hover:bg-slate-50'
-            }`}
-          >
-            <div className="flex items-center justify-between w-full mb-1.5">
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                selectedRole === 'admin' ? 'bg-purple-600 text-white' : 'bg-slate-200/80 text-slate-600'
-              }`}>
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              {selectedRole === 'admin' && (
-                <span className="w-2 h-2 rounded-full bg-purple-600" />
-              )}
-            </div>
-            <div>
-              <div className="text-xs font-bold text-slate-900 font-['Outfit',sans-serif]">
-                Eğitmen
-              </div>
-              <div className="text-[10px] text-slate-500 font-medium leading-tight mt-0.5">
-                Yönetim Paneli
-              </div>
-            </div>
-          </button>
         </div>
-      </div>
+      </div>}
 
       <form onSubmit={handleLoginSubmit} className="space-y-4" noValidate>
         <div>
@@ -318,7 +287,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               ? 'Öğrenci Kodu, Kullanıcı Adı veya E-posta'
               : selectedRole === 'parent'
               ? 'Veli E-posta Adresi'
-              : 'Eğitmen / Yönetici E-postası'}
+              : 'Yönetici E-posta Adresi'}
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -462,7 +431,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       </form>
 
       {/* Minimalist Quick Demo Section */}
-      <div className="mt-5 pt-4 border-t border-slate-200/80">
+      {!adminOnly && <div className="mt-5 pt-4 border-t border-slate-200/80">
         <div className="flex items-center justify-between mb-2">
           <span className="text-[11px] font-semibold text-slate-500">Hızlı Deneme & Önizleme:</span>
           <span className="text-[10px] text-slate-400">Toplam 3 örnek soru</span>
@@ -477,7 +446,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             <span>Öğrenci denemesini aç</span>
           </button>
         </div>
-      </div>
+      </div>}
     </div>
   );
 };

@@ -6,7 +6,9 @@ import { AuthProvider } from './contexts/AuthContext';
 import { PasswordResetPage } from './features/auth/components/PasswordResetPage';
 import { isRecoveryRedirect } from './lib/supabase';
 import './components/wordwall.css';
+import { isAdminLocation } from './lib/admin-access';
 
+const AdminPortal = lazy(() => import('./components/AdminPortal').then(module => ({ default: module.AdminPortal })));
 const WordwallPage = lazy(() => import('./components/WordwallLibrary').then(module => ({ default: module.WordwallPage })));
 
 // Safely handle unhandled background Supabase Auth network rejections
@@ -33,7 +35,9 @@ createRoot(document.getElementById('root')!).render(
       <Suspense fallback={<p role="status" className="p-8 text-center">Testler yükleniyor…</p>}><WordwallPage /></Suspense>
     ) : (
       <AuthProvider>
-        <App />
+        {isAdminLocation(window.location.pathname) ? (
+          <Suspense fallback={<p role="status" className="p-8 text-center">Yönetici alanı yükleniyor…</p>}><AdminPortal /></Suspense>
+        ) : <App />}
       </AuthProvider>
     )}
   </StrictMode>,
