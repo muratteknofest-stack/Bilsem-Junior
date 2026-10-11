@@ -14,6 +14,9 @@ export interface RegistrationDraft {
 }
 export type RegistrationStep = 0 | 1 | 2;
 export type RegistrationErrors = Partial<Record<keyof RegistrationDraft, string>>;
+export function registrationControls(step: RegistrationStep, busy: boolean, registrationOpen?: boolean) {
+  return { fieldsDisabled: busy, submitDisabled: busy || (step === 2 && registrationOpen !== true) };
+}
 const stepFields: Array<Array<keyof RegistrationDraft>> = [
   ['parentEmail', 'password', 'passwordConfirmation'],
   ['studentName', 'grade', 'studentPassword', 'studentPasswordConfirmation'],

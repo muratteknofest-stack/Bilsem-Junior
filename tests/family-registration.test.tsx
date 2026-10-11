@@ -7,11 +7,22 @@ import { readFileSync } from 'node:fs';
 import { createFamilyRegistrationHandler } from '../server/family-registration';
 import { defaultPlatformSettings } from '../src/lib/platform-settings';
 import { PasswordPolicyError } from '../server/password-policy';
-import { validateRegistrationDraft, firstInvalidRegistrationStep, type RegistrationDraft } from '../src/features/auth/registration-draft';
+import { validateRegistrationDraft, firstInvalidRegistrationStep, registrationControls, type RegistrationDraft } from '../src/features/auth/registration-draft';
 import { registerFamilyInSupabase, resendFamilyConfirmation } from '../src/services/family-registration-service';
 import { RegistrationConfirmation } from '../src/features/auth/components/RegistrationConfirmation';
 import { accountEntry, accountEntryPath } from '../src/features/auth/account-entry';
 const parentId = '11111111-1111-4111-8111-111111111111', studentId = '22222222-2222-4222-8222-222222222222';
+test('closed or unavailable registration permits editing and step navigation, but prevents account creation', () => {
+  for (const open of [undefined, false, true]) {
+    for (const step of [0, 1] as const) assert.deepEqual(registrationControls(step, false, open), { fieldsDisabled: false, submitDisabled: false });
+    assert.deepEqual(registrationControls(2, false, open), { fieldsDisabled: false, submitDisabled: open !== true });
+    for (const step of [0, 1, 2] as const) assert.deepEqual(registrationControls(step, true, open), { fieldsDisabled: true, submitDisabled: true });
+  }
+  const source = readFileSync(new URL('../src/features/auth/components/RegistrationForm.tsx', import.meta.url), 'utf8');
+  assert.match(source, /<fieldset disabled=\{controls\.fieldsDisabled\}/);
+  assert.match(source, /type="submit" disabled=\{controls\.submitDisabled\}/);
+  assert.ok(source.indexOf('if (step < 2) { setStep') < source.indexOf('if (!availability?.registrationOpen) {'));
+});
 test('direct registration and login addresses preserve the public account form and never select administrator access', () => {
   for (const path of ['/register', '/register/']) assert.deepEqual(accountEntry(new URL(path, 'https://zekapark.vercel.app')), { mode:'register',role:'parent' });
   assert.deepEqual(accountEntry(new URL('https://zekapark.vercel.app/login?role=parent')), { mode:'login',role:'parent' });

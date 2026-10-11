@@ -4,7 +4,7 @@ import { FooterInfoModal, type FooterModalTopic } from '../../../components/Foot
 import { ArrowLeft, ArrowRight, Check, LoaderCircle, Users } from 'lucide-react';
 import { NewPasswordFields } from './NewPasswordFields';
 import { apiUrl } from '../../../lib/api-client';
-import { firstInvalidRegistrationStep, validateRegistrationDraft, type RegistrationDraft, type RegistrationErrors, type RegistrationStep } from '../registration-draft';
+import { firstInvalidRegistrationStep, registrationControls, validateRegistrationDraft, type RegistrationDraft, type RegistrationErrors, type RegistrationStep } from '../registration-draft';
 
 export interface RegistrationSuccess {
   identifier: string;
@@ -62,13 +62,17 @@ export function RegistrationForm({ setErrorMessage, onRegisterSuccess, onBusyCha
   }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (submitting.current || !availability?.registrationOpen) return;
+    if (submitting.current) return;
     setErrorMessage(null); setAccountExists(false);
     const problems = validateRegistrationDraft(draft, step < 2 ? step : undefined);
     focusInvalid.current = Object.keys(problems).length > 0;
     setErrors(problems);
     if (Object.keys(problems).length) { if (step === 2) setStep(firstInvalidRegistrationStep(problems)); return; }
     if (step < 2) { setStep(previous => (previous + 1) as RegistrationStep); return; }
+    if (!availability?.registrationOpen) {
+      setErrorMessage(availabilityError || (availability ? 'Hesap oluşturma şu anda kapalı. Bilgilerinizi düzenleyebilir veya kayıt durumunu yeniden kontrol edebilirsiniz.' : 'Kayıt durumu kontrol ediliyor. Lütfen kontrolün tamamlanmasını bekleyin.'));
+      return;
+    }
     submitting.current = true; setBusy(true); onBusyChange?.(true);
     try {
       const email = draft.parentEmail.trim().toLowerCase();
@@ -84,7 +88,7 @@ export function RegistrationForm({ setErrorMessage, onRegisterSuccess, onBusyCha
       }
     } finally { submitting.current = false; setBusy(false); onBusyChange?.(false); }
   }
-  const disabled = busy || !availability?.registrationOpen;
+  const controls = registrationControls(step, busy, availability?.registrationOpen);
   return <div className="space-y-5">
     <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-950">
       <div className="flex items-center gap-2 font-semibold"><Users size={19} aria-hidden="true" /> Tek kayıtla veli ve öğrenci hesabı</div>
@@ -93,22 +97,22 @@ export function RegistrationForm({ setErrorMessage, onRegisterSuccess, onBusyCha
     <ol className="grid grid-cols-3 gap-2 text-xs sm:text-sm" aria-label="Kayıt adımları">
       {steps.map((name, index) => <li key={name} aria-current={step === index ? 'step' : undefined} className={`rounded-xl border p-3 ${step === index ? 'border-indigo-600 bg-indigo-50 font-semibold text-indigo-950' : 'border-slate-200 text-slate-600'}`}><span className="mb-1 flex items-center gap-1">{step > index ? <Check size={16} aria-label="Tamamlandı" /> : `${index + 1}. adım`}</span>{name}</li>)}
     </ol>
-    {!availability?.registrationOpen && <div className="rounded-xl border border-slate-200 p-4 text-sm leading-6"><p role={availabilityError ? 'alert' : 'status'}>{availabilityError || (availability ? 'Yeni aile kayıtları hazırlık aşamasında. Mevcut hesabınızla giriş yapabilirsiniz.' : 'Kayıt durumu kontrol ediliyor…')}</p>{availabilityError && <button type="button" onClick={() => setReload(previous => previous + 1)} className="mt-2 min-h-11 font-semibold text-indigo-700 underline">Yeniden kontrol et</button>}</div>}
+    {!availability?.registrationOpen && <div id="registration-availability" className="rounded-xl border border-slate-200 p-4 text-sm leading-6"><p role={availabilityError ? 'alert' : 'status'}>{availabilityError || (availability ? 'Bilgilerinizi doldurup kontrol adımına ilerleyebilirsiniz. Hesap oluşturma şu anda kapalıdır.' : 'Kayıt durumu kontrol ediliyor. Bu sırada bilgilerinizi doldurabilirsiniz.')}</p><p className="mt-2 text-slate-600">Hesap oluşturulana kadar bu bilgiler gönderilmez. Sayfayı kapatırsanız form temizlenir.</p>{(availability || availabilityError) && <button type="button" disabled={busy} onClick={() => { setErrorMessage(null); setReload(previous => previous + 1); }} className="mt-2 min-h-11 font-semibold text-indigo-700 underline disabled:opacity-60">Kayıt durumunu yeniden kontrol et</button>}</div>}
     <form ref={form} onSubmit={submit} noValidate className="space-y-4" aria-busy={busy}>
       <h2 ref={heading} tabIndex={-1} className="text-lg font-semibold text-slate-900 focus:outline-none">{steps[step]}</h2>
-      <fieldset disabled={disabled} className="space-y-4">
+      <fieldset disabled={controls.fieldsDisabled} className="space-y-4">
         <legend className="sr-only">{steps[step]}</legend>
         {step === 0 && <>
           <label className="block text-sm font-semibold text-slate-700" htmlFor="parent-email">Veli e-posta adresi<input id="parent-email" type="email" required autoComplete="email" autoCapitalize="none" spellCheck={false} maxLength={254} value={draft.parentEmail} onChange={e => update('parentEmail', e.target.value)} aria-invalid={Boolean(errors.parentEmail)} aria-describedby="parent-email-help parent-email-error" className={field} /><span id="parent-email-help" className="mt-1 block text-xs font-normal text-slate-600">Doğrulama bağlantısı ve hesap kurtarma iletileri bu adrese gönderilir.</span></label>
           <p id="parent-email-error" className="text-sm text-rose-700">{errors.parentEmail}</p>
-          <NewPasswordFields label="Veli şifresi" value={draft.password} confirmation={draft.passwordConfirmation} onChange={v => update('password', v)} onConfirmation={v => update('passwordConfirmation', v)} error={errors.password} confirmationError={errors.passwordConfirmation} disabled={disabled} />
+          <NewPasswordFields label="Veli şifresi" value={draft.password} confirmation={draft.passwordConfirmation} onChange={v => update('password', v)} onConfirmation={v => update('passwordConfirmation', v)} error={errors.password} confirmationError={errors.passwordConfirmation} disabled={controls.fieldsDisabled} />
         </>}
         {step === 1 && <>
           <label className="block text-sm font-semibold text-slate-700" htmlFor="child-alias">Öğrencinin takma adı<input id="child-alias" required minLength={2} maxLength={50} autoComplete="off" value={draft.studentName} onChange={e => update('studentName', e.target.value)} aria-invalid={Boolean(errors.studentName)} aria-describedby="alias-help alias-error" className={field} /><span id="alias-help" className="mt-1 block text-xs font-normal text-slate-600">Ad soyad, okul veya adres yazmanız gerekmez.</span></label>
           <p id="alias-error" className="text-sm text-rose-700">{errors.studentName}</p>
           <label className="block text-sm font-semibold text-slate-700" htmlFor="child-grade">Sınıf<select id="child-grade" className={field} value={draft.grade} onChange={e => update('grade', Number(e.target.value))} aria-invalid={Boolean(errors.grade)} aria-describedby="grade-error">{[1,2,3,4].map(g => <option key={g} value={g}>{g}. sınıf</option>)}</select></label>
           <p id="grade-error" className="text-sm text-rose-700">{errors.grade}</p>
-          <NewPasswordFields label="Öğrenci şifresi" value={draft.studentPassword} confirmation={draft.studentPasswordConfirmation} onChange={v => update('studentPassword', v)} onConfirmation={v => update('studentPasswordConfirmation', v)} error={errors.studentPassword} confirmationError={errors.studentPasswordConfirmation} disabled={disabled} />
+          <NewPasswordFields label="Öğrenci şifresi" value={draft.studentPassword} confirmation={draft.studentPasswordConfirmation} onChange={v => update('studentPassword', v)} onConfirmation={v => update('studentPasswordConfirmation', v)} error={errors.studentPassword} confirmationError={errors.studentPasswordConfirmation} disabled={controls.fieldsDisabled} />
           <p className="text-xs text-slate-600">Öğrenci şifresi veli şifresinden farklı olmalıdır. Öğrenci hesabı, veli e-postası doğrulanıp veli paneline giriş yapıldığında etkinleşir.</p>
         </>}
         {step === 2 && <>
@@ -121,7 +125,7 @@ export function RegistrationForm({ setErrorMessage, onRegisterSuccess, onBusyCha
         </>}
         <div className="flex gap-3">
           {step > 0 && <button type="button" onClick={() => { setStep(previous => (previous - 1) as RegistrationStep); setErrors({}); setErrorMessage(null); }} className="flex min-h-12 items-center gap-2 rounded-xl border border-slate-300 px-4 font-semibold"><ArrowLeft size={18} /> Geri</button>}
-          <button type="submit" className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-700 px-4 py-3 font-semibold text-white disabled:opacity-60">{busy ? <><LoaderCircle size={18} className="animate-spin" aria-hidden="true" /> Hesap oluşturuluyor…</> : <>{step === 2 ? 'Aile hesabını oluştur' : 'Devam et'}<ArrowRight size={18} aria-hidden="true" /></>}</button>
+          <button type="submit" disabled={controls.submitDisabled} aria-describedby={step === 2 && !availability?.registrationOpen ? 'registration-availability' : undefined} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-700 px-4 py-3 font-semibold text-white disabled:opacity-60">{busy ? <><LoaderCircle size={18} className="animate-spin" aria-hidden="true" /> Hesap oluşturuluyor…</> : <>{step === 2 ? (availability?.registrationOpen ? 'Aile hesabını oluştur' : availabilityError ? 'Kayıt durumu doğrulanamadı' : availability ? 'Kayıtlar şu anda kapalı' : 'Kayıt durumu bekleniyor…') : 'Devam et'}<ArrowRight size={18} aria-hidden="true" /></>}</button>
         </div>
       </fieldset>
       {busy && <p role="status" className="text-sm text-slate-600">Kayıt tamamlanırken lütfen sayfayı kapatmayın.</p>}
