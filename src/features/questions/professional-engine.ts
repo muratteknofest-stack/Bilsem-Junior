@@ -2,11 +2,12 @@ import type { BaseQuestion, CognitiveCategory, DifficultyLevel, QuestionType } f
 import { SeededRNG } from '../../lib/rng';
 import { generateVisualFingerprint as fingerprint } from './fingerprint';
 import { VISUAL_SYMBOL_IDS, symbolLabel } from './visual-vocabulary';
+import { ALL_TOPIC_TYPES } from './topic-catalog';
 
 export const ENGINE_VERSION = 'verified-5';
 export const VERIFIED_TYPES: QuestionType[] = ['matrix_2x2', 'matrix_3x3', 'raven_matrix', 'visual_sequence', 'figure_rotation', 'mirror_reflection', 'number_pattern', 'operation_machine', 'symbol_coding', 'shape_counting', 'logic_grid'];
 export const RECOVERED_TYPES: QuestionType[] = ['symmetry_completion', 'shape_combination', 'direction_path', 'number_pyramid'];
-export const STUDENT_TYPES: QuestionType[] = [...VERIFIED_TYPES, ...RECOVERED_TYPES];
+export const STUDENT_TYPES: QuestionType[] = [...ALL_TOPIC_TYPES];
 export type Tile = { cells: number[]; size: number };
 type Value = Tile | { textNumber: number | string };
 export type Board = {
@@ -356,4 +357,5 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
     estimatedSeconds: (board.kind === 'matrix' || board.kind === 'order' ? 45 : 25) + difficulty * 8, skills: [objective], seed, visualConfig: board, status: 'draft',
     authoring: { engine: legacyV3 ? 'verified-3' : ENGINE_VERSION, objective, distractorNotes: notes } };
 }
+
 

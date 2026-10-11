@@ -9,7 +9,7 @@ import { generateVisualFingerprint } from '../src/features/questions/fingerprint
 import { EDUCATION_PROFILES, inspectEducation, type SchoolGrade } from '../src/features/questions/quality-policy';
 import { runMultiPassQuestionTests, stampQuestionVerification } from '../src/features/questions/verifier';
 
-export const BATCH_POLICY = 'balanced-bank-1';
+export const BATCH_POLICY = 'balanced-bank-2';
 export const stemKey = (q: BaseQuestion) => generateVisualFingerprint({ prompt:q.prompt?.trim(),board:q.visualConfig });
 export function gradeTypes(grade:SchoolGrade):QuestionType[]{
   return STUDENT_TYPES.filter(type=>grade!==1 || !['operation_machine','matrix_3x3','raven_matrix'].includes(type));
@@ -45,6 +45,13 @@ export function generateGradeBank(options:{perGrade:number;seed:number;batchId:s
       for(const type of candidates){
       const cell=type+':'+difficulty;
       if(exhausted.has(cell))continue;
+      // Four triangular complements and a short gear chain are finite curricula.
+      // Reserve one distinct stem for each grade; redistribute demand instead of
+      // inventing novelty with seeds, answer order or hidden metadata.
+      const finiteLimit=type==='balance_scale'?3:['tangram_puzzle','gear_rotation'].includes(type)?1:undefined;
+      if(finiteLimit!==undefined&&(counts.types[type]||0)>=finiteLimit){
+        exhausted.add(cell);redistributed.push({grade,type,difficulty,reason:'limited-visible-stems'});continue;
+      }
       // 3×3 symmetry has only 2^4 visible stems. Reserve up to four per grade.
       if(type==='symmetry_completion'&&difficulty<4&&smallSymmetryCount>=4){
         exhausted.add(cell);redistributed.push({grade,type,difficulty,reason:'limited-visible-stems'});continue;
@@ -91,3 +98,4 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   await writeFile(args.output,JSON.stringify(result));
   console.log(JSON.stringify({batchId:result.batchId,...result.summary},null,2));
 }
+

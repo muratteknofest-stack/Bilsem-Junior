@@ -24,104 +24,15 @@ import {
   ALL_COGNITIVE_CATEGORIES,
   COGNITIVE_CATEGORY_LABELS,
 } from '../types';
+import { auditQuestion } from '../features/questions/quality';
+import { ALL_TOPIC_TYPES, TOPIC_CATEGORY } from '../features/questions/topic-catalog';
 
 // ==========================================
 // PREDEFINED CONSTANTS & TYPE DEFINITIONS
 // ==========================================
 
-export const VALID_QUESTION_TYPES: QuestionType[] = [
-  'odd_one_out',
-  'visual_sequence',
-  'matrix_2x2',
-  'figure_rotation',
-  'mirror_reflection',
-  'symmetry_completion',
-  'figure_completion',
-  'spatial_relationship',
-  'visual_analogy',
-  'shape_counting',
-  'direction_path',
-  'visual_memory',
-  'symbol_coding',
-  'classification',
-  'visual_attention',
-  'number_pattern',
-  'logical_sequence',
-  'matrix_3x3',
-  'shape_equation',
-  'latin_square',
-  'shadow_matching',
-  'balance_scale',
-  'gear_rotation',
-  'paper_folding',
-  'venn_diagram',
-  'cube_counting',
-  'dice_unfold',
-  'cryptogram',
-  'operation_machine',
-  'top_view',
-  'shape_combination',
-  'verbal_analogy',
-  'number_pyramid',
-  'story_logic',
-  'tangram_puzzle',
-  'maze_path',
-  'logic_grid',
-  'punch_folding',
-  'detail_detection',
-  'weight_comparison',
-  'multiview_perspective',
-  'raven_matrix',
-  'word_scramble_logic',
-  'spatial_origami',
-];
-
-// Expected category mappings for standard question types
-export const TYPE_TO_EXPECTED_CATEGORIES: Partial<Record<QuestionType, CognitiveCategory[]>> = {
-  odd_one_out: ['visual_perception', 'attention', 'logic'],
-  figure_completion: ['visual_perception'],
-  symmetry_completion: ['visual_perception', 'spatial'],
-  visual_sequence: ['pattern', 'logic'],
-  number_pattern: ['pattern', 'numerical'],
-  logical_sequence: ['pattern', 'logic'],
-  matrix_2x2: ['matrix', 'logic'],
-  matrix_3x3: ['matrix', 'logic'],
-  raven_matrix: ['matrix', 'logic', 'pattern'],
-  figure_rotation: ['spatial'],
-  mirror_reflection: ['spatial', 'visual_perception'],
-  spatial_relationship: ['spatial', 'logic'],
-  shadow_matching: ['spatial', 'visual_perception'],
-  paper_folding: ['spatial'],
-  punch_folding: ['spatial'],
-  spatial_origami: ['spatial'],
-  cube_counting: ['spatial', 'numerical'],
-  dice_unfold: ['spatial'],
-  top_view: ['spatial'],
-  multiview_perspective: ['spatial'],
-  gear_rotation: ['spatial', 'logic'],
-  shape_combination: ['spatial', 'visual_perception'],
-  tangram_puzzle: ['spatial', 'visual_perception'],
-  visual_analogy: ['logic', 'visual_perception'],
-  verbal_analogy: ['logic'],
-  story_logic: ['logic'],
-  logic_grid: ['logic'],
-  latin_square: ['logic', 'matrix'],
-  venn_diagram: ['logic', 'classification' as any],
-  balance_scale: ['logic', 'numerical'],
-  weight_comparison: ['logic', 'numerical'],
-  shape_equation: ['numerical', 'logic'],
-  number_pyramid: ['numerical', 'pattern'],
-  cryptogram: ['numerical', 'logic'],
-  operation_machine: ['numerical', 'logic'],
-  visual_attention: ['attention', 'visual_perception'],
-  detail_detection: ['attention', 'visual_perception'],
-  maze_path: ['attention', 'spatial'],
-  direction_path: ['attention', 'spatial'],
-  visual_memory: ['memory', 'visual_perception'],
-  symbol_coding: ['memory', 'logic'],
-  classification: ['logic', 'visual_perception'],
-  word_scramble_logic: ['logic'],
-};
+export const VALID_QUESTION_TYPES: QuestionType[] = ALL_TOPIC_TYPES;
+export const TYPE_TO_EXPECTED_CATEGORIES: Partial<Record<QuestionType,CognitiveCategory[]>> = Object.fromEntries(ALL_TOPIC_TYPES.map(type=>[type,[TOPIC_CATEGORY[type]]]));
 
 export type QualityIssueSeverity = 'error' | 'warning' | 'info';
 
@@ -544,6 +455,9 @@ export function checkQuestionQuality(
   // -------------------------------------------------------------
   // REPORT AGGREGATION & SCORE CALCULATION
   // -------------------------------------------------------------
+  const mechanical = auditQuestion(question);
+  for(const [index,message] of [...mechanical.errors,...mechanical.reviewRequired].entries())issues.push({id:`mechanical-${index}`,category:'options_integrity',severity:'error',title:'Soru ve şık mekanik denetimi',message});
+  if(!mechanical.solverVerified&&!mechanical.errors.length&&!mechanical.reviewRequired.length)issues.push({id:'proof-required',category:'answer_index',severity:'error',title:'Bağımsız cevap kanıtı gerekli',message:'Yapısal uygunluk tek başına doğru cevap kanıtı değildir.'});
   const errorsCount = issues.filter((i) => i.severity === 'error').length;
   const warningsCount = issues.filter((i) => i.severity === 'warning').length;
   const infosCount = issues.filter((i) => i.severity === 'info').length;
@@ -965,3 +879,4 @@ export const QuestionQualityChecker: React.FC<QuestionQualityCheckerProps> = ({
     </div>
   );
 };
+

@@ -2,6 +2,7 @@ import type { BaseQuestion, DifficultyLevel } from '../../types';
 import type { Board } from './professional-engine';
 import { generateVisualFingerprint } from './fingerprint';
 import { isVisualSymbol } from './visual-vocabulary';
+import type { WorkshopBoard } from './workshop-mechanics';
 
 export const QUALITY_POLICY_VERSION = 'education-1';
 export type SchoolGrade = 1 | 2 | 3 | 4;
@@ -50,13 +51,21 @@ export function assessmentContentKey(q: BaseQuestion): string {
 export function inspectEducation(q: BaseQuestion, grade: SchoolGrade, age?: number) {
   const p = EDUCATION_PROFILES[grade], b = q.visualConfig as Board;
   if (!p) throw new Error('Hedef sınıf 1–4 olmalı.');
+  const w=q.visualConfig as unknown as WorkshopBoard;
+  const workshop=w?.displayMode==='workshop_board';
   const numeric = [ ...(b.values || []), ...(b.examples || []).flat(), b.input,
     ...(b.base || []),
+    ...(workshop ? [...(w.totals||[]),...(w.counts||[]),...(w.heights||[]),...(w.cells||[])] : []),
     ...(b.key || []).map(k => k.value), ...q.options.map(o => (o.visualData as { textNumber?: unknown })?.textNumber),
   ].filter((v): v is number => typeof v === 'number');
   const metrics = { maxNumber: Math.max(0, ...numeric.map(Math.abs)), itemCount: b.items?.length || 0,
     symbolCount: b.symbols?.length || b.moves?.length || 0, peopleCount: b.names?.length || 0,
-    gridSize: Math.max(b.gridSize || 0, ...(b.tiles || []).filter(Boolean).map(t => t!.size)), promptWords: q.prompt.trim().split(/\s+/u).length };
+    gridSize: Math.max(b.gridSize || 0, workshop ? w.size||0 : 0, ...(b.tiles || []).filter(Boolean).map(t => t!.size)), promptWords: q.prompt.trim().split(/\s+/u).length };
+  if(workshop){
+    metrics.symbolCount=w.kind==='cryptogram'?w.code!.length:w.kind==='word_scramble_logic'?w.letters!.length:w.kind==='visual_attention'?w.reference!.length:0;
+    metrics.peopleCount=w.labels?.length||0;
+    metrics.itemCount=w.symbols?.length||w.heights?.length||0;
+  }
   const audience: string[] = [], difficulty: string[] = [], visual: string[] = [];
   if (age !== undefined && (!Number.isInteger(age) || age < p.ages[0] || age > p.ages[1])) audience.push('AGE_PROFILE: Yaş seçilen sınıfın içerik profili dışında.');
   if (q.targetGrade !== undefined && q.targetGrade !== grade) audience.push('GRADE_MISMATCH: Soru sınıfı istekle uyuşmuyor.');
@@ -77,3 +86,4 @@ export function hasCompleteQualityReport(q: BaseQuestion): boolean {
     r.target.grade === q.targetGrade && r.target.age === q.targetAge && r.target.difficulty === q.difficulty &&
     r.stages.length === QUALITY_STAGES.length && QUALITY_STAGES.every(s => r.stages.filter(t => t.id === s.id && t.status === 'passed' && t.reasons.length === 0 && t.weight === s.weight).length === 1) && r.score === 100;
 }
+

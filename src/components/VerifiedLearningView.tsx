@@ -5,6 +5,7 @@ import { AVAILABLE_CATEGORIES, isAvailableCategory } from '../features/student/a
 import { LEARNING_EXAMS, type LearningCategory, type LearningMode, type LearningSessionView } from '../features/student/learning-contract';
 import { isResponseComplete, isResponseEmpty, type QuestionResponse } from '../features/questions/answer-interactions';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
+import { MemoryStudy } from '../features/questions/renderers/MemoryStudy';
 import { AnswerWorkspace } from '../features/questions/renderers/AnswerWorkspace';
 import { VisualExplanationOverlay } from '../features/questions/renderers/VisualExplanationOverlay';
 import { learningService } from '../services/learning-service';
@@ -89,8 +90,8 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
         <div className="flex flex-wrap justify-between gap-2 text-sm font-semibold"><span>Soru {index + 1} / {session.questions.length} · {COGNITIVE_CATEGORY_LABELS[q.category]}</span>{!session.result && <span aria-label="Kalan süre">{Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}</span>}</div>
         {mode === 'exam' || session.result ? <nav aria-label="Soru seçimi" className="flex flex-wrap gap-2">{session.questions.map((item, i) => <button key={item.id} type="button" disabled={busy} aria-current={index === i ? 'step' : undefined} aria-label={`${i + 1}. soru${session.answers[String(i)] ? ', yanıtlandı' : ', boş'}`} onClick={() => void goTo(i)} className={`min-h-10 min-w-10 rounded-lg border px-3 ${index === i ? 'border-indigo-700 bg-indigo-700 text-white' : session.answers[String(i)] ? 'border-indigo-300 bg-indigo-50' : 'border-slate-300'}`}>{i + 1}</button>)}</nav> : null}
         <h2 className="text-lg font-bold">{q.prompt}</h2>{q.secondaryPrompt && <p>{q.secondaryPrompt}</p>}
-        <QuestionRenderer question={renderQuestion} />
-        <fieldset disabled={busy}><legend className="sr-only">Cevabın</legend><AnswerWorkspace key={`${session.id}-${index}`} question={renderQuestion} response={response} onChange={setResponse} submitted={submitted} /></fieldset>
+        <MemoryStudy key={`${session.id}-${index}`} question={renderQuestion} review={submitted}><QuestionRenderer question={renderQuestion} />
+        <fieldset disabled={busy}><legend className="sr-only">Cevabın</legend><AnswerWorkspace key={`${session.id}-${index}`} question={renderQuestion} response={response} onChange={setResponse} submitted={submitted} /></fieldset></MemoryStudy>
         {!submitted && <button type="button" onClick={() => void submit()} disabled={busy || remaining === 0 || (!isResponseComplete(q as BaseQuestion, response) && !(mode === 'exam' && answer && isResponseEmpty(response)))} className={button}>{busy ? 'Kaydediliyor…' : mode === 'exam' ? 'Cevabımı kaydet' : 'Cevabımı kontrol et'}</button>}
         {mode === 'exam' && answer && !session.result && <p role="status" className="text-sm text-indigo-800">Cevabın kaydedildi. Değiştirdiğinde yeniden kaydet.</p>}
         {revealed && <p role="status" className={`font-bold ${answer.correct ? 'text-emerald-700' : 'text-amber-800'}`}>{answer.correct ? `Doğru cevap!${answer.xp ? ` +${answer.xp} XP` : ''}` : 'Bu soruyu birlikte yeniden inceleyelim.'}</p>}

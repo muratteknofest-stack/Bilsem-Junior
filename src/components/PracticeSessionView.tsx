@@ -15,6 +15,7 @@ import { demoQuestionsRemaining, isDemoUser, useDemoQuestion } from '../lib/demo
 import { loadPublishedQuestionsForGrade, usePublishedQuestions } from '../features/questions/use-published-questions';
 import { selectPublishedPool } from '../features/questions/editorial-data';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
+import { MemoryStudy } from '../features/questions/renderers/MemoryStudy';
 import { AnswerWorkspace } from '../features/questions/renderers/AnswerWorkspace';
 import { evaluateResponse, type QuestionResponse } from '../features/questions/answer-interactions';
 import { VisualExplanationOverlay } from '../features/questions/renderers/VisualExplanationOverlay';
@@ -976,6 +977,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
         )}
 
         {/* Programmatic Visual Question Canvas */}
+        <MemoryStudy key={currentQuestion.id} question={currentQuestion} review={isSubmitted}>
         <div className="py-2">
           <QuestionRenderer question={currentQuestion} />
           <QuestionIssueButton key={currentQuestion.id} question={currentQuestion} />
@@ -984,6 +986,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
         {/* Answer Options Grid */}
         <AnswerWorkspace key={currentQuestion.id} question={currentQuestion} response={answerResponse}
           onChange={handleResponse} submitted={isSubmitted} />
+        </MemoryStudy>
 
         {/* Action Button & Feedback Banner */}
         {!isSubmitted ? (
@@ -1151,4 +1154,5 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
     </div>
   );
 };
+
 

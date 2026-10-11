@@ -6,11 +6,15 @@ import { OptionRenderer } from './OptionRenderer';
 import { TileDiagram } from './ProfessionalBoard';
 import { questionVisualTheme, symbolLabel, type VisualTheme } from '../visual-vocabulary';
 import { SymbolDiagram } from './VisualGlyph';
+import { WorkshopShape } from './WorkshopBoard';
+import type { WorkshopValue } from '../workshop-mechanics';
+import { useMemoryStudy } from './MemoryStudy';
 
 const labels: Record<AnswerMode, string> = { choice: 'Şık seç', place: 'Sürükle bırak', order: 'Sırayı kur', match: 'Eşleştir', number: 'Cevabı yaz' };
 type Props = { question: BaseQuestion; response: QuestionResponse | null; onChange: (r: QuestionResponse) => void; submitted?: boolean; allowedModes?: AnswerMode[] };
 
 function CardValue({ value, theme }: { value: unknown; theme: VisualTheme }) {
+  if(value&&typeof value==='object'&&('symbol' in value||'polygon' in value))return <WorkshopShape value={value as WorkshopValue}/>;
   const data = value as Partial<Tile> & { textNumber?: string | number };
   return data?.cells && data.size ? <span className="block w-24 max-w-full mx-auto"><TileDiagram tile={data as Tile} theme={theme} /></span> :
     <span className="text-xl font-black">{data?.textNumber ?? String(value)}</span>;
@@ -18,6 +22,7 @@ function CardValue({ value, theme }: { value: unknown; theme: VisualTheme }) {
 
 /** Pointer events support mouse, touch and pen; every placement also works with Tab + Enter. */
 export function AnswerWorkspace({ question, response, onChange, submitted = false, allowedModes }: Props) {
+  const memory=useMemoryStudy();
   const theme = questionVisualTheme(question);
   const modes = interactionModes(question).filter(m => !allowedModes || allowedModes.includes(m));
   const [mode, setMode] = useState<AnswerMode>(response?.mode ?? modes[0]);
@@ -59,6 +64,7 @@ export function AnswerWorkspace({ question, response, onChange, submitted = fals
       <span className="block mt-1 text-xs font-normal text-slate-500">Tam sayı gir. Negatif sonuçlar için eksi işareti kullanabilirsin.</span>
     </label>
   );
+  if(memory.locked)return <p role="status" className="text-sm text-indigo-800">Önce deseni belleğinde tut. Deseni gizlediğinde cevap alanı açılır.</p>;
   return <div ref={root} className="space-y-4 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/60 to-white p-3 sm:p-5" aria-label="Cevap alanı">
     <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Çözme biçimi">
       {modes.map(m => <button key={m} type="button" aria-pressed={activeMode === m} disabled={submitted}
@@ -70,7 +76,7 @@ export function AnswerWorkspace({ question, response, onChange, submitted = fals
       {['place', 'order', 'match'].includes(activeMode) ? 'Kartı sürükle veya önce karta, sonra hedefe dokun. Klavyede Tab ve Enter kullan.' : activeMode === 'choice' ? 'Cevabını seç.' : 'Şıklara bakmadan sonucu bul.'}
     </p>
     {current.mode === 'choice' ? <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{question.options.map(o =>
-      <OptionRenderer key={o.id} option={o} question={question} isSelected={current.optionId === o.id} onSelect={() => onChange({ mode: 'choice', optionId: o.id })}
+      <OptionRenderer key={o.id} option={o} question={question} questionType={question.type} isSelected={current.optionId === o.id} onSelect={() => onChange({ mode: 'choice', optionId: o.id })}
         disabled={submitted} showCorrect={submitted} isCorrectOption={o.id === question.correctOptionId} />)}</div> : null}
     {current.mode === 'number' ? numberInput(current.value, value => onChange({ mode: 'number', value }), 'Cevabın') : null}
     {['place', 'order', 'match'].includes(activeMode) && <>
@@ -100,3 +106,4 @@ export function AnswerWorkspace({ question, response, onChange, submitted = fals
     {ghost && <div aria-hidden="true" className="fixed z-50 pointer-events-none rounded-xl border-2 border-indigo-500 bg-white p-3 shadow-xl" style={{ left: ghost.x + 12, top: ghost.y + 12 }}><CardValue theme={theme} value={tokens.find(t => t.id === ghost.token)?.value} /></div>}
   </div>;
 }
+

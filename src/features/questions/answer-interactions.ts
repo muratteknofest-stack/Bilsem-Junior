@@ -52,11 +52,11 @@ export function evaluateResponse(q: BaseQuestion, response: QuestionResponse | n
   const invalid = { complete: false, correct: false };
   if (!response || !interactionModes(q).includes(response.mode) || !isQuestionReadyForStudents(q)) return invalid;
   const b = q.visualConfig as Board;
-  const expected = independentlySolveBoard(b);
   if (response.mode === 'choice' || response.mode === 'place') {
     const complete = q.options.some(o => o.id === response.optionId);
     return { complete, correct: complete && response.optionId === q.correctOptionId };
   }
+  const expected = independentlySolveBoard(b);
   if (response.mode === 'order') {
     const slots = response.slots;
     const complete = Array.isArray(slots) && slots.length === b.names!.length &&

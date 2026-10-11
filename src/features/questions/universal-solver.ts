@@ -2,6 +2,9 @@ import type { BaseQuestion } from '../../types';
 import { solveBoard, type Board, STUDENT_TYPES } from './professional-engine';
 import { independentlySolveBoard } from './independent-board-solver';
 import { generateVisualFingerprint as fingerprint } from './fingerprint';
+import { solveWorkshopBoard, type WorkshopBoard, type WorkshopValue } from './workshop-mechanics';
+import { independentlyMatchesWorkshop } from './workshop-independent-solver';
+import { WORKSHOP_TYPES } from './topic-catalog';
 
 export interface UniversalSolverResult {
   canSolve: boolean;
@@ -22,6 +25,15 @@ export function solveQuestion(q: BaseQuestion): UniversalSolverResult {
   });
   try {
     if (!q || !Array.isArray(q.options) || q.options.length !== 4 || q.options.some(o => !o)) return failure('Dört geçerli seçenek gerekli.');
+    if ((q.visualConfig as Record<string, unknown>)?.displayMode === 'workshop_board') {
+      const board = q.visualConfig as unknown as WorkshopBoard;
+      if (!WORKSHOP_TYPES.includes(q.type) || board.kind !== q.type) return failure('Atölye konusu ile görsel kuralı uyuşmuyor.');
+      const expected = solveWorkshopBoard(board, q.options.map(o=>o.visualData as WorkshopValue));
+      const primary = q.options.filter(o=>fingerprint(o.visualData)===fingerprint(expected));
+      const independent = q.options.filter(o=>independentlyMatchesWorkshop(board,o.visualData as WorkshopValue));
+      if (primary.length !== 1 || independent.length !== 1 || primary[0].id !== independent[0].id) return failure('İki mekanik denetim tek bir doğru şıkta birleşmedi.', true);
+      return {canSolve:true,isMatch:primary[0].id===q.correctOptionId,expectedAnswerId:primary[0].id,expectedFingerprint:fingerprint(expected),solverMethod:'WorkshopCandidateProof-v1',confidence:1,ambiguityDetected:false,proofSteps:[`Konu kuralı: ${board.kind}`,`Cevap anahtarı kullanılmadan dört aday ayrı değerlendirildi.`,`Tek uygun aday: ${primary[0].id}.`]};
+    }
     if ((q.visualConfig as Record<string, unknown> | null)?.displayMode !== 'verified_board' || !STUDENT_TYPES.includes(q.type)) return failure('Bu gösterim için bağımsız kanıtlayıcı yok; inceleme gerekli.');
     const board = q.visualConfig as Board;
     const expected = solveBoard(board);
@@ -52,3 +64,4 @@ export function runQuestionBenchmark(questions: BaseQuestion[]) {
     solverMatchRate: questions.length ? Number((passedCount / questions.length * 100).toFixed(1)) : 0,
     averageConfidence: questions.length ? Number((results.reduce((s, r) => s + r.result.confidence, 0) / questions.length).toFixed(2)) : 0, reports };
 }
+

@@ -10,16 +10,21 @@ import { PaperFoldRenderer } from './engines/PaperFoldRenderer';
 import { LogicGridRenderer } from './engines/LogicGridRenderer';
 import { GenericRenderer } from './engines/GenericRenderer';
 import { questionVisualTheme } from '../visual-vocabulary';
+import { WorkshopBoard } from './WorkshopBoard';
+import type { WorkshopBoard as WorkshopBoardData } from '../workshop-mechanics';
+import { useMemoryStudy } from './MemoryStudy';
 
 interface QuestionRendererProps {
   question: BaseQuestion;
 }
 
 export const QuestionRenderer: React.FC<QuestionRendererProps> = ({ question }) => {
+  const memory=useMemoryStudy();
   const visualConfig = (question.visualConfig || {}) as Record<string, unknown>;
   const mode = typeof visualConfig.displayMode === 'string' ? visualConfig.displayMode : 'default';
   
   const renderEngine = () => {
+    if (mode === 'workshop_board') return memory.hidden&&question.type==='visual_memory'?<p role="status" className="rounded-2xl border border-indigo-200 p-6 text-indigo-900">Desen gizlendi. Belleğinde tuttuğun deseni seçeneklerden seç.</p>:<WorkshopBoard board={visualConfig as unknown as WorkshopBoardData} />;
     if (mode === 'verified_board') return <ProfessionalBoard board={visualConfig as Board} theme={questionVisualTheme(question)} />;
 
     if (['matrix_2x2', 'matrix_3x3', 'raven_matrix', 'shape_grid'].includes(mode)) {
@@ -57,4 +62,5 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({ question }) 
     </div>
   );
 };
+
 

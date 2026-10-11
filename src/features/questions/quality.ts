@@ -6,6 +6,10 @@ import { Board, ENGINE_VERSION, solveBoard, VERIFIED_TYPES, RECOVERED_TYPES, STU
 import { generateRecoveredQuestion } from './recovered-engine';
 import { generateProfessionalQuestion as generateV2 } from './professional-engine-v2';
 import { solveQuestion } from './universal-solver';
+import { generateWorkshopQuestion } from './workshop-engine';
+import { WORKSHOP_ENGINE_VERSION } from './workshop-mechanics';
+import { WORKSHOP_TYPES } from './topic-catalog';
+import { analyzeQuestionMechanics, visibleOptionKey, type MechanicalReport } from './mechanical-quality';
 
 export interface QualityReport {
   errors: string[];
@@ -13,6 +17,7 @@ export interface QualityReport {
   solverVerified: boolean;
   fingerprint: string;
   reviewRequired: string[];
+  mechanics?: MechanicalReport;
   /** AI quality score (0–100), only set for AI-generated questions */
   aiQualityScore?: number;
 }
@@ -22,10 +27,10 @@ export function questionContentKey(q: BaseQuestion): string {
   return fingerprint({ type: q.type, prompt: q.prompt?.trim(), secondaryPrompt: q.secondaryPrompt,
     explanation: q.explanation, correctOptionId: q.correctOptionId, estimatedSeconds: q.estimatedSeconds,
     targetGrade: q.targetGrade, skills: q.skills, board: q.visualConfig,
-    choices: q.options?.map(o => fingerprint(o.visualData)).sort() });
+    choices: q.options?.map(o => ({id:o.id,label:o.label,visual:visibleOptionKey(o.visualData)})).sort((a,b)=>a.id.localeCompare(b.id)), notes:q.authoring?.distractorNotes });
 }
 export function questionVisualKey(q: BaseQuestion): string {
-  return fingerprint({ type: q.type, board: q.visualConfig, choices: q.options?.map(o => fingerprint(o.visualData)).sort() });
+  return fingerprint({ type: q.type, board: q.visualConfig, choices: q.options?.map(o => visibleOptionKey(o.visualData)).sort() });
 }
 export function auditQuestion(value: unknown, existing: BaseQuestion[] = []): QualityReport {
   const result: QualityReport = { errors: [], warnings: [], solverVerified: false, fingerprint: '', reviewRequired: [] };
@@ -38,6 +43,8 @@ export function auditQuestion(value: unknown, existing: BaseQuestion[] = []): Qu
     if (!Array.isArray(q.options) || q.options.some(o => !o || typeof o !== 'object')) throw new Error('Seçenekler geçersiz.');
     if (typeof q.prompt !== 'string' || !q.explanation || typeof q.explanation.summary !== 'string') throw new Error('Yönerge veya açıklama eksik.');
     result.errors.push(...validateQuestion(q).errors.map(e => e.message));
+    result.mechanics = analyzeQuestionMechanics(q);
+    result.errors.push(...result.mechanics.errors);
     if (q.options.length !== 4) result.errors.push('Dört seçenek gerekli.');
     if (!Number.isSafeInteger(q.seed) || q.seed < 1 || !Number.isInteger(q.difficulty)) result.errors.push('Varyasyon ve zorluk tam sayı olmalı.');
     if (q.prompt.trim().length < 12 || q.prompt.length > 700) result.errors.push('Yönerge 12–700 karakter arasında olmalı.');
@@ -68,6 +75,16 @@ export function auditQuestion(value: unknown, existing: BaseQuestion[] = []): Qu
     const solved = solveQuestion(q);
     if (solved.canSolve && !solved.isMatch) result.errors.push('Bağımsız çözüm ile cevap anahtarı uyuşmuyor. ' + solved.proofSteps.join(' '));
     if (!solved.canSolve || solved.ambiguityDetected) result.reviewRequired.push(...solved.proofSteps);
+    if (cfg?.displayMode === 'workshop_board') {
+      if (!WORKSHOP_TYPES.includes(q.type) || q.authoring?.engine !== WORKSHOP_ENGINE_VERSION) result.errors.push('Atölye motoru konusu veya sürümü tanınmıyor.');
+      else {
+        const reference=generateWorkshopQuestion(q.type,q.seed,q.difficulty);
+        for(const field of ['prompt','secondaryPrompt','explanation','visualConfig','category','options','authoring'] as const) {
+          const normalize=(question:BaseQuestion)=>field==='options'?question.options.map(({id,label,visualData})=>({id,label,visualData})).sort((a,b)=>a.id.localeCompare(b.id)):question[field];
+          if(fingerprint(normalize(q))!==fingerprint(normalize(reference)))result.reviewRequired.push('Atölye kuralı, soru metni, şık veya çözüm doğrulanmış şablonla eşleşmiyor: '+field);
+        }
+      }
+    }
     // Certification covers the displayed instructions and explanation too. Arbitrary
     // edited/AI prose cannot inherit an old stamp or a template's mathematical proof.
     if (cfg?.displayMode === 'verified_board' && STUDENT_TYPES.includes(q.type)) {
@@ -175,3 +192,4 @@ export function assertQuestionReadyForStudents(value: unknown): asserts value is
     throw new Error(['QUESTION_REVIEW_REQUIRED', ...report.errors, ...report.reviewRequired].join(' | '));
   }
 }
+

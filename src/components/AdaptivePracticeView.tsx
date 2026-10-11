@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BaseQuestion, SkillMastery, DifficultyLevel, DIFFICULTY_COLORS } from '../types';
 import { generateQuestion, STUDENT_CATEGORY_TYPES } from '../features/questions/generators';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
+import { MemoryStudy } from '../features/questions/renderers/MemoryStudy';
 import { AnswerWorkspace } from '../features/questions/renderers/AnswerWorkspace';
 import { evaluateResponse, type QuestionResponse } from '../features/questions/answer-interactions';
 import { VisualExplanationOverlay } from '../features/questions/renderers/VisualExplanationOverlay';
@@ -277,6 +278,7 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
         </div>
 
         {/* Question Canvas */}
+        <MemoryStudy key={currentQuestion.id} question={currentQuestion} review={isSubmitted}>
         <div className="py-2">
           <QuestionRenderer question={currentQuestion} />
           <QuestionIssueButton key={currentQuestion.id} question={currentQuestion} />
@@ -285,6 +287,7 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
         {/* Answer Options */}
         <AnswerWorkspace key={currentQuestion.id} question={currentQuestion} response={answerResponse}
           onChange={handleResponse} submitted={isSubmitted} />
+        </MemoryStudy>
 
         {/* Controls and Feedback */}
         {!isSubmitted ? (
@@ -379,4 +382,5 @@ export const AdaptivePracticeView: React.FC<AdaptivePracticeViewProps> = ({ onNa
     </div>
   );
 };
+
 

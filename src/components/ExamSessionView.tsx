@@ -7,6 +7,7 @@ import { generateQuestion, generateQuestionForGrade, STUDENT_CATEGORY_TYPES } fr
 import { loadPublishedQuestionsForGrade, usePublishedQuestions } from '../features/questions/use-published-questions';
 import { selectPublishedPool } from '../features/questions/editorial-data';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
+import { MemoryStudy } from '../features/questions/renderers/MemoryStudy';
 import { AnswerWorkspace } from '../features/questions/renderers/AnswerWorkspace';
 import { VisualCountdownTimer } from './VisualCountdownTimer';
 import { dataService } from '../services/data-service';
@@ -933,6 +934,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
           </div>
 
           {/* Visual Question Area */}
+          <MemoryStudy key={currentQ.id} question={currentQ}>
           <div className="py-2">
             <QuestionRenderer question={currentQ} />
           <QuestionIssueButton key={currentQ.id} question={currentQ} />
@@ -948,6 +950,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
               if (response.optionId) handleSelectOption(response.optionId);
               else setAnswers(prev => { const next = { ...prev }; delete next[currentQ.id]; return next; });
             }} />
+          </MemoryStudy>
 
           {/* Bottom Pagination Buttons */}
           <div className="flex items-center justify-between pt-3 border-t border-zinc-200">
@@ -1024,4 +1027,5 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
     </div>
   );
 };
+
 

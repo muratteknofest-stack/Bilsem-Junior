@@ -55,9 +55,9 @@ test('all recovered engines satisfy each grade profile including retrying reject
 });
 
 test('generation never silently changes an unsupported requested category or type', () => {
-  for (const category of ['memory', 'verbal'] as CognitiveCategory[]) assert.throws(() => generateQuestion({ category, seed: 1 }), /CATEGORY_UNAVAILABLE/);
+  for (const category of ['memory', 'verbal'] as CognitiveCategory[]) assert.equal(generateQuestion({ category, seed: 1 }).category, category);
   for (const category of Object.keys(STUDENT_CATEGORY_TYPES) as CognitiveCategory[]) assert.equal(generateQuestion({ category, seed: 123 }).category, category);
-  assert.throws(() => generateQuestion({ type: 'odd_one_out', seed: 1 }), /REVIEW_REQUIRED/);
+  assert.equal(isQuestionReadyForStudents(generateQuestion({ type: 'odd_one_out', seed: 1 })), true);
   assert.throws(() => generateQuestion({ type: 'shape_combination', category: 'memory', seed: 1 }), /CATEGORY_MISMATCH/);
   assert.throws(() => generateQuestion({ seed: NaN }), /INVALID_GENERATION_INPUT/);
   assert.throws(() => generateQuestionByType('unknown' as never, 1), /UNKNOWN_QUESTION_TYPE/);
@@ -75,8 +75,8 @@ test('diagnostics exercise all 44 types at all six levels, preserve failures and
     for (const sample of record.samples) if (sample.status !== 'passed') assert.ok(sample.reasons.length);
   }
   assert.equal(summarizeDiagnostics([]).every(r => r.status === 'untested'), true);
-  assert.equal(diagnoseSample({ type: 'odd_one_out', seed: 300000, difficulty: 3 }).status, 'review');
-  assert.equal(diagnoseSample({ type: 'logical_sequence', seed: 300000, difficulty: 3 }).status, 'failed');
+  assert.equal(diagnoseSample({ type: 'odd_one_out', seed: 300000, difficulty: 3 }).status, 'passed');
+  assert.equal(diagnoseSample({ type: 'logical_sequence', seed: 300000, difficulty: 3 }).status, 'passed');
   const controller = new AbortController(); controller.abort();
   assert.equal(await runEngineDiagnostics(1, () => assert.fail('aborted test reported progress'), controller.signal), null);
 });
@@ -89,3 +89,4 @@ test('recovered board views expose givens and unknowns, not a hidden answer', ()
   const pyramid = render('number_pyramid'); assert.match(pyramid, /Sayı piramidi/); assert.match(pyramid, /\?/);
   assert.match(render('shape_combination'), /Eksik desen/);
 });
+

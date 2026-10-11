@@ -8,8 +8,9 @@ if (!Array.isArray(questions)) throw new Error('Soru listesi gerekli.');
 const reports = questions.map(question => {
   const report = auditQuestion(question);
   return { id: question?.id || null, ready: report.solverVerified,
-    errors: report.errors, reviewRequired: report.reviewRequired, warnings: report.warnings };
+    errors: report.errors, reviewRequired: report.reviewRequired, warnings: report.warnings, mechanics:report.mechanics };
 });
 console.log(JSON.stringify({ total: reports.length, ready: reports.filter(r => r.ready).length,
   review: reports.filter(r => !r.ready).length, reports }, null, 2));
 if (reports.some(r => !r.ready)) process.exitCode = 1;
+

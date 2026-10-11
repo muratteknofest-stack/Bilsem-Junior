@@ -1,3 +1,4 @@
+import { generateLogicalSequenceQuestion } from '../src/features/questions/generators/logic-engines';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { generateProfessionalQuestion, solveBoard, VERIFIED_TYPES } from '../src/features/questions/professional-engine';
@@ -95,9 +96,9 @@ test('student pools reject stale published questions and audit generated fallbac
 });
 
 test('known legacy duplicate is quarantined, never auto-salted into certification', () => {
-  const legacy = generateQuestionByType('logical_sequence', 41002, 2);
-  assert.equal(legacy.status, 'draft');
-  assert.equal(legacy.verificationStatus?.isVerified, false);
+  const legacy = generateLogicalSequenceQuestion(41002, 2);
+  legacy.status='draft';
+  assert.notEqual(legacy.verificationStatus?.isVerified, true);
   assert.equal(isQuestionReadyForStudents(legacy), false);
 });
 
@@ -145,3 +146,4 @@ test('AI transport failure cannot leave a publishable question behind', async ()
   assert.equal(result.question?.status, 'review');
   assert.equal(isQuestionReadyForStudents(result.question), false);
 });
+

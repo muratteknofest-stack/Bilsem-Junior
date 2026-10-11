@@ -1,7 +1,7 @@
 import { randomInt, randomUUID } from 'node:crypto';
-import { generateRecoveredQuestion } from '../src/features/questions/recovered-engine';
-import { generateProfessionalQuestion, STUDENT_TYPES as VERIFIED_TYPES, RECOVERED_TYPES } from '../src/features/questions/professional-engine';
-import { STUDENT_CATEGORY_TYPES } from '../src/features/questions/generators';
+import { STUDENT_TYPES as VERIFIED_TYPES } from '../src/features/questions/professional-engine';
+import { STUDENT_CATEGORY_TYPES, generateQuestionByType } from '../src/features/questions/generators';
+import { topicAllowedForGrade } from '../src/features/questions/topic-catalog';
 import { solveQuestion } from '../src/features/questions/universal-solver';
 import { GoogleGenAI, Type } from '@google/genai';
 import OpenAI from 'openai';
@@ -148,7 +148,7 @@ export async function runQuestionPipeline(aiClient: GoogleGenAI, config: Pipelin
     const maxAttempts = config.maxAttempts ?? 3;
     if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 4 || (config.minQualityScore !== undefined && (!Number.isInteger(config.minQualityScore) || config.minQualityScore < 0 || config.minQualityScore > 100))) throw new Error('Üretim denemesi veya kalite eşiği geçersiz.');
     const pool = VERIFIED_TYPES.filter(t => (!config.category || STUDENT_CATEGORY_TYPES[config.category as CognitiveCategory]?.includes(t)) &&
-      !(config.targetGrade === 1 && ['operation_machine', 'matrix_3x3', 'raven_matrix'].includes(t)));
+      topicAllowedForGrade(t, config.targetGrade));
     const type = config.questionType as QuestionType | undefined;
     if ((type && !pool.includes(type)) || !pool.length) throw new Error('PROFILE_CONFIG: Bu tür/kategori sınıf profilinde bağımsız doğrulamaya uygun değil.');
     const chosenType = type || pool[randomInt(pool.length)];
@@ -160,7 +160,7 @@ export async function runQuestionPipeline(aiClient: GoogleGenAI, config: Pipelin
       result.question = undefined; result.qualityReport = undefined; result.solverVerified = false; result.solverAnswer = undefined;
       let providerPending = false;
       try {
-        const question = (RECOVERED_TYPES.includes(chosenType) ? generateRecoveredQuestion : generateProfessionalQuestion)(chosenType, seed, config.difficulty as DifficultyLevel);
+        const question = generateQuestionByType(chosenType, seed, config.difficulty as DifficultyLevel);
         question.targetGrade = config.targetGrade; question.targetGrades = [config.targetGrade];
         if (config.targetAge !== undefined) question.targetAge = config.targetAge;
         question.ageGroup = config.targetGrade <= 2 ? '1-2' : '3-4';
@@ -247,3 +247,4 @@ export async function runQuestionPipeline(aiClient: GoogleGenAI, config: Pipelin
   }
   return result;
 }
+

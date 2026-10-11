@@ -4,6 +4,8 @@ import { VisualOption, QuestionType, type BaseQuestion } from '../../../types';
 import { ShapeSvg, ShapeKind } from '../../../lib/svg-primitives';
 import { TileDiagram } from './ProfessionalBoard';
 import { questionVisualTheme } from '../visual-vocabulary';
+import { WorkshopShape } from './WorkshopBoard';
+import { useMemoryStudy } from './MemoryStudy';
 
 interface OptionRendererProps {
   option: Pick<VisualOption, 'id' | 'label' | 'visualData'>;
@@ -26,7 +28,9 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
   questionType,
   question,
 }) => {
+  const memory=useMemoryStudy();
   const { id, visualData } = option;
+  if(memory.locked)return null;
 
   // Determine 3D tactile button styling based on state
   let cardStyle =
@@ -63,7 +67,8 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
     }
 
     const vd: any = visualData || {};
-    if (Array.isArray(vd.cells) && [3, 4].includes(vd.size)) return <div className="w-24 sm:w-28 max-w-full mx-auto"><TileDiagram tile={vd} theme={questionVisualTheme(question)} /></div>;
+    if (vd.symbol || vd.polygon) return <WorkshopShape value={vd} />;
+    if (Array.isArray(vd.cells) && [3, 4].includes(vd.size)) return <div className="w-24 sm:w-28 max-w-full mx-auto"><TileDiagram tile={vd} flat={questionType === 'shadow_matching'} theme={questionVisualTheme(question)} /></div>;
 
     // 1. Direct numerical or text badge (e.g. counting, equation, or number pattern)
     if (vd.textNumber !== undefined && vd.textNumber !== null) {
@@ -515,4 +520,5 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
     </button>
   );
 };
+
 

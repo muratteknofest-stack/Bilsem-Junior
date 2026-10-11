@@ -5,6 +5,7 @@ import { MistakeItem, BaseQuestion, CognitiveCategory } from '../types';
 import { dataService } from '../services/data-service';
 import { generateQuestionByType } from '../features/questions/generators';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
+import { MemoryStudy } from '../features/questions/renderers/MemoryStudy';
 import { OptionRenderer } from '../features/questions/renderers/OptionRenderer';
 import { VisualExplanationOverlay } from '../features/questions/renderers/VisualExplanationOverlay';
 import { AiHintModal } from './AiHintModal';
@@ -172,7 +173,7 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
             )}
           </div>
 
-          <div className="py-2">
+          <MemoryStudy key={retryQuestion.id} question={retryQuestion} review={isSubmitted}><div className="py-2">
             <QuestionRenderer question={retryQuestion} />
           </div>
 
@@ -195,6 +196,7 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
             ))}
           </div>
 
+          </MemoryStudy>
           {!isSubmitted ? (
             <div className="pt-2 flex flex-col sm:flex-row items-center gap-2.5">
               <button

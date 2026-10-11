@@ -2,6 +2,7 @@ import type { BaseQuestion, VisualOption } from '../../types';
 import { generateVisualFingerprint } from './fingerprint';
 import { auditQuestion } from './quality';
 import { solveQuestion } from './universal-solver';
+import { visibleOptionKey } from './mechanical-quality';
 
 export interface VerificationStageResult { stageNumber: number; name: string; passed: boolean; message: string; details?: Record<string, unknown> }
 export interface QuestionVerificationReport {
@@ -12,7 +13,7 @@ export interface QuestionVerificationReport {
 
 // Recompute from content; IDs and client-provided fingerprints never prove uniqueness.
 export function computeOptionFingerprint(opt: VisualOption): string {
-  return generateVisualFingerprint(opt?.visualData);
+  return visibleOptionKey(opt?.visualData);
 }
 
 export function runMultiPassQuestionTests(question: BaseQuestion): QuestionVerificationReport {
@@ -56,3 +57,4 @@ export function verifyAndAutoHealQuestion(generatorFn: (seed: number) => BaseQue
   }
   throw new Error('QUESTION_REVIEW_REQUIRED: Denemeler tükendi; doğrulanmamış soru döndürülmedi.');
 }
+

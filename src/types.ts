@@ -409,6 +409,7 @@ export interface GenericVisualConfig {
 }
 
 export type VisualConfig =
+  | import('./features/questions/workshop-mechanics').WorkshopBoard
   | VerifiedBoardVisualConfig
   | SequenceVisualConfig
   | MatrixVisualConfig
@@ -855,4 +856,5 @@ export interface WeeklyQuestionProgressData {
   fourWeeksTrend: PastWeekTrendItem[];
   allTimeTotal: number;
 }
+
 

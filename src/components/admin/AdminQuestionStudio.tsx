@@ -8,6 +8,7 @@ import {
 } from '../../types';
 import { generateQuestionByType, ALL_QUESTION_TYPES } from '../../features/questions/generators';
 import { validateQuestion, QuestionValidationResult } from '../../features/questions/validator';
+import { auditQuestion } from '../../features/questions/quality';
 import { GRADE_CONFIGS, ALL_GRADES, GradeLevelConfig } from '../../features/questions/grade-config';
 import { QuestionRenderer } from '../../features/questions/renderers/QuestionRenderer';
 import { OptionRenderer } from '../../features/questions/renderers/OptionRenderer';
@@ -112,7 +113,8 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
   };
 
   // Real-time validation audit
-  const validationResult: QuestionValidationResult = validateQuestion(activeQuestion);
+  const audit = auditQuestion(activeQuestion);
+  const validationResult: QuestionValidationResult = {isValid:audit.solverVerified&&!audit.errors.length&&!audit.reviewRequired.length,errors:[...audit.errors,...audit.reviewRequired].map(message=>({code:'QUESTION_STRUCTURE_INVALID',message}))};
 
   const handleSelectGrade = (g: 1 | 2 | 3 | 4) => {
     sound.playClick();
@@ -423,7 +425,7 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
                     : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
                 }`}
               >
-                {validationResult.isValid ? 'Tam Uyumlu (%100)' : 'Uyarı Tespit Edildi'}
+                {validationResult.isValid ? 'Soru ve şık kontrolleri geçti' : 'İnceleme gerekli'}
               </span>
             </div>
 
@@ -797,4 +799,5 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
     </div>
   );
 };
+
 

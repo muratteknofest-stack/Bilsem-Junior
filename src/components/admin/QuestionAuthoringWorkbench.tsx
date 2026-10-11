@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, CheckCircle2, FileDown, FolderOpen, LoaderCircle, Plus, RefreshCw, Save, Search, ShieldCheck, Square, WandSparkles, X } from 'lucide-react';
 import type { BaseQuestion, DifficultyLevel, QuestionType } from '../../types';
 import { QUESTION_TYPE_LABELS, COGNITIVE_CATEGORY_LABELS } from '../../types';
-import { ALL_QUESTION_TYPES, generateQuestionByType } from '../../features/questions/generators';
+import { generateQuestionByType } from '../../features/questions/generators';
 import { GRADE_CONFIGS } from '../../features/questions/grade-config';
 import { EDUCATION_PROFILES } from '../../features/questions/quality-policy';
 import { STUDENT_TYPES as VERIFIED_TYPES } from '../../features/questions/professional-engine';
@@ -11,6 +11,7 @@ import { QuestionRenderer } from '../../features/questions/renderers/QuestionRen
 import { OptionRenderer } from '../../features/questions/renderers/OptionRenderer';
 import { loadQuestionLibrary, parseQuestionImport, saveEditorialQuestion, StoredQuestion } from '../../services/question-publishing-service';
 import { questionBankService } from '../../services/question-bank-service';
+import { topicAllowedForGrade } from '../../features/questions/topic-catalog';
 
 type Grade = 1 | 2 | 3 | 4;
 type Section = 'compose' | 'library';
@@ -128,7 +129,8 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
     const accepted: BaseQuestion[] = [];
     let skipped = 0;
     const gradeTypes = VERIFIED_TYPES.filter(t => GRADE_CONFIGS[grade].recommendedTypes.includes(t));
-    const pool = type === 'mixed' ? (gradeTypes.length ? gradeTypes : VERIFIED_TYPES) : [type];
+    const pool = (type === 'mixed' ? (gradeTypes.length ? gradeTypes : VERIFIED_TYPES) : [type]).filter(t=>topicAllowedForGrade(t,grade));
+    if(!pool.length){setRunning(false);setNotice('Bu konu seçilen sınıf için uygun değil. Sınıfı veya konuyu değiştirin.');return;}
     try {
       for (let attempt = 0; accepted.length < count && attempt < count * 12 && !cancelled.current; attempt++) {
         try {
@@ -229,8 +231,7 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
       <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
         <label className="text-sm text-slate-300 space-y-2"><span>Hedef sınıf</span><select className={field} value={grade} disabled={running} onChange={e => { const g = Number(e.target.value) as Grade; setGrade(g); setDifficulty(GRADE_CONFIGS[g].defaultDifficulty); }}>{[1, 2, 3, 4].map(g => <option key={g} value={g}>{g}. sınıf</option>)}</select></label>
         <label className="col-span-2 xl:col-span-2 text-sm text-slate-300 space-y-2"><span>Soru ailesi</span><select className={field} value={type} disabled={running} onChange={e => setType(e.target.value as QuestionType | 'mixed')}>
-          <option value="mixed">Karma · otomatik çözümlenebilen türler</option><optgroup label={`Bağımsız cevap doğrulamalı · ${VERIFIED_TYPES.length} tür`}>{VERIFIED_TYPES.map(t => <option key={t} value={t}>{QUESTION_TYPE_LABELS[t]}</option>)}</optgroup>
-          <optgroup label="Diğer türler · eğitmen denetimi gerekli">{ALL_QUESTION_TYPES.filter(t => !VERIFIED_TYPES.includes(t)).map(t => <option key={t} value={t}>{QUESTION_TYPE_LABELS[t]}</option>)}</optgroup>
+          <option value="mixed">Karma · sınıfa uygun konular</option><optgroup label={`Bağımsız cevap doğrulamalı · ${VERIFIED_TYPES.length} konu`}>{VERIFIED_TYPES.map(t => <option key={t} value={t} disabled={!topicAllowedForGrade(t,grade)}>{QUESTION_TYPE_LABELS[t]}</option>)}</optgroup>
         </select></label>
         <label className="text-sm text-slate-300 space-y-2"><span>Zorluk</span><select className={field} value={difficulty} disabled={running} onChange={e => setDifficulty(Number(e.target.value) as DifficultyLevel)}>{[1, 2, 3, 4, 5, 6].map(d => <option key={d} value={d} disabled={d > EDUCATION_PROFILES[grade].maxDifficulty}>{d} / 6</option>)}</select></label>
         <label className="text-sm text-slate-300 space-y-2"><span>Adet</span><input className={field} type="number" min={1} max={60} value={count} disabled={running} onChange={e => setCount(Number(e.target.value))} /></label>
@@ -289,6 +290,8 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
           {active.authoring && <p className="text-sm text-slate-600">Ölçülen beceri: {active.authoring.objective}</p>}
           {report.errors.length ? <ul className="list-disc pl-5 text-sm text-rose-800 space-y-1">{report.errors.map((e, i) => <li key={i}>{e}</li>)}</ul> : <p className="text-sm text-emerald-800 flex gap-2"><CheckCircle2 size={16} />Yapı, seçenek benzersizliği ve tekrar denetimi geçti.</p>}
           {report.warnings.map((w, i) => <p key={i} className="text-sm text-amber-900">{w}</p>)}
+          {report.reviewRequired.map((reason,i)=><p key={`review-${i}`} className="text-sm text-amber-900">İnceleme gerekli: {reason}</p>)}
+          {report.mechanics&&<div className="space-y-2 border-t pt-3" aria-label="Soru ve şık mekanik analizi"><p className="font-semibold text-sm">{report.mechanics.uniqueVisibleOptions}/4 farklı şık · {report.mechanics.matchingOptions} kural eşleşmesi · {report.mechanics.passed?'Mekanik denetim geçti':'Mekanik denetim tamamlanmadı'}</p>{report.mechanics.choices.map(choice=><p key={choice.id} className="text-sm"><strong>{choice.id}: {choice.ruleMatch?'Doğru aday':'Çeldirici'}</strong> · {active.authoring?.distractorNotes[choice.id]||choice.reason}</p>)}</div>}
           <fieldset className="space-y-3 border-t pt-3" disabled={saving}><legend className="text-sm font-semibold pt-3">Eğitmen incelemesi</legend>{checks.map((label, i) => <label key={label} className="flex items-start gap-3 text-sm leading-6 cursor-pointer"><input className="mt-1 w-4 h-4 accent-indigo-600" type="checkbox" checked={review[i]} onChange={e => setReview(previous => previous.map((v, n) => n === i ? e.target.checked : v))} />{label}</label>)}</fieldset>
           <div className="flex flex-wrap gap-2 pt-2">
             <button className={button + ' bg-slate-900 text-white'} disabled={saving || !cloudReady || !!report.errors.length} onClick={() => void save('draft')}><Save size={16} />Taslağı kaydet</button>
@@ -302,4 +305,5 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
     </div>
   </div>;
 }
+
 

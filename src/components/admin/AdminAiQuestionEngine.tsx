@@ -41,6 +41,7 @@ import {
   BaseQuestion
 } from '../../types';
 import { ALL_QUESTION_TYPES, STUDENT_CATEGORY_TYPES } from '../../features/questions/generators';
+import { topicAllowedForGrade } from '../../features/questions/topic-catalog';
 
 export interface AdminAiQuestionEngineProps {}
 
@@ -230,7 +231,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                 className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
               >
                 <option value="auto">✨ Yapay Zeka Seçsin (Otomatik)</option>
-                {(STUDENT_CATEGORY_TYPES[selectedCategory] || []).filter(t => !(targetGrade === 1 && ['operation_machine','matrix_3x3','raven_matrix'].includes(t))).map(t => (
+                {(STUDENT_CATEGORY_TYPES[selectedCategory] || []).filter(t => topicAllowedForGrade(t,targetGrade)).map(t => (
                   <option key={t} value={t}>{QUESTION_TYPE_LABELS[t]}</option>
                 ))}
               </select>
@@ -493,4 +494,5 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
     </div>
   );
 };
+
 

@@ -1,5 +1,6 @@
 import { generateVisualFingerprint } from './fingerprint';
 import { BaseQuestion } from '../../types';
+import { visibleOptionKey } from './mechanical-quality';
 
 export type ValidationErrorCode =
   | 'QUESTION_STRUCTURE_INVALID'
@@ -77,7 +78,7 @@ export function validateQuestion(question: BaseQuestion): QuestionValidationResu
     // Visual Fingerprint Uniqueness: no duplicate visual distractor/answers
     const fingerprints = new Set<string>();
     for (const opt of question.options) {
-      const actual = generateVisualFingerprint(opt?.visualData);
+      const actual = visibleOptionKey(opt?.visualData);
       if (!opt?.visualData || fingerprints.has(actual)) {
         errors.push({
           code: 'DUPLICATE_OPTION',
@@ -113,4 +114,5 @@ export function validateQuestion(question: BaseQuestion): QuestionValidationResu
     errors,
   };
 }
+
 
