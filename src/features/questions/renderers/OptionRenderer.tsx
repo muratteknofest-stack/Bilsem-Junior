@@ -1,3 +1,5 @@
+import { ColorfulArt } from './ColorfulBoard';
+import { validColorfulValue } from '../colorful-engine';
 import React from 'react';
 import { motion } from 'motion/react';
 import { VisualOption, QuestionType, type BaseQuestion } from '../../../types';
@@ -58,6 +60,7 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
   }
 
   const renderVisualContent = () => {
+    if(validColorfulValue(visualData))return <ColorfulArt value={visualData} shadow={questionType==='shadow_matching'}/>;
     if (!visualData && !option.label) {
       return (
         <div className="flex items-center justify-center w-full min-h-[60px] text-lg font-bold text-slate-700">

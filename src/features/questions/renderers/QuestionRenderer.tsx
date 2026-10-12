@@ -1,3 +1,5 @@
+import { ColorfulBoard } from './ColorfulBoard';
+import type { ColorfulBoard as ColorfulBoardData } from '../colorful-engine';
 import React from 'react';
 import { BaseQuestion } from '../../../types';
 import type { Board } from '../professional-engine';
@@ -24,6 +26,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({ question }) 
   const mode = typeof visualConfig.displayMode === 'string' ? visualConfig.displayMode : 'default';
   
   const renderEngine = () => {
+    if(mode==='colorful_board')return memory.hidden&&question.type==='visual_memory'?<p role="status">Desen gizlendi. Belleğindeki deseni seç.</p>:<ColorfulBoard board={visualConfig as unknown as ColorfulBoardData}/>;
     if (mode === 'workshop_board') return memory.hidden&&question.type==='visual_memory'?<p role="status" className="rounded-2xl border border-indigo-200 p-6 text-indigo-900">Desen gizlendi. Belleğinde tuttuğun deseni seçeneklerden seç.</p>:<WorkshopBoard board={visualConfig as unknown as WorkshopBoardData} />;
     if (mode === 'verified_board') return <ProfessionalBoard board={visualConfig as Board} theme={questionVisualTheme(question)} />;
 
@@ -55,12 +58,13 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({ question }) 
   };
 
   return (
-    <div className="w-full max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto flex items-center justify-center p-0.5 sm:p-2 md:p-3 select-none touch-manipulation">
+    <div className="zp-question-visual w-full max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto flex items-center justify-center p-0.5 sm:p-2 md:p-3 select-none touch-manipulation">
       <div className="w-full flex items-center justify-center">
         {renderEngine()}
       </div>
     </div>
   );
 };
+
 
 

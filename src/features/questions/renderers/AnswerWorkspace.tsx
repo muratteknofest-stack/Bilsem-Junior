@@ -11,17 +11,17 @@ import type { WorkshopValue } from '../workshop-mechanics';
 import { useMemoryStudy } from './MemoryStudy';
 
 const labels: Record<AnswerMode, string> = { choice: 'Şık seç', place: 'Sürükle bırak', order: 'Sırayı kur', match: 'Eşleştir', number: 'Cevabı yaz' };
-type Props = { question: BaseQuestion; response: QuestionResponse | null; onChange: (r: QuestionResponse) => void; submitted?: boolean; allowedModes?: AnswerMode[]; preferredMode?: AnswerMode };
+type Props = { compact?: boolean; question: BaseQuestion; response: QuestionResponse | null; onChange: (r: QuestionResponse) => void; submitted?: boolean; allowedModes?: AnswerMode[]; preferredMode?: AnswerMode };
 
 function CardValue({ value, theme }: { value: unknown; theme: VisualTheme }) {
-  if(value&&typeof value==='object'&&('symbol' in value||'polygon' in value))return <WorkshopShape value={value as WorkshopValue}/>;
+  if(value&&typeof value==='object'&&('figure' in value||'symbol' in value||'polygon' in value))return <WorkshopShape value={value as WorkshopValue}/>;
   const data = value as Partial<Tile> & { textNumber?: string | number };
   return data?.cells && data.size ? <span className="block w-24 max-w-full mx-auto"><TileDiagram tile={data as Tile} theme={theme} /></span> :
     <span className="text-xl font-black">{data?.textNumber ?? String(value)}</span>;
 }
 
 /** Pointer events support mouse, touch and pen; every placement also works with Tab + Enter. */
-export function AnswerWorkspace({ question, response, onChange, submitted = false, allowedModes, preferredMode }: Props) {
+export function AnswerWorkspace({ question, response, onChange, submitted = false, compact = false, allowedModes, preferredMode }: Props) {
   const memory=useMemoryStudy();
   const theme = questionVisualTheme(question);
   const modes = interactionModes(question).filter(m => !allowedModes || allowedModes.includes(m));
@@ -66,15 +66,15 @@ export function AnswerWorkspace({ question, response, onChange, submitted = fals
   );
   if(memory.locked)return <p role="status" className="text-sm text-indigo-800">Önce deseni belleğinde tut. Deseni gizlediğinde cevap alanı açılır.</p>;
   return <div ref={root} className="zp-answer-workspace space-y-4 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/60 to-white p-3 sm:p-5" aria-label="Cevap alanı">
-    <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Çözme biçimi">
+    {!compact && <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Çözme biçimi">
       {modes.map(m => <button key={m} type="button" aria-pressed={activeMode === m} disabled={submitted}
         onClick={() => { if (m === activeMode) return; setMode(m); setPicked(null); setGhost(null); onChange(emptyResponse(m, question)); setAnnouncement('Çözme biçimi değişti. Cevap alanı temizlendi.'); }}
         className={`min-h-11 rounded-xl px-3 py-2 text-sm font-bold focus-visible:outline-4 focus-visible:outline-indigo-400 ${activeMode === m ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200'}`}>{labels[m]}</button>)}
-    </div>
-    <p id={helpId} className="text-sm text-slate-600">
+    </div>}
+    {!compact && <p id={helpId} className="text-sm text-slate-600">
       {activeMode === 'order' ? 'İpuçlarına göre tüm sırayı soldan sağa kur. Bütün yerleşimler kontrol edilecek. ' : activeMode === 'match' ? 'Sembolleri değerleriyle eşleştir, sonra toplamı yaz. Bir değeri tekrar kullanabilirsin. ' : ''}
       {['place', 'order', 'match'].includes(activeMode) ? 'Kartı sürükle veya önce karta, sonra hedefe dokun. Klavyede Tab ve Enter kullan.' : activeMode === 'choice' ? 'Cevabını seç.' : 'Şıklara bakmadan sonucu bul.'}
-    </p>
+    </p>}
     {current.mode === 'choice' ? <div className="zp-answer-grid grid grid-cols-2 sm:grid-cols-4 gap-3">{question.options.map(o =>
       <OptionRenderer key={o.id} option={o} question={question} questionType={question.type} isSelected={current.optionId === o.id} onSelect={() => onChange({ mode: 'choice', optionId: o.id })}
         disabled={submitted} showCorrect={submitted} isCorrectOption={o.id === question.correctOptionId} />)}</div> : null}
@@ -100,10 +100,11 @@ export function AnswerWorkspace({ question, response, onChange, submitted = fals
       </div>
       {current.mode === 'match' && numberInput(current.total, total => onChange({ ...current, total }), 'Sembol dizisinin toplamı')}
     </>}
-    {!submitted && <button type="button" onClick={() => { onChange(emptyResponse(activeMode, question)); setPicked(null); setAnnouncement('Cevap temizlendi.'); }} className="min-h-11 text-sm font-semibold text-slate-600 underline underline-offset-4">Cevabı temizle</button>}
+    {!compact && !submitted && <button type="button" onClick={() => { onChange(emptyResponse(activeMode, question)); setPicked(null); setAnnouncement('Cevap temizlendi.'); }} className="min-h-11 text-sm font-semibold text-slate-600 underline underline-offset-4">Cevabı temizle</button>}
     {submitted && current.mode !== 'choice' && <p className="text-sm font-bold text-indigo-800">Cevabın kaydedildi. Çözüm açıklaması aşağıda.</p>}
     <span role="status" aria-live="polite" className="sr-only">{announcement}</span>
     {ghost && <div aria-hidden="true" className="fixed z-50 pointer-events-none rounded-xl border-2 border-indigo-500 bg-white p-3 shadow-xl" style={{ left: ghost.x + 12, top: ghost.y + 12 }}><CardValue theme={theme} value={tokens.find(t => t.id === ghost.token)?.value} /></div>}
   </div>;
 }
+
 

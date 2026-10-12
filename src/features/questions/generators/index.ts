@@ -1,3 +1,4 @@
+import { COLORFUL_TYPES, generateColorfulQuestion } from '../colorful-engine';
 import { professionalGradeTypes } from '../reasoning-profile';
 import { gradeDifficulty, isSchoolGrade, type SchoolGrade } from '../quality-policy';
 import { assertQuestionReadyForStudents, isQuestionReadyForStudents } from '../quality';
@@ -20,7 +21,9 @@ export function generateQuestionByType(
   _retryCount = 0
 ): BaseQuestion {
   let question: BaseQuestion;
-  if (WORKSHOP_TYPES.includes(type)) {
+  if (COLORFUL_TYPES.includes(type)) {
+    question = generateColorfulQuestion(type, seed, difficulty);
+  } else if (WORKSHOP_TYPES.includes(type)) {
     question = generateWorkshopQuestion(type, seed, difficulty);
   } else if (RECOVERED_TYPES.includes(type)) {
     question = generateRecoveredQuestion(type, seed, difficulty);
@@ -95,4 +98,5 @@ export function generateQuestionForGrade(
 
   return generateQuestion({ type: finalType, seed: finalSeed, difficulty: finalDifficulty, targetGrade: grade });
 }
+
 

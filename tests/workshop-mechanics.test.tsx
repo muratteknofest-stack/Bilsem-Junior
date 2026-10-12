@@ -1,3 +1,4 @@
+import { solveColorful } from '../src/features/questions/colorful-engine';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import React from 'react';
@@ -110,7 +111,7 @@ test('ambiguous or inconsistent givens fail closed, including disconnected nets 
   for(const type of WORKSHOP_TYPES){const q=generateQuestionByType(type,321,3);(q.visualConfig as any).hiddenAnswer=q.correctOptionId;assert.equal(isQuestionReadyForStudents(q),false,type);}
 });
 test('every topic renders givens and all four choices without exposing editorial data',()=>{
-  for(const type of WORKSHOP_TYPES){const q=generateQuestionByType(type,321,3),markup=renderToStaticMarkup(<><QuestionRenderer question={q}/>{q.options.map(o=><OptionRenderer key={o.id} question={q} questionType={q.type} option={o}/>)}</>);assert.match(markup,new RegExp(`data-workshop-kind="${type}"`));assert.doesNotMatch(markup,/Tanımsız sembol|görünümü tanımlı değil|\[object Object\]|correctOptionId|distractorNotes/);}
+  for(const type of WORKSHOP_TYPES){const q=generateQuestionByType(type,321,3),markup=renderToStaticMarkup(<><QuestionRenderer question={q}/>{q.options.map(o=><OptionRenderer key={o.id} question={q} questionType={q.type} option={o}/>)}</>);assert.match(markup,new RegExp(`data-(?:workshop|colorful)-kind="${type}"`));assert.doesNotMatch(markup,/Tanımsız sembol|görünümü tanımlı değil|\[object Object\]|correctOptionId|distractorNotes/);}
   const q=generateQuestionByType('visual_memory',321,3);const study=renderToStaticMarkup(<MemoryStudy question={q}><QuestionRenderer question={q}/><AnswerWorkspace question={q} response={null} onChange={()=>{}}/></MemoryStudy>);assert.match(study,/Deseni gizle ve cevapla/);assert.doesNotMatch(study,/aria-label="Cevap alanı"/);
   const review=renderToStaticMarkup(<MemoryStudy question={q} review><QuestionRenderer question={q}/><AnswerWorkspace question={q} response={null} onChange={()=>{}}/></MemoryStudy>);assert.match(review,/aria-label="Cevap alanı"/);
 });
@@ -121,7 +122,7 @@ test('all new topics cross editorial publication and server-owned scoring withou
   }
 });
 test('all 29 new topics must pass both AI reviews; approval flags cannot bypass a failed proof',async()=>{
-  for(const type of WORKSHOP_TYPES){let blind=0,editorial=0;const client={models:{async generateContent({contents}:{contents:string}){const q=JSON.parse(contents.split('Soru: ')[1]);if(!q.explanation){blind++;const answer=solveWorkshopBoard(q.visualConfig,q.options.map((o:any)=>o.visualData));return {text:JSON.stringify({chosenOptionId:q.options.find((o:any)=>JSON.stringify(o.visualData)===JSON.stringify(answer)).id,uniqueAnswer:true,sufficientInformation:true,issues:[]})};}editorial++;return {text:JSON.stringify({explanationCorrect:true,gradeAppropriate:true,ageAppropriate:true,difficultyAppropriate:true,promptClear:true,distractorsValid:true,issues:[]})};}}};
+  for(const type of WORKSHOP_TYPES){let blind=0,editorial=0;const client={models:{async generateContent({contents}:{contents:string}){const q=JSON.parse(contents.split('Soru: ')[1]);if(!q.explanation){blind++;const answer=q.visualConfig.displayMode==='colorful_board'?solveColorful(q.visualConfig):solveWorkshopBoard(q.visualConfig,q.options.map((o:any)=>o.visualData));return {text:JSON.stringify({chosenOptionId:q.options.find((o:any)=>JSON.stringify(o.visualData)===JSON.stringify(answer)).id,uniqueAnswer:true,sufficientInformation:true,issues:[]})};}editorial++;return {text:JSON.stringify({explanationCorrect:true,gradeAppropriate:true,ageAppropriate:true,difficultyAppropriate:true,promptClear:true,distractorsValid:true,issues:[]})};}}};
     const result=await runQuestionPipeline(client as any,{targetGrade:3,questionType:type,category:generateQuestionByType(type,321,3).category,difficulty:3,maxAttempts:1},{nextSeed:()=>321});assert.equal(result.success,true,`${type}: ${result.validationErrors.join(' ')}`);assert.equal(blind,1);assert.equal(editorial,1);assert.equal(result.qualityReport?.stages.length,9);assert.equal(isQuestionReadyForStudents(result.question),true);
   }
 });
@@ -163,3 +164,4 @@ test('equation diagrams show every coefficient, cube SVG has exact units and no 
   assert.equal((cube.match(/data-unit-cube="true"/g)||[]).length,8);
   assert.doesNotMatch(cube,/data-cube-count|correctOptionId|NaN|undefined/);
 });
+

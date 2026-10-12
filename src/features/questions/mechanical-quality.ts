@@ -1,3 +1,4 @@
+import { validColorfulValue } from './colorful-engine';
 import { validFigure } from './figure-analogy';
 import type { BaseQuestion } from '../../types';
 import { generateVisualFingerprint as fingerprint } from './fingerprint';
@@ -34,6 +35,7 @@ export function analyzeQuestionMechanics(q:BaseQuestion):MechanicalReport {
     if(allowed[0]==='size'&&(![3,4].includes(Number(value.size))||!Array.isArray(value.cells)||value.cells.length!==Number(value.size)**2||value.cells.some(c=>c!==0&&c!==1)))errors.push(`${option.id}: Seçenek ızgarası geçersiz.`);
     if(allowed[0]==='textNumber'&&(!['string','number'].includes(typeof value.textNumber)||typeof value.textNumber==='string'&&!value.textNumber.trim()||typeof value.textNumber==='number'&&!Number.isFinite(value.textNumber)))errors.push(`${option.id}: Şık metni veya sayısı geçersiz.`);
   }
+  if(mode==='colorful_board'&&q.options.some(o=>!validColorfulValue(o.visualData)))errors.push('Çizilmeyen veya geçersiz renkli seçenek alanı.');
   const solve=solveQuestion(q), matches=q.options.filter(o=>fingerprint(o.visualData)===solve.expectedFingerprint);
   if(solve.canSolve&&(!solve.isMatch||solve.ambiguityDetected))errors.push('ANSWER_MECHANICS: Mekanik çözüm tek bir doğru şık ve cevap anahtarıyla uyuşmuyor.');
   const choices=q.options.map((option,i)=>{const ruleMatch=solve.canSolve&&!solve.ambiguityDetected&&option.id===solve.expectedAnswerId;return {id:option.id,visibleKey:keys[i],ruleMatch,reason:ruleMatch?'Verilenlerden hesaplanan tek doğru şık.':solve.canSolve&&!solve.ambiguityDetected?'Verilen kurala uymayan çeldirici.':'Bağımsız kanıt tamamlanamadığı için bu şık onaylanamaz.'};});

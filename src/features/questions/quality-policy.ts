@@ -1,3 +1,4 @@
+import type { ColorfulBoard } from './colorful-engine';
 import type { BaseQuestion, DifficultyLevel } from '../../types';
 import type { Board } from './professional-engine';
 import { generateVisualFingerprint } from './fingerprint';
@@ -66,6 +67,7 @@ export function inspectEducation(q: BaseQuestion, grade: SchoolGrade, age?: numb
     metrics.peopleCount=w.labels?.length||0;
     metrics.itemCount=w.cipherRows?.flat().length||w.figures?.length||w.symbols?.length||w.heights?.length||0;
   }
+  if((q.visualConfig as Record<string,unknown>).displayMode==='colorful_board'){const c=q.visualConfig as unknown as ColorfulBoard;metrics.gridSize=c.source?.art==='mosaic'?c.source.size:0;metrics.itemCount=metrics.gridSize**2||c.layers?.length||1;}
   const audience: string[] = [], difficulty: string[] = [], visual: string[] = [];
   if (age !== undefined && (!Number.isInteger(age) || age < p.ages[0] || age > p.ages[1])) audience.push('AGE_PROFILE: Yaş seçilen sınıfın içerik profili dışında.');
   if (q.targetGrade !== undefined && q.targetGrade !== grade) audience.push('GRADE_MISMATCH: Soru sınıfı istekle uyuşmuyor.');

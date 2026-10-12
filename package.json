@@ -11,11 +11,11 @@
     "preview": "vite preview",
     "clean": "rm -rf dist build server.js",
     "lint": "tsc --noEmit",
-    "test": "node --import tsx --test tests/editorial-engine.test.ts tests/editorial-publication.test.ts tests/question-engine.test.ts tests/security-regression.test.ts tests/auth-flows.test.ts tests/auth-error-messages.test.ts tests/question-safety.test.ts tests/gamification.test.ts tests/answer-interactions.test.ts tests/question-quality-v3.test.ts tests/question-visuals.test.tsx tests/multi-stage-quality.test.ts tests/engine-recovery.test.ts tests/landing-design-system.test.ts tests/homepage-preview.test.ts tests/supabase-shape.test.ts tests/progress-outbox.test.ts tests/commercial-flows.test.ts tests/daily-challenge.test.ts tests/grade-bank.test.ts tests/verified-learning.test.ts tests/learning-rewards.test.ts tests/supabase-learning.test.ts tests/blog.test.ts tests/footer-security.test.tsx tests/password-security.test.ts tests/student-session.test.ts tests/wordwall.test.tsx tests/workshop-mechanics.test.tsx tests/reference-reasoning.test.tsx tests/family-security.test.tsx tests/security-hardening.test.ts tests/admin-access.test.ts tests/answer-progression.test.ts tests/release-readiness.test.ts tests/family-registration.test.tsx",
+    "test": "node --import tsx --test tests/editorial-engine.test.ts tests/editorial-publication.test.ts tests/question-engine.test.ts tests/security-regression.test.ts tests/auth-flows.test.ts tests/auth-error-messages.test.ts tests/question-safety.test.ts tests/gamification.test.ts tests/answer-interactions.test.ts tests/question-quality-v3.test.ts tests/question-visuals.test.tsx tests/multi-stage-quality.test.ts tests/engine-recovery.test.ts tests/landing-design-system.test.ts tests/homepage-preview.test.ts tests/supabase-shape.test.ts tests/progress-outbox.test.ts tests/commercial-flows.test.ts tests/daily-challenge.test.ts tests/grade-bank.test.ts tests/verified-learning.test.ts tests/learning-rewards.test.ts tests/supabase-learning.test.ts tests/blog.test.ts tests/footer-security.test.tsx tests/password-security.test.ts tests/student-session.test.ts tests/wordwall.test.tsx tests/workshop-mechanics.test.tsx tests/reference-reasoning.test.tsx tests/family-security.test.tsx tests/security-hardening.test.ts tests/admin-access.test.ts tests/answer-progression.test.ts tests/release-readiness.test.ts tests/family-registration.test.tsx tests/colorful-engine.test.tsx",
     "test:student": "node --import tsx tests/student-study-hub.test.ts",
     "security:audit": "node scripts/osv-audit.mjs",
     "check": "npm run lint && npm test && npm run build",
-    "test:questions": "node --import tsx --test tests/editorial-engine.test.ts tests/editorial-publication.test.ts tests/question-engine.test.ts tests/question-safety.test.ts tests/answer-interactions.test.ts tests/question-quality-v3.test.ts tests/question-visuals.test.tsx tests/multi-stage-quality.test.ts tests/engine-recovery.test.ts tests/workshop-mechanics.test.tsx tests/reference-reasoning.test.tsx",
+    "test:questions": "node --import tsx --test tests/editorial-engine.test.ts tests/editorial-publication.test.ts tests/question-engine.test.ts tests/question-safety.test.ts tests/answer-interactions.test.ts tests/question-quality-v3.test.ts tests/question-visuals.test.tsx tests/multi-stage-quality.test.ts tests/engine-recovery.test.ts tests/workshop-mechanics.test.tsx tests/reference-reasoning.test.tsx tests/colorful-engine.test.tsx",
     "audit:questions": "node --import tsx scripts/audit-question-bank.ts",
     "release:commercial": "node scripts/commercial-readiness.mjs",
     "generate:grade-bank": "node --import tsx scripts/generate-grade-bank.ts",
@@ -25,7 +25,8 @@
     "verify:live": "node scripts/verify-live-release.mjs",
     "import:wordwall": "node scripts/import-wordwall.mjs",
     "backup:database": "node scripts/backup-database.mjs",
-    "monitor:site": "node scripts/monitor-site.mjs"
+    "monitor:site": "node scripts/monitor-site.mjs",
+    "test:layout": "node scripts/check-question-layout.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -60,10 +61,10 @@
     "@types/nodemailer": "^8.0.1",
     "@types/react": "^19.0.12",
     "@types/react-dom": "^19.0.4",
+    "playwright": "1.62.1",
     "vite": "^6.2.3"
   },
   "overrides": {
     "uuid": "^11.1.1"
   }
 }
-

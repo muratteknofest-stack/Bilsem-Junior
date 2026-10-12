@@ -1,3 +1,4 @@
+import { COLORFUL_TYPES, generateColorfulQuestion } from './colorful-engine';
 import { generateWorkshopQuestion as generateWorkshopV2 } from './workshop-engine-v2';
 import { inspectEducation, isSchoolGrade, hasCompleteQualityReport } from './quality-policy';
 import { BaseQuestion, QUESTION_TYPE_LABELS, ALL_COGNITIVE_CATEGORIES } from '../../types';
@@ -73,6 +74,15 @@ export function auditQuestion(value: unknown, existing: BaseQuestion[] = []): Qu
       const expected = fingerprint(solveBoard(q.visualConfig as Board));
       const matches = q.options.filter(o => fingerprint(o.visualData) === expected);
       if (matches.length !== 1 || matches[0].id !== q.correctOptionId) result.errors.push('Bağımsız çözüm ile cevap anahtarı uyuşmuyor.');
+    }
+    if(cfg?.displayMode==='colorful_board') {
+      if(!COLORFUL_TYPES.includes(q.type)||q.authoring?.engine!=='colorful-1')result.errors.push('Renkli motor sürümü tanınmıyor.');
+      else {
+        const reference=generateColorfulQuestion(q.type,q.seed,q.difficulty);
+        for(const field of ['prompt','secondaryPrompt','explanation','visualConfig','category','authoring'] as const)if(fingerprint(q[field])!==fingerprint(reference[field]))result.reviewRequired.push('Renkli soru şablonu değişmiş: '+field);
+        const normalize=(question:BaseQuestion)=>question.options.map(({id,label,visualData})=>({id,label,visualData})).sort((a,b)=>a.id.localeCompare(b.id));
+        if(fingerprint(normalize(q))!==fingerprint(normalize(reference)))result.reviewRequired.push('Renkli seçenekler doğrulanmış şablonla uyuşmuyor.');
+      }
     }
     const solved = solveQuestion(q);
     if (solved.canSolve && !solved.isMatch) result.errors.push('Bağımsız çözüm ile cevap anahtarı uyuşmuyor. ' + solved.proofSteps.join(' '));

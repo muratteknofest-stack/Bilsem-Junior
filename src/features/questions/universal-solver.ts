@@ -1,3 +1,4 @@
+import { solveColorful, independentlyMatchesColorful, type ColorfulBoard, type ColorfulValue } from './colorful-engine';
 import type { BaseQuestion } from '../../types';
 import { solveBoard, type Board, STUDENT_TYPES } from './professional-engine';
 import { independentlySolveBoard } from './independent-board-solver';
@@ -25,6 +26,14 @@ export function solveQuestion(q: BaseQuestion): UniversalSolverResult {
   });
   try {
     if (!q || !Array.isArray(q.options) || q.options.length !== 4 || q.options.some(o => !o)) return failure('Dört geçerli seçenek gerekli.');
+    if ((q.visualConfig as Record<string, unknown>)?.displayMode === 'colorful_board') {
+      const b=q.visualConfig as unknown as ColorfulBoard;
+      if(b.kind!==q.type)return failure('Konu ile çizim uyuşmuyor.');
+      const expected=solveColorful(b),primary=q.options.filter(o=>fingerprint(o.visualData)===fingerprint(expected));
+      const independent=q.options.filter(o=>independentlyMatchesColorful(b,o.visualData as ColorfulValue));
+      if(primary.length!==1||independent.length!==1||primary[0].id!==independent[0].id)return failure('Tek görsel cevap kanıtlanamadı.',true);
+      return {canSolve:true,isMatch:primary[0].id===q.correctOptionId,expectedAnswerId:primary[0].id,expectedFingerprint:fingerprint(expected),solverMethod:'ColorfulCandidateProof-v1',confidence:1,ambiguityDetected:false,proofSteps:['Koordinatlar ve görünür özellikler ayrı ayrı karşılaştırıldı.','Tek uygun seçenek: '+primary[0].id]};
+    }
     if ((q.visualConfig as Record<string, unknown>)?.displayMode === 'workshop_board') {
       const board = q.visualConfig as unknown as WorkshopBoard;
       if (!WORKSHOP_TYPES.includes(q.type) || board.kind !== q.type) return failure('Atölye konusu ile görsel kuralı uyuşmuyor.');
@@ -64,4 +73,5 @@ export function runQuestionBenchmark(questions: BaseQuestion[]) {
     solverMatchRate: questions.length ? Number((passedCount / questions.length * 100).toFixed(1)) : 0,
     averageConfidence: questions.length ? Number((results.reduce((s, r) => s + r.result.confidence, 0) / questions.length).toFixed(2)) : 0, reports };
 }
+
 
