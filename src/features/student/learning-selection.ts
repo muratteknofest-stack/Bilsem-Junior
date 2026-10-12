@@ -3,7 +3,7 @@ import type { BaseQuestion, DifficultyLevel } from '../../types';
 import { EDUCATION_PROFILES, type SchoolGrade } from '../questions/quality-policy';
 import { AVAILABLE_CATEGORIES } from './available-categories';
 
-export const ACTIVE_BANK_VERSION = 'robot-20261011-4000-v1';
+export const ACTIVE_BANK_VERSION = 'robot-20261012-reasoning-v2';
 export type LearningDifficulty = 'mixed' | DifficultyLevel;
 export const learningStartSchema = z.object({
   mode: z.enum(['practice', 'adaptive', 'exam']),

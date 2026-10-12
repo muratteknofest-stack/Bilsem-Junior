@@ -55,7 +55,7 @@ export function inspectEducation(q: BaseQuestion, grade: SchoolGrade, age?: numb
   const workshop=w?.displayMode==='workshop_board';
   const numeric = [ ...(b.values || []), ...(b.examples || []).flat(), b.input,
     ...(b.base || []),
-    ...(workshop ? [...(w.totals||[]),...(w.counts||[]),...(w.heights||[]),...(w.cells||[])] : []),
+    ...(workshop ? [...(w.totals||[]),...(w.equations||[]).flat(),...(w.expression||[]),...(w.counts||[]),...(w.heights||[]),...(w.cells||[])] : []),
     ...(b.key || []).map(k => k.value), ...q.options.map(o => (o.visualData as { textNumber?: unknown })?.textNumber),
   ].filter((v): v is number => typeof v === 'number');
   const metrics = { maxNumber: Math.max(0, ...numeric.map(Math.abs)), itemCount: b.items?.length || 0,

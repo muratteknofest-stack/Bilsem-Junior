@@ -1,3 +1,4 @@
+import { completeLatinSquare } from './reasoning-constraints';
 import type { BaseQuestion, DifficultyLevel, QuestionType } from '../../types';
 import { QUESTION_TYPE_LABELS } from '../../types';
 import { SeededRNG } from '../../lib/rng';
@@ -26,9 +27,48 @@ export function generateWorkshopQuestion(type:QuestionType,seed:number,difficult
     case 'spatial_relationship': b.size=3;b.symbols=rng.shuffle(VISUAL_SYMBOL_IDS).slice(0,9);b.index=rng.nextInt(3,8);prompt='İşaretli hücrenin hemen üstündeki hücrede hangi şekil var?';steps=['İşaretli hücrenin sütununu değiştirme.','Bir satır yukarıdaki hücrede bulunan şekli seç.'];extra=rng.shuffle(b.symbols).slice(0,4).map(symbol=>({symbol}));break;
     case 'visual_attention': b.reference=rng.shuffle(VISUAL_SYMBOL_IDS).slice(0,2);b.symbols=Array.from({length:Math.min(16,6+difficulty)},()=>rng.pick(b.reference!));prompt='Şerit soldan sağa okunuyor. Hedef iki şekil yan yana ve aynı sırayla kaç kez var?';steps=['Şeritteki her komşu şekil çiftini hedef çiftle karşılaştır.','İki şeklin de aynı sırada eşleştiği çiftleri say; örtüşen çiftler de sayılır.'];break;
     case 'logical_sequence': {const timeline=['Hazırlık','Ekim','Sulama','Filizlenme'];b.labels=rng.shuffle(timeline);b.order=b.labels.map(label=>timeline.indexOf(label)+1);b.position=rng.nextInt(0,3);prompt=`Olaylar sıra numaralarıyla verilmiş. Zaman çizelgesinde ${b.position+1}. olay hangisidir?`;steps=['Olay kartlarını yanlarındaki sıra numaralarına göre sırala.','İstenen sıradaki olayın adını seç.'];extra=b.labels.map(textNumber=>({textNumber}));break;}
-    case 'shape_equation': {const x=rng.nextInt(1,6),y=rng.nextInt(2,7);b.totals=[x*2,x+y];prompt='Aynı şekiller aynı sayıyı gösteriyor. Daire hangi sayıya eşittir?';steps=[`İki karenin toplamı ${x*2}; bir kare ${x} olur.`,`Kare ve daire toplamı ${x+y}; daire ${x+y} − ${x} = ${y} olur.`];break;}
+    case 'shape_equation': {
+      const n=difficulty>=4?3:2, values=rng.pickUnique([1,2,3,4,5,6],n);
+      const coefficients=n===2?(difficulty===1?[[2,0],[1,1]]:[[2,1],[1,1]]):rng.shuffle([[2,1,0],[0,2,1],[1,0,1]]);
+      b.equations=coefficients.map(row=>[...row,row.reduce((sum,c,i)=>sum+c*values[i],0)]);
+      b.expression=n===2?(difficulty===1?[0,1]:[1,2]):difficulty<=4?[1,1,1]:rng.pick([[2,1,1],[1,2,1],[1,1,2]]);
+      prompt='Aynı şekiller aynı pozitif tam sayıyı gösteriyor. Bütün eşitlikleri kullanarak son satırdaki işlemin sonucunu bul.';
+      const names=['kare','daire','üçgen'];
+      steps=['Tek bir eşitliğe bakmak yetmez; bütün satırlarda aynı şekil aynı değerde kalmalı.',
+        values.map((v,i)=>`${names[i]} = ${v}`).join('; ')+'.',
+        ...b.equations.map(row=>row.slice(0,n).flatMap((c,i)=>Array(c).fill(values[i])).join(' + ')+` = ${row[n]}; eşitlik sağlanır.`),
+        'Son satır: '+b.expression.flatMap((c,i)=>Array(c).fill(values[i])).join(' + ')+` = ${b.expression.reduce((sum,c,i)=>sum+c*values[i],0)}.`];
+      if(n===2)steps.splice(1,0,difficulty===1?`İlk eşitlikte iki kare ${b.equations[0][2]}; bir kare ${b.equations[0][2]} ÷ 2 = ${values[0]}. İkinci eşitlikten kareyi çıkar: ${b.equations[1][2]} − ${values[0]} = ${values[1]}.`:`İlk iki eşitlikte daireler aynıdır. Toplamları çıkarınca bir kare kalır: ${b.equations[0][2]} − ${b.equations[1][2]} = ${values[0]}. Sonra ${b.equations[1][2]} − ${values[0]} = ${values[1]} ile daireyi bul.`);
+      else {const a=b.equations.find(r=>r[0]===2)![3],bb=b.equations.find(r=>r[1]===2)![3],c=b.equations.find(r=>r[0]===1)![3];steps.splice(1,0,`İki kare + daire eşitliğini iki kez al. Kare + üçgen eşitliğini ekle. İki daire + üçgen eşitliğini çıkarınca 5 kare kalır: 2 × ${a} + ${c} − ${bb} = ${5*values[0]}. Bir kare ${values[0]} olur.`,`Daire: ${a} − 2 × ${values[0]} = ${values[1]}. Üçgen: ${c} − ${values[0]} = ${values[2]}.`);}
+      extra=[{textNumber:values.reduce((a,v)=>a+v,0)},{textNumber:b.equations.at(-1)!.at(-1)!},{textNumber:b.expression.reduce((a,v)=>a+v,0)},...values.map(textNumber=>({textNumber}))];
+      break;
+    }
     case 'balance_scale': {const count=rng.nextInt(2,3),weight=rng.nextInt(2,8);b.counts=[count];b.totals=[count*weight];prompt='Terazi dengede ve karelerin ağırlıkları eşit. Bir karenin ağırlığı kaç birimdir?';steps=[`${count} eş kare toplam ${count*weight} birimdir.`,`Toplamı eş parça sayısına böl: ${count*weight} ÷ ${count} = ${weight}.`];break;}
-    case 'latin_square': {const rows=rng.shuffle(Array.from({length:size},(_,i)=>i)),cols=rng.shuffle(Array.from({length:size},(_,i)=>i)),values=rng.shuffle(Array.from({length:size},(_,i)=>i+1));b.size=size;b.cells=rows.flatMap(r=>cols.map(c=>values[(r+c)%size]));b.index=rng.nextInt(0,size**2-1);b.cells[b.index]=0;prompt=`Her satır ve sütunda 1’den ${size}’e kadar sayılar birer kez bulunur. Boş hücreye hangisi gelir?`;steps=['Boş hücrenin satırında bulunmayan sayıyı belirle.','Aynı sayının bu sütunda da bulunmadığını ve diğer satırların geçerli olduğunu kontrol et.'];break;}
+    case 'latin_square': {
+      b.size=size;
+      for(let attempt=0;attempt<100;attempt++){
+        const rows=rng.shuffle(Array.from({length:size},(_,i)=>i)),cols=rng.shuffle(Array.from({length:size},(_,i)=>i)),values=rng.shuffle(Array.from({length:size},(_,i)=>i+1));
+        const full=rows.flatMap(r=>cols.map(c=>values[(r+c)%size]));
+        b.cells=[...full];b.index=rng.nextInt(0,size**2-1);b.cells[b.index]=0;
+        const target=Math.min(Math.floor(size**2*.65),difficulty===1?2:difficulty===2?4:difficulty===3?5:7+Math.floor((difficulty-4)/2));
+        for(const i of rng.shuffle(Array.from({length:full.length},(_,i)=>i).filter(i=>i!==b.index))){
+          if(b.cells.filter(v=>!v).length>=target)break;
+          b.cells[i]=0;try{completeLatinSquare(b.cells,size);}catch{b.cells[i]=full[i];}
+        }
+        const r=Math.floor(b.index/size),c=b.index%size;
+        const immediate=values.filter(v=>!b.cells!.slice(r*size,(r+1)*size).includes(v)&&!b.cells!.some((n,i)=>i%size===c&&n===v));
+        if(difficulty===1||immediate.length>1){
+          const solved=completeLatinSquare(b.cells,size);
+          steps=['Her satır ve sütunda aynı sayı yalnızca bir kez bulunabilir.',
+            ...b.cells.flatMap((v,i)=>v?[]:[`${Math.floor(i/size)+1}. satır, ${i%size+1}. sütun: ${solved[i]}. Bu değerler birlikte tüm satır ve sütun kurallarını sağlar.`]),
+            `İşaretli hedef hücre ${r+1}. satır, ${c+1}. sütundur; değeri ${solved[b.index]} olur.`];
+          break;
+        }
+        if(attempt===99)throw Error('Çok adımlı, tek çözümlü kare üretilemedi.');
+      }
+      prompt=`Her satır ve sütunda 1’den ${size}’e kadar sayılar birer kez bulunur. Boş hücreleri birlikte düşün. İşaretli ? hücresine hangi sayı gelir?`;
+      extra=Array.from({length:size},(_,i)=>({textNumber:i+1}));break;
+    }
     case 'gear_rotation': b.counts=[Math.min(5,2+Math.floor(difficulty/2))];b.direction=rng.pick(['clockwise','counterclockwise']);prompt='Dış dişliler sırayla birbirine temas ediyor. İlk dişlinin yönü verilmiş. Son dişli nasıl döner?';steps=['Temas eden her dış dişli bir öncekinin tersine döner.','Zinciri baştan sona izleyerek her temasta yönü değiştir.'];extra=['Saat yönünde','Saat yönünün tersine','Dönmez','Yönü sürekli değişir'].map(textNumber=>({textNumber}));break;
     case 'paper_folding': case 'punch_folding': b.size=size;b.folds=difficulty<=2?[rng.pick(['x','y'])]:rng.shuffle(['x','y']);b.holes=[[rng.nextInt(0,Math.floor(size/2)-1),rng.nextInt(0,Math.floor(size/2)-1)]];prompt=type==='paper_folding'?'Kâğıt kesikli eksenlerden katlanıyor. İşaretli noktadan küçük bir kesim yapılıyor. Açıldığında hangi kesim deseni oluşur?':'Kâğıt kesikli eksenlerden katlanıyor. İşaretli noktada delik açılıyor. Açıldığında delikler nerede olur?';steps=['Her katlama ekseni işaretli noktanın karşı tarafında bir yansıma oluşturur.','Kâğıdı açarken tüm eksenlere göre yansıyan konumları işaretle.'];break;
     case 'venn_diagram': {const pool=rng.shuffle(['Ada','Ece','Can','Efe','Ela','Oya']);b.groups=[pool.slice(0,3),rng.shuffle(pool).slice(0,3)];prompt='İki grubun üyeleri verilmiş. Her iki grupta da bulunan kaç kişi vardır?';steps=['Birinci gruptaki her ismi ikinci grubun listesinde ara.','İki listede de bulunan isimleri birer kez say.'];break;}
@@ -44,6 +84,16 @@ export function generateWorkshopQuestion(type:QuestionType,seed:number,difficult
     default:throw Error('UNKNOWN_WORKSHOP_TOPIC');
   }
   const answer=solveWorkshopBoard(b,extra),choices:WorkshopValue[]=[answer];
+  if(b.heights){
+    const rowTotals=Array.from({length:size},(_,r)=>b.heights!.slice(r*size,(r+1)*size).reduce((a,v)=>a+v,0));
+    if(type==='cube_counting'){
+      steps=['Her sütunun tabandaki küpünü ve üstündeki küpleri birlikte say.',...rowTotals.map((v,r)=>`${r+1}. sıradaki sütunlar: ${b.heights!.slice(r*size,(r+1)*size).join(' + ')} = ${v}.`),`Toplam: ${rowTotals.join(' + ')} = ${rowTotals.reduce((a,v)=>a+v,0)} küp.`];
+      extra=[{textNumber:b.heights.filter(Boolean).length},{textNumber:Math.max(...b.heights)},{textNumber:b.heights.reduce((a,v)=>a+Math.max(0,v-1),0)}];
+    }else if(type==='multiview_perspective'){
+      const max=Array.from({length:size},(_,c)=>Math.max(...b.heights!.filter((_,i)=>i%size===c)));
+      steps=['Önden bakarken aynı sütundaki alçak küpler, daha yüksek sütunun arkasında kalabilir.',...max.map((v,c)=>`${c+1}. sütunda görünen yükseklik: en büyük değer ${v}.`),'Her sütunu tabandan başlayarak bu yüksekliğe kadar doldur.'];
+    }
+  }
   const add=(v:WorkshopValue)=>{if(!choices.some(c=>same(c,v)))choices.push(v);};
   for(const v of rng.shuffle(extra.filter(v=>!same(v,answer)))){add(v);if(choices.length===4)break;}
   if(choices.length<4&&'cells' in answer) {
@@ -61,7 +111,7 @@ export function generateWorkshopQuestion(type:QuestionType,seed:number,difficult
   let correctOptionId='';const notes:Record<string,string>={};
   const options=rng.shuffle(choices).map((visualData,i)=>{const id='ABCD'[i],correct=same(visualData,answer);if(correct)correctOptionId=id;notes[id]=describeWorkshopChoice(b,visualData,answer);return {id,label:id,visualData,fingerprint:fingerprint(visualData)};});
   const finalSteps=[...steps,`Verilen kurala uyan tek seçenek ${correctOptionId}.`];
-  return {id:`${type}-w1-d${difficulty}-s${seed}`,version:1,type,category:TOPIC_CATEGORY[type],seed,difficulty,ageGroup:difficulty<=2?'1-2':'3-4',prompt,options,correctOptionId,explanation:{ruleTitle:QUESTION_TYPE_LABELS[type],summary:finalSteps.join(' '),steps:finalSteps},visualConfig:b,skills:[type],estimatedSeconds:30+difficulty*10,status:'draft',authoring:{engine:WORKSHOP_ENGINE_VERSION,objective:prompt,distractorNotes:notes}};
+  return {id:`${type}-w2-d${difficulty}-s${seed}`,version:2,type,category:TOPIC_CATEGORY[type],seed,difficulty,ageGroup:difficulty<=2?'1-2':'3-4',prompt,options,correctOptionId,explanation:{ruleTitle:QUESTION_TYPE_LABELS[type],summary:finalSteps.join(' '),steps:finalSteps},visualConfig:b,skills:[type],estimatedSeconds:30+difficulty*10,status:'draft',authoring:{engine:WORKSHOP_ENGINE_VERSION,objective:prompt,distractorNotes:notes}};
 }
 export function describeWorkshopChoice(board:WorkshopBoard,choice:WorkshopValue,expected:WorkshopValue):string {
   if(same(choice,expected))return 'Verilen bilgilerden hesaplanan tek doğru sonuç; bağımsız aday denetimi de aynı sonucu veriyor.';

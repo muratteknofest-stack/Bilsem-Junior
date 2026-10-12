@@ -16,9 +16,33 @@ export function independentlyMatchesWorkshop(b:WorkshopBoard, value:WorkshopValu
     case 'spatial_relationship': {const row=Math.floor(b.index!/b.size!)-1,col=b.index!%b.size!;return symbol===b.symbols![row*b.size!+col];}
     case 'visual_attention': {const pattern=b.reference!.join('|');let hits=0;for(let i=1;i<b.symbols!.length;i++)if(b.symbols!.slice(i-1,i+1).join('|')===pattern)hits++;return text===hits;}
     case 'logical_sequence': return text===b.labels!.find((_,i)=>b.order![i]===b.position!+1);
-    case 'shape_equation': {if(typeof text!=='number')return false;return Array.from({length:16},(_,x)=>x).some(x=>x+x===b.totals![0]&&x+text===b.totals![1]);}
+    case 'shape_equation': {
+      if(typeof text!=='number')return false;
+      if(!b.equations)return Array.from({length:16},(_,x)=>x).some(x=>x+x===b.totals![0]&&x+text===b.totals![1]);
+      const n=b.equations.length, matches:number[][]=[];
+      const enumerate=(values:number[])=>{
+        if(values.length===n){if(b.equations!.every(row=>row.slice(0,n).reduce((s,c,i)=>s+c*values[i],0)===row[n]))matches.push(values);return;}
+        for(let value=1;value<=12;value++)enumerate([...values,value]);
+      };
+      enumerate([]);
+      return matches.length===1&&b.expression!.reduce((s,c,i)=>s+c*matches[0][i],0)===text;
+    }
     case 'balance_scale': return typeof text==='number'&&Array.from({length:b.counts![0]},()=>text).reduce((a,v)=>a+v,0)===b.totals![0];
-    case 'latin_square': {if(typeof text!=='number'||text<1||text>b.size!)return false;const size=b.size!,grid=[...b.cells!];grid[b.index!]=text;return Array.from({length:size},(_,i)=>i).every(i=>{for(let n=1;n<=size;n++)if(grid.slice(i*size,(i+1)*size).filter(v=>v===n).length!==1||grid.filter((v,j)=>j%size===i&&v===n).length!==1)return false;return true;});}
+    case 'latin_square': {
+      if(typeof text!=='number'||text<1||text>b.size!)return false;
+      const size=b.size!, rows=permutations(Array.from({length:size},(_,i)=>i+1));
+      const solutions:number[][]=[];
+      const extend=(grid:number[])=>{
+        if(solutions.length>1)return;
+        const r=grid.length/size;
+        if(r===size){solutions.push(grid);return;}
+        for(const row of rows){
+          if(row.some((v,c)=>(b.cells![r*size+c]!==0&&b.cells![r*size+c]!==v)||grid.some((n,i)=>i%size===c&&n===v)))continue;
+          extend([...grid,...row]);
+        }
+      };
+      extend([]);return solutions.length===1&&solutions[0][b.index!]===text;
+    }
     case 'gear_rotation': {let clockwise=b.direction==='clockwise';for(let i=1;i<b.counts![0];i++)clockwise=!clockwise;return text===(clockwise?'Saat yönünde':'Saat yönünün tersine');}
     case 'paper_folding': case 'punch_folding': return tileMatches(i=>{const size=b.size!;let r=Math.floor(i/size),c=i%size;for(const axis of b.folds!)if(axis==='x'&&c>=size/2)c=size-1-c;else if(axis==='y'&&r>=size/2)r=size-1-r;return Number(b.holes!.some(([rr,cc])=>rr===r&&cc===c));});
     case 'venn_diagram': {const membership=new Map<string,number>();for(const group of b.groups!)for(const name of group)membership.set(name,(membership.get(name)||0)+1);return text===[...membership.values()].filter(n=>n===2).length;}

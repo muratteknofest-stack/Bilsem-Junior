@@ -1,3 +1,4 @@
+import { solveLinearClues, completeLatinSquare } from './reasoning-constraints';
 import type { QuestionType } from '../../types';
 import type { Tile } from './professional-engine';
 import { isVisualSymbol, type VisualSymbol } from './visual-vocabulary';
@@ -8,6 +9,7 @@ export interface WorkshopBoard {
   displayMode: 'workshop_board'; kind: QuestionType;
   tiles?: Tile[]; symbols?: VisualSymbol[]; reference?: VisualSymbol[];
   size?: number; cells?: number[]; target?: number; index?: number;
+  equations?: number[][]; expression?: number[];
   totals?: number[]; counts?: number[]; heights?: number[];
   labels?: string[]; edges?: [string,string][]; position?: number;
   groups?: string[][]; entries?: { code: string; letter: string }[]; code?: string[];
@@ -17,7 +19,7 @@ export interface WorkshopBoard {
   start?: number; goals?: number[]; direction?: 'clockwise'|'counterclockwise';
   polygon?: number[][];
 }
-export const WORKSHOP_ENGINE_VERSION = 'workshop-1';
+export const WORKSHOP_ENGINE_VERSION = 'workshop-2';
 export const POLYGON_SYMBOLS: VisualSymbol[] = ['▲','■','◆','⬟','⬢'];
 export const TANGRAM_POLYGONS = [ [[0,0],[4,0],[0,4]], [[4,0],[4,4],[0,4]], [[0,0],[4,0],[4,4]], [[0,0],[0,4],[4,4]] ];
 const fail = (s: string): never => { throw new Error('MECHANICS: ' + s); };
@@ -30,7 +32,7 @@ const fields: Partial<Record<QuestionType,string[]>> = {
   odd_one_out:['symbols'], classification:['reference'], visual_attention:['symbols','reference'], visual_memory:['tiles'],
   figure_completion:['tiles'], visual_analogy:['tiles'], shadow_matching:['tiles'], detail_detection:['tiles'],
   spatial_relationship:['symbols','size','index'], logical_sequence:['labels','order','position'],
-  shape_equation:['totals'], balance_scale:['totals','counts'], latin_square:['size','cells','index'],
+  shape_equation:['totals','equations','expression'], balance_scale:['totals','counts'], latin_square:['size','cells','index'],
   gear_rotation:['counts','direction'], paper_folding:['size','folds','holes'], punch_folding:['size','folds','holes'],
   venn_diagram:['groups'], cube_counting:['heights','size'], top_view:['heights','size'], multiview_perspective:['heights','size'],
   dice_unfold:['net','face'], spatial_origami:['net','face'], cryptogram:['entries','code'],
@@ -57,9 +59,14 @@ export function validateWorkshopBoard(b: WorkshopBoard): void {
     case 'visual_analogy': if(b.tiles?.length!==3) fail('A, B ve C desenleri gerekli.'); break;
     case 'spatial_relationship': if(!integer(b.size,3,4)||b.symbols?.length!==b.size**2||!unique(b.symbols)||!integer(b.index,b.size,b.size**2-1)) fail('Konum veya benzersiz sembol ızgarası geçersiz.'); break;
     case 'logical_sequence': if(!b.labels||!list(b.order,b.labels.length,b.labels.length,v=>integer(v,1,b.labels!.length))||!unique(b.order)||!integer(b.position,0,b.labels.length-1)) fail('Olay sırası geçersiz.'); break;
-    case 'shape_equation': if(!list(b.totals,2,2,v=>integer(v,2,30))||b.totals[0]%2||b.totals[1]<=b.totals[0]/2) fail('Denklem yeterli veya geçerli değil.'); break;
+    case 'shape_equation':
+      if (b.equations) {
+        const n=b.equations.length;
+        if (b.totals || ![2,3].includes(n) || !list(b.equations,n,n,row=>list(row,n+1,n+1,v=>integer(v,0,72))&&row.slice(0,n).every(v=>v<=3)&&row.slice(0,n).some(Boolean)) || !list(b.expression,n,n,v=>integer(v,0,3)) || !b.expression.some(Boolean)) fail('Denklem ipuçları veya hedef ifade geçersiz.');
+      } else if(b.expression || !list(b.totals,2,2,v=>integer(v,2,30))||b.totals[0]%2||b.totals[1]<=b.totals[0]/2) fail('Denklem yeterli veya geçerli değil.');
+      break;
     case 'balance_scale': if(!list(b.totals,1,1,v=>integer(v,1,30))||!list(b.counts,1,1,v=>integer(v,2,4))||b.totals[0]%b.counts[0]) fail('Tam sayılı denge gerekli.'); break;
-    case 'latin_square': if(!integer(b.size,3,4)||!list(b.cells,b.size**2,b.size**2,v=>integer(v,0,b.size!))||b.cells.filter(v=>v===0).length!==1||!integer(b.index,0,b.cells.length-1)||b.cells[b.index]!==0) fail('Latin karesi tek boş hücre içermeli.'); break;
+    case 'latin_square': if(!integer(b.size,3,4)||!list(b.cells,b.size**2,b.size**2,v=>integer(v,0,b.size!))||b.cells.filter(v=>v===0).length<1||b.cells.filter(v=>v===0).length>Math.floor(b.size**2*.65)||!integer(b.index,0,b.cells.length-1)||b.cells[b.index]!==0) fail('Latin karesinde geçerli verilenler ve boş bir hedef hücre gerekli.'); break;
     case 'gear_rotation': if(!list(b.counts,1,1,v=>integer(v,2,5))||!['clockwise','counterclockwise'].includes(b.direction||'')) fail('Dişli zinciri geçersiz.'); break;
     case 'paper_folding': case 'punch_folding': if(!integer(b.size,3,4)||!list(b.folds,1,2,v=>v==='x'||v==='y')||!unique(b.folds)||!list(b.holes,1,2,p=>p.length===2&&p.every(v=>integer(v,0,b.size!-1)))||!unique(b.holes)||b.holes.some(([r,c])=>b.folds!.includes('x')&&c>=b.size!/2||b.folds!.includes('y')&&r>=b.size!/2)) fail('Katlama ve kesim konumu geçersiz.'); break;
     case 'venn_diagram': if(!list(b.groups,2,2,g=>list(g,2,6,text)&&unique(g))) fail('İki açık küme gerekli.'); break;
@@ -126,16 +133,9 @@ export function solveWorkshopBoard(b:WorkshopBoard, options:WorkshopValue[]=[]):
     case 'spatial_relationship': return {symbol:b.symbols![b.index!-b.size!]};
     case 'visual_attention': {let count=0;for(let i=0;i<b.symbols!.length-1;i++)if(b.symbols![i]===b.reference![0]&&b.symbols![i+1]===b.reference![1])count++;return n(count);}
     case 'logical_sequence': return n(b.labels![b.order!.indexOf(b.position!+1)]);
-    case 'shape_equation': return n(b.totals![1]-b.totals![0]/2);
+    case 'shape_equation': { if (!b.equations) return n(b.totals![1]-b.totals![0]/2); const values=solveLinearClues(b.equations); return n(b.expression!.reduce((sum,c,i)=>sum+c*values[i],0)); }
     case 'balance_scale': return n(b.totals![0]/b.counts![0]);
-    case 'latin_square': {
-      const size=b.size!, row=Math.floor(b.index!/size), col=b.index!%size;
-      const missing=Array.from({length:size},(_,i)=>i+1).filter(v=>!b.cells!.slice(row*size,(row+1)*size).includes(v)&&!b.cells!.filter((_,i)=>i%size===col).includes(v));
-      if(missing.length!==1)fail('Latin karesinde tek aday yok.');
-      const completed=[...b.cells!];completed[b.index!]=missing[0];
-      for(let i=0;i<size;i++)if(!unique(completed.slice(i*size,(i+1)*size))||!unique(completed.filter((_,j)=>j%size===i)))fail('Latin karesinin diğer satır veya sütunu geçersiz.');
-      return n(missing[0]);
-    }
+    case 'latin_square': return n(completeLatinSquare(b.cells!,b.size!)[b.index!]);
     case 'gear_rotation': return n(b.counts![0]%2===1?(b.direction==='clockwise'?'Saat yönünde':'Saat yönünün tersine'):(b.direction==='clockwise'?'Saat yönünün tersine':'Saat yönünde'));
     case 'paper_folding': case 'punch_folding': {
       const size=b.size!,cells=Array(size**2).fill(0);

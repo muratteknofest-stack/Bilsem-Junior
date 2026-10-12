@@ -7,6 +7,7 @@ import { generateRecoveredQuestion } from './recovered-engine';
 import { generateProfessionalQuestion as generateV2 } from './professional-engine-v2';
 import { solveQuestion } from './universal-solver';
 import { generateWorkshopQuestion } from './workshop-engine';
+import { generateWorkshopQuestion as generateWorkshopV1 } from './workshop-engine-v1';
 import { WORKSHOP_ENGINE_VERSION } from './workshop-mechanics';
 import { WORKSHOP_TYPES } from './topic-catalog';
 import { analyzeQuestionMechanics, visibleOptionKey, type MechanicalReport } from './mechanical-quality';
@@ -76,9 +77,9 @@ export function auditQuestion(value: unknown, existing: BaseQuestion[] = []): Qu
     if (solved.canSolve && !solved.isMatch) result.errors.push('Bağımsız çözüm ile cevap anahtarı uyuşmuyor. ' + solved.proofSteps.join(' '));
     if (!solved.canSolve || solved.ambiguityDetected) result.reviewRequired.push(...solved.proofSteps);
     if (cfg?.displayMode === 'workshop_board') {
-      if (!WORKSHOP_TYPES.includes(q.type) || q.authoring?.engine !== WORKSHOP_ENGINE_VERSION) result.errors.push('Atölye motoru konusu veya sürümü tanınmıyor.');
+      if (!WORKSHOP_TYPES.includes(q.type) || ![WORKSHOP_ENGINE_VERSION, 'workshop-1'].includes(q.authoring?.engine || '')) result.errors.push('Atölye motoru konusu veya sürümü tanınmıyor.');
       else {
-        const reference=generateWorkshopQuestion(q.type,q.seed,q.difficulty);
+        const reference=(q.authoring?.engine === 'workshop-1' ? generateWorkshopV1 : generateWorkshopQuestion)(q.type,q.seed,q.difficulty);
         for(const field of ['prompt','secondaryPrompt','explanation','visualConfig','category','options','authoring'] as const) {
           const normalize=(question:BaseQuestion)=>field==='options'?question.options.map(({id,label,visualData})=>({id,label,visualData})).sort((a,b)=>a.id.localeCompare(b.id)):question[field];
           if(fingerprint(normalize(q))!==fingerprint(normalize(reference)))result.reviewRequired.push('Atölye kuralı, soru metni, şık veya çözüm doğrulanmış şablonla eşleşmiyor: '+field);

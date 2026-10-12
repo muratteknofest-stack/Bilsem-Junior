@@ -1,3 +1,4 @@
+import { professionalGradeTypes } from '../reasoning-profile';
 import { gradeDifficulty, isSchoolGrade, type SchoolGrade } from '../quality-policy';
 import { assertQuestionReadyForStudents, isQuestionReadyForStudents } from '../quality';
 import { BaseQuestion, CognitiveCategory, DifficultyLevel, QuestionType } from '../../../types';
@@ -33,6 +34,7 @@ export function generateQuestionByType(
 }
 
 export function generateQuestion(options: {
+  profile?: 'professional';
   targetGrade?: SchoolGrade;
   category?: CognitiveCategory | 'mixed';
   difficulty?: DifficultyLevel;
@@ -43,7 +45,7 @@ export function generateQuestion(options: {
   if (!Number.isSafeInteger(seed) || seed < 1 || options.targetGrade !== undefined && !isSchoolGrade(options.targetGrade) || options.difficulty !== undefined && (!Number.isInteger(options.difficulty) || options.difficulty < 1 || options.difficulty > 6)) throw new Error('INVALID_GENERATION_INPUT: Sınıf, zorluk veya tohum geçersiz.');
   const rng = new SeededRNG(seed);
   const difficulty = options.targetGrade ? gradeDifficulty(options.targetGrade, options.difficulty ?? 3) : options.difficulty ?? 3;
-  const allowed = (type: QuestionType) => topicAllowedForGrade(type, options.targetGrade);
+  const allowed = (type: QuestionType) => topicAllowedForGrade(type, options.targetGrade) && (options.profile !== 'professional' || professionalGradeTypes(options.targetGrade || 4).includes(type));
 
   let chosenType: QuestionType;
 

@@ -125,3 +125,41 @@ test('all 29 new topics must pass both AI reviews; approval flags cannot bypass 
     const result=await runQuestionPipeline(client as any,{targetGrade:3,questionType:type,category:generateQuestionByType(type,321,3).category,difficulty:3,maxAttempts:1},{nextSeed:()=>321});assert.equal(result.success,true,`${type}: ${result.validationErrors.join(' ')}`);assert.equal(blind,1);assert.equal(editorial,1);assert.equal(result.qualityReport?.stages.length,9);assert.equal(isQuestionReadyForStudents(result.question),true);
   }
 });
+
+test('multi-clue equations and multi-blank squares require a unique independently proved solution',()=>{
+  const equations:WorkshopBoard={displayMode:'workshop_board',kind:'shape_equation',equations:[[2,1,0,8],[0,2,1,8],[1,0,1,7]],expression:[1,2,1]};
+  // Square 3, circle 2, triangle 4: 3 + 2*2 + 4 = 11.
+  assert.deepEqual(solveWorkshopBoard(equations),{textNumber:11});
+  for(const n of [7,9,10,11,12])assert.equal(independentlyMatchesWorkshop(equations,{textNumber:n}),n===11);
+  const ambiguous={...equations,equations:[[1,1,0,5],[2,2,0,10],[0,0,1,4]]};
+  assert.throws(()=>solveWorkshopBoard(ambiguous));
+  assert.equal(independentlyMatchesWorkshop(ambiguous,{textNumber:11}),false);
+  const square:WorkshopBoard={displayMode:'workshop_board',kind:'latin_square',size:3,cells:[0,0,3,0,3,1,3,1,0],index:0};
+  assert.deepEqual(solveWorkshopBoard(square),{textNumber:1});
+  assert.equal(independentlyMatchesWorkshop(square,{textNumber:1}),true);
+  assert.equal(independentlyMatchesWorkshop(square,{textNumber:2}),false);
+  assert.throws(()=>solveWorkshopBoard({...square,size:4,index:8,cells:[1,2,3,4,2,3,4,1,0,0,0,0,0,0,0,0]}));
+});
+
+test('new square levels require reasoning across blanks and legacy published questions remain valid',async()=>{
+  const {generateWorkshopQuestion:legacy}=await import('../src/features/questions/workshop-engine-v1');
+  for(const type of WORKSHOP_TYPES)assert.equal(isQuestionReadyForStudents(legacy(type,321,3)),true,type);
+  for(const difficulty of [2,3,4,5,6] as const)for(let seed=1;seed<=15;seed++){
+    const q=generateQuestionByType('latin_square',seed,difficulty),b=q.visualConfig as unknown as WorkshopBoard;
+    const n=b.size!,r=Math.floor(b.index!/n),c=b.index!%n;
+    const candidates=Array.from({length:n},(_,i)=>i+1).filter(v=>!b.cells!.slice(r*n,(r+1)*n).includes(v)&&!b.cells!.some((x,i)=>i%n===c&&x===v));
+    assert.ok(candidates.length>1,'Target must not be a one-step row/column lookup');
+    assert.ok(b.cells!.filter(v=>v===0).length>=3);
+    assert.equal(auditQuestion(q).solverVerified,true);
+  }
+});
+
+test('equation diagrams show every coefficient, cube SVG has exact units and no answer metadata',async()=>{
+  const {CubeSculpture}=await import('../src/features/questions/renderers/CubeSculpture');
+  const q=generateQuestionByType('shape_equation',731,4),b=q.visualConfig as unknown as WorkshopBoard;
+  const html=renderToStaticMarkup(<QuestionRenderer question={q}/>);
+  for(const row of b.equations!)assert.ok(html.includes(`eşittir ${row.at(-1)}`));
+  const cube=renderToStaticMarkup(<CubeSculpture size={3} heights={[1,2,0,3,0,1,0,0,1]}/>);
+  assert.equal((cube.match(/data-unit-cube="true"/g)||[]).length,8);
+  assert.doesNotMatch(cube,/data-cube-count|correctOptionId|NaN|undefined/);
+});

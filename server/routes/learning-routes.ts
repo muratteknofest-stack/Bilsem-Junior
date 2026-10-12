@@ -98,7 +98,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const questions: BaseQuestion[] = [], seen = new Set<string>();
     for (const q of candidates) { if (!isQuestionReadyForStudents(q)) continue; const key = questionContentKey(q); if (!seen.has(key)) { seen.add(key); questions.push(q); } if (questions.length === count) break; }
     for (let tries = 0; questions.length < count && tries < count * 50; tries++) {
-      const q = generateQuestion({ targetGrade: profile.data.grade, difficulty: difficulty === 'mixed' ? randomInt(1, EDUCATION_PROFILES[profile.data.grade].maxDifficulty + 1) as import('../../src/types').DifficultyLevel : difficulty, category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number], seed: randomInt(1, 2147483647) });
+      const q = generateQuestion({ profile: 'professional', targetGrade: profile.data.grade, difficulty: difficulty === 'mixed' ? randomInt(1, EDUCATION_PROFILES[profile.data.grade].maxDifficulty + 1) as import('../../src/types').DifficultyLevel : difficulty, category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number], seed: randomInt(1, 2147483647) });
       const key = questionContentKey(q);
       if (!seen.has(key) && fitsLearningSelection(q, selection) && isQuestionReadyForStudents(q)) { seen.add(key); questions.push(q); }
     }
