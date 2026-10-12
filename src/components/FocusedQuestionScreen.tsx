@@ -19,10 +19,25 @@ export function FitQuestionVisual({question}:{question:BaseQuestion}) {
 }
 type Props={question:BaseQuestion;sessionKey:string;index:number;total:number;remaining:number;busy:boolean;submitted:boolean;response:QuestionResponse|null;error:string;onChange:(r:QuestionResponse)=>void;onLeave:()=>void;onPrevious?:()=>void;onNext?:()=>void;onRetry?:()=>void;tools:React.ReactNode};
 export function FocusedQuestionScreen(p:Props) {
+  const screen=useRef<HTMLElement>(null);
+  const [fullScreen,setFullScreen]=useState(false);
+  const [screenMessage,setScreenMessage]=useState('');
   const tools=useRef<HTMLDialogElement>(null),zoom=useRef<HTMLDialogElement>(null),heading=useRef<HTMLHeadingElement>(null);
   useEffect(()=>{const old=document.body.style.overflow;document.body.style.overflow='hidden';return()=>{document.body.style.overflow=old;};},[]);
+  useEffect(()=>{
+    const viewport=window.visualViewport;
+    const resize=()=>{if(screen.current&&(!viewport||viewport.scale===1))screen.current.style.setProperty('--zp-visible-height',`${viewport?.height||window.innerHeight}px`);};
+    const changed=()=>setFullScreen(document.fullscreenElement===screen.current);
+    resize();viewport?.addEventListener('resize',resize);window.addEventListener('resize',resize);document.addEventListener('fullscreenchange',changed);
+    return()=>{viewport?.removeEventListener('resize',resize);window.removeEventListener('resize',resize);document.removeEventListener('fullscreenchange',changed);};
+  },[]);
+  const toggleFullScreen=async()=>{
+    tools.current?.close();
+    try{if(document.fullscreenElement)await document.exitFullscreen();else await screen.current?.requestFullscreen();setScreenMessage('');}
+    catch{setScreenMessage('Tarayıcı tam ekranı açamadı. Sorular mevcut ekrana sığacak şekilde gösteriliyor.');}
+  };
   useEffect(()=>{heading.current?.focus({preventScroll:true});tools.current?.close();zoom.current?.close();},[p.sessionKey]);
-  const content=<main className="zp-focus" aria-label="Soru çözme ekranı">
+  const content=<main ref={screen} className="zp-focus" aria-label="Soru çözme ekranı">
     <header className="zp-focus-header"><button onClick={p.onLeave} disabled={p.busy} aria-label="Çalışmadan çık">‹ Çık</button><span><b>ZekaPark</b><small>{p.question.targetGrade || ''}. sınıf · Zorluk {p.question.difficulty}</small></span><span role="timer" aria-label="Kalan süre">{Math.floor(p.remaining/60)}:{String(p.remaining%60).padStart(2,'0')}</span><button onClick={()=>tools.current?.showModal()} aria-label="Sorular ve çalışma araçları">☰</button></header>
     {p.error&&<div role="alert" className="zp-focus-error">{p.error}{p.onRetry&&<button onClick={p.onRetry} disabled={p.busy}>Yeniden gönder</button>}</div>}
     <h2 className="zp-focus-prompt" tabIndex={-1} ref={heading}>{p.question.prompt}{p.question.secondaryPrompt&&<small>{p.question.secondaryPrompt}</small>}</h2>
@@ -30,8 +45,8 @@ export function FocusedQuestionScreen(p:Props) {
       <div className="zp-focus-visual"><FitQuestionVisual question={p.question}/>{(p.question.type!=='visual_memory'||p.submitted)&&<button className="zp-zoom-button" onClick={()=>zoom.current?.showModal()} aria-label="Soru görselini büyüt">⤢</button>}</div>
       <fieldset className="zp-focus-answers" disabled={p.busy}><legend className="sr-only">Cevabın</legend><AnswerWorkspace compact allowedModes={['choice']} preferredMode="choice" question={p.question} response={p.response?.mode==='choice'?p.response:null} onChange={p.onChange} submitted={p.submitted}/></fieldset>
     </MemoryStudy>
-    <footer className="zp-focus-footer"><button disabled={p.busy||!p.onPrevious} onClick={p.onPrevious}>‹ Önceki</button><span aria-live="polite"><b>{p.index+1} / {p.total}</b><small>{p.busy?'Kaydediliyor…':p.submitted?'Cevabı incele':'Seçince ilerler'}</small></span><button disabled={p.busy||!p.onNext} onClick={p.onNext}>Sonraki ›</button></footer>
-    <dialog ref={tools} className="zp-focus-dialog" aria-label="Sorular ve çalışma araçları"><div className="zp-dialog-top"><h2>Sorular ve araçlar</h2><button onClick={()=>tools.current?.close()}>Kapat ✕</button></div>{p.tools}</dialog>
+    <footer className="zp-focus-footer"><button disabled={p.busy||!p.onPrevious} onClick={p.onPrevious}>‹ Önceki</button><span aria-live="polite"><b>{p.index+1} / {p.total}</b><small>{p.busy?'Kaydediliyor…':p.submitted?'Cevabı incele':'Seçince ilerler'}</small><progress aria-label="Soru ilerlemesi" value={p.index+1} max={p.total}/></span><button disabled={p.busy||!p.onNext} onClick={p.onNext}>Sonraki ›</button></footer>
+    <dialog ref={tools} className="zp-focus-dialog" aria-label="Sorular ve çalışma araçları"><div className="zp-dialog-top"><h2>Sorular ve araçlar</h2><button onClick={()=>tools.current?.close()}>Kapat ✕</button></div>{document.fullscreenEnabled&&<button onClick={()=>void toggleFullScreen()}>{fullScreen?'Tam ekrandan çık':'Tam ekranı aç'}</button>}{screenMessage&&<p role="status">{screenMessage}</p>}{p.tools}</dialog>
     {(p.question.type!=='visual_memory'||p.submitted)&&<dialog ref={zoom} className="zp-focus-dialog zp-zoom-dialog" aria-label="Büyük soru görseli"><div className="zp-dialog-top"><h2>Soru görseli</h2><button onClick={()=>zoom.current?.close()}>Kapat ✕</button></div><p>{p.question.prompt}</p><QuestionRenderer question={p.question}/></dialog>}
   </main>;
   return createPortal(content,document.body);

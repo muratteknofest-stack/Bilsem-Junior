@@ -3,7 +3,7 @@ import type { BaseQuestion, DifficultyLevel } from '../../types';
 import { EDUCATION_PROFILES, type SchoolGrade } from '../questions/quality-policy';
 import { AVAILABLE_CATEGORIES } from './available-categories';
 
-export const ACTIVE_BANK_VERSION = 'robot-20261012-reasoning-v2';
+export const ACTIVE_BANK_VERSION = 'robot-20261012-colorful-v3';
 export type LearningDifficulty = 'mixed' | DifficultyLevel;
 export const learningStartSchema = z.object({
   mode: z.enum(['practice', 'adaptive', 'exam']),
@@ -25,3 +25,4 @@ export function fitsLearningSelection(q: BaseQuestion, selection: LearningSelect
 export function sameLearningSelection(saved: Partial<LearningSelection> | undefined, next: LearningSelection) {
   return !!saved && (Object.keys(next) as Array<keyof LearningSelection>).every(key => saved[key] === next[key]);
 }
+

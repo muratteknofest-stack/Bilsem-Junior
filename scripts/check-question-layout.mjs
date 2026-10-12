@@ -11,7 +11,7 @@ const page=await browser.newPage({viewport:{width:360,height:640},deviceScaleFac
 await page.goto('http://127.0.0.1:5182/tests/browser/question-screen.html');await page.waitForSelector('.zp-answer-option');await page.screenshot({path:output+'/zekapark-mobile.png'});
 
 const failures=[];let count=0;
-for(const [width,height] of [[320,568],[360,640],[390,844],[667,375],[768,1024],[1024,768]]){
+for(const [width,height] of [[320,480],[320,568],[360,560],[360,640],[390,844],[600,960],[667,375],[768,1024],[820,1180],[1024,1366],[1024,768]]){
  await page.setViewportSize({width,height});
  const types=await page.evaluate(()=>window.__types);
  for(const type of types){
@@ -45,6 +45,8 @@ for(const type of ['mirror_reflection','figure_completion','visual_memory','shad
 await page.getByRole('button',{name:'Sorular ve çalışma araçları'}).click();
 if(!await page.locator('dialog[open]').isVisible())throw Error('Tools dialog did not open');
 await page.keyboard.press('Escape');
+// Expanding/collapsing mobile browser controls changes usable portrait height.
+for(const height of [700,510,740]){await page.setViewportSize({width:360,height});await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));const overflow=await page.evaluate(()=>{const root=document.querySelector('.zp-focus');return root.scrollHeight>root.clientHeight+1;});if(overflow)failures.push({height,result:['viewport-resize-overflow']});count++;}
 await page.setViewportSize({width:768,height:1024});await page.evaluate(()=>window.__show('mirror_reflection',3));await page.screenshot({path:output+'/zekapark-tablet.png'});
 console.log(JSON.stringify({count,failures}));
 await fs.writeFile(output+'/results.json',JSON.stringify({count,failures},null,2));

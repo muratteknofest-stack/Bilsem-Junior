@@ -30,9 +30,9 @@ Aktif testler `FocusedQuestionScreen` üzerinden açılır. Ekran `100dvh` ve g�
 - 208 birim/entegrasyon testi; yeni 1.200 sınıfa uygun üretim, cevap anahtarı/metadata bozulma kontrolleri ve tarihsel motor uyumluluğu dahil.
 - 1.200 soruluk sınıf dağılımı testi dört sınıfta konu kapsamını ve tekilliği doğrular; gerçek veritabanını değiştirmez.
 - TypeScript ve Vercel üretim derlemesi.
-- Gerçek Chromium ile yerel bileşen düzeyinde 284 senaryo: 44 konu × 6 ekran ölçüsü; ayrıca 5 yeni aile × 4 sınıf. Ekran ölçüleri 320×568, 360×640, 390×844, 667×375, 768×1024, 1024×768. Kart sınırları, SVG taşması, dokunma alanı, cevap olayı, hafıza gizleme ve araç menüsü kontrol edilir.
+- Gerçek Chromium ile yerel bileşen düzeyinde 507 senaryo: 44 konu × 11 ekran ölçüsü; ayrıca 5 yeni aile × 4 sınıf ve 3 kullanılabilir yükseklik değişimi. Ekran ölçüleri 320×480, 320×568, 360×560, 360×640, 390×844, 600×960, 667×375, 768×1024, 820×1180, 1024×1366, 1024×768. Kart sınırları, SVG taşması, dokunma alanı, cevap olayı, hafıza gizleme ve araç menüsü kontrol edilir.
 - Bu tarayıcı testi oturum açılmış canlı API/veritabanı akışı veya fiziksel iOS/Android cihaz testi değildir. Normal metin ölçeğinde sınırlar kontrol edilir; erişilebilirlik için aşırı yakınlaştırmada içerik kaydırılabilir.
 
 Tekrar çalıştırma: `npm ci`, `npx playwright install chromium`, `npm test`, `npm run test:layout`, `npm run vercel-build`. Hazır Chromium kullanmak için `BROWSER_EXECUTABLE` belirtilebilir. Tarayıcı raporu ve ekran görüntüleri varsayılan olarak `/tmp/zekapark-layout` altında üretilir; `LAYOUT_OUTPUT` ile değiştirilebilir. Fixture yalnızca yerel geliştirme testidir, üretim sayfası değildir.
 
-Canlı dağıtım, birleştirme ve yayımlı 4.000 sorunun değiştirilmesi bu değişikliğin parçası olarak yapılmadı. Yeni aileler sonraki üretimlerde kullanılacak; mevcut yayımlı bankanın yenilenmesi ayrı yayın akışını gerektirir. Sesli harf hafızası veya altı seçenekli test formatı eklenmedi; mevcut dört seçenek sözleşmesi korunur.
+Yeni 4.000 soruluk parti üretildi ve otomatik doğrulandı. Yayın geçişi, yalnızca yeni motoru içeren canlı sürüm doğrulandıktan sonra yapılır. Parti ve doğrulama ayrıntıları `PORTRAIT_BANK_20261012.md` dosyasındadır. Sesli harf hafızası veya altı seçenekli test formatı eklenmedi; mevcut dört seçenek sözleşmesi korunur.
