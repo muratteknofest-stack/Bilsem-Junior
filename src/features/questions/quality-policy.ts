@@ -62,9 +62,9 @@ export function inspectEducation(q: BaseQuestion, grade: SchoolGrade, age?: numb
     symbolCount: b.symbols?.length || b.moves?.length || 0, peopleCount: b.names?.length || 0,
     gridSize: Math.max(b.gridSize || 0, workshop ? w.size||0 : 0, ...(b.tiles || []).filter(Boolean).map(t => t!.size)), promptWords: q.prompt.trim().split(/\s+/u).length };
   if(workshop){
-    metrics.symbolCount=w.kind==='cryptogram'?w.code!.length:w.kind==='word_scramble_logic'?w.letters!.length:w.kind==='visual_attention'?w.reference!.length:0;
+    metrics.symbolCount=w.kind==='cryptogram'?(w.querySymbols?.length||w.code!.length):w.kind==='word_scramble_logic'?w.letters!.length:w.kind==='visual_attention'?w.reference!.length:0;
     metrics.peopleCount=w.labels?.length||0;
-    metrics.itemCount=w.symbols?.length||w.heights?.length||0;
+    metrics.itemCount=w.cipherRows?.flat().length||w.figures?.length||w.symbols?.length||w.heights?.length||0;
   }
   const audience: string[] = [], difficulty: string[] = [], visual: string[] = [];
   if (age !== undefined && (!Number.isInteger(age) || age < p.ages[0] || age > p.ages[1])) audience.push('AGE_PROFILE: Yaş seçilen sınıfın içerik profili dışında.');
@@ -86,4 +86,5 @@ export function hasCompleteQualityReport(q: BaseQuestion): boolean {
     r.target.grade === q.targetGrade && r.target.age === q.targetAge && r.target.difficulty === q.difficulty &&
     r.stages.length === QUALITY_STAGES.length && QUALITY_STAGES.every(s => r.stages.filter(t => t.id === s.id && t.status === 'passed' && t.reasons.length === 0 && t.weight === s.weight).length === 1) && r.score === 100;
 }
+
 

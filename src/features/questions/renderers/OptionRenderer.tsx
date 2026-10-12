@@ -67,7 +67,7 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
     }
 
     const vd: any = visualData || {};
-    if (vd.symbol || vd.polygon) return <WorkshopShape value={vd} />;
+    if (vd.figure || vd.symbol || vd.polygon) return <WorkshopShape value={vd} />;
     if (Array.isArray(vd.cells) && [3, 4].includes(vd.size)) return <div className="w-24 sm:w-28 max-w-full mx-auto"><TileDiagram tile={vd} flat={questionType === 'shadow_matching'} theme={questionVisualTheme(question)} /></div>;
 
     // 1. Direct numerical or text badge (e.g. counting, equation, or number pattern)
@@ -524,5 +524,6 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
     </button>
   );
 };
+
 
 
