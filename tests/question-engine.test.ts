@@ -28,7 +28,7 @@ test('generators are deterministic; only supported engines enter the student poo
         `${type} level ${difficulty}: ${validation.errors.map((error) => error.message).join('; ')}`,
       );
       assert.ok(first.options.some((option) => option.id === first.correctOptionId));
-      assert.match(first.id, new RegExp(`^${type}-[vw]\\d+-d${difficulty}-s\\d+$`));
+      assert.match(first.id, new RegExp(`^${type}-(?:[vw]|color)\\d+-d${difficulty}-s\\d+$`));
     }
   }
 });
@@ -46,5 +46,6 @@ test('question IDs do not collide across type, difficulty and seed', () => {
   }
   assert.equal(ids.size, ALL_QUESTION_TYPES.length * difficulties.length * 25);
 });
+
 
 

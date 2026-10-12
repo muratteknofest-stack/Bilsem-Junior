@@ -1,12 +1,16 @@
+import { solveSymbolDeduction } from './symbol-deduction';
+import { validFigure, validateFigureTask, figureResult, type AnalogyFigure, type FigureTask } from './figure-analogy';
 import { solveLinearClues, completeLatinSquare } from './reasoning-constraints';
 import type { QuestionType } from '../../types';
 import type { Tile } from './professional-engine';
 import { isVisualSymbol, type VisualSymbol } from './visual-vocabulary';
 import { WORKSHOP_TYPES } from './topic-catalog';
 
-export type WorkshopValue = Tile | { textNumber: string | number } | { symbol: VisualSymbol } | { polygon: number[][] };
+export type WorkshopValue = Tile | { textNumber: string | number } | { symbol: VisualSymbol } | { polygon: number[][] } | { figure: AnalogyFigure };
 export interface WorkshopBoard {
   displayMode: 'workshop_board'; kind: QuestionType;
+  cipherRows?: VisualSymbol[][]; numberCodes?: string[]; querySymbols?: VisualSymbol[];
+  figureTask?: FigureTask; figures?: AnalogyFigure[];
   tiles?: Tile[]; symbols?: VisualSymbol[]; reference?: VisualSymbol[];
   size?: number; cells?: number[]; target?: number; index?: number;
   equations?: number[][]; expression?: number[];
@@ -19,7 +23,7 @@ export interface WorkshopBoard {
   start?: number; goals?: number[]; direction?: 'clockwise'|'counterclockwise';
   polygon?: number[][];
 }
-export const WORKSHOP_ENGINE_VERSION = 'workshop-2';
+export const WORKSHOP_ENGINE_VERSION = 'workshop-3';
 export const POLYGON_SYMBOLS: VisualSymbol[] = ['▲','■','◆','⬟','⬢'];
 export const TANGRAM_POLYGONS = [ [[0,0],[4,0],[0,4]], [[4,0],[4,4],[0,4]], [[0,0],[4,0],[4,4]], [[0,0],[0,4],[4,4]] ];
 const fail = (s: string): never => { throw new Error('MECHANICS: ' + s); };
@@ -30,12 +34,12 @@ const tileOK = (t:Tile) => !!t && integer(t.size,3,4) && list(t.cells,t.size**2,
 const unique = (v: unknown[]) => new Set(v.map(x=>JSON.stringify(x))).size===v.length;
 const fields: Partial<Record<QuestionType,string[]>> = {
   odd_one_out:['symbols'], classification:['reference'], visual_attention:['symbols','reference'], visual_memory:['tiles'],
-  figure_completion:['tiles'], visual_analogy:['tiles'], shadow_matching:['tiles'], detail_detection:['tiles'],
+  figure_completion:['tiles'], visual_analogy:['tiles','figureTask','figures'], shadow_matching:['tiles'], detail_detection:['tiles'],
   spatial_relationship:['symbols','size','index'], logical_sequence:['labels','order','position'],
   shape_equation:['totals','equations','expression'], balance_scale:['totals','counts'], latin_square:['size','cells','index'],
   gear_rotation:['counts','direction'], paper_folding:['size','folds','holes'], punch_folding:['size','folds','holes'],
   venn_diagram:['groups'], cube_counting:['heights','size'], top_view:['heights','size'], multiview_perspective:['heights','size'],
-  dice_unfold:['net','face'], spatial_origami:['net','face'], cryptogram:['entries','code'],
+  dice_unfold:['net','face'], spatial_origami:['net','face'], cryptogram:['entries','code','cipherRows','numberCodes','querySymbols'],
   verbal_analogy:['pairs','target'], story_logic:['labels','edges','position'], weight_comparison:['labels','edges'],
   tangram_puzzle:['polygon'], maze_path:['cells','size','start','goals'], word_scramble_logic:['letters','order'],
 };
@@ -56,7 +60,7 @@ export function validateWorkshopBoard(b: WorkshopBoard): void {
     case 'visual_attention': if(b.reference?.length!==2) fail('İki şekillik hedef gerekli.'); break;
     case 'visual_memory': case 'shadow_matching': if(b.tiles?.length!==1) fail('Bir başlangıç deseni gerekli.'); break;
     case 'figure_completion': case 'detail_detection': if(b.tiles?.length!==2 || b.tiles[1].cells.some((v,i)=>v>b.tiles![0].cells[i])) fail('Parça tam desenin alt kümesi olmalı.'); break;
-    case 'visual_analogy': if(b.tiles?.length!==3) fail('A, B ve C desenleri gerekli.'); break;
+    case 'visual_analogy': if(b.figures){if(b.tiles||!b.figureTask)fail('Şekil verilenleri çakışıyor.');validateFigureTask(b.figureTask!,b.figures);break;}if(b.figureTask)fail('Şekiller eksik.');if(b.tiles?.length!==3) fail('A, B ve C desenleri gerekli.'); break;
     case 'spatial_relationship': if(!integer(b.size,3,4)||b.symbols?.length!==b.size**2||!unique(b.symbols)||!integer(b.index,b.size,b.size**2-1)) fail('Konum veya benzersiz sembol ızgarası geçersiz.'); break;
     case 'logical_sequence': if(!b.labels||!list(b.order,b.labels.length,b.labels.length,v=>integer(v,1,b.labels!.length))||!unique(b.order)||!integer(b.position,0,b.labels.length-1)) fail('Olay sırası geçersiz.'); break;
     case 'shape_equation':
@@ -71,7 +75,7 @@ export function validateWorkshopBoard(b: WorkshopBoard): void {
     case 'paper_folding': case 'punch_folding': if(!integer(b.size,3,4)||!list(b.folds,1,2,v=>v==='x'||v==='y')||!unique(b.folds)||!list(b.holes,1,2,p=>p.length===2&&p.every(v=>integer(v,0,b.size!-1)))||!unique(b.holes)||b.holes.some(([r,c])=>b.folds!.includes('x')&&c>=b.size!/2||b.folds!.includes('y')&&r>=b.size!/2)) fail('Katlama ve kesim konumu geçersiz.'); break;
     case 'venn_diagram': if(!list(b.groups,2,2,g=>list(g,2,6,text)&&unique(g))) fail('İki açık küme gerekli.'); break;
     case 'dice_unfold': case 'spatial_origami': if(!list(b.net,6,6,n=>integer(n.x,-3,3)&&integer(n.y,-3,3)&&text(n.label))||!unique(b.net.map(n=>n.label))||!unique(b.net.map(n=>[n.x,n.y]))||!b.net.some(n=>n.label===b.face)) fail('Küp açılımı geçersiz.'); break;
-    case 'cryptogram': if(!list(b.entries,3,6,e=>text(e.code)&&text(e.letter)&&e.letter.length===1)||!unique(b.entries.map(e=>e.code))||!unique(b.entries.map(e=>e.letter))||!list(b.code,3,6,c=>b.entries!.some(e=>e.code===c))) fail('Şifre anahtarı eksik veya belirsiz.'); break;
+    case 'cryptogram': if(b.cipherRows){if(b.entries||b.code||!b.numberCodes||!b.querySymbols||b.cipherRows.flat().some(s=>!isVisualSymbol(s)))fail('Şekil kodu eksik.');solveSymbolDeduction({cipherRows:b.cipherRows,numberCodes:b.numberCodes!,querySymbols:b.querySymbols!});break;}if(b.numberCodes||b.querySymbols)fail('Kod satırları eksik.');if(!list(b.entries,3,6,e=>text(e.code)&&text(e.letter)&&e.letter.length===1)||!unique(b.entries.map(e=>e.code))||!unique(b.entries.map(e=>e.letter))||!list(b.code,3,6,c=>b.entries!.some(e=>e.code===c))) fail('Şifre anahtarı eksik veya belirsiz.'); break;
     case 'verbal_analogy': if(!list(b.pairs,4,8,p=>p.length===2&&p.every(text))||!unique(b.pairs.map(p=>p[0]))||!unique(b.pairs.map(p=>p[1]))||!integer(b.target,1,b.pairs.length-1)) fail('Sözel ilişki tablosu geçersiz.'); break;
     case 'story_logic': if(!b.labels||!b.edges||!integer(b.position,0,b.labels.length-1)) fail('Sıralama sorusu eksik.'); break;
     case 'weight_comparison': if(!b.labels||!b.edges) fail('Ağırlık ipuçları eksik.'); break;
@@ -127,6 +131,7 @@ export function solveWorkshopBoard(b:WorkshopBoard, options:WorkshopValue[]=[]):
     case 'figure_completion': return {size:b.tiles![0].size,cells:b.tiles![0].cells.map((v,i)=>v-b.tiles![1].cells[i])};
     case 'shadow_matching': case 'visual_memory': return structuredClone(b.tiles![0]);
     case 'visual_analogy': {
+      if(b.figures)return {figure:figureResult(b.figureTask!,b.figures)};
       const rules=Array.from({length:8},(_,i)=>i).filter(v=>JSON.stringify(transformed(b.tiles![0],v))===JSON.stringify(b.tiles![1]));
       if(rules.length!==1)fail('Analoji örneği tek dönüşüm tanımlamıyor.');return transformed(b.tiles![2],rules[0]);
     }
@@ -147,7 +152,7 @@ export function solveWorkshopBoard(b:WorkshopBoard, options:WorkshopValue[]=[]):
     case 'top_view': return {size:b.size!,cells:b.heights!.map(h=>Number(h>0))};
     case 'multiview_perspective': {const size=b.size!,max=Array.from({length:size},(_,c)=>Math.max(...b.heights!.filter((_,i)=>i%size===c)));return {size,cells:Array.from({length:size**2},(_,i)=>Number(size-Math.floor(i/size)<=max[i%size]))};}
     case 'dice_unfold': case 'spatial_origami': {const normals=cubeFaceNormals(b.net!), normal=normals.get(b.face!)!;return n([...normals].find(([,v])=>v.every((x,i)=>x===-normal[i]))![0]);}
-    case 'cryptogram': return n(b.code!.map(c=>b.entries!.find(e=>e.code===c)!.letter).join(''));
+    case 'cryptogram': if(b.cipherRows)return n(solveSymbolDeduction({cipherRows:b.cipherRows,numberCodes:b.numberCodes!,querySymbols:b.querySymbols!}));return n(b.code!.map(c=>b.entries!.find(e=>e.code===c)!.letter).join(''));
     case 'verbal_analogy': return n(b.pairs![b.target!][1]);
     case 'story_logic': return n(orderedNames(b)[b.position!]);
     case 'weight_comparison': return n(orderedNames(b).at(-1)!);
@@ -159,3 +164,4 @@ export function solveWorkshopBoard(b:WorkshopBoard, options:WorkshopValue[]=[]):
   }
 }
 export function neighbors(i:number,size:number):number[]{return [i-size,i+size,...(i%size?[i-1]:[]),...(i%size<size-1?[i+1]:[])].filter(j=>j>=0&&j<size**2);}
+

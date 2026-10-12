@@ -1,3 +1,4 @@
+import { FocusedQuestionScreen } from './FocusedQuestionScreen';
 import { ArrowLeft, ArrowRight, Clock3, Gamepad2, Sparkles, Trophy, Tablet, CheckCircle2 } from 'lucide-react';
 import './VerifiedLearningView.css';
 import React, { useEffect, useRef, useState } from 'react';
@@ -76,7 +77,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
   useEffect(() => {
     const saved = session?.answers[String(index)];
     setResponse(saved ? saved.response as QuestionResponse : null); setHint(false); setReportStatus('');
-    heading.current?.focus();
+    heading.current?.focus({preventScroll:true});
   }, [session?.id, index]);
   useEffect(() => {
     if (!session || session.result) return;
@@ -136,6 +137,20 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
   };
   const answeredCount = session ? Object.keys(session.answers).length : 0;
   const isExam = mode === 'exam';
+  if(session&&!session.result&&q&&renderQuestion) {
+    const canVisit=(i:number)=>i>=0&&i<session.questions.length&&(mode==='exam'||!!session.answers[String(i)]||i===nextUnansweredIndex(session));
+    return <FocusedQuestionScreen question={renderQuestion} sessionKey={`${session.id}-${index}`} index={index} total={session.questions.length} remaining={remaining} busy={busy} submitted={submitted} response={response} error={error} onChange={changeResponse} onLeave={()=>void leave()} onPrevious={canVisit(index-1)?()=>void goTo(index-1):undefined} onNext={canVisit(index+1)?()=>void goTo(index+1):undefined} onRetry={response?.mode==='choice'&&response.optionId?()=>void submit():undefined} tools={<>
+      <p>Şıkkı seçince cevabın kaydedilir ve sonraki soru açılır. {isExam?'Çözümler deneme bitince gösterilir.':'Önceki soruların çözümlerini buradan inceleyebilirsin.'}</p>
+      <nav aria-label="Soru seçimi">{session.questions.map((item,i)=>{const saved=session.answers[String(i)];const label=saved?.correct===undefined?(saved?'Yanıtlandı':'Boş'):(saved.correct?'Doğru':'Yanlış');return <button key={item.id} disabled={busy||!canVisit(i)} aria-current={i===index?'step':undefined} onClick={()=>void goTo(i)} aria-label={`${i+1}. soru, ${label}`}>{i+1} · {label}</button>;})}</nav>
+      {response&&response.mode!=='choice'&&<details><summary>Önceki yanıtın</summary><AnswerWorkspace question={renderQuestion} response={response} onChange={changeResponse} submitted/></details>}
+      {revealed&&<p role="status">{answer.correct?'Doğru cevap!':'Bu soruyu birlikte inceleyelim.'}</p>}
+      {solution&&<VisualExplanationOverlay explanation={solution.explanation} correctOptionId={solution.correctOptionId}/>}
+      {!submitted&&!isExam&&<details><summary>İpucu</summary><p>Önce değişen ve aynı kalan özellikleri karşılaştır. Kuralın bütün adımlarda çalıştığını kontrol et.</p></details>}
+      <div className="zp-tools-actions">{!reviewMistakeId&&<button disabled={busy} onClick={()=>void chooseNewDifficulty()}>Zorluğu değiştir / yeni çalışma</button>}<button disabled={busy} onClick={()=>void finish()}>{isExam?'Denemeyi bitir':'Çalışmayı bitir'}</button></div>
+      <details><summary>Soruyla ilgili sorun bildir</summary>{([['answer','Cevap'],['unclear','Anlatım'],['visual','Görsel'],['level','Seviye']] as const).map(([reason,label])=><button key={reason} disabled={reportBusy} onClick={async()=>{setReportBusy(true);try{await learningService.report(session.id,index,reason);setReportStatus('Bildirimin alındı. Teşekkür ederiz.');}catch(err){setReportStatus(err instanceof Error?err.message:'Bildirim gönderilemedi.');}finally{setReportBusy(false);}}}>{label}</button>)}<p role="status">{reportStatus}</p></details>
+      <AnswerHistory items={history}/>
+    </>}/>;
+  }
   return <main className={`zp-learning ${isExam ? 'zp-exam' : 'zp-game'} mx-auto w-full max-w-6xl space-y-5 px-3 py-6 sm:px-6`}>
     <header className="zp-page-header flex flex-wrap items-center justify-between gap-3">
       <div><p className="zp-eyebrow">ZekaPark · {isExam ? 'Sınav merkezi' : 'Oyun alanı'}</p><h1 className="text-2xl font-extrabold">{session?.title || title}</h1></div>
@@ -197,3 +212,4 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
     </div>
   </main>;
 }
+

@@ -8,6 +8,7 @@ export function MemoryStudy({question,review=false,children}:{question:Pick<Base
   const [hidden,setHidden]=useState(false);
   const memory=question.type==='visual_memory',locked=memory&&!hidden&&!review;
   return <MemoryContext.Provider value={{locked,hidden:memory&&hidden&&!review}}>
-    <div className="space-y-4">{children}{locked&&<button type="button" onClick={()=>setHidden(true)} className="min-h-12 rounded-xl bg-indigo-700 px-5 py-3 font-bold text-white">Deseni gizle ve cevapla</button>}</div>
+    <div className="zp-memory-study space-y-4" data-locked={locked}>{children}{locked&&<button type="button" onClick={()=>setHidden(true)} className="min-h-12 rounded-xl bg-indigo-700 px-5 py-3 font-bold text-white">Deseni gizle ve cevapla</button>}</div>
   </MemoryContext.Provider>;
 }
+

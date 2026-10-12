@@ -1,3 +1,4 @@
+import { validFigure } from './figure-analogy';
 import type { WorkshopBoard, WorkshopValue } from './workshop-mechanics';
 import { POLYGON_SYMBOLS } from './workshop-mechanics';
 
@@ -49,13 +50,32 @@ export function independentlyMatchesWorkshop(b:WorkshopBoard, value:WorkshopValu
     case 'cube_counting': {let count=0;for(let level=1;level<=3;level++)for(const height of b.heights!)if(height>=level)count++;return text===count;}
     case 'top_view': return tileMatches(i=>b.heights![i]===0?0:1);
     case 'multiview_perspective': return tileMatches(i=>{const level=b.size!-Math.floor(i/b.size!),col=i%b.size!;for(let row=0;row<b.size!;row++)if(b.heights![row*b.size!+col]>=level)return 1;return 0;});
-    case 'cryptogram': {if(typeof text!=='string'||text.length!==b.code!.length)return false;return [...text].every((letter,i)=>b.entries!.some(e=>e.letter===letter&&e.code===b.code![i]));}
+    case 'cryptogram': {if(b.cipherRows){
+      if(typeof text!=='string')return false;
+      const symbols=[...new Set(b.cipherRows.flat())],digits=[...new Set(b.numberCodes!.join(''))],keys:Map<string,string>[]=[];
+      // Enumerate assignments directly; compare codes by decoding back to shapes.
+      for(const a of digits)for(const c of digits)for(const d of digits){if(new Set([a,c,d]).size!==3)continue;
+        const key=new Map([[a,symbols[0]],[c,symbols[1]],[d,symbols[2]]]);
+        const decoded=b.numberCodes!.map(code=>[...code].map(n=>key.get(n)).join('')).sort();
+        if(decoded.join('|')===b.cipherRows.map(row=>row.join('')).sort().join('|'))keys.push(key);
+      }
+      return keys.length===1&&text.length===b.querySymbols!.length&&[...text].every((digit,i)=>keys[0].get(digit)===b.querySymbols![i]);
+    }if(typeof text!=='string'||text.length!==b.code!.length)return false;return [...text].every((letter,i)=>b.entries!.some(e=>e.letter===letter&&e.code===b.code![i]));}
     case 'word_scramble_logic': {if(typeof text!=='string'||text.length!==b.letters!.length)return false;for(let source=0;source<b.letters!.length;source++)if(text[b.order!.indexOf(source+1)]!==b.letters![source])return false;return true;}
     case 'verbal_analogy': return typeof text==='string'&&b.pairs!.some(([word,partner])=>word===b.pairs![b.target!][0]&&partner===text);
     case 'story_logic': case 'weight_comparison': {const solutions=permutations(b.labels!).filter(order=>b.edges!.every(([a,c])=>order.indexOf(a)<order.indexOf(c)));return solutions.length===1&&text===solutions[0][b.kind==='weight_comparison'?b.labels!.length-1:b.position!];}
     case 'tangram_puzzle': {if(!('polygon' in value))return false;const given=b.polygon!,candidate=value.polygon;if(candidate.length!==3)return false;const area=(p:number[][])=>Math.abs(p.reduce((s,v,i)=>s+v[0]*p[(i+1)%p.length][1]-p[(i+1)%p.length][0]*v[1],0))/2;if(area(given)!==8||area(candidate)!==8)return false;const center=(p:number[][])=>p.reduce((v,p)=>[v[0]+p[0]/3,v[1]+p[1]/3],[0,0]);const a=center(given),c=center(candidate);return Math.abs(a[0]+c[0]-4)<1e-8&&Math.abs(a[1]+c[1]-4)<1e-8;}
     case 'maze_path': {if(typeof text!=='string'||!/^[A-D]$/.test(text))return false;const destination=b.goals!['ABCD'.indexOf(text)],visited=new Set<number>();const explore=(i:number):boolean=>{if(i===destination)return true;visited.add(i);const r=Math.floor(i/b.size!),c=i%b.size!;for(const [dr,dc] of [[-1,0],[1,0],[0,-1],[0,1]]){const rr=r+dr,cc=c+dc,j=rr*b.size!+cc;if(rr>=0&&cc>=0&&rr<b.size!&&cc<b.size!&&!b.cells![j]&&!visited.has(j)&&explore(j))return true;}return false;};return explore(b.start!);}
     case 'visual_analogy': {
+      if(b.figures){
+        if(!('figure' in value)||!validFigure(value.figure))return false;
+        const f=value.figure,fs=b.figures,source=fs[b.figureTask==='line_union'?3:2];
+        if(f.shape!==source.shape||f.inner!==source.inner)return false;
+        if(b.figureTask==='fill_exchange')return f.lines===source.lines&&f.half===source.half&&f.outerFill===source.innerFill&&f.innerFill===source.outerFill;
+        if(b.figureTask==='half_completion')return !f.half&&f.lines===0&&f.outerFill==='empty'&&f.innerFill==='empty';
+        if(f.half||f.outerFill!=='empty'||f.innerFill!=='empty')return false;
+        return [1,2,4,8].every(bit=>Boolean(f.lines&bit)===(Boolean(fs[3].lines&bit)||Boolean(fs[4].lines&bit)));
+      }
       if(!cells||!('size' in value)||value.size!==b.tiles![0].size)return false;
       const size=value.size, permutations:number[][]=[];
       // D4 maps are expressed as coordinate equations, independently of forward tile rotation.
@@ -77,3 +97,4 @@ export function independentlyFoldNet(net:NonNullable<WorkshopBoard['net']>):Map<
   visit(net[0]);const normals=new Map([...frames].map(([k,f])=>[k,cross(f.u,f.v)]));
   if(normals.size!==6||new Set([...normals.values()].map(v=>v.join(','))).size!==6)throw Error('Bağımsız katlama altı yüz vermedi.');return normals;
 }
+
