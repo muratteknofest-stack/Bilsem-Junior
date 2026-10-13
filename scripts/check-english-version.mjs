@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import {createServer} from 'vite';
 import {chromium} from 'playwright';
+process.env.VITE_SUPABASE_URL ||= 'https://thinkharbor-test.invalid';
+process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||= 'test-publishable-placeholder';
 const server=await createServer({server:{host:'127.0.0.1',port:5184,strictPort:true}});await server.listen();let browser;
 try{
  browser=await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE,args:['--no-sandbox','--disable-dev-shm-usage']}: {})});

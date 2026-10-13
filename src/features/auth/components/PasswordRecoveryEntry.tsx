@@ -1,0 +1,4 @@
+import React,{lazy,Suspense,useState} from 'react';
+import {PasswordResetPage} from './PasswordResetPage';
+const EnglishRecovery=lazy(()=>import('../../international/EnglishRecovery').then(m=>({default:m.EnglishRecovery})));
+export function PasswordRecoveryEntry(){const [english,setEnglish]=useState(()=>{try{return new URLSearchParams(location.search).get('lang')==='en'||localStorage.getItem('zekapark-preferred-language')==='en';}catch{return false;}});return <><button type="button" style={{position:'fixed',top:12,right:12,zIndex:100,padding:12,background:'white',border:'1px solid #aaa',borderRadius:10}} onClick={()=>setEnglish(v=>!v)}>{english?'Türkçe':'English'}</button>{english?<Suspense fallback={<p role="status">Opening recovery…</p>}><EnglishRecovery/></Suspense>:<PasswordResetPage/>}</>;}

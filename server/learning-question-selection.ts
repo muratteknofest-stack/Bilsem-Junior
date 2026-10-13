@@ -52,10 +52,12 @@ export function balancedCategoryPlan(count: number, category: CognitiveCategory 
 export function selectLearningQuestions(options: {
   count: number; category: CognitiveCategory | 'mixed'; candidates: BaseQuestion[];
   exposure: ReadonlyMap<string, number>; canUse: (question: BaseQuestion) => boolean;
-  generate: (category: CognitiveCategory) => BaseQuestion; randomIndex?: (max: number) => number;
+  generate: (category: CognitiveCategory) => BaseQuestion; randomIndex?: (max: number) => number; categories?: CognitiveCategory[];
 }) {
   const randomIndex = options.randomIndex || randomInt;
-  const plan = balancedCategoryPlan(options.count, options.category, randomIndex);
+  const configured = options.category === 'mixed' && options.categories ? shuffle([...new Set(options.categories)], randomIndex) : undefined;
+  if (configured && !configured.length) throw new LearningError('No verified activities are available.');
+  const plan = configured ? Array.from({length:options.count},(_,i)=>configured[i%configured.length]) : balancedCategoryPlan(options.count, options.category, randomIndex);
   const groups = new Map<CognitiveCategory, Array<{ question: BaseQuestion; key: string; lastAssigned: number }>>();
   for (const question of shuffle(options.candidates, randomIndex)) {
     try {

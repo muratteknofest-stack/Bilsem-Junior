@@ -35,3 +35,6 @@ jobs:
         run: npm run test:shopier-layout
       - name: Verify English practice, device progress and mobile layouts
         run: npm run test:english-browser
+
+      - name: Verify English family accounts and saved learning flows
+        run: npm run test:english-accounts

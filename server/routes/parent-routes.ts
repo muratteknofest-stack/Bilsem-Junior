@@ -109,6 +109,17 @@ parentRoutes.post('/parent/reset-student-password', requireSupabaseAuth, account
   }),
 );
 
+parentRoutes.get('/parent/learning-history/:studentId', requireSupabaseAuth, requireVerifiedEmail, requireProfileRole('parent'), async (req: AuthenticatedRequest, res) => {
+  const studentId = String(req.params.studentId), parentId = req.authUser!.uid;
+  if (!z.uuid().safeParse(studentId).success) return res.status(404).json({error:'Student not found.'});
+  const client = getServiceClient();
+  const [parent, child] = await Promise.all([client.from('profiles').select('linked_student_ids').eq('id',parentId).single(), client.from('profiles').select('linked_parent_id,role').eq('id',studentId).maybeSingle()]);
+  if (parent.error || child.error) throw parent.error || child.error;
+  if (!parent.data?.linked_student_ids?.includes(studentId) || child.data?.linked_parent_id !== parentId || child.data?.role !== 'student') return res.status(404).json({error:'Student not found.'});
+  const {data,error} = await client.from('learning_sessions').select('id,mode,created_at,expires_at,finished_at,result,selection').eq('student_id',studentId).order('created_at',{ascending:false}).limit(50);
+  if (error) throw error;
+  return res.json({sessions:data});
+});
 const reportSchema = z.object({
   studentId: z.string().min(1).max(128),
 }).strict();
@@ -218,5 +229,6 @@ parentRoutes.post('/send-weekly-report', requireSupabaseAuth, reportLimiter, req
 });
 
 export default parentRoutes;
+
 
 

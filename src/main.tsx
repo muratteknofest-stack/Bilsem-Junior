@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
 import { AuthProvider } from './contexts/AuthContext';
-import { PasswordResetPage } from './features/auth/components/PasswordResetPage';
+import { PasswordRecoveryEntry } from './features/auth/components/PasswordRecoveryEntry';
 import { isRecoveryRedirect } from './lib/supabase';
 import './components/wordwall.css';
 import { isAdminLocation } from './lib/admin-access';
@@ -30,7 +30,7 @@ if (typeof window !== 'undefined') {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {window.location.pathname === '/reset-password' || isRecoveryRedirect ? (
-      <PasswordResetPage />
+      <PasswordRecoveryEntry />
     ) : window.location.pathname === '/wordwall' ? (
       <Suspense fallback={<p role="status" className="p-8 text-center">Testler yükleniyor…</p>}><WordwallPage /></Suspense>
     ) : (

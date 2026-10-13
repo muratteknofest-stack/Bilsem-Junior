@@ -1,3 +1,5 @@
+import { englishBankForGrade, ENGLISH_BANK_VERSION } from '../english-learning-bank';
+import { ENGLISH_AREAS } from '../../src/features/international/english-content';
 import { requireLearningAccess } from '../shopier-access';
 import { ShopierError } from '../shopier-model';
 import { sharedRateLimit } from '../shared-rate-limit';
@@ -70,7 +72,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const parsed = startSchema.safeParse(req.body);
     if (!parsed.success) throw new LearningError('Çalışma seçenekleri geçersiz.', 400);
     await requireLearningAccess(req.authUser!.uid);
-    const { mode, exam } = parsed.data, student = req.authUser!.uid, client = getServiceClient();
+    const { mode, exam, locale } = parsed.data, student = req.authUser!.uid, client = getServiceClient();
     const profile = await client.from('profiles').select('grade').eq('id', student).single();
     if (profile.error) throw profile.error;
     if (!isSchoolGrade(profile.data.grade)) throw new LearningError('Çalışma için 1–4. sınıf bilgisi gerekli.');
@@ -79,7 +81,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const difficulty = parsed.data.difficulty as LearningDifficulty;
     if (difficulty !== 'mixed' && difficulty > EDUCATION_PROFILES[profile.data.grade].maxDifficulty) throw new LearningError('Bu zorluk seçtiğin sınıf için uygun değil.', 400);
     let category = mode === 'exam' ? 'mixed' : parsed.data.category;
-    if (mode === 'adaptive') {
+    if (mode === 'adaptive' && locale !== 'en') {
       const progress = await client.from('user_private_state').select('values').eq('user_id', student).maybeSingle();
       if (progress.error) throw progress.error;
       let masteries: SkillMastery[] = [];
@@ -89,19 +91,22 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const configuration = await readPlatformSettings();
     const settings = configuredExams(configuration.settings).find(e => e.id === exam)!;
     const count = mode === 'exam' ? settings.count : mode === 'adaptive' ? 1 : 5;
-    const bank = await loadPublishedLearningBank({ grade: profile.data.grade, difficulty, category });
-    const selection: LearningSelection = { grade: profile.data.grade, difficulty, category, exam: mode === 'exam' ? exam : '', count, bankVersion: bank.bankVersion };
+    const bank = locale === 'en' ? {questions:englishBankForGrade(grade),bankVersion:ENGLISH_BANK_VERSION} : await loadPublishedLearningBank({ grade: profile.data.grade, difficulty, category });
+    const selection: LearningSelection = { grade: profile.data.grade, difficulty, category, exam: mode === 'exam' ? exam : '', count, bankVersion: bank.bankVersion, ...(locale === 'en' ? { locale } : {}) };
     const active = await client.from('learning_sessions').select('*').eq('student_id', student).eq('mode', mode).is('finished_at', null).maybeSingle();
     if (active.error) throw active.error;
     if (active.data && Date.parse(active.data.expires_at) > Date.now() && sameLearningSelection(active.data.selection, selection)) return res.json(learningView(active.data as LearningSession));
     if (active.data) await commit(student, active.data.id, finishLearningSession);
-    const candidates = bank.questions.filter(q => fitsLearningSelection(q, selection));
+    const englishReady = (q: BaseQuestion) => (q.visualConfig as Record<string,unknown>)?.displayMode === 'colorful_board' && ENGLISH_AREAS.some(a => a.id === q.type);
+    const candidates = bank.questions.filter(q => fitsLearningSelection(q, selection) && (locale !== 'en' || englishReady(q)));
+    if (locale === 'en' && candidates.length < count) throw new LearningError('This activity is not available in English at this level. Try mixed practice.', 422);
     const exposure = await loadRecentQuestionExposure(student);
     const questions = selectLearningQuestions({ count, category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number],
-      candidates, exposure, canUse: q => fitsLearningSelection(q, selection) && isQuestionReadyForStudents(q),
-      generate: nextCategory => generateQuestion({ profile: 'professional', targetGrade: grade,
+      ...(locale === 'en' ? {categories:[...new Set(candidates.map(q=>q.category))]} : {}),
+      candidates, exposure, canUse: q => fitsLearningSelection(q, selection) && isQuestionReadyForStudents(q) && (locale !== 'en' || englishReady(q)),
+      generate: nextCategory => { if (locale === 'en') throw new LearningError('English practice is temporarily unavailable. Please try again.', 503); return generateQuestion({ profile: 'professional', targetGrade: grade,
         difficulty: difficulty === 'mixed' ? randomInt(1, EDUCATION_PROFILES[grade].maxDifficulty + 1) as import('../../src/types').DifficultyLevel : difficulty,
-        category: nextCategory, seed: randomInt(1, 2147483647) }),
+        category: nextCategory, seed: randomInt(1, 2147483647) }); },
     });
     const latestProfile = await client.from('profiles').select('grade').eq('id', student).single();
     if (latestProfile.error) throw latestProfile.error;
@@ -131,7 +136,12 @@ routes.get('/learning/rewards', async (req: AuthenticatedRequest, res) => {
     return res.json({ badges, reviewToday: facts.data.reviewToday });
   } catch (error) { return handleError(error, res); }
 });
-routes.get('/learning/:id', async (req: AuthenticatedRequest, res) => {
+routes.get('/learning/history', async (req: AuthenticatedRequest, res) => {
+  const { data, error } = await getServiceClient().from('learning_sessions').select('id,mode,created_at,expires_at,finished_at,result,selection').eq('student_id', req.authUser!.uid).order('created_at', {ascending:false}).limit(50);
+  if (error) throw error;
+  return res.json({sessions:data});
+});
+routes.get('/learning/:id' , async (req: AuthenticatedRequest, res) => {
   try { return res.json(learningView(await readSession(req.authUser!.uid, String(req.params.id)))); } catch (error) { return handleError(error, res); }
 });
 routes.post('/learning/review', async (req: AuthenticatedRequest, res) => {
