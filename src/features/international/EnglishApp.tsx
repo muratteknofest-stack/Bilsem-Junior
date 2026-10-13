@@ -1,4 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
+import {HarborMark} from './EnglishArtwork';
 import {EnglishInstall} from './EnglishInstall';
 import {EnglishAccount} from './EnglishAccount';
 import {EnglishHome} from './EnglishHome';
@@ -7,6 +8,7 @@ import {ENGLISH_AREAS,ENGLISH_LEVELS,ENGLISH_INFO,ENGLISH_BRAND,type EnglishArea
 import {selectEnglishPuzzles,type EnglishPuzzle} from './english-puzzles';
 import {ENGLISH_PROGRESS_KEY,parseEnglishProgress,recordEnglishSession,englishProgressStats,type EnglishProgress,type EnglishSummary} from './english-progress';
 import './english.css';
+import './english-theme.css';
 type Session={id:string;mode:'practice'|'challenge';level:EnglishLevel;questions:EnglishPuzzle[];answers:Record<string,string>;startedAt:number;deadline:number|null};
 function route(){return typeof window==='undefined'?'home':window.location.hash.slice(1).split('?')[0]||'home';}
 function loadProgress(){try{return parseEnglishProgress(localStorage.getItem(ENGLISH_PROGRESS_KEY));}catch{return parseEnglishProgress(null);}}
@@ -45,7 +47,7 @@ export function EnglishApp(){
   const home=()=>{if(active)setLeave(true);else location.hash='home';};
   return <div className={`en-app ${active?'en-active':''}`}>
     <a className="en-skip" href="#en-main" onClick={e=>{e.preventDefault();document.getElementById('en-main')?.focus();}}>Skip to content</a>
-    <header className="en-header" inert={leave||clear}><button className="en-brand" type="button" onClick={home} aria-label="ThinkHarbor home"><span className="en-brand-symbol" aria-hidden="true">✦</span>ThinkHarbor<span className="en-brand-caption">THINK · PLAY · DISCOVER</span></button>{active?<button type="button" className="en-secondary en-small-button" onClick={()=>setLeave(true)}>Leave practice</button>:<nav aria-label="Main navigation"><a href="#account">My account</a><a href="#practice">Play</a><a href="#account">Families</a><a href="#help">Help</a><a href="/" lang="tr" hrefLang="tr" aria-label="Switch to Turkish">Türkçe</a></nav>}</header>
+    <header className="en-header" inert={leave||clear}><button className="en-brand" type="button" onClick={home} aria-label="ThinkHarbor home"><span className="en-brand-symbol" aria-hidden="true"><HarborMark/></span>ThinkHarbor<span className="en-brand-caption">THINK · PLAY · DISCOVER</span></button>{active?<button type="button" className="en-secondary en-small-button" onClick={()=>setLeave(true)}>Leave practice</button>:<nav aria-label="Main navigation"><a className="en-nav-account" aria-current={page==='account'?'page':undefined} href="#account">My account <span aria-hidden="true">↗</span></a><a aria-current={page==='practice'?'page':undefined} href="#practice">Play</a><a href="#account">Families</a><a aria-current={page==='help'?'page':undefined} href="#help">Help</a><a href="/" lang="tr" hrefLang="tr" aria-label="Switch to Turkish">Türkçe</a></nav>}</header>
     <main inert={leave||clear} id="en-main" tabIndex={-1} className={active?'en-play-main':'en-container'}>
       {page==='account'&&<EnglishAccount/>}
       {page==='home'&&<><EnglishHome/><EnglishInstall/></>}
