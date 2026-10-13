@@ -7,6 +7,9 @@ type ParentSession = { parentId: string; access_token: string; refresh_token: st
 export class ParentSignInError extends Error {
   constructor() { super('Veli şifresi doğrulanamadı. Şifrenizi kontrol edin veya veli giriş ekranını kullanın.'); }
 }
+export class ParentEmailUnconfirmedError extends Error {
+  constructor() { super('Veli e-posta adresi henüz doğrulanmamış. Lütfen gelen kutunuzdaki onay bağlantısına tıklayın.'); }
+}
 interface Dependencies {
   profile: (id: string) => Promise<FamilyProfile | undefined>;
   signIn: (parentId: string, password: string) => Promise<ParentSession>;
@@ -33,6 +36,7 @@ export function createParentSessionHandler(deps: Dependencies) {
       if (session.parentId !== parent.id || !session.verified || !session.access_token || !session.refresh_token) throw new Error('Invalid parent session');
       return res.json({ parentId: session.parentId, access_token: session.access_token, refresh_token: session.refresh_token });
     } catch (error) {
+      if (error instanceof ParentEmailUnconfirmedError) return res.status(403).json({ error: error.message });
       if (error instanceof ParentSignInError) return res.status(401).json({ error: error.message });
       return res.status(503).json({ error: 'Veli oturumu açılamadı. Biraz sonra yeniden deneyin.' });
     }

@@ -15,15 +15,15 @@ import {
   sanitizeHeaderValue,
   type AuthenticatedRequest,
 } from '../security';
-import { accountSecurityLimiter, reportLimiter } from '../rate-limiters';
+import { accountSecurityLimiter, panelSwitchLimiter, reportLimiter } from '../rate-limiters';
 import { createStudentSessionHandler } from '../student-session';
-import { createParentSessionHandler, ParentSignInError } from '../parent-session';
+import { createParentSessionHandler, ParentSignInError, ParentEmailUnconfirmedError } from '../parent-session';
 import { createStudentPasswordHandler } from '../student-password';
 
 const parentRoutes = Router();
 
 parentRoutes.post('/parent/return-session', requireSupabaseAuth, requireProfileRole('student'),
-  accountSecurityLimiter, sharedRateLimit('parent-panel-return', 6, 3600),
+  panelSwitchLimiter, sharedRateLimit('parent-panel-return', 60, 3600),
   createParentSessionHandler({
     async profile(id) { return (await getAdminDb().doc(`users/${id}`).get()).data() as any; },
     async audit(studentId, parentId) {
@@ -32,10 +32,12 @@ parentRoutes.post('/parent/return-session', requireSupabaseAuth, requireProfileR
     async signIn(parentId, password) {
       const client = getServiceClient();
       const existing = await client.auth.admin.getUserById(parentId);
-      if (existing.error || !existing.data.user?.email || !existing.data.user.email_confirmed_at) throw new ParentSignInError();
+      if (existing.error || !existing.data.user?.email) throw new ParentSignInError();
+      if (!existing.data.user.email_confirmed_at) throw new ParentEmailUnconfirmedError();
       const result = await client.auth.signInWithPassword({ email: existing.data.user.email, password });
       if (result.error) {
-        if (['invalid_credentials', 'email_not_confirmed'].includes(result.error.code || '')) throw new ParentSignInError();
+        if (result.error.code === 'email_not_confirmed') throw new ParentEmailUnconfirmedError();
+        if (result.error.code === 'invalid_credentials') throw new ParentSignInError();
         throw new Error('Parent authentication unavailable');
       }
       if (!result.data.session || result.data.user?.id !== parentId || !result.data.user.email_confirmed_at) {
@@ -48,7 +50,7 @@ parentRoutes.post('/parent/return-session', requireSupabaseAuth, requireProfileR
 );
 
 parentRoutes.post('/parent/student-session', requireSupabaseAuth, requireVerifiedEmail,
-  requireProfileRole('parent'), accountSecurityLimiter, sharedRateLimit('student-panel-switch', 20, 3600),
+  requireProfileRole('parent'), panelSwitchLimiter, sharedRateLimit('student-panel-switch', 60, 3600),
   createStudentSessionHandler({
     async profile(id) {
       const data = (await getAdminDb().doc(`users/${id}`).get()).data();
@@ -62,6 +64,9 @@ parentRoutes.post('/parent/student-session', requireSupabaseAuth, requireVerifie
       const client = getServiceClient();
       const existing = await client.auth.admin.getUserById(studentId);
       if (existing.error || !existing.data.user?.email) throw new Error('Student account unavailable');
+      if (!existing.data.user.email_confirmed_at) {
+        await client.auth.admin.updateUserById(studentId, { email_confirm: true });
+      }
       const link = await client.auth.admin.generateLink({ type: 'magiclink', email: existing.data.user.email });
       if (link.error || link.data.user?.id !== studentId || !link.data.properties?.hashed_token) throw new Error('Student link unavailable');
       const verified = await client.auth.verifyOtp({ token_hash: link.data.properties.hashed_token, type: 'email' });

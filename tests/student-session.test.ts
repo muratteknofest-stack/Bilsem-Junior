@@ -86,3 +86,63 @@ test('Supabase session failures are reported; a wrong identity is immediately si
   const networkFailure = { async setSession() { throw Error('Network request failed'); }, async signOut() {} };
   await assert.rejects(activateStudentSession(Response.json(childSession), studentId, networkFailure), /Bağlantınızı kontrol/);
 });
+
+import { createParentSessionHandler, ParentSignInError, ParentEmailUnconfirmedError } from '../server/parent-session';
+import { activateParentSession } from '../src/lib/student-session';
+
+test('parent return session differentiates unconfirmed email from wrong password', async () => {
+  const handler = createParentSessionHandler({
+    async profile(id) {
+      if (id === studentId) return { id: studentId, role: 'student', linkedParentId: parentId };
+      if (id === parentId) return { id: parentId, role: 'parent', linkedStudentIds: [studentId] };
+      return undefined;
+    },
+    async audit() {},
+    async signIn(_pid, password) {
+      if (password === 'unconfirmed') throw new ParentEmailUnconfirmedError();
+      if (password !== 'correct-pass') throw new ParentSignInError();
+      return { parentId, access_token: 'parent-access', refresh_token: 'parent-refresh', verified: true };
+    },
+  });
+
+  function mockRes() {
+    let status = 200;
+    let payload: any;
+    const res = {
+      setHeader() { return this; },
+      status(v: number) { status = v; return this; },
+      json(v: unknown) { payload = v; return this; },
+    } as unknown as ExpressResponse;
+    return { res, getStatus: () => status, getPayload: () => payload };
+  }
+
+  // Test wrong password -> 401
+  const reqWrong = { authUser: { uid: studentId }, body: { password: 'wrong' } } as AuthenticatedRequest;
+  const res1 = mockRes();
+  await handler(reqWrong, res1.res);
+  assert.equal(res1.getStatus(), 401);
+  assert.match(res1.getPayload().error, /Veli şifresi doğrulanamadı/);
+
+  // Test unconfirmed email -> 403
+  const reqUnconfirmed = { authUser: { uid: studentId }, body: { password: 'unconfirmed' } } as AuthenticatedRequest;
+  const res2 = mockRes();
+  await handler(reqUnconfirmed, res2.res);
+  assert.equal(res2.getStatus(), 403);
+  assert.match(res2.getPayload().error, /doğrulanmamış/);
+
+  // Test correct password -> 200
+  const reqCorrect = { authUser: { uid: studentId }, body: { password: 'correct-pass' } } as AuthenticatedRequest;
+  const res3 = mockRes();
+  await handler(reqCorrect, res3.res);
+  assert.equal(res3.getStatus(), 200);
+  assert.equal(res3.getPayload().parentId, parentId);
+  assert.equal(res3.getPayload().access_token, 'parent-access');
+});
+
+test('complete return session activates parent credentials after verification', async () => {
+  const auth = fakeAuth(parentId);
+  const response = Response.json({ parentId, access_token: 'parent-access', refresh_token: 'parent-refresh' });
+  await activateParentSession(response, parentId, auth);
+  assert.deepEqual(auth.calls, [{ access_token: 'parent-access', refresh_token: 'parent-refresh' }]);
+});
+

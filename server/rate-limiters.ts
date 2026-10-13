@@ -33,6 +33,15 @@ export const accountSecurityLimiter = rateLimit({
   message: { error: 'Saatlik hesap güvenliği işlem sınırına ulaşıldı.' },
 });
 
+export const panelSwitchLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 60,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  keyGenerator: authenticatedRateLimitKey,
+  message: { error: 'Geçiş istek sınırına ulaşıldı. Lütfen bir süre sonra tekrar deneyin.' },
+});
+
 export const adminAiLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   limit: 60,

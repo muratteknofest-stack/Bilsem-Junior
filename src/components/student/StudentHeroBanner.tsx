@@ -9,6 +9,7 @@ import {
   Check,
   Flame,
   Shield,
+  ShieldCheck,
   Trophy,
   ChevronRight,
   Star,
@@ -160,6 +161,19 @@ export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({
                   ) : (
                     <Copy className="w-3 h-3 text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-200" />
                   )}
+                </motion.button>
+              )}
+              {user.linkedParentId && (
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => onNavigate('parent')}
+                  title="Veli alanına dönmek için veli şifresini doğrula"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200/80 bg-indigo-50/80 hover:bg-indigo-100 px-3 py-1 text-xs font-bold text-indigo-700 transition-colors dark:border-indigo-800/60 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/50 cursor-pointer shadow-2xs"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Veli Alanına Dön</span>
                 </motion.button>
               )}
               {user.id.startsWith('demo_') && (
