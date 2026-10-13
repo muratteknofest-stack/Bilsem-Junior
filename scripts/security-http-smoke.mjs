@@ -17,7 +17,7 @@ try {
     try { const response = await fetch(base, { signal: AbortSignal.timeout(1000) }); await response.arrayBuffer(); ready = true; break; } catch { await pause(100); }
   }
   assert.ok(ready, 'Production server did not start');
-  const checks = [['/', 200], ['/unknown-release-page', 404], ['/reset-password', 200], ['/admin', 200], ['/admin/giris', 200], ['/admin/giris/', 200], ['/blog', 200], ['/bilgi/gizlilik-ve-veriler', 200], ['/bilgi/unknown', 404], ['/blog/unknown', 404], ['/server.cjs', 404], ['/server.cjs.map', 404], ['/build/server.cjs', 404], ['/bilgi/%2e%2e/.env', 404], ['/api/account/export', 401], ['/api/admin/support-requests', 401]];
+  const checks = [['/', 200], ['/unknown-release-page', 404], ['/reset-password', 200], ['/admin', 200], ['/admin/giris', 200], ['/admin/giris/', 200], ['/blog', 200], ['/bilgi/gizlilik-ve-veriler', 200], ['/bilgi/unknown', 404], ['/blog/unknown', 404], ['/server.cjs', 404], ['/server.cjs.map', 404], ['/build/server.cjs', 404], ['/bilgi/%2e%2e/.env', 404], ['/api/account/export', 401], ['/api/admin/support-requests', 401], ['/api/parent/shopier/access?studentId=22222222-2222-4222-8222-222222222222', 401]];
   for (const [path, expected] of checks) {
     const response = await fetch(base + path, { signal: AbortSignal.timeout(3000) });
     assert.equal(response.status, expected, path);
@@ -51,7 +51,7 @@ try {
   assert.equal(studentSwitch.status, 401, 'Unauthenticated student-session switch');
   assert.equal(studentSwitch.headers.get('cache-control'), 'no-store');
   await studentSwitch.arrayBuffer();
-  for (const path of ['/api/parent/return-session', '/api/parent/reset-student-password']) {
+  for (const path of ['/api/parent/return-session', '/api/parent/reset-student-password', '/api/parent/shopier/claim']) {
     const response = await fetch(base + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}', signal: AbortSignal.timeout(3000) });
     assert.equal(response.status, 401, `Unauthenticated ${path}`);
     assert.equal(response.headers.get('cache-control'), 'no-store', path);
@@ -71,7 +71,8 @@ try {
     assert.equal(response.headers.get('cross-origin-resource-policy'), 'same-origin');
     await response.arrayBuffer();
   }
-  console.log(`Production HTTP security: ${checks.length + 7} checks passed.`);
+  console.log(`Production HTTP security: ${checks.length + 8} checks passed.`);
 } finally {
   if (child.exitCode === null) { child.kill('SIGTERM'); await new Promise(resolve => child.once('exit', resolve)); }
 }
+

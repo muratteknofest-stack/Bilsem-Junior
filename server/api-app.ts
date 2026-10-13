@@ -14,6 +14,7 @@ import { getServiceClient } from './supabase-admin';
 import { browserDirectives, securityHeaders } from './browser-security';
 import { requestSecurity } from './request-security';
 import platformRoutes from './routes/platform-routes';
+import shopierRoutes from './routes/shopier-routes';
 
 export function createApiApp() {
   const app = express();
@@ -34,6 +35,7 @@ export function createApiApp() {
   app.use('/api', requestSecurity(corsOrigins));
   app.use(express.json({ limit: '256kb' }));
   app.use('/api', platformRoutes);
+  app.use('/api', shopierRoutes);
   app.use('/api', parentRoutes);
   app.use('/api', studentAiRoutes);
   app.use('/api', adminAiRoutes);
@@ -69,5 +71,6 @@ export function createApiApp() {
   app.use('/api', apiErrorHandler);
   return app;
 }
+
 
 

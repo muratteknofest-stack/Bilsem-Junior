@@ -1,61 +1,42 @@
-# Quantum tech — ticari yayın kararı
+# Quantum tech — Shopier ile bireysel satış kararı
 
-13 Ekim 2026. Kullanıcı diğer yapılandırmaların araştırılıp seçilmesini yetkilendirdi.
+13 Ekim 2026. Kullanıcı şirketi ve henüz Shopier hesabı olmadığını belirtti; site tarafının hazırlanmasını yetkilendirdi. Önceki iyzico önerisinin şirket varsayımı kaldırıldı.
 
-## Kaydedilen işletmeci bilgileri
+## Kimlik ve iletişim
 
-- Unvan: Quantum tech
-- Kullanıcının verdiği adres metni: Quantum tech lab
-- İletişim: zeka.kupu.test@gmail.com
+Quantum tech **marka adıdır**; doğrulanmış şirket unvanı değildir. Quantum tech lab kullanıcının verdiği adres metnidir; tam posta adresi yerine geçmez. Destek: zeka.kupu.test@gmail.com. Gerçek bireysel satıcı/veri sorumlusu adı verilmediği için boş bırakılır. Kimlik, vergi veya banka bilgisi uydurulmaz.
 
-Canlı platform ayarlarına revision kontrolüyle kaydedildi (revision 3). Adres metni sokak, bina/no, ilçe, il ve posta kodu içermediğinden ödeme kuruluşu başvurusu için tam posta adresi yerine geçmez. Unvanın ticaret/vergi kaydı doğrulanmış sayılmadı. Gerçek bilgiler banka ve sağlayıcı kayıtlarıyla uyuşmalıdır.
+## Sağlayıcı ve paketler
 
-## Sağlayıcı seçimi
+Shopier resmî sayfasında bireysel hesap ve dijital ürün/hizmet satışını destekliyor. Site kart verisi toplamaz; satın alma gerçek Shopier ürün sayfasında yapılır. Hesap açılmadığından gerçek ödeme testi yapılmadı ve satış açılmadı.
 
-Türkiye'de kurulmuş bir işletme varsayımıyla ilk tercih iyzico Checkout Form'un yönlendirmeli ortak ödeme sayfasıdır. Kart verilerinin uygulamadan geçmediği, sağlayıcıda işlenen bir akış hedeflenir. Bu entegrasyon henüz kurulmamıştır; gerçek sağlayıcı hesabı olmadan SDK, sahte checkout veya geçici ödeme hakkı oluşturulmaz.
-
-Stripe, Türkiye'yi doğrudan desteklenen işletme ülkelerinde listelemiyor. PayTR Türkiye için uygun alternatif; yayımlanan düşük komisyon başlangıcı yedi gün valör koşuluna bağlı ve kesin teklif işletme/ciro/iş modeline göre verilir. iyzico seçimi en düşük komisyon iddiası değil, belgelenmiş yönlendirmeli ödeme sayfası ve Türkiye'deki onboarding sürecine göre teknik uygunluk kararıdır. Gerçek teklif daha iyi çıkarsa sağlayıcı tercihi yeniden değerlendirilebilir.
-
-Resmî sayfalarda araştırma sırasında görülen koşullar:
-
-| Sağlayıcı | Açıklanan fiyat koşulu | Önemli sınır |
-|---|---|---|
-| iyzico | %4,29 + 0,25 TL | Açıklanan teklif aylık 20.000 TL üzeri satış koşuluyla; bu işletme için onaylanmış oran değildir |
-| PayTR | %2,19'dan başlayan oran | Yedi gün valör; kesin oran sektör, hacim, sepet ve karta göre teklif edilir |
-
-İki sağlayıcıda da başvuru değerlendirmesi ve kimlik/işletme/banka doğrulaması gerekir. Bu adımlar kullanıcı adına kimlik/vergi/IBAN uydurularak tamamlanamaz. Sözleşme imzalanmış veya satış hesabı açılmış sayılmaz.
-
-## Başlangıç paketleri
-
-Seçilen lansman fiyatı hedefleri:
-
-| Paket | Süre | Tek seferlik son kullanıcı fiyatı hedefi |
+| Paket | Süre | Planlanan tek seferlik fiyat |
 |---|---:|---:|
 | Başlangıç | 30 gün | 299 TL |
 | Düzenli çalışma | 90 gün | 799 TL |
 
-Kapsam: bir öğrenci hesabı için sınıfa uygun soru bankası, pratik/deneme, yanlışların tekrarı ve veli ilerleme görünümü. Sınav başarısı, zekâ tanısı, uzman danışmanlığı veya canlı ders vaat edilmez. Otomatik yenileme/kart saklama açılmaz. Bir ödeme için aynı sunucu hakkı yalnız bir kez tanımlanmalı; süre, doğrulanmış ödeme onayından başlamalıdır.
+Bir öğrenci için çalışmalar, denemeler, yanlış tekrarı ve veli takibi. Otomatik yenileme yok. Süre ilk doğrulanmış aktivasyonda başlar; yeni paket kalan sürenin sonuna eklenir. Sınav başarısı, resmî BİLSEM bağlantısı, zekâ tanısı veya canlı ders vaat edilmez. Fiyatlar piyasa optimumu iddiası taşımayan lansman tercihleridir.
 
-Bunlar piyasada doğrulanmış optimal fiyatlar değil, yeni ürün için seçilen başlangıç fiyatlarıdır. Bilsem Online'ın yayımlanan premium fiyatları 1 ay 4.999 TL, 3 ay 6.999 TL ve 6 ay 9.499 TL; kapsam/uzman raporları farklı olduğundan eşdeğer ürün karşılaştırması değildir. Müşteri geri bildirimi, dönüşüm, gerçek barındırma/AI maliyeti, sağlayıcı komisyonu ve iade oranı sonrası fiyat yeniden değerlendirilmelidir. Vergi/fatura düzeni ve satın alma öncesi koşullar gerçek işletme statüsüne göre tamamlanmalıdır.
+## Uygulanan sistem
 
-Paketler canlı checkout'a eklenmedi ve ücret tahsilatı açılmadı. Ödeme kuruluşu hesabı onaylandıktan sonra katalog ve sunucu hakları gerçek entegrasyona göre uygulanacak.
+/paketler herkese açık açıklama sayfasıdır. Veli panelinde öğrenciye özel paketler ve sipariş doğrulaması bulunur. Sunucu Shopier REST API'den siparişin gerçekten ödenmiş olduğunu, alıcı e-postasını, tek dijital ürünü, ürün kimliğini, TRY tutarını, adedini ve iadeleri denetler. Teslim edilmiş olması tek başına ödeme kanıtı sayılmaz. Tarayıcıdan bildirilen ödeme sonucu veya paylaşılan kod erişim açmaz.
 
-## Yayın öncesi kalan gerçek bilgiler/erişim
+Sipariş bir veli/öğrenciye yalnız bir kez bağlanır; tekrar doğrulama süreyi uzatmaz. Hesap silinmesi eski siparişin başka hesaba aktarılmasını sağlamaz. Kayıtlar istemcilere kapalı RLS tablosundadır; ham Shopier siparişi, adresi, kart veya token kaydedilmez. Alıcı e-postası yalnız karşılaştırma için SHA-256 olarak saklanır; bu da kişisel veri kapsamında değerlendirilmelidir.
 
-- Tam posta adresi, işletmenin gerçek hukuki/vergi statüsü ve sağlayıcının istediği belgeler; sağlayıcı panelinden girilmeli.
-- Kullanıcıya ait ödeme hesabı onayı ve sunucu tarafındaki güvenli entegrasyon değişkenleri; sohbetten gizli anahtar istenmez.
-- Veri saklama/silme politikasının uygulanan süreçle eşleşmesi ve mevcut dış sağlayıcıların aktarım şartları. Bir metin doldurmak, sözleşme/teknik silme süreci tamamlamak değildir.
-- E-posta ve gerçek aile pilotu, fiziksel cihaz ve geri yükleme kabulü.
+Satış ve ücretli erişim zorunluluğu ayrı ayardır. İkisi de varsayılan kapalıdır; mevcut ücretsiz kullanım sürer. Açılışta yasal yayın kabulü, gerçek ürün bilgisi ve sunucu sağlayıcı doğrulaması zorunludur. Ücretli erişim açılırsa yeni çalışma/yanlış tekrarı sunucuda doğrulanır; başlamış oturumun cevap/bitirme işlemleri mevcut güvenlik sınırları içinde devam eder. İadeler takip eden erişim kontrolünde kapsamdan çıkarılır. Sağlayıcı hatası erişim onayı yerine geçmez. Bir öğrenci için 50'den fazla sipariş kaydı otomatik akış dışında incelenir.
 
-KVKK aydınlatması için hukuki dayanak, saklama/silme süreleri ve aktarım koşulları mevcut işletme süreciyle doğrulanmalı. Varsayılan süre veya imzalanmamış sözleşme gerçekmiş gibi yayımlanmadı.
+## Hesap açıldığında
 
-## Araştırma kaynakları
+Ayrıntılı kurulum: [SHOPIER_SETUP.md](SHOPIER_SETUP.md). Kullanıcının kendi hesabından gerçek kimlik/banka başvurusu, iki dijital ürün ve güvenli sunucu token yapılandırması gerekir. Shopier'de dijital hizmet teslimatının kapatılması ayrı işletmeci adımıdır; site otomatik teslimat bildirimi yapmaz.
 
-- https://www.iyzico.com/isim-icin/sanal-pos
-- https://docs.iyzico.com/odeme-metotlari/odeme-formu/cf-entegrasyonu
-- https://www.paytr.com/paytr-sanal-pos
-- https://dev.paytr.com/en/iframe-api
-- https://stripe.com/global
-- https://bilsemonline.com/paketler
-- https://www.kvkk.gov.tr/Icerik/8142/Kisisel-Verilerin-Yurt-Disina-Aktarilmasi-Rehberi
-- https://www.kvkk.gov.tr/Icerik/8170/Yurt-Disina-Kisisel-Veri-Aktariminda-Kullanilacak-Standart-Sozlesmelerde-Dikkat-Edilmesi-Gereken-Hususlara-Iliskin-Kamuoyu-Duyurusu
+Gerçek satıcı adı, tam adres, hukuki dayanaklar, saklama/silme ve dış sağlayıcı aktarım koşulları uygulanmış süreçle tamamlanmalı. Bireysel hesap olanağı bu alanları otomatik tamamlamaz. E-posta/aile pilotu, fiziksel cihaz ve geri yükleme kabulü gerçekleşmiş sayılmaz.
+
+## Resmî kaynaklar
+
+- https://www.shopier.com/
+- https://developer.shopier.com/llms.txt
+- https://developer.shopier.com/docs/overview
+- https://developer.shopier.com/reference/get-orders-id
+- https://developer.shopier.com/reference/get-products-id
+
+Endpoint belgelerinin güncel bağlantıları developer portalının llms.txt dizininden kontrol edilir. Entegrasyon /v1/orders/{id} ve /v1/products/{id} kullanır; eski OSB callback sistemi kullanılmaz.

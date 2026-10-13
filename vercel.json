@@ -4,6 +4,10 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/paketler",
+      "destination": "/api/index?__path=public/shopier/page"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/index?__path=:path*"
     },

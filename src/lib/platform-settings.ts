@@ -1,3 +1,4 @@
+import { shopierSettingsSchema } from "./shopier-config";
 import { z } from "zod";
 import { LEARNING_EXAMS } from "../features/student/learning-contract";
 
@@ -12,6 +13,7 @@ const exam = (count: number, seconds: number) =>
     .default({ count, seconds });
 export const platformSettingsSchema = z
   .object({
+    shopier: shopierSettingsSchema,
     exams: z
       .object({
         mini: exam(15, 900),
@@ -26,6 +28,7 @@ export const platformSettingsSchema = z
       }),
     business: z
       .object({
+        brandName: z.string().trim().max(160).optional(),
         legalName: text,
         address: text,
         contactEmail: z
