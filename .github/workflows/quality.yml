@@ -36,5 +36,18 @@ jobs:
       - name: Verify English practice, device progress and mobile layouts
         run: npm run test:english-browser
 
+  english-accounts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
       - name: Verify English family accounts and saved learning flows
         run: npm run test:english-accounts
