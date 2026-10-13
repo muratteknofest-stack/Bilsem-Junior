@@ -89,7 +89,7 @@ test('real Postgres isolates the ledger, preserves activation on retry, rejects 
       grant usage on schema auth,public to anon,authenticated,service_role;grant execute on function auth.jwt() to service_role;
       create table public.profiles(id uuid primary key,role text,linked_student_ids text[] default '{}',linked_parent_id text);
       grant select,update on public.profiles to service_role;`);
-    await db.exec(await readFile('supabase/migrations/20261013143317_shopier_verified_access.sql','utf8'));
+    await db.exec(await readFile('supabase/migrations/20261013150111_shopier_verified_access.sql','utf8'));
     const p='00000000-0000-4000-8000-000000000001',q='00000000-0000-4000-8000-000000000002',a='00000000-0000-4000-8000-000000000003',b='00000000-0000-4000-8000-000000000004';
     await db.query("insert into public.profiles values($1::uuid,'parent',array[$3::text,$4::text],null),($2::uuid,'parent','{}',null),($3::uuid,'student','{}',$1::text),($4::uuid,'student','{}',$1::text)",[p,q,a,b]);
     await db.exec("set role authenticated;select set_config('request.jwt.claims','{\"role\":\"authenticated\"}',false)");

@@ -20,7 +20,7 @@ API sözleşmesi, kötüye kullanım ve gerçek PostgreSQL yetki/idempotans test
 
 ## Teknik kayıt
 
-- Migration: 20261013143317_shopier_verified_access.sql
+- Migration: 20261013150111_shopier_verified_access.sql
 - Sunucu: shopier-client.ts, shopier-model.ts, shopier-access.ts, routes/shopier-routes.ts
 - Genel sayfa: /paketler; veli uçları: /api/parent/shopier/access, /api/parent/shopier/claim
 - Yalnız service_role ledger okuyup yazar; istemci RPC çağrısı yetkisizdir.
