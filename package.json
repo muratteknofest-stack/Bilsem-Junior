@@ -17,7 +17,7 @@
     "check": "npm run lint && npm test && npm run build",
     "test:questions": "node --import tsx --test tests/editorial-engine.test.ts tests/editorial-publication.test.ts tests/question-engine.test.ts tests/question-safety.test.ts tests/answer-interactions.test.ts tests/question-quality-v3.test.ts tests/question-visuals.test.tsx tests/multi-stage-quality.test.ts tests/engine-recovery.test.ts tests/workshop-mechanics.test.tsx tests/reference-reasoning.test.tsx tests/colorful-engine.test.tsx tests/learning-improvements.test.tsx tests/learning-selection-policy.test.ts tests/learning-network.test.tsx",
     "audit:questions": "node --import tsx scripts/audit-question-bank.ts",
-    "release:commercial": "node scripts/commercial-readiness.mjs",
+    "release:commercial": "node --import tsx scripts/commercial-readiness.mjs",
     "generate:grade-bank": "node --import tsx scripts/generate-grade-bank.ts",
     "test:database": "node --import tsx --test tests/supabase-learning.test.ts",
     "test:blog": "node --import tsx --test tests/blog.test.ts",
