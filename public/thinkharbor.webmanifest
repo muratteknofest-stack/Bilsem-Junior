@@ -1,0 +1,16 @@
+{
+  "id": "/en/",
+  "name": "ThinkHarbor — Think, Play, Discover",
+  "short_name": "ThinkHarbor",
+  "description": "Visual reasoning, attention and memory practice for curious minds and families.",
+  "lang": "en",
+  "start_url": "/en/",
+  "scope": "/en/",
+  "display": "standalone",
+  "background_color": "#faf8ff",
+  "theme_color": "#4936ad",
+  "icons": [
+    {"src": "/thinkharbor-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/thinkharbor-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
+  ]
+}
