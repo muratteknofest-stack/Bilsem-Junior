@@ -75,7 +75,7 @@ export const defaultPlatformSettings = () => platformSettingsSchema.parse({});
 export function releaseBlockers(settings: PlatformSettings): string[] {
   const missing: string[] = [];
   const labels = {
-    legalName: "İşletmeci / veri sorumlusu unvanı",
+    legalName: "Yasal satıcı / veri sorumlusu adı veya unvanı",
     address: "İşletmeci adresi",
     contactEmail: "Veri talebi iletişim e-postası",
     legalBases: "İşleme amaçları ve hukuki dayanakları",
