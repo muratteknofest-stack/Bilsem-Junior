@@ -36,6 +36,7 @@ export const ENGLISH_INFO = {
     'This application may change as it is tested. Commercial terms and country-specific requirements must be completed before any paid release. Contact zeka.kupu.test@gmail.com to report a problem.',
   ]},
   help:{title:'Help & family guide',paragraphs:[
+    'To start a family account, a parent creates the account and confirms their email. Sign in as a parent and choose Open student practice once; this securely enables student code sign-in. Afterwards the student can sign in using their code and separate password. To return from student practice to the family dashboard, use the parent password.',
     'Choose one of four activity levels. If the puzzles feel frustrating, try an earlier level. If they feel easy, move to a later one. Suggested audience: children around 6–10, with adult help where appropriate.',
     'Guest practice has five puzzles and an optional ten-puzzle challenge. Account practice has five puzzles and a one-hour session deadline. Account challenges contain 15, 30 or 45 puzzles with a practice timer shown on screen. The timer is a practice tool, not an intelligence measurement.',
     'Read the instruction, compare all four choices and select an answer. Account and guest practice show feedback before you move on. Account challenges reveal answers only after finishing. In memory activities, study the pattern first and press “Hide pattern & answer”.',

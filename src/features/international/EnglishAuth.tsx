@@ -28,7 +28,7 @@ export function EnglishAuth(){
  if(password!==f.get('passwordConfirm')||studentPassword!==f.get('studentPasswordConfirm'))throw Error('The repeated passwords must match.');
  if(password===studentPassword)throw Error('Use different parent and student passwords.');
  const result=await registerFamilyInSupabase({parentEmail:identifier,parentPassword:password,studentName:String(f.get('studentName')||'').trim(),studentPassword,grade:Number(f.get('grade')),examFocus:'Thinking skills',consentAccepted:f.get('privacy')==='on',termsAccepted:f.get('terms')==='on',guardianConfirmed:f.get('guardian')==='on',policyVersion:availability.policyVersion});
- if(alive.current){setCode(result.student.code);setNotice(result.verificationSent?'Your family account is ready. Confirm the parent email before signing in. Save the student code below.':'Your family account was created, but the confirmation email could not be sent. Save the student code and request a new email below.');setConfirmation(true);form.reset();}
+ if(alive.current){setCode(result.student.code);setNotice(result.verificationSent?'Your family account is ready. Confirm the parent email, sign in as a parent, and choose “Open student practice” once to enable student code sign-in. Save the student code below.':'Your family account was created, but the confirmation email could not be sent. Save the student code and request a new email below.');setConfirmation(true);form.reset();}
  }else{
  cancelAccountSwitch();const email=role==='student'&&!identifier.includes('@')?studentCodeToEmail(identifier):identifier;
  const credential=await signInWithEmailAndPassword(auth,email,password);signedId=credential.user.uid;
@@ -40,7 +40,7 @@ export function EnglishAuth(){
  // A normal form unmount must not revoke the newly authenticated session.
  if(alive.current){loginLocally(profile);location.hash='account';}
  }
- }catch(err){if(signedId&&auth.currentUser?.uid===signedId)await signOut(auth).catch(()=>undefined);if(alive.current){setError(englishAccountError(err));if((err as {code?:string}).code==='email_not_confirmed')setConfirmation(true);}}
+ }catch(err){if(signedId&&auth.currentUser?.uid===signedId)await signOut(auth).catch(()=>undefined);if(alive.current){setError((err as {code?:string}).code==='email_not_confirmed'&&role==='student'?'Ask your parent to confirm their email, sign in as a parent, and choose Open student practice once to enable your student code.':englishAccountError(err));if(role==='parent'&&(err as {code?:string}).code==='email_not_confirmed')setConfirmation(true);}}
  finally{lock.current=false;if(alive.current)setBusy(false);}
  }
  async function resend(e:React.MouseEvent<HTMLButtonElement>){if(lock.current)return;const form=e.currentTarget.closest('form');const email=confirmationEmail.current||String(new FormData(form!).get('identifier')||'').trim();lock.current=true;setBusy(true);try{await resendFamilyConfirmation(email);if(alive.current)setNotice('If an eligible account exists, a confirmation email will be sent. Check your inbox and spam folder.');}catch(err){if(alive.current)setError(englishAccountError(err));}finally{lock.current=false;if(alive.current)setBusy(false);}}
