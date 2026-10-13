@@ -33,8 +33,9 @@ authRoutes.post('/register-student', accountSecurityLimiter, (_req, res) => {
 });
 
 const sendVerification = async (email: string) => {
+  const siteUrl = (process.env.PUBLIC_SITE_URL || 'https://zekapark.vercel.app').replace(/\/+$/, '');
   const { error } = await getServiceClient().auth.resend({ type: 'signup', email,
-    options: { emailRedirectTo: 'https://zekapark.vercel.app' } });
+    options: { emailRedirectTo: siteUrl } });
   if (error) throw error;
 };
 authRoutes.post('/register-family', accountSecurityLimiter, sharedRateLimit('family-registration', 6, 3600), createFamilyRegistrationHandler({

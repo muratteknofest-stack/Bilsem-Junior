@@ -4,12 +4,14 @@ import { z } from 'zod';
 import { getServiceClient } from '../supabase-admin';
 import { requireSupabaseAuth, requireVerifiedEmail, requireProfileRole, type AuthenticatedRequest } from '../security';
 import { accountSecurityLimiter, adminAiLimiter } from '../rate-limiters';
+import { sharedRateLimit } from '../shared-rate-limit';
 import { prepareQuestionReport, reviewRequestSchema, mayReviewRequest } from '../support-validation';
 
 const routes = Router();
 const access = [requireSupabaseAuth, requireVerifiedEmail];
+const EXPORT_PROFILE_COLUMNS = 'id,email,name,role,student_code,linked_student_ids,linked_parent_id,grade,exam_focus,parent_phone,recovery_email,consent,avatar,level,xp,streak,longest_streak,last_active_date,today_practiced,streak_freeze_count,claimed_streak_days,weekly_streak_history,daily_goal_minutes,today_minutes_spent,daily_goal_questions,today_questions_solved,daily_goal_sessions,today_sessions_completed,sound_enabled,total_questions_solved,resolved_mistakes_count,featured_badge_ids,reminder_config,total_points,last_login_at,created_at,updated_at';
 
-routes.post('/questions/report', ...access, requireProfileRole('student','parent','admin'), async (req: AuthenticatedRequest, res) => {
+routes.post('/questions/report', ...access, requireProfileRole('student','parent','admin'), sharedRateLimit('support-report', 20, 3600), async (req: AuthenticatedRequest, res) => {
   let report;
   try { report = prepareQuestionReport(req.body); }
   catch { return res.status(400).json({ error: 'Bildirimdeki soru bilgileri geçersiz.' }); }
@@ -27,7 +29,7 @@ routes.get('/account/requests', ...access, async (req: AuthenticatedRequest, res
   if (error) throw error;
   return res.json({ requests: data });
 });
-routes.post('/account/deletion-request', ...access, accountSecurityLimiter, requireProfileRole('parent','student'), async (req: AuthenticatedRequest, res) => {
+routes.post('/account/deletion-request', ...access, accountSecurityLimiter, requireProfileRole('parent','student'), sharedRateLimit('account-deletion', 6, 3600), async (req: AuthenticatedRequest, res) => {
   if (!z.object({ confirmed: z.literal(true) }).strict().safeParse(req.body).success)
     return res.status(400).json({ error: 'Silme talebi için onay gerekli.' });
   const client = getServiceClient();
@@ -41,13 +43,13 @@ routes.post('/account/deletion-request', ...access, accountSecurityLimiter, requ
   if (error) throw error;
   return res.status(201).json({ id: data });
 });
-routes.get('/account/export', ...access, accountSecurityLimiter, async (req: AuthenticatedRequest, res) => {
+routes.get('/account/export', ...access, accountSecurityLimiter, sharedRateLimit('account-export', 6, 3600), async (req: AuthenticatedRequest, res) => {
   const client = getServiceClient();
-  const { data: owner, error } = await client.from('profiles').select('*').eq('id', req.authUser!.uid).single();
+  const { data: owner, error } = await client.from('profiles').select(EXPORT_PROFILE_COLUMNS).eq('id', req.authUser!.uid).single();
   if (error) throw error;
   let profiles = [owner];
   if (owner.role === 'parent' && owner.linked_student_ids?.length) {
-    const children = await client.from('profiles').select('*').in('id', owner.linked_student_ids)
+    const children = await client.from('profiles').select(EXPORT_PROFILE_COLUMNS).in('id', owner.linked_student_ids)
       .eq('linked_parent_id', owner.id).eq('role', 'student');
     if (children.error) throw children.error;
     profiles = profiles.concat(children.data || []);
@@ -67,7 +69,7 @@ routes.get('/admin/support-requests', ...access, adminAiLimiter, requireProfileR
   if (error) throw error;
   return res.json({ requests: data });
 });
-routes.post('/admin/support-requests/:id', ...access, adminAiLimiter, requireProfileRole('admin'), async (req: AuthenticatedRequest, res) => {
+routes.post('/admin/support-requests/:id', ...access, adminAiLimiter, requireProfileRole('admin'), sharedRateLimit('admin-support-review', 60, 600), async (req: AuthenticatedRequest, res) => {
   const parsed = reviewRequestSchema.safeParse(req.body);
   if (!parsed.success || !z.uuid().safeParse(req.params.id).success) return res.status(400).json({ error: 'İnceleme bilgileri geçersiz.' });
   const client = getServiceClient();

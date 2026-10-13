@@ -4,12 +4,13 @@ import { z } from 'zod';
 import { getServiceClient } from '../supabase-admin';
 import { requireSupabaseAuth, requireVerifiedEmail, requireProfileRole, type AuthenticatedRequest } from '../security';
 import { aiLimiter } from '../rate-limiters';
+import { sharedRateLimit } from '../shared-rate-limit';
 import { generateQuestion } from '../../src/features/questions/generators';
 import { isSchoolGrade } from '../../src/features/questions/quality-policy';
 import { prepareQuestionReport } from '../support-validation';
 import { publicChallenge, answeredChallenge } from '../challenge-validation';
 const routes = Router();
-routes.use('/challenges', requireSupabaseAuth, requireVerifiedEmail, requireProfileRole('student'), aiLimiter);
+routes.use('/challenges', requireSupabaseAuth, requireVerifiedEmail, requireProfileRole('student'), sharedRateLimit('student-challenges', 60, 600), aiLimiter);
 
 routes.get('/challenges/today', async (req: AuthenticatedRequest,res) => {
   const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul' }).format(new Date());

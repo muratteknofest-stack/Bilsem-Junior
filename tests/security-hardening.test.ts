@@ -7,6 +7,7 @@ import { requestSecurity } from '../server/request-security';
 import { publicBuildSettings } from '../scripts/public-build-settings';
 import { createApiApp } from '../server/api-app';
 import { secretKinds } from '../scripts/check-public-assets.mjs';
+import { policyHtml } from '../server/platform-policy';
 
 const publicEnv = { VITE_SUPABASE_URL: 'https://vehhvsdkifwstbjhnhao.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test-only', VITE_API_BASE_URL: '' };
 const jwt = (role: string) => `header.${Buffer.from(JSON.stringify({ role })).toString('base64url')}.signature`;
@@ -97,4 +98,18 @@ test('rejected API requests retain all security headers and malformed/oversize i
       const payload=await r.json();assert.equal(typeof payload.error,'string');assert.ok(!JSON.stringify(payload).includes('fixture-secret'));assert.equal(payload.access_token,undefined);
     }
   } finally { await new Promise<void>(resolve=>server.close(()=>resolve())); if(saved===undefined)delete process.env.NODE_ENV;else process.env.NODE_ENV=saved; }
+});
+
+test('policyHtml uses PUBLIC_SITE_URL when configured and defaults cleanly to zekapark.vercel.app', () => {
+  const info = { slug: 'test-policy', title: 'Test Başlık', description: 'Test Açıklama', sections: [] };
+  const prev = process.env.PUBLIC_SITE_URL;
+  try {
+    delete process.env.PUBLIC_SITE_URL;
+    assert.match(policyHtml(info as any), /rel="canonical" href="https:\/\/zekapark\.vercel\.app\/bilgi\/test-policy"/);
+    process.env.PUBLIC_SITE_URL = 'https://custom.zekapark.com/';
+    assert.match(policyHtml(info as any), /rel="canonical" href="https:\/\/custom\.zekapark\.com\/bilgi\/test-policy"/);
+  } finally {
+    if (prev !== undefined) process.env.PUBLIC_SITE_URL = prev;
+    else delete process.env.PUBLIC_SITE_URL;
+  }
 });

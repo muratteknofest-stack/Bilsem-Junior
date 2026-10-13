@@ -18,7 +18,11 @@ Tarihsel migration dosyaları yalnızca sürüm geçmişini korur. Bunlar eski s
 
 ## Yeni proje
 
-Yeni, boş bir projede `schema.sql` temel şemadır. Daha sonraki gerekli uygulama/güvenlik migration'larını bir test ortamında sırasıyla uygulayıp doğrulayın. Bu talimat mevcut üretim projesinde şemayı yeniden oluşturma izni değildir.
+Yeni, boş bir projede `schema.sql` temel şemadır. Ancak `schema.sql` tek başına nihai güvenlik korumalarını içermez. Zorunlu kurulum sırası:
+1. `schema.sql` dosyasını boş veritabanına uygulayın.
+2. `supabase/migrations/` altındaki tüm SQL migrasyonlarını kronolojik dosya sırasıyla uygulayın (özellikle `20261010090133_protect_verified_progress.sql` ve `20261010091235_distributed_api_limits.sql` güvenlik ve limit kilitlerini sağlar).
+3. `scripts/verify-commercial-db.sql` betiğini çalıştırarak RLS kısıtlamalarının, rol yetkilerinin ve kota işlevlerinin aktif olduğunu doğrulayın (test işlemi otomatik rollback yapar).
+4. Bu talimat mevcut üretim projesinde şemayı yeniden oluşturma veya toplu sıfırlama izni değildir. Canlı ortamda yalnızca yeni eklenen migration dosyaları uygulanır.
 
 ## Doğrulama
 

@@ -72,7 +72,8 @@ export function publicPolicy(
   return info;
 }
 export function policyHtml(info: PlatformInfo): string {
-  const url = `https://zekapark.vercel.app/bilgi/${info.slug}`;
+  const siteUrl = (process.env.PUBLIC_SITE_URL || 'https://zekapark.vercel.app').replace(/\/+$/, '');
+  const url = `${siteUrl}/bilgi/${info.slug}`;
   const schema = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "WebPage",
