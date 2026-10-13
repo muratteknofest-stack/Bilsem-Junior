@@ -16,17 +16,18 @@ export function publicPolicy(
   const info: PlatformInfo = structuredClone(source),
     b = settings.business;
   const hasIdentity = !!(b.legalName && b.address && b.contactEmail);
+  const hasContact = !!(b.contactEmail && (b.brandName || b.legalName));
   const hasLegalDetails = !!(b.legalBases && b.retention && b.transfers);
   info.contactEmail = b.contactEmail || SUPPORT_EMAIL;
   const identity = {
-    title: "İşletmeci ve veri sorumlusu",
+    title: hasIdentity ? "Yasal satıcı ve veri sorumlusu" : "Marka ve iletişim",
     paragraphs: [
-      b.legalName, b.address,
+      b.brandName ? `Marka: ${b.brandName}` : "", b.legalName, b.address,
       b.contactEmail ? `İletişim ve veri talepleri: ${b.contactEmail}` : "",
     ].filter(Boolean),
   };
   if (slug === "gizlilik-ve-veriler") {
-    if (hasIdentity) info.sections.unshift(identity);
+    if (hasIdentity || hasContact) info.sections.unshift(identity);
     if (hasIdentity && hasLegalDetails) info.sections = info.sections.filter(s => !s.title.includes("tamamlanması gereken"));
     else if (hasIdentity) info.sections = info.sections.map(s => s.title.includes("tamamlanması gereken") ? {
       ...s, paragraphs: ["İşletmeci iletişim bilgileri yukarıda sunulmuştur. Her işleme amacı için hukuki dayanak, saklama ve silme süreleri ile yurt dışı aktarım koşulları henüz tamamlanmamıştır. Bu açıklama tamamlanmış bir KVKK aydınlatma metni veya mevzuata uyum güvencesi değildir."]
@@ -49,12 +50,12 @@ export function publicPolicy(
       },
     );
   } else if (slug === "kullanim-kosullari") {
-    if (hasIdentity) info.sections.unshift(identity);
+    if (hasIdentity || hasContact) info.sections.unshift(identity);
     if (hasIdentity) info.sections = info.sections.map((s) => ({
       ...s,
       paragraphs: s.paragraphs.map(p => p.replace("İşletmecinin doğrulanmış kimlik ve adres bilgileri henüz projede tamamlanmamıştır. ", "")),
     }));
-  } else if (slug === "iletisim-ve-destek" && hasIdentity) info.sections[0] = identity;
+  } else if (slug === "iletisim-ve-destek" && (hasIdentity || hasContact)) info.sections[0] = identity;
   info.sections = info.sections.map((s) => ({
     ...s,
     paragraphs: s.paragraphs.map((p) =>

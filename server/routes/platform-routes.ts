@@ -18,6 +18,8 @@ import {
 } from "../security";
 import { accountSecurityLimiter } from "../rate-limiters";
 
+import { verifyShopierProducts } from '../shopier-client';
+import { ShopierError } from '../shopier-model';
 const routes = Router();
 routes.get("/public/platform", async (_req, res) => {
   const { settings, revision } = await readPlatformSettings();
@@ -64,6 +66,11 @@ routes.put(
     if (!parsed.success)
       return res.status(400).json({ error: "Ayar bilgileri geçersiz." });
     const { settings, revision } = parsed.data;
+    if (settings.shopier.enabled || settings.shopier.enforcePaidAccess) {
+      if (releaseBlockers(settings).length) return res.status(422).json({ error: 'Ücretli satış için işletmeci bilgileri ve kabul kontrolleri tamamlanmalı.' });
+      try { await verifyShopierProducts(settings.shopier); }
+      catch(error) { if(error instanceof ShopierError) return res.status(error.status).json({error:error.message}); throw error; }
+    }
     const { data, error } = await getServiceClient()
       .from("platform_settings")
       .update({
@@ -88,3 +95,4 @@ routes.put(
   },
 );
 export default routes;
+

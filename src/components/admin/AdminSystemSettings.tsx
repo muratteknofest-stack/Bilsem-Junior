@@ -79,7 +79,8 @@ export function AdminSystemSettings({
     setNotice("");
   }
   const labels: Record<keyof PlatformSettings["business"], string> = {
-    legalName: "İşletmeci / veri sorumlusu unvanı",
+    brandName: "Marka adı (şirket unvanı yerine geçmez)",
+    legalName: "Yasal satıcı / veri sorumlusu adı veya unvanı",
     address: "İşletmeci adresi",
     contactEmail: "İletişim ve veri talebi e-postası",
     legalBases: "Her işleme amacı ve hukuki dayanağı",
@@ -128,6 +129,17 @@ export function AdminSystemSettings({
       ) : (
         <form onSubmit={save} className="space-y-6">
           <fieldset disabled={busy} className="space-y-6">
+            <section className="rounded-2xl border bg-white p-5 space-y-3">
+              <h3 className="text-lg font-bold">Shopier paketleri</h3>
+              <p>Bireysel Shopier hesabındaki iki dijital ürünü bağlayın. 30 gün: 299 TL; 90 gün: 799 TL. Gerçek ürün, fiyat ve bağlantı sunucuda Shopier üzerinden kontrol edilir. Erişim anahtarı bu forma yazılmaz.</p>
+              {(['monthly','quarterly'] as const).map(id => <div key={id} className="grid gap-3 sm:grid-cols-2">
+                <label>{id==='monthly'?'30':'90'} günlük Shopier ürün numarası<input className="block w-full border rounded-lg p-3" value={record.settings.shopier[id==='monthly'?'monthlyProductId':'quarterlyProductId']} onChange={e=>setRecord(r=>r&&({...r,settings:{...r.settings,shopier:{...r.settings.shopier,[id==='monthly'?'monthlyProductId':'quarterlyProductId']:e.target.value}}}))}/></label>
+                <label>Shopier ürün bağlantısı<input type="url" className="block w-full border rounded-lg p-3" value={record.settings.shopier[id==='monthly'?'monthlyUrl':'quarterlyUrl']} onChange={e=>setRecord(r=>r&&({...r,settings:{...r.settings,shopier:{...r.settings.shopier,[id==='monthly'?'monthlyUrl':'quarterlyUrl']:e.target.value}}}))}/></label>
+              </div>)}
+              <label className="block"><input type="checkbox" checked={record.settings.shopier.enabled} onChange={e=>setRecord(r=>r&&({...r,settings:{...r.settings,shopier:{...r.settings.shopier,enabled:e.target.checked}}}))}/> Shopier satış bağlantılarını aç</label>
+              <label className="block"><input type="checkbox" checked={record.settings.shopier.enforcePaidAccess} onChange={e=>setRecord(r=>r&&({...r,settings:{...r.settings,shopier:{...r.settings.shopier,enforcePaidAccess:e.target.checked}}}))}/> Yeni çalışmalar için doğrulanmış paket erişimi iste</label>
+              <p className="text-sm">Ücretli erişim başlangıçta kapalıdır. Satışı veya ücretli erişimi açmak için gerçek hesap bağlantısı, işletmeci bilgileri ve kabul kontrolleri tamamlanmalıdır. Mevcut oturumların sonuçları erişilebilir kalır.</p>
+            </section>
             <section className="rounded-2xl border bg-white p-5">
               <h3 className="mb-4 text-lg font-bold">
                 Yeni denemelerin soru sayısı ve toplam süresi
@@ -219,7 +231,7 @@ export function AdminSystemSettings({
                       <input
                         type="email"
                         maxLength={254}
-                        value={record.settings.business[key]}
+                        value={record.settings.business[key] || ""}
                         onChange={(e) => business(key, e.target.value)}
                         className="mt-2 w-full rounded-lg border p-3"
                       />
@@ -227,7 +239,7 @@ export function AdminSystemSettings({
                       <textarea
                         rows={key === "legalName" ? 2 : 4}
                         maxLength={6000}
-                        value={record.settings.business[key]}
+                        value={record.settings.business[key] || ""}
                         onChange={(e) => business(key, e.target.value)}
                         className="mt-2 w-full rounded-lg border p-3"
                       />

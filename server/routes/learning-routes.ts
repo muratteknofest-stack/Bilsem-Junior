@@ -1,3 +1,5 @@
+import { requireLearningAccess } from '../shopier-access';
+import { ShopierError } from '../shopier-model';
 import { sharedRateLimit } from '../shared-rate-limit';
 import { Router } from 'express';
 import { randomInt, randomUUID } from 'node:crypto';
@@ -53,7 +55,7 @@ async function commit(student: string, id: string, change: (s: LearningSession) 
   throw new LearningError('Başka cihazdaki değişiklik kaydediliyor. Yeniden dene.', 409);
 }
 function handleError(error: unknown, res: import('express').Response) {
-  if (error instanceof LearningError) return res.status(error.status).json({ error: error.message });
+  if (error instanceof LearningError || error instanceof ShopierError) return res.status(error.status).json({ error: error.message });
   throw error;
 }
 routes.patch('/learning/grade', async (req: AuthenticatedRequest, res) => {
@@ -67,6 +69,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
   try {
     const parsed = startSchema.safeParse(req.body);
     if (!parsed.success) throw new LearningError('Çalışma seçenekleri geçersiz.', 400);
+    await requireLearningAccess(req.authUser!.uid);
     const { mode, exam } = parsed.data, student = req.authUser!.uid, client = getServiceClient();
     const profile = await client.from('profiles').select('grade').eq('id', student).single();
     if (profile.error) throw profile.error;
@@ -122,7 +125,7 @@ routes.get('/learning/rewards', async (req: AuthenticatedRequest, res) => {
     const badges = createLockedAchievements().map(b => {
       const claimed = saved.find(item => item.id === b.id && item.rewardClaimed);
       if (claimed) return { ...b, ...claimed };
-      try { eligibleReward('badge', b.id, user, facts.data as RewardFacts, progress); return { ...b, unlocked: true, progress: b.maxProgress }; } catch (error) { if (!(error instanceof LearningError)) throw error; return b; }
+      try { eligibleReward('badge', b.id, user, facts.data as RewardFacts, progress); return { ...b, unlocked: true, progress: b.maxProgress }; } catch (error) { if (!(error instanceof LearningError || error instanceof ShopierError)) throw error; return b; }
     });
     badges.push(...saved.filter(b => b.category === 'weekly'));
     return res.json({ badges, reviewToday: facts.data.reviewToday });
@@ -133,6 +136,7 @@ routes.get('/learning/:id', async (req: AuthenticatedRequest, res) => {
 });
 routes.post('/learning/review', async (req: AuthenticatedRequest, res) => {
   try {
+    await requireLearningAccess(req.authUser!.uid);
     const parsed = z.object({ mistakeId: z.string().min(1).max(150) }).strict().safeParse(req.body);
     if (!parsed.success) throw new LearningError('Tekrar sorusu geçersiz.', 400);
     const client = getServiceClient(), student = req.authUser!.uid;

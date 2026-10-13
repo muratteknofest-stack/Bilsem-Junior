@@ -1,3 +1,4 @@
+import { ShopierBilling } from './ShopierBilling';
 import { AccountCenter, FamilyActivation } from './AccountCenter';
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
@@ -642,6 +643,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
         </div>
 
         {parentProfile?.role === 'parent' && <FamilyActivation />}
+        {parentProfile?.role === 'parent' && currentStudent.role === 'student' && <ShopierBilling studentId={currentStudent.id}/>}
         <AnimatePresence mode="wait">
           {activeTab === 'overview' && (
             <motion.div 

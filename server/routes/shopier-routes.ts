@@ -1,0 +1,52 @@
+import { Router } from 'express';
+import { z } from 'zod';
+import { SHOPIER_PLANS, shopierProduct } from '../../src/lib/shopier-config';
+import { readPlatformSettings } from '../platform-settings';
+import { shopierReady, shopierGet } from '../shopier-client';
+import { verifiedShopierOrder, ShopierError } from '../shopier-model';
+import { shopierAccess, assertShopierFamily } from '../shopier-access';
+import { getServiceClient } from '../supabase-admin';
+import { requireSupabaseAuth,requireVerifiedEmail,requireProfileRole,escapeHtml,type AuthenticatedRequest } from '../security';
+import { sharedRateLimit } from '../shared-rate-limit';
+import { accountSecurityLimiter } from '../rate-limiters';
+const routes=Router();
+export async function publicShopierView() {
+  return shopierView((await readPlatformSettings()).settings);
+}
+export function shopierView(settings:import('../../src/lib/platform-settings').PlatformSettings) {
+  const ready=shopierReady(settings.shopier);
+  return {ready,enforced:settings.shopier.enforcePaidAccess,brand:settings.business.brandName||settings.business.legalName||'ZekaPark',
+    plans:SHOPIER_PLANS.map(p=>({...p,url:ready?shopierProduct(settings.shopier,p.id).url:null}))};
+}
+routes.get('/public/shopier',async(_req,res)=>res.json(await publicShopierView()));
+export function shopierPageHtml(config:ReturnType<typeof shopierView>) {
+  return `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ZekaPark paketleri</title><link rel="stylesheet" href="/blog-assets/blog.css"></head><body><header class="header"><nav class="wrap nav"><a class="brand" href="/">ZekaPark</a><a href="/login?role=parent">Veli paneli</a></nav></header><main class="wrap policy"><h1>ZekaPark çalışma paketleri</h1><p>${escapeHtml(config.brand)} · Bir öğrenci için toplam 4.000 soruluk bankadan sınıfa uygun çalışmalar, denemeler ve veli ilerleme takibi.</p><p>${config.ready?'Satın alırken veli hesabındaki e-postayı kullan. Sonra veli panelinde Shopier sipariş numaranla erişimini doğrula.':'Ücretli satış henüz açılmadı. Aşağıdaki fiyatlar planlanan lansman fiyatlarıdır; mevcut ücretsiz kullanım devam eder.'}</p>${config.plans.map(p=>`<section class="platform-info-card"><h2>${escapeHtml(p.title)} · ${p.days} gün</h2><p>${p.amountKurus/100} TL · Tek seferlik ödeme, otomatik yenileme yok.</p><p>Öğrenci sınıfını değiştirebilir; erişim bir öğrenci hesabına tanımlanır. Süre ilk doğrulanmış aktivasyondan başlar.</p>${p.url?'<a class="button" href="/login?role=parent">Veli panelinden satın al</a>':'<p role="status">Yakında · Satış henüz açılmadı</p>'}</section>`).join('')}<p>Sınav başarısı, resmî BİLSEM bağlantısı, zekâ tanısı veya canlı ders vaat edilmez.</p><p><a href="/bilgi/kullanim-kosullari">Kullanım koşulları</a> · <a href="/bilgi/gizlilik-ve-veriler">Gizlilik</a> · <a href="/bilgi/iletisim-ve-destek">İletişim</a></p></main></body></html>`;
+}
+routes.get('/public/shopier/page',async(_req,res)=>{res.type('html').send(shopierPageHtml(await publicShopierView()));});
+routes.use('/parent/shopier',requireSupabaseAuth,requireVerifiedEmail,requireProfileRole('parent'),accountSecurityLimiter);
+const studentSchema=z.uuid();
+routes.get('/parent/shopier/access',sharedRateLimit('shopier-access',60,600),async(req:AuthenticatedRequest,res)=>{
+  try {
+    const id=studentSchema.parse(req.query.studentId),{settings}=await readPlatformSettings();const config=shopierView(settings);
+    const access=await shopierAccess(req.authUser!.uid,id,settings.shopier);
+    res.json({...config,access});
+  } catch(error){if(error instanceof z.ZodError)return res.status(400).json({error:'Öğrenci seçimi geçersiz.'});if(error instanceof ShopierError)return res.status(error.status).json({error:error.message});throw error;}
+});
+routes.post('/parent/shopier/claim',sharedRateLimit('shopier-claim',12,3600),async(req:AuthenticatedRequest,res)=>{
+  try {
+    const {orderId,studentId}=z.object({orderId:z.string().regex(/^[A-Za-z0-9_-]{1,80}$/),studentId:studentSchema}).strict().parse(req.body);
+    const {settings}=await readPlatformSettings();
+    if(!shopierReady(settings.shopier))throw new ShopierError('Shopier satış hesabı henüz bağlanmadı.',503);
+    await assertShopierFamily(req.authUser!.uid,studentId);
+    if(!req.authUser!.email)throw new ShopierError('Veli e-postası doğrulanamadı.',403);
+    const raw=await shopierGet('orders',orderId);
+    const proof=verifiedShopierOrder(raw,orderId,{email:req.authUser!.email},settings.shopier);
+    const saved=await getServiceClient().rpc('claim_shopier_access',{p_order:proof.orderId,p_parent:req.authUser!.uid,p_student:studentId,
+      p_product:proof.productId,p_plan:proof.planId,p_buyer_hash:proof.buyerEmailSha256});
+    if(saved.error?.code==='40001')throw new ShopierError('Bu sipariş daha önce başka bir öğrenciye tanımlanmış.',409);
+    if(saved.error?.code==='42501')throw new ShopierError('Öğrenci bağlantısı değişmiş. Yeniden yükle.',403);
+    if(saved.error||saved.data?.order_id!==orderId)throw new ShopierError('Erişim kaydı doğrulanamadı.',503);
+    res.json({access:await shopierAccess(req.authUser!.uid,studentId,settings.shopier)});
+  } catch(error){if(error instanceof z.ZodError)return res.status(400).json({error:'Sipariş veya öğrenci bilgileri geçersiz.'});if(error instanceof ShopierError)return res.status(error.status).json({error:error.message});throw error;}
+});
+export default routes;
