@@ -13,9 +13,21 @@ import { createClient } from '@supabase/supabase-js';
  *   npx tsx scripts/pilot-family-e2e.ts [optional-base-url]
  */
 
+const suppliedEmail = process.env.PILOT_PARENT_EMAIL?.trim();
+if (!suppliedEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(suppliedEmail) || /\.(internal|invalid|test)$/.test(suppliedEmail)) {
+  throw new Error('PILOT_PARENT_EMAIL: doğrulama e-postasını alabilen gerçek pilot adresi gerekli. Test başlatılmadı.');
+}
+if (!process.env.PILOT_PARENT_PASSWORD || !process.env.PILOT_STUDENT_PASSWORD) {
+  throw new Error('Pilot parolalarını güvenli ortam değişkenleriyle yapılandırın. Test başlatılmadı.');
+}
 const BASE_URL = (process.argv[2] || process.env.PUBLIC_SITE_URL || 'https://zekapark.vercel.app').replace(/\/+$/, '');
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://vehhvsdkifwstbjhnhao.supabase.co';
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_ijE2Jbn1oGn9Elz03fiYrA_FUBnEWXI';
+
+const target = new URL(BASE_URL);
+if (target.origin !== 'https://zekapark.vercel.app' || target.pathname !== '/') throw new Error('Pilot yayın hedefi doğrulanamadı.');
+const nativeFetch = globalThis.fetch;
+const fetch: typeof globalThis.fetch = (input, init) => nativeFetch(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(25_000) });
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -40,6 +52,7 @@ async function runPilot() {
     throw new Error(`Sağlık kontrolü başarısız (${healthRes.status}): ${await healthRes.text()}`);
   }
   const healthData = await healthRes.json();
+  if (healthData.status !== 'ok' || healthData.database !== 'ready' || healthData.projectRef !== 'vehhvsdkifwstbjhnhao') throw new Error('Canlı veritabanı/proje sağlık yanıtı doğrulanamadı.');
   console.log(`  ✅ Sistem Durumu: ${healthData.status}, Veritabanı: ${healthData.database}, Proje: ${healthData.projectRef}`);
 
   const platformRes = await fetch(`${BASE_URL}/api/public/platform`);
@@ -57,13 +70,13 @@ async function runPilot() {
   // ADIM 2: Gerçek Pilot Aile Kaydı Oluşturma
   console.log('\n📌 Adım 2: Canlı Sitede Pilot Aile Kaydı Başlatılıyor...');
   const testSuffix = randomId(6);
-  const parentEmail = `pilot.veli.${testSuffix}@zekapark-test.internal`;
+  const parentEmail = suppliedEmail!;
   // Güvenli, sızdırılmamış ve parola politikasını karşılayan şifreler:
-  const parentPassword = `ZekaPark!Veli_${testSuffix}_2026`;
-  const studentPassword = `ZekaPark!Ogr_${testSuffix}_2026`;
+  const parentPassword = process.env.PILOT_PARENT_PASSWORD!;
+  const studentPassword = process.env.PILOT_STUDENT_PASSWORD!;
   const studentName = `PilotCan${testSuffix.slice(0, 3).toUpperCase()}`;
 
-  console.log(`  Veli E-postası: ${parentEmail}`);
+  console.log('  Veli e-postası güvenli ortamdan alındı.');
   console.log(`  Öğrenci Adı: ${studentName}`);
   console.log(`  Sınıf: 2. Sınıf`);
 
@@ -98,7 +111,8 @@ async function runPilot() {
   console.log(`  ✅ Veli ID: ${registerData.parentProfile?.id}`);
   console.log(`  ✅ Öğrenci Kodu: ${registerData.student?.code}`);
   console.log(`  ✅ Öğrenci Sistem E-postası: ${registerData.student?.email}`);
-  console.log(`  ✅ E-posta Doğrulama İstendi: ${registerData.verificationSent ? 'EVET' : 'HAYIR'}`);
+  console.log(`  E-posta Doğrulama İstendi: ${registerData.verificationSent ? 'EVET' : 'HAYIR'}`);
+  if (!registerData.student?.code || !registerData.student?.email) throw new Error('Öğrenci kayıt bilgileri doğrulanamadı.');
 
   const studentCode = registerData.student.code;
   const studentAuthEmail = registerData.student.email;
@@ -164,6 +178,7 @@ async function runPilot() {
 
     if (startRes.ok) {
       const sessionData = await startRes.json();
+      if (!sessionData.id || !Array.isArray(sessionData.questions) || sessionData.questions.length === 0) throw new Error('Boş veya geçersiz çalışma oturumu.');
       console.log(`  ✅ Alıştırma oturumu açıldı! Oturum ID: ${sessionData.id}`);
       console.log(`  ✅ Toplam Soru: ${sessionData.questions.length}`);
 
@@ -190,7 +205,7 @@ async function runPilot() {
           console.log(`  ✅ Cevap sunucu tarafından başarıyla işlendi ve puanlandı.`);
           console.log(`  Doğruluk: ${answerResult.answers?.['0']?.correct ? 'Doğru' : 'Yanlış'}, Kazanılan XP: ${answerResult.rewarded_xp || 0}`);
         } else {
-          console.log(`  ⚠️ Cevap gönderimi yanıt kodu: ${answerRes.status}`);
+          throw new Error(`Cevap kaydı doğrulanamadı (${answerRes.status}).`);
         }
 
         // Testi tamamla
@@ -204,16 +219,18 @@ async function runPilot() {
           body: JSON.stringify({}),
         });
 
+        if (!finishRes.ok) throw new Error(`Sonuçlar yüklenemedi (${finishRes.status}).`);
         if (finishRes.ok) {
           const finishResult = await finishRes.json();
+          if (!finishResult.result || !Number.isFinite(finishResult.result.xp)) throw new Error('Sonuç/puan doğrulanamadı.');
           console.log(`  ✅ Alıştırma oturumu tamamlandı! Toplam XP: ${finishResult.result?.xp || 0}`);
         }
       }
     } else {
-      console.log(`  ⚠️ Alıştırma oturumu başlatılamadı (${startRes.status}): ${await startRes.text()}`);
+      throw new Error(`Alıştırma başlatılamadı (${startRes.status}).`);
     }
   } else {
-    console.log('  ℹ️ Canlı öğrenci oturumu açılması için veli e-postasının doğrulanması ve veli panelinden öğrencinin etkinleştirilmesi gerekmektedir.');
+    throw new Error('Pilot tamamlanmadı: veli e-postası doğrulanmalı ve öğrenci etkinleştirilmeli. Oluşturulan aile hesabını panelden takip edin.');
     console.log('  ℹ️ Sistem mimarisinde bu iki adımlı güvenlik kilidi gereği çocuk hesapları veli onaysız çalıştırılamaz.');
   }
 
@@ -222,8 +239,8 @@ async function runPilot() {
   console.log('  Özet:');
   console.log(`  - Canlı Kayıt API: BAŞARILI (Veli ID: ${registerData.parentProfile?.id})`);
   console.log(`  - Öğrenci Kodu Üretimi: BAŞARILI (${studentCode})`);
-  console.log(`  - E-posta Bildirimi Gönderimi: BAŞARILI (${registerData.verificationSent ? 'Tetiklendi' : 'Kayıt tamamlandı'})`);
-  console.log(`  - Güvenlik ve İzolasyon: TAM DOĞRULANDI`);
+  console.log(`  - E-posta isteği: ${registerData.verificationSent ? 'Tetiklendi; teslim doğrulaması ayrıca gerekir' : 'Doğrulanmadı'}`);
+  console.log('  - Temel kayıt/giriş/çalışma akışı geçti. E-posta teslimi, şifre sıfırlama ve iki aile arasında yetki izolasyonu ayrıca doğrulanmalıdır.');
   console.log('====================================================\n');
 
   return {
@@ -239,3 +256,4 @@ runPilot().catch((err) => {
   console.error('\n❌ Pilot test sırasında hata oluştu:', err);
   process.exit(1);
 });
+

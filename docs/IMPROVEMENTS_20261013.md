@@ -42,3 +42,9 @@ Yeni renkli bankanın 4.000 sorusu mevcut durumda incelemededir. Bu değişiklik
 Tarayıcı kurulumu önceki analizde çalışmadığından bu tur gerçek Android/iOS/tablet görsel kabulü geçti denmez. Arka plan yenilemede profil ve rozet verileri kısa süre sonra güncellenir; hız kazanımı gerçek cihaz gecikmesi olarak ölçülmedi. Karşılaştırma sayfalaması tek veritabanı transaction snapshot'ı değildir; farklı soru kimliklerinin eşzamanlı aynı görselle yayımına karşı veritabanı seviyesinde fingerprint tekilliği sonraki güçlendirmedir. Bu dal aynı soru kimliğinin revision yarışını kapatır.
 
 Vercel önizlemesinin içinden kabul testi bu tur yapılamadı: dağıtım ayrıntısı servisi ekip erişiminde 403 döndürdü ve yerel Vercel CLI mevcut değil. GitHub dağıtım durumu, uygulama içi kabul testinin yerine geçmez.
+
+## Yayına geçiş hazırlığı
+
+Kullanıcı teknik düzeltmelerin ana dala alınmasını ve ücretli genel yayını talep etti. Pilot aracı gerçek alıcı/parola yapılandırması olmadan başlamaz; öğrenci girişi, çalışma başlatma, cevap kaydı veya sonuç başarısızken başarı bildirmez. E-posta teslimi ve iki aile izolasyonu temel akış başarısıyla eş tutulmaz. GitHub kalite akışına Chromium ile telefon/tablet viewport kontrolü eklendi. Bunlar fiziksel Android/iOS kabulü değildir.
+
+Canlı ana sayfa, blog, API ve veritabanı sağlık kontrolü yayından önce geçti. Ödeme sağlayıcısı hesabı, işletmeci bilgileri, doğrulanmış e-posta/aile kabulü ve yedekten geri yükleme halen dış yapılandırma gerektirir. Vercel proje erişimi ekip kapsamında 403 döndürür; CLI için kayıtlı kimlik bilgisi bulunmadı. Ücret tahsilatı ve yayın kabul bayrakları bu bilgiler olmadan açılmaz.
