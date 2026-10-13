@@ -8,12 +8,14 @@ import { requireSupabaseAuth, requireVerifiedEmail, requireProfileRole, type Aut
 import { authenticatedRateLimitKey } from '../rate-limiters';
 import { generateQuestion } from '../../src/features/questions/generators';
 import { EDUCATION_PROFILES, isSchoolGrade } from '../../src/features/questions/quality-policy';
-import { ACTIVE_BANK_VERSION, fitsLearningSelection, learningStartSchema, sameLearningSelection, type LearningDifficulty, type LearningSelection } from '../../src/features/student/learning-selection';
-import { isQuestionReadyForStudents, questionContentKey } from '../../src/features/questions/quality';
+import { fitsLearningSelection, learningStartSchema, sameLearningSelection, type LearningDifficulty, type LearningSelection } from '../../src/features/student/learning-selection';
+import { loadPublishedLearningBank } from '../learning-bank';
+import { isQuestionReadyForStudents } from '../../src/features/questions/quality';
+import { loadRecentQuestionExposure, selectLearningQuestions } from '../learning-question-selection';
 import { AVAILABLE_CATEGORIES } from '../../src/features/student/available-categories';
 import { COGNITIVE_CATEGORY_LABELS, type BaseQuestion, type SkillMastery } from '../../src/types';
 import { prepareQuestionReport } from '../support-validation';
-import { LearningError, answerLearningSession, finishLearningSession, learningTotals, learningView, prepareLearningQuestions, type LearningSession } from '../learning-model';
+import { LearningError, answerLearningSession, finishLearningSession, learningTotals, learningView, learningUpdateView, prepareLearningQuestions, type LearningSession } from '../learning-model';
 import { eligibleReward, type RewardFacts } from '../learning-rewards';
 import { fromSupabaseRow } from '../../src/lib/supabase-shape';
 import type { UserProfile } from '../../src/types';
@@ -69,6 +71,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const profile = await client.from('profiles').select('grade').eq('id', student).single();
     if (profile.error) throw profile.error;
     if (!isSchoolGrade(profile.data.grade)) throw new LearningError('Çalışma için 1–4. sınıf bilgisi gerekli.');
+    const grade = profile.data.grade;
     if (parsed.data.expectedGrade !== undefined && parsed.data.expectedGrade !== profile.data.grade) throw new LearningError('Sınıfın başka bir ekranda değişti. Ana sayfaya dönüp yeniden başla.', 409);
     const difficulty = parsed.data.difficulty as LearningDifficulty;
     if (difficulty !== 'mixed' && difficulty > EDUCATION_PROFILES[profile.data.grade].maxDifficulty) throw new LearningError('Bu zorluk seçtiğin sınıf için uygun değil.', 400);
@@ -83,26 +86,20 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const configuration = await readPlatformSettings();
     const settings = configuredExams(configuration.settings).find(e => e.id === exam)!;
     const count = mode === 'exam' ? settings.count : mode === 'adaptive' ? 1 : 5;
-    const selection: LearningSelection = { grade: profile.data.grade, difficulty, category, exam: mode === 'exam' ? exam : '', count, bankVersion: ACTIVE_BANK_VERSION };
+    const bank = await loadPublishedLearningBank({ grade: profile.data.grade, difficulty, category });
+    const selection: LearningSelection = { grade: profile.data.grade, difficulty, category, exam: mode === 'exam' ? exam : '', count, bankVersion: bank.bankVersion };
     const active = await client.from('learning_sessions').select('*').eq('student_id', student).eq('mode', mode).is('finished_at', null).maybeSingle();
     if (active.error) throw active.error;
     if (active.data && Date.parse(active.data.expires_at) > Date.now() && sameLearningSelection(active.data.selection, selection)) return res.json(learningView(active.data as LearningSession));
     if (active.data) await commit(student, active.data.id, finishLearningSession);
-    let bank = client.from('questions').select('data').eq('status', 'published').eq('target_grade', profile.data.grade).order('id').range(0, 999);
-    if (category !== 'mixed') bank = bank.eq('category', category);
-    if (difficulty !== 'mixed') bank = bank.eq('difficulty', difficulty);
-    const pool = await bank;
-    if (pool.error) throw pool.error;
-    const candidates = (pool.data || []).map(row => row.data).filter(q => fitsLearningSelection(q, selection));
-    for (let i = candidates.length - 1; i > 0; i--) { const j = randomInt(i + 1); [candidates[i], candidates[j]] = [candidates[j], candidates[i]]; }
-    const questions: BaseQuestion[] = [], seen = new Set<string>();
-    for (const q of candidates) { if (!isQuestionReadyForStudents(q)) continue; const key = questionContentKey(q); if (!seen.has(key)) { seen.add(key); questions.push(q); } if (questions.length === count) break; }
-    for (let tries = 0; questions.length < count && tries < count * 50; tries++) {
-      const q = generateQuestion({ profile: 'professional', targetGrade: profile.data.grade, difficulty: difficulty === 'mixed' ? randomInt(1, EDUCATION_PROFILES[profile.data.grade].maxDifficulty + 1) as import('../../src/types').DifficultyLevel : difficulty, category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number], seed: randomInt(1, 2147483647) });
-      const key = questionContentKey(q);
-      if (!seen.has(key) && fitsLearningSelection(q, selection) && isQuestionReadyForStudents(q)) { seen.add(key); questions.push(q); }
-    }
-    if (questions.length !== count) throw new LearningError('Bu çalışma için yeterli doğrulanmış soru hazır değil.');
+    const candidates = bank.questions.filter(q => fitsLearningSelection(q, selection));
+    const exposure = await loadRecentQuestionExposure(student);
+    const questions = selectLearningQuestions({ count, category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number],
+      candidates, exposure, canUse: q => fitsLearningSelection(q, selection) && isQuestionReadyForStudents(q),
+      generate: nextCategory => generateQuestion({ profile: 'professional', targetGrade: grade,
+        difficulty: difficulty === 'mixed' ? randomInt(1, EDUCATION_PROFILES[grade].maxDifficulty + 1) as import('../../src/types').DifficultyLevel : difficulty,
+        category: nextCategory, seed: randomInt(1, 2147483647) }),
+    });
     const latestProfile = await client.from('profiles').select('grade').eq('id', student).single();
     if (latestProfile.error) throw latestProfile.error;
     if (latestProfile.data.grade !== selection.grade) throw new LearningError('Sınıfın değişti. Yeni sınıfınla tekrar başla.', 409);
@@ -185,13 +182,15 @@ routes.post('/learning/:id/answer', async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = answerSchema.safeParse(req.body);
     if (!parsed.success) throw new LearningError('Yanıt geçersiz.', 400);
-    return res.json(learningView(await commit(req.authUser!.uid, String(req.params.id), session => answerLearningSession(session, parsed.data.index, parsed.data.response))));
+    const saved = await commit(req.authUser!.uid, String(req.params.id), session => answerLearningSession(session, parsed.data.index, parsed.data.response));
+    return res.json(req.query.view === 'update' ? learningUpdateView(saved) : learningView(saved));
   } catch (error) { return handleError(error, res); }
 });
 routes.post('/learning/:id/finish', async (req: AuthenticatedRequest, res) => {
   try {
     if (!z.object({}).strict().safeParse(req.body || {}).success) throw new LearningError('Sonuçlar sunucu tarafından hesaplanır.', 400);
-    return res.json(learningView(await commit(req.authUser!.uid, String(req.params.id), finishLearningSession)));
+    const saved = await commit(req.authUser!.uid, String(req.params.id), finishLearningSession);
+    return res.json(req.query.view === 'update' ? learningUpdateView(saved) : learningView(saved));
   } catch (error) { return handleError(error, res); }
 });
 routes.post('/learning/:id/report', async (req: AuthenticatedRequest, res) => {
@@ -208,3 +207,4 @@ routes.post('/learning/:id/report', async (req: AuthenticatedRequest, res) => {
   } catch (error) { return handleError(error, res); }
 });
 export default routes;
+

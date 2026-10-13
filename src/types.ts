@@ -465,6 +465,14 @@ export interface BaseQuestion {
   updatedAt?: string;
   updatedBy?: string;
   reviewedBy?: string;
+  sourceBatch?: string;
+  batchValidation?: {
+    policy: string;
+    automaticChecks: 'passed';
+    editorReview: 'pending' | 'completed';
+    visualKeySha256: string;
+    stemKeySha256: string;
+  };
   /** Explicit owner release of an auto-verified batch, tracked separately from individual educator review. */
   releaseAuthorization?: {
     source: string;

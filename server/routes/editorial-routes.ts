@@ -2,7 +2,7 @@ import { logServerFailure } from '../safe-log';
 import { Router } from 'express';
 import { z } from 'zod';
 import type { BaseQuestion } from '../../src/types';
-import { getServiceClient } from '../supabase-admin';
+import { EditorialConflictError, saveQuestionRevision } from '../editorial-store';
 import { requireSupabaseAuth, requireProfileRole, requireVerifiedEmail, type AuthenticatedRequest } from '../security';
 import { adminAiLimiter } from '../rate-limiters';
 import { sharedRateLimit } from '../shared-rate-limit';
@@ -21,20 +21,15 @@ editorialRoutes.post('/admin/questions/save', requireSupabaseAuth, adminAiLimite
   const parsed = saveSchema.safeParse(req.body);
   if (!parsed.success || !req.authUser) return res.status(400).json({ error: 'Soru kayıt isteği geçersiz.' });
   try {
-    const existing = parsed.data.status === 'published' ? await loadQualityComparisonPool() : [];
+    const existing = parsed.data.status === 'published' ? await loadQualityComparisonPool((parsed.data.question as unknown as BaseQuestion).type) : [];
     const stored = prepareEditorialQuestion(
       parsed.data.question as unknown as BaseQuestion, parsed.data.status, parsed.data.expectedRevision,
       parsed.data.confirmedReview, req.authUser.uid, existing.filter(q => q.id !== parsed.data.question.id),
     );
-    const { data, error } = await getServiceClient().rpc('save_question', {
-      payload: stored, p_expected_revision: parsed.data.expectedRevision,
-    });
-    if (error) {
-      if (error.code === '40001') return res.status(409).json({ error: 'Soru başka bir oturumda değişti. Yeniden yükleyin.' });
-      throw error;
-    }
+    const data = await saveQuestionRevision(stored, parsed.data.expectedRevision);
     return res.json({ question: data });
   } catch (error) {
+    if (error instanceof EditorialConflictError) return res.status(409).json({ error: error.message });
     if (error instanceof EditorialValidationError) {
       return res.status(422).json({ error: 'Soru yayıma veya kayda uygun değil.', details: error.details });
     }
@@ -44,4 +39,5 @@ editorialRoutes.post('/admin/questions/save', requireSupabaseAuth, adminAiLimite
 });
 
 export default editorialRoutes;
+
 

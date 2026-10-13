@@ -26,3 +26,8 @@ jobs:
       - run: npm audit --audit-level=moderate
       - run: npm run vercel-build
       - run: npm run security:http
+      - name: Install Chromium for mobile and tablet layout checks
+        run: npx playwright install --with-deps chromium
+      - name: Check question layouts on mobile and tablet viewports
+        run: npm run test:layout
+

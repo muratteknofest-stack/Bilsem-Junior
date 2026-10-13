@@ -12,6 +12,9 @@ import {
 } from '../security';
 import { adminAiLimiter } from '../rate-limiters';
 import { getGeminiClient } from '../gemini-client';
+import type { BaseQuestion, QuestionType } from '../../src/types';
+import { EditorialValidationError, prepareEditorialQuestion } from '../editorial-validation';
+import { archiveQuestionRevision, assertQuestionRevision, EditorialConflictError, saveQuestionRevision } from '../editorial-store';
 
 const adminAiRoutes = Router();
 
@@ -26,9 +29,10 @@ const aiQuestionGenerateSchema = z.object({
   aiModel: z.string().max(100).optional(),
 }).strict();
 
-const aiQuestionReviewSchema = z.object({
+export const aiQuestionReviewSchema = z.object({
   questionId: z.string().min(1).max(200),
   action: z.enum(['approve', 'reject', 'regenerate']),
+  expectedRevision: z.number().int().min(0),
 }).strict();
 
 adminAiRoutes.post('/admin/ai-generate-question', requireSupabaseAuth, adminAiLimiter, requireProfileRole('admin'), sharedRateLimit('admin-ai', 60, 600), async (req: AuthenticatedRequest, res) => {
@@ -53,7 +57,7 @@ adminAiRoutes.post('/admin/ai-generate-question', requireSupabaseAuth, adminAiLi
       maxAttempts: parsed.data.maxAttempts,
       minQualityScore: parsed.data.minQualityScore,
       aiModel: parsed.data.aiModel,
-    }, { existingQuestions: await loadQualityComparisonPool() });
+    }, { existingQuestions: await loadQualityComparisonPool(parsed.data.questionType as QuestionType | undefined) });
 
     try {
       const adminDb = getAdminDb();
@@ -131,32 +135,25 @@ adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, adminAiLimi
       return res.status(404).json({ error: 'Soru bulunamadı.' });
     }
 
-    const currentData = snap.data()!;
+    const currentData = snap.data()! as BaseQuestion;
+    const revision = currentData.revision || 0;
+    assertQuestionRevision(currentData, parsed.data.expectedRevision);
 
     if (action === 'approve') {
-      const comparison = await loadQualityComparisonPool();
+      const comparison = await loadQualityComparisonPool(currentData.type);
       const report = auditQuestion(currentData, comparison.filter(q => q.id !== currentData.id));
       if (!isQuestionReadyForStudents(currentData) || report.errors.length) {
         return res.status(422).json({ error: 'Soru doğrulanamadı; inceleme gerekli.', details: [...report.errors, ...report.reviewRequired] });
       }
-      await qRef.update({
-        status: 'published',
-        reviewedBy: req.authUser.uid,
-        updatedAt: new Date().toISOString(),
-        updatedBy: req.authUser.uid,
-        revision: (currentData.revision || 0) + 1,
-      });
-      return res.json({ success: true, message: 'Soru onaylandı ve yayınlandı.' });
+      const reviewed = prepareEditorialQuestion(currentData, 'published', revision, true, req.authUser.uid,
+        comparison.filter(q => q.id !== currentData.id));
+      const saved = await saveQuestionRevision(reviewed, revision);
+      return res.json({ success: true, question: saved, message: 'Soru onaylandı ve yayınlandı.' });
     }
 
     if (action === 'reject') {
-      await qRef.update({
-        status: 'archived',
-        updatedAt: new Date().toISOString(),
-        updatedBy: req.authUser.uid,
-        revision: (currentData.revision || 0) + 1,
-      });
-      return res.json({ success: true, message: 'Soru reddedildi.' });
+      const saved = await saveQuestionRevision(archiveQuestionRevision(currentData, req.authUser.uid), revision);
+      return res.json({ success: true, question: saved, message: 'Soru reddedildi.' });
     }
 
     if (action === 'regenerate') {
@@ -170,7 +167,7 @@ adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, adminAiLimi
         targetGrade: currentData.targetGrade || 3,
         difficulty: currentData.difficulty || 3,
         targetAge: currentData.targetAge,
-      }, { existingQuestions: await loadQualityComparisonPool() });
+      }, { existingQuestions: await loadQualityComparisonPool(currentData.type) });
 
       if (result.question) {
         await adminDb.collection('questions').doc(result.question.id).set({
@@ -183,7 +180,7 @@ adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, adminAiLimi
         });
       }
 
-      if (result.success) await qRef.update({ status: 'archived', updatedAt: new Date().toISOString() });
+      if (result.success) await saveQuestionRevision(archiveQuestionRevision(currentData, req.authUser.uid), revision);
       return res.json({
         success: result.success,
         message: result.success ? 'Soru yeniden üretildi.' : 'Yeniden üretim başarısız.',
@@ -196,11 +193,14 @@ adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, adminAiLimi
 
     return res.status(400).json({ error: 'Geçersiz işlem.' });
   } catch (err: any) {
+    if (err instanceof EditorialConflictError) return res.status(409).json({ error: err.message });
+    if (err instanceof EditorialValidationError) return res.status(422).json({ error: 'Soru yayın için doğrulanamadı.', details: err.details });
     logServerFailure('Question review failed', err);
     return res.status(500).json({ error: 'İşlem başarısız.' });
   }
 });
 
 export default adminAiRoutes;
+
 
 

@@ -12,12 +12,32 @@ export class AnswerRequestGate {
   }
 }
 
+/** Expiry retries are independent of unrelated UI errors and bounded during an outage. */
+export class DeadlineFinishGate {
+  private sessionId = '';
+  private attempts = 0;
+  private nextAttemptAt = 0;
+  take(sessionId: string, deadline: number, now: number, busy: boolean) {
+    if (sessionId !== this.sessionId) { this.sessionId = sessionId; this.attempts = 0; this.nextAttemptAt = 0; }
+    if (!Number.isFinite(deadline) || busy || now < deadline || now < this.nextAttemptAt || this.attempts >= 3) return false;
+    this.nextAttemptAt = now + 1000 * 2 ** this.attempts++;
+    return true;
+  }
+}
+
 export function nextUnansweredIndex(session: LearningSessionView, after = -1): number {
   for (let offset = 1; offset <= session.questions.length; offset++) {
     const index = (after + offset) % session.questions.length;
     if (!session.answers[String(index)]) return index;
   }
   return -1;
+}
+
+/** UI guard only; the server independently enforces its own deadline and scoring. */
+export function canSubmitLearningAnswer(session: LearningSessionView | null, index: number, now = Date.now()) {
+  if (!session || session.result || !Number.isInteger(index) || !session.questions[index]) return false;
+  const deadline = Date.parse(session.expiresAt);
+  return Number.isFinite(deadline) && now < deadline && (session.mode === 'exam' || !session.answers[String(index)]);
 }
 
 type AnswerApi = {

@@ -15,4 +15,6 @@ export interface LearningSessionView {
   solutions?: Record<string, { correctOptionId: string; explanation: VisualExplanation }>;
   result: LearningResult | null;
 }
+/** Answer/finish acknowledgement; immutable puzzle snapshots stay in the client cache. */
+export type LearningSessionUpdate = Omit<LearningSessionView, 'questions'>;
 export type LearningCategory = CognitiveCategory | 'mixed';

@@ -1,4 +1,5 @@
 import { FocusedQuestionScreen } from './FocusedQuestionScreen';
+import { LearningRefreshNotice } from './LearningRefreshNotice';
 import { ArrowLeft, ArrowRight, Clock3, Gamepad2, Sparkles, Trophy, Tablet, CheckCircle2 } from 'lucide-react';
 import './VerifiedLearningView.css';
 import React, { useEffect, useRef, useState } from 'react';
@@ -13,7 +14,7 @@ import { AnswerWorkspace } from '../features/questions/renderers/AnswerWorkspace
 import { VisualExplanationOverlay } from '../features/questions/renderers/VisualExplanationOverlay';
 import { apiUrl } from '../lib/api-client';
 import { learningService } from '../services/learning-service';
-import { AnswerRequestGate, nextUnansweredIndex, saveAndAdvance } from '../features/student/answer-progression';
+import { AnswerRequestGate, DeadlineFinishGate, canSubmitLearningAnswer, nextUnansweredIndex, saveAndAdvance } from '../features/student/answer-progression';
 import { AnswerHistory, type ReviewedAnswer } from './AnswerHistory';
 import { dataService } from '../services/data-service';
 import { difficultyChoices, type LearningDifficulty } from '../features/student/learning-selection';
@@ -44,6 +45,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
   const [hint, setHint] = useState(false);
   const [history, setHistory] = useState<ReviewedAnswer[]>([]);
   const gate = useRef(new AnswerRequestGate());
+  const deadlineGate = useRef(new DeadlineFinishGate());
   const mounted = useRef(true);
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -72,6 +74,8 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
     return !!updated;
   };
   const finish = async () => { if (session && await savePending()) await run(() => learningService.finish(session.id)); };
+  const latestFinish = useRef({ finish, busy });
+  useEffect(() => { latestFinish.current = { finish, busy }; });
   const goTo = async (nextIndex: number) => { if (!busy && await savePending()) setIndex(nextIndex); };
   const leave = async () => { if (await savePending()) onNavigateHome(); };
   useEffect(() => {
@@ -81,15 +85,19 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
   }, [session?.id, index]);
   useEffect(() => {
     if (!session || session.result) return;
-    const tick = () => setRemaining(Math.max(0, Math.ceil((Date.parse(session.expiresAt) - Date.now()) / 1000)));
+    const tick = () => {
+      const now = Date.now(), deadline = Date.parse(session.expiresAt);
+      setRemaining(Math.max(0, Math.ceil((deadline - now) / 1000)));
+      if (deadlineGate.current.take(session.id, deadline, now, latestFinish.current.busy)) void latestFinish.current.finish();
+    };
     tick(); const timer = setInterval(tick, 1000); return () => clearInterval(timer);
   }, [session?.id, session?.expiresAt, session?.result]);
-  // Expiry is enforced independently by the server. A failed auto-finish stays retryable.
-  useEffect(() => { if (session && !session.result && remaining === 0 && Date.now() >= Date.parse(session.expiresAt) && !busy && !error) void finish(); }, [remaining, session?.id, session?.result, busy, error]);
   const q = session?.questions[index], answer = session?.answers[String(index)];
   const solution = session?.solutions?.[String(index)] || (answer?.correctOptionId && answer.explanation ? { correctOptionId: answer.correctOptionId, explanation: answer.explanation } : undefined);
   const revealed = answer?.correct !== undefined;
   const submitted = !!session?.result || (mode !== 'exam' && revealed);
+  const expired = !!session && !session.result && Date.now() >= Date.parse(session.expiresAt);
+  const needsFinish = !!session && !session.result && (expired || nextUnansweredIndex(session) < 0);
   // Existing renderers only consume visible puzzle fields. They never score this DTO.
   const renderQuestion = q ? { ...q, ...(solution || {}) } as BaseQuestion : null;
   const remember = (completed: LearningSessionView) => {
@@ -101,7 +109,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
     setHistory(previous => [...previous.filter(item => !entries.some(entry => entry.id === item.id)), ...entries]);
   };
   const submit = async (pending = response) => {
-    if (!session || submitted || !pending || !isResponseComplete(q as BaseQuestion, pending)) return;
+    if (!session || !canSubmitLearningAnswer(session, index) || !pending || !isResponseComplete(q as BaseQuestion, pending)) return;
     await run(async () => {
       const advanced = await saveAndAdvance(session, index, pending, learningService, saved => {
         if (mounted.current) { setSession(saved); setResponse(saved.answers[String(index)]?.response as QuestionResponse ?? null); }
@@ -120,7 +128,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
     });
   };
   const changeResponse = (pending: QuestionResponse) => {
-    if (busy || submitted) return;
+    if (busy || !canSubmitLearningAnswer(session, index)) return;
     setResponse(pending);
     if (pending.mode === 'choice' && pending.optionId) void submit(pending);
   };
@@ -139,14 +147,15 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
   const isExam = mode === 'exam';
   if(session&&!session.result&&q&&renderQuestion) {
     const canVisit=(i:number)=>i>=0&&i<session.questions.length&&(mode==='exam'||!!session.answers[String(i)]||i===nextUnansweredIndex(session));
-    return <FocusedQuestionScreen question={renderQuestion} sessionKey={`${session.id}-${index}`} index={index} total={session.questions.length} remaining={remaining} busy={busy} submitted={submitted} response={response} error={error} onChange={changeResponse} onLeave={()=>void leave()} onPrevious={canVisit(index-1)?()=>void goTo(index-1):undefined} onNext={canVisit(index+1)?()=>void goTo(index+1):undefined} onRetry={response?.mode==='choice'&&response.optionId?()=>void submit():undefined} tools={<>
+    return <FocusedQuestionScreen question={renderQuestion} sessionKey={`${session.id}-${index}`} index={index} total={session.questions.length} remaining={remaining} busy={busy} submitted={submitted} expired={expired} response={response} error={error} onChange={changeResponse} onLeave={()=>void leave()} onPrevious={canVisit(index-1)?()=>void goTo(index-1):undefined} onNext={canVisit(index+1)?()=>void goTo(index+1):undefined} onRetry={needsFinish?()=>void finish():response?.mode==='choice'&&response.optionId?()=>void submit():undefined} onRetryLabel={needsFinish?'Sonuçları yükle':'Yeniden gönder'} onReloadResults={()=>void finish()} tools={<>
+      <LearningRefreshNotice/>
       <p>Şıkkı seçince cevabın kaydedilir ve sonraki soru açılır. {isExam?'Çözümler deneme bitince gösterilir.':'Önceki soruların çözümlerini buradan inceleyebilirsin.'}</p>
       <nav aria-label="Soru seçimi">{session.questions.map((item,i)=>{const saved=session.answers[String(i)];const label=saved?.correct===undefined?(saved?'Yanıtlandı':'Boş'):(saved.correct?'Doğru':'Yanlış');return <button key={item.id} disabled={busy||!canVisit(i)} aria-current={i===index?'step':undefined} onClick={()=>void goTo(i)} aria-label={`${i+1}. soru, ${label}`}>{i+1} · {label}</button>;})}</nav>
       {response&&response.mode!=='choice'&&<details><summary>Önceki yanıtın</summary><AnswerWorkspace question={renderQuestion} response={response} onChange={changeResponse} submitted/></details>}
       {revealed&&<p role="status">{answer.correct?'Doğru cevap!':'Bu soruyu birlikte inceleyelim.'}</p>}
       {solution&&<VisualExplanationOverlay explanation={solution.explanation} correctOptionId={solution.correctOptionId}/>}
       {!submitted&&!isExam&&<details><summary>İpucu</summary><p>Önce değişen ve aynı kalan özellikleri karşılaştır. Kuralın bütün adımlarda çalıştığını kontrol et.</p></details>}
-      <div className="zp-tools-actions">{!reviewMistakeId&&<button disabled={busy} onClick={()=>void chooseNewDifficulty()}>Zorluğu değiştir / yeni çalışma</button>}<button disabled={busy} onClick={()=>void finish()}>{isExam?'Denemeyi bitir':'Çalışmayı bitir'}</button></div>
+      <div className="zp-tools-actions">{!reviewMistakeId&&<button disabled={busy} onClick={()=>void chooseNewDifficulty()}>Zorluğu değiştir / yeni çalışma</button>}<button disabled={busy} onClick={()=>void finish()}>{remaining===0?'Sonuçları yeniden yükle':isExam?'Denemeyi bitir':'Çalışmayı bitir'}</button></div>
       <details><summary>Soruyla ilgili sorun bildir</summary>{([['answer','Cevap'],['unclear','Anlatım'],['visual','Görsel'],['level','Seviye']] as const).map(([reason,label])=><button key={reason} disabled={reportBusy} onClick={async()=>{setReportBusy(true);try{await learningService.report(session.id,index,reason);setReportStatus('Bildirimin alındı. Teşekkür ederiz.');}catch(err){setReportStatus(err instanceof Error?err.message:'Bildirim gönderilemedi.');}finally{setReportBusy(false);}}}>{label}</button>)}<p role="status">{reportStatus}</p></details>
       <AnswerHistory items={history}/>
     </>}/>;
@@ -159,6 +168,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
     <div className={isExam ? 'zp-tablet' : 'zp-game-shell'}>
     {isExam && <div className="zp-tablet-camera" aria-hidden="true"><span /></div>}
     <div className="zp-screen">
+    <LearningRefreshNotice/>
     <div className="zp-screen-bar"><span>{isExam ? <Tablet size={17} aria-hidden="true" /> : <Gamepad2 size={19} aria-hidden="true" />} {isExam ? 'ZEKA PARK / DENEME' : 'KEŞFET · DÜŞÜN · ÇÖZ'}</span><span>{grade}. SINIF</span></div>
     {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{error}</div>}
     <AnswerHistory items={history} />
@@ -202,7 +212,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
         <div className="zp-session-actions flex flex-wrap gap-3">
           {!session.result && !reviewMistakeId && <button type="button" disabled={busy} onClick={() => void chooseNewDifficulty()} className="min-h-11 rounded-xl border border-indigo-300 px-4 py-2 font-semibold text-indigo-800">Zorluğu değiştir / yeni çalışma</button>}
           {!session.result && mode !== 'exam' && revealed && <button type="button" disabled={busy} onClick={() => nextUnansweredIndex(session) >= 0 ? void goTo(nextUnansweredIndex(session)) : void next()} className={button}>{nextUnansweredIndex(session) >= 0 ? 'Çalışmaya devam et' : 'Sonuçları gör'}</button>}
-          {!session.result && <button type="button" disabled={busy} onClick={() => void finish()} className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 font-semibold">{mode === 'exam' ? 'Denemeyi bitir' : 'Çalışmayı bitir'}</button>}
+          {!session.result && <button type="button" disabled={busy} onClick={() => void finish()} className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 font-semibold">{remaining===0?'Sonuçları yeniden yükle':mode === 'exam' ? 'Denemeyi bitir' : 'Çalışmayı bitir'}</button>}
         </div>
         <details className="border-t border-slate-100 pt-4"><summary className="min-h-11 cursor-pointer text-sm font-semibold text-slate-600">Soruyla ilgili sorun bildir</summary><div className="flex flex-wrap gap-2">{([['answer', 'Cevap'], ['unclear', 'Anlatım'], ['visual', 'Görsel'], ['level', 'Seviye']] as const).map(([reason, label]) => <button key={reason} type="button" disabled={reportBusy} onClick={async () => { setReportBusy(true); try { await learningService.report(session.id, index, reason); setReportStatus('Bildirimin alındı. Teşekkür ederiz.'); } catch (err) { setReportStatus(err instanceof Error ? err.message : 'Bildirim gönderilemedi.'); } finally { setReportBusy(false); } }} className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm">{label}</button>)}</div><p role="status" className="mt-2 text-sm">{reportStatus}</p></details>
       </section>}

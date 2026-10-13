@@ -62,7 +62,7 @@ class ZekaParkDataService {
   private setProgressItem(key: (typeof USER_PROGRESS_KEYS)[number], value: string) { return setProgressItem(key, value); }
   private removeProgressItem(key: (typeof USER_PROGRESS_KEYS)[number]) { return removeProgressItem(key); }
   private async persistUserStateToSupabase() { return persistUserStateToSupabase(); }
-  async hydrateUserStateFromSupabase(): Promise<void> { return hydrateUserStateFromSupabase(); }
+  async hydrateUserStateFromSupabase(options?: { signal?: AbortSignal }): Promise<void> { return hydrateUserStateFromSupabase(options); }
   async loadRemoteProgressForUser(userId: string) { return loadRemoteProgressForUser(userId); }
 
   // Profile

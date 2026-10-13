@@ -73,9 +73,9 @@ test('exam answers can be cleared before finish without revealing correctness', 
   assert.equal(finishLearningSession(cleared, now+3000).result!.blankAnswers, 1);
   assert.throws(() => answerLearningSession(fixture(), 0, null, now+1000));
 });
-import { difficultyChoices, fitsLearningSelection, learningStartSchema, sameLearningSelection, ACTIVE_BANK_VERSION, type LearningSelection } from '../src/features/student/learning-selection';
+import { difficultyChoices, fitsLearningSelection, learningStartSchema, sameLearningSelection, LEARNING_BANK_POLICY, type LearningSelection } from '../src/features/student/learning-selection';
 test('grade and difficulty selections reject stale sessions and out-of-scope questions', () => {
-  const selection: LearningSelection = { grade: 2, difficulty: 2, category: 'mixed', exam: 'mini', count: 15, bankVersion: ACTIVE_BANK_VERSION };
+  const selection: LearningSelection = { grade: 2, difficulty: 2, category: 'mixed', exam: 'mini', count: 15, bankVersion: LEARNING_BANK_POLICY };
   const q = generateQuestion({ targetGrade: 2, difficulty: 2, seed: 213546, type: 'visual_sequence' });
   assert.equal(fitsLearningSelection(q, selection), true);
   assert.equal(fitsLearningSelection({ ...q, targetGrade: 1 }, selection), false);

@@ -3,8 +3,9 @@ import type { BaseQuestion } from '../src/types';
 import { evaluateResponse, type QuestionResponse } from '../src/features/questions/answer-interactions';
 import { isQuestionReadyForStudents } from '../src/features/questions/quality';
 import { answerXp } from '../src/features/student/gamification-model';
-import type { LearningMode, LearningResult, LearningSessionView, PublicLearningQuestion } from '../src/features/student/learning-contract';
+import type { LearningMode, LearningResult, LearningSessionView, LearningSessionUpdate, PublicLearningQuestion } from '../src/features/student/learning-contract';
 import type { LearningSelection } from '../src/features/student/learning-selection';
+import { publicVisualConfig } from '../src/features/questions/public-visual';
 
 export interface LearningSession {
   id: string; student_id: string; mode: LearningMode; title: string; questions: BaseQuestion[];
@@ -21,12 +22,15 @@ export function prepareLearningQuestions(questions: BaseQuestion[]): BaseQuestio
 }
 export function publicLearningQuestion(q: BaseQuestion): PublicLearningQuestion {
   return { id: q.id, type: q.type, category: q.category, difficulty: q.difficulty, prompt: q.prompt,
-    ...(q.secondaryPrompt ? { secondaryPrompt: q.secondaryPrompt } : {}), visualConfig: q.visualConfig, targetGrade: q.targetGrade,
+    ...(q.secondaryPrompt ? { secondaryPrompt: q.secondaryPrompt } : {}), visualConfig: publicVisualConfig(q), targetGrade: q.targetGrade,
     options: q.options.map(({ id, label, visualData }) => ({ id, label, visualData })) };
 }
 export function learningView(session: LearningSession): LearningSessionView {
+  return { ...learningUpdateView(session), questions: session.questions.map(publicLearningQuestion) };
+}
+export function learningUpdateView(session: LearningSession): LearningSessionUpdate {
   return { id: session.id, mode: session.mode, title: session.title, expiresAt: session.expires_at,
-    questions: session.questions.map(publicLearningQuestion), result: session.result,
+    result: session.result,
     ...(session.finished_at ? { solutions: Object.fromEntries(session.questions.map((q, index) => [index, { correctOptionId: q.correctOptionId, explanation: q.explanation }])) } : {}),
     answers: Object.fromEntries(Object.entries(session.answers).map(([index, answer]) => {
       const reveal = session.mode !== 'exam' || !!session.finished_at;
@@ -63,3 +67,4 @@ export function learningTotals(session: LearningSession) {
   return { xp: session.result?.xp ?? Object.values(session.answers).reduce((sum, a) => sum + a.xp, 0),
     answered: session.mode === 'exam' && !session.finished_at ? 0 : Object.keys(session.answers).length };
 }
+
