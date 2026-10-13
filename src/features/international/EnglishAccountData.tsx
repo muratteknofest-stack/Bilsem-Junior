@@ -12,7 +12,7 @@ const statuses={open:'Received',reviewing:'Under review',resolved:'Resolved',dis
 
 export function EnglishAccountData({ownerId}:{ownerId:string}){
  const [requests,setRequests]=useState<AccountRequest[]>([]),[confirmed,setConfirmed]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
- const alive=useRef(true),lock=useRef(false),controllers=useRef(new Set<AbortController>());
+ const alive=useRef(true),lock=useRef(false),controllers=useRef(new Set<AbortController>()),refreshSequence=useRef(0);
  const current=()=>alive.current&&auth.currentUser?.uid===ownerId;
  async function request(path:string,options:RequestInit={}){
   const controller=new AbortController();controllers.current.add(controller);
@@ -22,7 +22,7 @@ export function EnglishAccountData({ownerId}:{ownerId:string}){
    finally{deadline.removeEventListener('abort',abort);}
   },45_000);}finally{controllers.current.delete(controller);}
  }
- async function refresh(){const data=requestsSchema.parse(await request('requests'));if(current())setRequests(data.requests);}
+ async function refresh(){const sequence=++refreshSequence.current;const data=requestsSchema.parse(await request('requests'));if(current()&&sequence===refreshSequence.current)setRequests(data.requests);}
  useEffect(()=>{let active=true;alive.current=true;void refresh().catch(e=>{if(active&&current())setError(englishAccountError(e));});return()=>{active=false;alive.current=false;for(const c of controllers.current)c.abort();};},[ownerId]);
  async function action(job:()=>Promise<void>){if(lock.current)return;lock.current=true;setBusy(true);setError('');setMessage('');try{await job();}catch(e){if(current())setError(englishAccountError(e));}finally{lock.current=false;if(current())setBusy(false);}}
  const pending=requests.some(r=>r.kind==='deletion'&&(r.status==='open'||r.status==='reviewing'));
@@ -37,7 +37,7 @@ export function EnglishAccountData({ownerId}:{ownerId:string}){
  <label className="en-check"><input type="checkbox" checked={confirmed} disabled={busy||pending} onChange={e=>setConfirmed(e.target.checked)}/> I request deletion of my family account and linked student data.</label>
  <button type="button" className="en-secondary" disabled={busy||!confirmed||pending} onClick={()=>void action(async()=>{
   const data=z.object({id:z.string().uuid()}).parse(await request('deletion-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirmed:true})}));
-  if(!current())return;setConfirmed(false);setRequests(rows=>[{id:data.id,kind:'deletion' as const,status:'open' as const,created_at:new Date().toISOString(),updated_at:new Date().toISOString()},...rows.filter(r=>r.id!==data.id)].slice(0,50));setMessage('Deletion request received. Your account remains active while the request is reviewed.');
+  if(!current())return;refreshSequence.current++;setConfirmed(false);setRequests(rows=>[{id:data.id,kind:'deletion' as const,status:'open' as const,created_at:new Date().toISOString(),updated_at:new Date().toISOString()},...rows.filter(r=>r.id!==data.id)].slice(0,50));setMessage('Deletion request received. Your account remains active while the request is reviewed.');
  })}>Send deletion request</button>
  {busy&&<p role="status">Processing account data…</p>}{message&&<p role="status">{message}</p>}{error&&<p role="alert" className="en-notice">{error}</p>}
  <h3>Recent support requests</h3>{!requests.length&&<p>No recent requests. Use “Refresh request status” to check again.</p>}<ul className="en-history">{requests.map(r=><li key={r.id}><strong>{r.kind==='deletion'?'Account deletion':'Puzzle report'} · {statuses[r.status]}</strong><span>{new Date(r.created_at).toLocaleDateString('en-GB')} · Reference: {r.id}</span></li>)}</ul>
