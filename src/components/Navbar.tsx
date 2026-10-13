@@ -86,6 +86,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
 
+        <a href="/en/" lang="en" hrefLang="en" aria-label="English version" className="inline-flex min-h-11 items-center px-2 text-sm font-bold">English</a>
+
         {/* Family Two-Way Role Switcher (Öğrenci <-> Veli) */}
         {!isLanding && role !== 'admin' && (
           <div className="hidden sm:flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">

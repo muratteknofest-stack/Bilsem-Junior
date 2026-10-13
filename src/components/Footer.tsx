@@ -97,6 +97,7 @@ export function Footer({ onNavigate, onNavigateToLogin }: FooterProps) {
           </div>
           <div className="platform-footer-actions">
             <a href="/paketler" className="platform-footer-btn-secondary">Shopier paketleri</a>
+            <a href="/en/" lang="en" hrefLang="en" className="platform-footer-btn-secondary">English · Thinking games</a>
             <button
               type="button"
               className="platform-footer-btn-primary"

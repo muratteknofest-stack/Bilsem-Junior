@@ -100,7 +100,7 @@ export function renderBlog(root = process.cwd(), env: NodeJS.ProcessEnv = proces
     pages.set(`bilgi/${info.slug}/index.html`, shell(info.title, info.description, route, body, [{ '@type': 'WebPage', name: info.title, description: info.description, url: absolute(route), inLanguage: 'tr-TR' }]));
   }
   const urls = ['/blog', ...articles.map(a => `/blog/${a.slug}`), '/blog/yayin-ilkeleri', ...PLATFORM_INFO.map(p => `/bilgi/${p.slug}`)];
-  pages.set('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${config.origin ? ['/', ...urls].map(u => `<url><loc>${e(absolute(u))}</loc>${u === '/' ? '' : `<lastmod>${BLOG_DATE}</lastmod>`}</url>`).join('') : ''}</urlset>`);
+  pages.set('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${config.origin ? ['/', '/en/', ...urls].map(u => `<url><loc>${e(absolute(u))}</loc>${u === '/' ? '' : `<lastmod>${BLOG_DATE}</lastmod>`}</url>`).join('') : ''}</urlset>`);
   pages.set('robots.txt', config.indexable ? `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /admin\nDisallow: /reset-password\nSitemap: ${absolute('/sitemap.xml')}\n` : 'User-agent: *\nDisallow: /\n');
   pages.set('blog/feed.xml', `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>ZekaPark Blog</title><link>${e(absolute('/blog'))}</link><description>Çocuklar için düşünme oyunları ve aile rehberleri</description><language>tr-TR</language>${config.origin ? articles.map(a => `<item><title>${e(a.title)}</title><link>${e(absolute(`/blog/${a.slug}`))}</link><guid isPermaLink="true">${e(absolute(`/blog/${a.slug}`))}</guid><description>${e(a.excerpt)}</description><pubDate>Sat, 10 Oct 2026 09:00:00 GMT</pubDate></item>`).join('') : ''}</channel></rss>`);
   return { pages, articles, config };
@@ -115,3 +115,4 @@ export function writeBlog(outputDir: string, root = process.cwd(), env = process
   }
   return result;
 }
+
