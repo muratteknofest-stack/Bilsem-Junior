@@ -17,6 +17,9 @@ async function reviewDesign(label){
  for(const [width,height] of [[320,480],[390,844],[667,375],[820,1180],[1440,1000]]){
   await page.setViewportSize({width,height});
   const layout=await page.evaluate(()=>({horizontal:document.documentElement.scrollWidth>innerWidth+1,controls:[...document.querySelectorAll('main button,main select')].filter(e=>e.getBoundingClientRect().width>0).every(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1;})}));
+  const navigationContrast=await page.locator('.en-nav-account').evaluate(el=>{
+   const style=getComputedStyle(el),luminance=value=>{const rgb=value.match(/[0-9.]+/g).slice(0,3).map(Number).map(v=>{v/=255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4);});return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;};const a=luminance(style.color),b=luminance(style.backgroundColor);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);
+  });assert.ok(navigationContrast>=4.5,JSON.stringify({label,width,navigationContrast}));
   assert.equal(layout.horizontal,false,JSON.stringify({label,width,height,layout}));assert.equal(layout.controls,true,JSON.stringify({label,width,height,layout}));
   if(width===390||width===1440)await page.screenshot({path:`test-artifacts/thinkharbor/${label}-${width}.png`,fullPage:true});
  }
