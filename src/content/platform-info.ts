@@ -35,22 +35,48 @@ export const PLATFORM_INFO: PlatformInfo[] = [
     { title: 'Bir güvenlik sorunu fark ederseniz', paragraphs: [`Uygulama bağlantısını, sorunun oluştuğu adımları ve kişisel bilgi içermeyen bir açıklamayı ${SUPPORT_EMAIL} adresine iletin. Başka kullanıcıların verilerini indirmeyin veya yayımlamayın.`, 'Bu sayfa güvenlik sertifikası veya sistemin tüm açıklarının giderildiği iddiası değildir. Güvenlik kontrolleri ve canlı ortam yapılandırmaları ayrıca doğrulanmalıdır.'] },
   ] },
 ];
-export const FOOTER_GROUPS = [
-  { title: 'ZekaPark’ı tanıyın', links: [
-    { label: 'Platform hakkında', href: '/bilgi/zekapark-hakkinda' },
-    { label: 'Çalışma alanları', href: '/bilgi/calisma-alanlari' },
-    { label: 'Hesap ve veli rehberi', href: '/bilgi/hesap-ve-veli-rehberi' },
-  ] },
-  { title: 'Birlikte öğrenin', links: [
-    { label: '30 yazılık blog', href: '/blog' },
-    { label: 'BİLSEM rehberleri', href: '/blog?category=B%C4%B0LSEM%20rehberi' },
-    { label: 'Aile rehberleri', href: '/blog?category=Aile%20rehberi' },
-    { label: 'Yayın ve görsel ilkeleri', href: '/blog/yayin-ilkeleri' },
-  ] },
-  { title: 'Destek ve veriler', links: [
-    { label: 'İletişim ve destek', href: '/bilgi/iletisim-ve-destek' },
-    { label: 'Gizlilik ve hesap verileri', href: '/bilgi/gizlilik-ve-veriler' },
-    { label: 'Kullanım koşulları', href: '/bilgi/kullanim-kosullari' },
-    { label: 'Hesap güvenliği', href: '/bilgi/hesap-guvenligi' },
-  ] },
+export interface FooterLink {
+  label: string;
+  href: string;
+  tag?: string;
+  desc?: string;
+  icon?: string;
+}
+
+export interface FooterGroup {
+  title: string;
+  icon?: string;
+  links: FooterLink[];
+}
+
+export const FOOTER_GROUPS: FooterGroup[] = [
+  {
+    title: 'ZekaPark’ı tanıyın',
+    icon: 'Sparkles',
+    links: [
+      { label: 'Platform hakkında', href: '/bilgi/zekapark-hakkinda', tag: 'Vizyon', desc: 'Eğitim felsefemiz ve hikayemiz', icon: 'Compass' },
+      { label: 'Çalışma alanları', href: '/bilgi/calisma-alanlari', tag: '10 Kategori', desc: 'Bilişsel beceri modelleri', icon: 'Layers' },
+      { label: 'Hesap ve veli rehberi', href: '/bilgi/hesap-ve-veli-rehberi', tag: 'Rehber', desc: 'Giriş kodu ve aile takibi', icon: 'Users' },
+    ],
+  },
+  {
+    title: 'Birlikte öğrenin',
+    icon: 'BookOpen',
+    links: [
+      { label: '30 yazılık blog', href: '/blog', tag: '30 Rehber', desc: 'Bilişsel gelişim makaleleri', icon: 'BookOpen' },
+      { label: 'BİLSEM rehberleri', href: '/blog?category=B%C4%B0LSEM%20rehberi', tag: 'Sınav', desc: 'Tablet sınavı & stratejiler', icon: 'Trophy' },
+      { label: 'Aile rehberleri', href: '/blog?category=Aile%20rehberi', tag: 'Ebeveyn', desc: 'Evde zeka gelişim oyunları', icon: 'Heart' },
+      { label: 'Yayın ve görsel ilkeleri', href: '/blog/yayin-ilkeleri', tag: 'Standart', desc: 'Pedagojik soru ilkeleri', icon: 'Palette' },
+    ],
+  },
+  {
+    title: 'Destek ve veriler',
+    icon: 'ShieldCheck',
+    links: [
+      { label: 'İletişim ve destek', href: '/bilgi/iletisim-ve-destek', tag: '7/24 Yardım', desc: 'Soru bildirimi ve iletişim', icon: 'MessageCircle' },
+      { label: 'Gizlilik ve hesap verileri', href: '/bilgi/gizlilik-ve-veriler', tag: 'KVKK', desc: 'Şeffaf veri güvenliği', icon: 'Lock' },
+      { label: 'Kullanım koşulları', href: '/bilgi/kullanim-kosullari', tag: 'İlkeler', desc: 'Kullanım sözleşmesi', icon: 'FileText' },
+      { label: 'Hesap güvenliği', href: '/bilgi/hesap-guvenligi', tag: 'Korumalı', desc: 'Şifre ve oturum güvenliği', icon: 'KeyRound' },
+    ],
+  },
 ];
