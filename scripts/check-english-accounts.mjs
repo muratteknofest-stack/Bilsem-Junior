@@ -3,7 +3,7 @@ import {createServer} from 'vite';
 import {chromium} from 'playwright';
 import {englishLearningBank} from '../server/english-learning-bank.ts';
 import {learningView,answerLearningSession,finishLearningSession,prepareLearningQuestions} from '../server/learning-model.ts';
-process.env.VITE_SUPABASE_URL='https://thinkharbor-test.invalid';process.env.VITE_SUPABASE_PUBLISHABLE_KEY='test-publishable-placeholder';
+process.env.VITE_SUPABASE_URL='https://thinkharbor-test.invalid';process.env.VITE_SUPABASE_PUBLISHABLE_KEY='sb_publishable_thinkharbor_test_fixture';
 const server=await createServer({server:{host:'127.0.0.1',port:5185,strictPort:true}});await server.listen();let browser;
 const parentId='11111111-1111-4111-8111-111111111111',studentId='22222222-2222-4222-8222-222222222222';
 const parent={id:parentId,role:'parent',name:'Parent',linked_student_ids:[studentId],xp:0,level:1};const student={id:studentId,role:'student',name:'Explorer',grade:1,student_code:'EXPLORER1234',linked_parent_id:parentId,xp:0,level:1};
