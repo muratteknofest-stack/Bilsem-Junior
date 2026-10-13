@@ -96,7 +96,8 @@ function queueProgressItem(key: string, value: string | null) {
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => { retries = 0; scheduleProgressPersist(0); });
 }
-export async function hydrateUserStateFromSupabase(): Promise<void> {
+export async function hydrateUserStateFromSupabase(options: { signal?: AbortSignal } = {}): Promise<void> {
+  if (options.signal?.aborted) return;
   const userId = auth.currentUser?.uid;
   if (!userId) return;
   activeUserId = userId;
@@ -105,7 +106,7 @@ export async function hydrateUserStateFromSupabase(): Promise<void> {
   try {
     await flights.get(userId)?.catch(() => undefined);
     const snapshot = await getDoc(doc(db, 'users', userId, 'private', 'state'));
-    if (auth.currentUser?.uid !== userId || activeUserId !== userId || revision !== hydrationRevision) return;
+    if (options.signal?.aborted || auth.currentUser?.uid !== userId || activeUserId !== userId || revision !== hydrationRevision) return;
     const values = snapshot.data()?.values || {};
     const pending = outbox.patch(userId);
     // Read the queue after the request: edits made while loading take precedence.
@@ -118,7 +119,7 @@ export async function hydrateUserStateFromSupabase(): Promise<void> {
     if (Object.keys(pending).length) { setSyncStatus('pending'); scheduleProgressPersist(); }
     else setSyncStatus('saved');
   } catch {
-    if (auth.currentUser?.uid !== userId || activeUserId !== userId || revision !== hydrationRevision) return;
+    if (options.signal?.aborted || auth.currentUser?.uid !== userId || activeUserId !== userId || revision !== hydrationRevision) return;
     for (const [key, value] of Object.entries(outbox.patch(userId))) {
       if (value === null) safeStorage.removeItem(key); else safeStorage.setItem(key, value);
     }

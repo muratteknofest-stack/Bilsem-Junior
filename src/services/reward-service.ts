@@ -19,12 +19,12 @@ export async function claimServerReward(kind: string, id: string) {
   return { success: result.xpAwarded > 0, xpAwarded: Number(result.xpAwarded) || 0, user: getCurrentUser() };
 }
 
-export async function refreshServerRewards(): Promise<{ badges: Achievement[]; reviewToday: number }> {
+export async function refreshServerRewards(signal?: AbortSignal): Promise<{ badges: Achievement[]; reviewToday: number }> {
   const userId = auth.currentUser?.uid;
-  const response = await authenticatedFetch('/api/learning/rewards');
+  const response = await authenticatedFetch('/api/learning/rewards', { signal });
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || 'Rozetler yüklenemedi.');
-  if (auth.currentUser?.uid !== userId) throw new Error('Hesap değişti.');
+  if (signal?.aborted || auth.currentUser?.uid !== userId) throw new Error('Yenileme iptal edildi veya hesap değişti.');
   safeStorage.setItem('yapyap_achievements', JSON.stringify(result.badges));
   return result;
 }

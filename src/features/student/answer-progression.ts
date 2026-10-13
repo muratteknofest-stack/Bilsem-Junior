@@ -33,6 +33,13 @@ export function nextUnansweredIndex(session: LearningSessionView, after = -1): n
   return -1;
 }
 
+/** UI guard only; the server independently enforces its own deadline and scoring. */
+export function canSubmitLearningAnswer(session: LearningSessionView | null, index: number, now = Date.now()) {
+  if (!session || session.result || !Number.isInteger(index) || !session.questions[index]) return false;
+  const deadline = Date.parse(session.expiresAt);
+  return Number.isFinite(deadline) && now < deadline && (session.mode === 'exam' || !session.answers[String(index)]);
+}
+
 type AnswerApi = {
   answer: (id: string, index: number, response: QuestionResponse) => Promise<LearningSessionView>;
   finish: (id: string) => Promise<LearningSessionView>;

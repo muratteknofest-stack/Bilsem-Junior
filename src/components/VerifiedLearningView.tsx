@@ -14,7 +14,7 @@ import { AnswerWorkspace } from '../features/questions/renderers/AnswerWorkspace
 import { VisualExplanationOverlay } from '../features/questions/renderers/VisualExplanationOverlay';
 import { apiUrl } from '../lib/api-client';
 import { learningService } from '../services/learning-service';
-import { AnswerRequestGate, DeadlineFinishGate, nextUnansweredIndex, saveAndAdvance } from '../features/student/answer-progression';
+import { AnswerRequestGate, DeadlineFinishGate, canSubmitLearningAnswer, nextUnansweredIndex, saveAndAdvance } from '../features/student/answer-progression';
 import { AnswerHistory, type ReviewedAnswer } from './AnswerHistory';
 import { dataService } from '../services/data-service';
 import { difficultyChoices, type LearningDifficulty } from '../features/student/learning-selection';
@@ -96,6 +96,8 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
   const solution = session?.solutions?.[String(index)] || (answer?.correctOptionId && answer.explanation ? { correctOptionId: answer.correctOptionId, explanation: answer.explanation } : undefined);
   const revealed = answer?.correct !== undefined;
   const submitted = !!session?.result || (mode !== 'exam' && revealed);
+  const expired = !!session && !session.result && Date.now() >= Date.parse(session.expiresAt);
+  const needsFinish = !!session && !session.result && (expired || nextUnansweredIndex(session) < 0);
   // Existing renderers only consume visible puzzle fields. They never score this DTO.
   const renderQuestion = q ? { ...q, ...(solution || {}) } as BaseQuestion : null;
   const remember = (completed: LearningSessionView) => {
@@ -107,7 +109,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
     setHistory(previous => [...previous.filter(item => !entries.some(entry => entry.id === item.id)), ...entries]);
   };
   const submit = async (pending = response) => {
-    if (!session || submitted || !pending || !isResponseComplete(q as BaseQuestion, pending)) return;
+    if (!session || !canSubmitLearningAnswer(session, index) || !pending || !isResponseComplete(q as BaseQuestion, pending)) return;
     await run(async () => {
       const advanced = await saveAndAdvance(session, index, pending, learningService, saved => {
         if (mounted.current) { setSession(saved); setResponse(saved.answers[String(index)]?.response as QuestionResponse ?? null); }
@@ -126,7 +128,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
     });
   };
   const changeResponse = (pending: QuestionResponse) => {
-    if (busy || submitted) return;
+    if (busy || !canSubmitLearningAnswer(session, index)) return;
     setResponse(pending);
     if (pending.mode === 'choice' && pending.optionId) void submit(pending);
   };
@@ -145,7 +147,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
   const isExam = mode === 'exam';
   if(session&&!session.result&&q&&renderQuestion) {
     const canVisit=(i:number)=>i>=0&&i<session.questions.length&&(mode==='exam'||!!session.answers[String(i)]||i===nextUnansweredIndex(session));
-    return <FocusedQuestionScreen question={renderQuestion} sessionKey={`${session.id}-${index}`} index={index} total={session.questions.length} remaining={remaining} busy={busy} submitted={submitted} response={response} error={error} onChange={changeResponse} onLeave={()=>void leave()} onPrevious={canVisit(index-1)?()=>void goTo(index-1):undefined} onNext={canVisit(index+1)?()=>void goTo(index+1):undefined} onRetry={response?.mode==='choice'&&response.optionId?()=>void submit():undefined} tools={<>
+    return <FocusedQuestionScreen question={renderQuestion} sessionKey={`${session.id}-${index}`} index={index} total={session.questions.length} remaining={remaining} busy={busy} submitted={submitted} expired={expired} response={response} error={error} onChange={changeResponse} onLeave={()=>void leave()} onPrevious={canVisit(index-1)?()=>void goTo(index-1):undefined} onNext={canVisit(index+1)?()=>void goTo(index+1):undefined} onRetry={needsFinish?()=>void finish():response?.mode==='choice'&&response.optionId?()=>void submit():undefined} onRetryLabel={needsFinish?'Sonuçları yükle':'Yeniden gönder'} onReloadResults={()=>void finish()} tools={<>
       <LearningRefreshNotice/>
       <p>Şıkkı seçince cevabın kaydedilir ve sonraki soru açılır. {isExam?'Çözümler deneme bitince gösterilir.':'Önceki soruların çözümlerini buradan inceleyebilirsin.'}</p>
       <nav aria-label="Soru seçimi">{session.questions.map((item,i)=>{const saved=session.answers[String(i)];const label=saved?.correct===undefined?(saved?'Yanıtlandı':'Boş'):(saved.correct?'Doğru':'Yanlış');return <button key={item.id} disabled={busy||!canVisit(i)} aria-current={i===index?'step':undefined} onClick={()=>void goTo(i)} aria-label={`${i+1}. soru, ${label}`}>{i+1} · {label}</button>;})}</nav>
