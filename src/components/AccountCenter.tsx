@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { authenticatedFetch } from '../lib/api-client';
+import { auth, supabase } from '../lib/supabase';
 
 async function request(path: string, init?: RequestInit) {
   const response = await authenticatedFetch(path, init);
@@ -7,16 +8,92 @@ async function request(path: string, init?: RequestInit) {
   if (!response.ok) throw new Error(body.error || 'İşlem tamamlanamadı.');
   return body;
 }
+
 export function FamilyActivation() {
-  const [state, setState] = useState<'loading'|'ready'|'error'>('loading');
+  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [isResending, setIsResending] = useState(false);
+  const [resendNotice, setResendNotice] = useState('');
+
+  const parentEmail = auth.currentUser?.email;
+
   const activate = useCallback(async () => {
     setState('loading');
-    try { await request('/api/parent/activate-students', { method: 'POST' }); setState('ready'); }
-    catch { setState('error'); }
+    try {
+      await supabase.auth.refreshSession().catch(() => undefined);
+      await request('/api/parent/activate-students', { method: 'POST' });
+      setState('ready');
+    } catch {
+      setState('error');
+    }
   }, []);
+
+  const handleResend = async () => {
+    if (!parentEmail || isResending) return;
+    setIsResending(true);
+    setResendNotice('');
+    try {
+      const res = await fetch('/api/auth/resend-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: parentEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Doğrulama bağlantısı gönderilemedi.');
+      setResendNotice('Doğrulama e-postası tekrar gönderildi. Lütfen gelen kutunuzu ve spam klasörünü kontrol edin.');
+    } catch (err: any) {
+      setResendNotice(err?.message || 'E-posta gönderilemedi. Lütfen biraz sonra tekrar deneyin.');
+    } finally {
+      setIsResending(false);
+    }
+  };
+
   useEffect(() => { void activate(); }, [activate]);
   if (state === 'ready') return null;
-  return <div role="status" className="mx-auto mb-4 max-w-6xl rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">{state === 'loading' ? 'Öğrenci giriş izni kontrol ediliyor…' : 'Öğrenci giriş izni doğrulanamadı. Yeni kayıtlarda veli e-postası doğrulandıktan sonra etkinleştirme gerekir.'}{state === 'error' && <button className="ml-3 min-h-11 underline" onClick={() => void activate()}>Tekrar dene</button>}</div>;
+
+  return (
+    <div role="status" className="mx-auto mb-6 max-w-6xl rounded-2xl border border-amber-200 bg-amber-50/95 p-4 shadow-sm text-sm text-amber-950 backdrop-blur-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <span className="text-xl leading-none mt-0.5">📩</span>
+          <div>
+            <p className="font-semibold text-amber-900">
+              {state === 'loading' ? 'Öğrenci giriş izni kontrol ediliyor…' : 'Öğrenci Giriş İzni Onay Bekliyor'}
+            </p>
+            <p className="mt-1 text-amber-800 text-xs sm:text-sm">
+              {state === 'loading'
+                ? 'Lütfen bekleyin…'
+                : `Öğrencinizin giriş yapabilmesi için veli e-posta adresinize (${parentEmail || 'kayıtlı adresiniz'}) gönderilen onay linkine tıklamalısınız.`}
+            </p>
+            {resendNotice && (
+              <p className="mt-2 text-xs font-medium text-emerald-800 bg-emerald-100/90 p-2 rounded-lg border border-emerald-200">
+                {resendNotice}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {state === 'error' && (
+          <div className="flex flex-wrap items-center gap-2 pt-2 sm:pt-0 self-end sm:self-center">
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={isResending}
+              className="inline-flex min-h-10 items-center justify-center rounded-xl bg-amber-200/80 hover:bg-amber-200 px-3 py-1.5 text-xs font-semibold text-amber-900 transition disabled:opacity-50"
+            >
+              {isResending ? 'Gönderiliyor…' : 'E-postayı Tekrar Gönder'}
+            </button>
+            <button
+              type="button"
+              onClick={() => void activate()}
+              className="inline-flex min-h-10 items-center justify-center rounded-xl bg-amber-800 hover:bg-amber-900 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition"
+            >
+              Onayladım, Tekrar Dene
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 export function AccountCenter() {
   const [confirmed, setConfirmed] = useState(false);
