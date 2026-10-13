@@ -1,3 +1,4 @@
+import { englishPuzzle } from '../src/features/international/english-puzzles';
 import { randomUUID } from 'node:crypto';
 import type { BaseQuestion } from '../src/types';
 import { evaluateResponse, type QuestionResponse } from '../src/features/questions/answer-interactions';
@@ -25,16 +26,21 @@ export function publicLearningQuestion(q: BaseQuestion): PublicLearningQuestion 
     ...(q.secondaryPrompt ? { secondaryPrompt: q.secondaryPrompt } : {}), visualConfig: publicVisualConfig(q), targetGrade: q.targetGrade,
     options: q.options.map(({ id, label, visualData }) => ({ id, label, visualData })) };
 }
+function translatedQuestion(q: BaseQuestion, session: LearningSession) {
+  if (session.selection?.locale !== 'en') return q;
+  const en = englishPuzzle(q, session.selection.grade);
+  return { ...q, prompt: en.prompt, secondaryPrompt: undefined, explanation: {ruleTitle: en.explanation.title, summary: en.explanation.steps.join(' '), steps: en.explanation.steps} };
+}
 export function learningView(session: LearningSession): LearningSessionView {
-  return { ...learningUpdateView(session), questions: session.questions.map(publicLearningQuestion) };
+  return { ...learningUpdateView(session), questions: session.questions.map(q => publicLearningQuestion(translatedQuestion(q, session))) };
 }
 export function learningUpdateView(session: LearningSession): LearningSessionUpdate {
-  return { id: session.id, mode: session.mode, title: session.title, expiresAt: session.expires_at,
+  return { id: session.id, mode: session.mode, title: session.selection?.locale === 'en' ? (session.mode === 'exam' ? 'Thinking challenge' : session.mode === 'adaptive' ? 'Guided practice' : 'Thinking practice') : session.title, expiresAt: session.expires_at,
     result: session.result,
-    ...(session.finished_at ? { solutions: Object.fromEntries(session.questions.map((q, index) => [index, { correctOptionId: q.correctOptionId, explanation: q.explanation }])) } : {}),
+    ...(session.finished_at ? { solutions: Object.fromEntries(session.questions.map((q, index) => [index, { correctOptionId: q.correctOptionId, explanation: translatedQuestion(q, session).explanation }])) } : {}),
     answers: Object.fromEntries(Object.entries(session.answers).map(([index, answer]) => {
       const reveal = session.mode !== 'exam' || !!session.finished_at;
-      const q = session.questions[Number(index)];
+      const q = translatedQuestion(session.questions[Number(index)], session);
       return [index, reveal ? { ...answer, correctOptionId: q.correctOptionId, explanation: q.explanation } : { response: answer.response }];
     })) };
 }

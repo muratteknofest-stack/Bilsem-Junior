@@ -50,8 +50,15 @@ async function request(path: string, body: unknown): Promise<LearningSessionView
   return session;
 }
 export const learningService = {
+  async resume(id: string) {
+    const userId = auth.currentUser?.uid;
+    if (!userId || !/^[a-f0-9-]{36}$/.test(id)) throw new Error('Sign in to resume this practice.');
+    const payload = await learningApi(id, {method:'GET'});
+    if (auth.currentUser?.uid !== userId || payload.id !== id) throw new Error('Account changed. Open the practice again.');
+    return sessions.save(userId, payload as LearningSessionView);
+  },
   review: (mistakeId: string) => request('review', { mistakeId }),
-  start: (mode: LearningMode, category: LearningCategory = 'mixed', exam = 'mini', difficulty: LearningDifficulty = 'mixed') => request('start', { mode, category, exam, difficulty, expectedGrade: dataService.getCurrentUser().grade }),
+  start: (mode: LearningMode, category: LearningCategory = 'mixed', exam = 'mini', difficulty: LearningDifficulty = 'mixed', locale?: 'tr'|'en') => request('start', { mode, category, exam, difficulty, ...(locale ? {locale} : {}), expectedGrade: dataService.getCurrentUser().grade }),
   async changeGrade(grade: SchoolGrade): Promise<UserProfile> {
     const userId = auth.currentUser?.uid;
     const payload = await learningApi('grade', { method: 'PATCH', body: JSON.stringify({ grade }) });

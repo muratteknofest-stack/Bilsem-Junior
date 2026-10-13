@@ -1,0 +1,46 @@
+import assert from 'node:assert/strict';
+import {createServer} from 'vite';
+import {chromium} from 'playwright';
+import {fromSupabaseRow} from '../src/lib/supabase-shape.ts';
+import {englishLearningBank} from '../server/english-learning-bank.ts';
+import {learningView,answerLearningSession,finishLearningSession,prepareLearningQuestions} from '../server/learning-model.ts';
+process.env.VITE_SUPABASE_URL='https://thinkharbor-test.invalid';process.env.VITE_SUPABASE_PUBLISHABLE_KEY='sb_publishable_thinkharbor_test_fixture';
+const server=await createServer({server:{host:'127.0.0.1',port:5185,strictPort:true}});await server.listen();let browser,page;
+const parentId='11111111-1111-4111-8111-111111111111',studentId='22222222-2222-4222-8222-222222222222';
+const parent={id:parentId,role:'parent',name:'Parent',linked_student_ids:[studentId],xp:0,level:1};const student={id:studentId,role:'student',name:'Explorer',grade:1,student_code:'EXPLORER1234',linked_parent_id:parentId,xp:0,level:1};
+let activeRole='student',sessions=new Map(),answers=0;
+function syntheticSession(role){const id=role==='parent'?parentId:studentId;const encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url');const token=`${encode({alg:'HS256',typ:'JWT'})}.${encode({sub:id,role:'authenticated',aud:'authenticated',exp:Math.floor(Date.now()/1000)+3600,iat:Math.floor(Date.now()/1000),app_metadata:{provider:'email'}})}.dGVzdC1zaWduYXR1cmU`;return {access_token:token,refresh_token:'test-refresh-token',token_type:'bearer',expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600,user:{id,aud:'authenticated',email:role==='parent'?'parent@example.invalid':'explorer1234@zekapark.com',email_confirmed_at:new Date().toISOString(),app_metadata:{provider:'email'},user_metadata:{},created_at:new Date().toISOString()}};}
+try{
+ browser=await chromium.launch({headless:true});page=await browser.newPage({viewport:{width:390,height:844}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('https://thinkharbor-test.invalid/**',async route=>{const u=new URL(route.request().url());let value;
+ if(u.pathname.includes('/auth/v1/token'))value=syntheticSession(activeRole);
+ else if(u.pathname.includes('/auth/v1/user'))value=syntheticSession(activeRole).user;
+ else if(u.pathname.includes('/auth/v1/logout'))value={};
+ else if(u.pathname.includes('/rest/v1/profiles'))value=u.searchParams.get('id')===`eq.${parentId}`?parent:student;
+ else if(u.pathname.includes('/rest/v1/user_private_state'))value={user_id:activeRole==='student'?studentId:parentId,values:{}};
+ else value=[];
+ await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(value)});
+ });
+ await page.route('**/api/**',async route=>{const u=new URL(route.request().url()),body=route.request().postDataJSON();let value={};
+ if(u.pathname==='/api/public/platform')value={registrationOpen:true,policyVersion:'2026-10-11.4'};
+ else if(u.pathname==='/api/register-family')value={success:true,parentProfile:{id:parentId,role:'parent'},student:{id:studentId,code:'EXPLORER1234',email:'explorer1234@zekapark.com'},verificationSent:true};
+ else if(u.pathname==='/api/auth/resend-confirmation'){assert.equal(body.email,'parent@example.invalid');value={success:true,message:'Sent'};}
+ else if(u.pathname.endsWith('/history')||u.pathname.includes('/parent/learning-history/'))value={sessions:[...sessions.values()].map(s=>({id:s.id,mode:s.mode,created_at:s.created_at,expires_at:s.expires_at,finished_at:s.finished_at,result:s.result,selection:s.selection}))};
+ else if(u.pathname==='/api/learning/grade'){student.grade=body.grade;value={profile:fromSupabaseRow('profiles',student)};}
+ else if(u.pathname==='/api/learning/start'){assert.equal(body.locale,'en');const q=englishLearningBank().filter(q=>q.targetGrade===student.grade).slice(0,5);const now=new Date();const s={id:crypto.randomUUID(),student_id:studentId,mode:body.mode,title:'Test',questions:prepareLearningQuestions(q),answers:{},selection:{grade:student.grade,locale:'en'},created_at:now.toISOString(),expires_at:new Date(Date.now()+600000).toISOString(),finished_at:null,result:null,revision:0,rewarded_xp:0};sessions.set(s.id,s);value=learningView(s);}
+ else if(u.pathname.includes('/api/learning/')){const [,id,action]=u.pathname.match(/\/api\/learning\/([^/]+)(?:\/(\w+))?/)||[];let s=sessions.get(id);if(s){if(action==='answer'){s=answerLearningSession(s,body.index,body.response);answers++;}if(action==='finish')s=finishLearningSession(s);sessions.set(id,s);value=learningView(s);}}
+ await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(value)});
+ });
+ await page.goto('http://127.0.0.1:5185/en/#account');await page.getByRole('heading',{name:'Welcome back, curious minds.'}).waitFor();
+ await page.getByRole('button',{name:'Create family account',exact:true}).click();
+ await page.getByLabel('Parent email',{exact:true}).fill('parent@example.invalid');await page.getByLabel('Parent password',{exact:true}).fill('ExampleOnly123');await page.getByLabel('Repeat parent password',{exact:true}).fill('ExampleOnly123');await page.getByLabel('Student nickname').fill('Explorer');await page.getByRole('combobox',{name:'Practice level',exact:true}).selectOption('1');await page.getByLabel('Student password',{exact:true}).fill('DifferentExample456');await page.getByLabel('Repeat student password',{exact:true}).fill('DifferentExample456');
+ for(const name of ['privacy','terms','guardian'])await page.locator(`input[name="${name}"]`).check();await page.getByRole('button',{name:'Create family account',exact:true}).last().click();await page.getByText('EXPLORER1234',{exact:true}).waitFor();await page.getByRole('button',{name:'Resend confirmation email'}).click();await page.getByText(/an eligible account exists/).waitFor();
+ await page.getByRole('button',{name:'Sign in',exact:true}).first().click();await page.getByLabel('Account type').selectOption('student');await page.getByLabel('Student code').fill('EXPLORER1234');await page.getByLabel('Password',{exact:true}).fill('DifferentExample456');await page.getByRole('button',{name:'Sign in',exact:true}).last().click();await page.getByRole('heading',{name:'Welcome, Explorer.'}).waitFor();
+ await page.getByRole('combobox',{name:'Practice level',exact:true}).selectOption('2');await page.getByRole('button',{name:'Save level',exact:true}).click();await page.getByRole('button',{name:'Start account practice'}).click();await page.getByRole('heading',{name:'Puzzle 1 of 5'}).waitFor();
+ const hide=page.getByRole('button',{name:'Hide pattern & answer'});if(await hide.count())await hide.click();await page.getByRole('button',{name:'Choice A',exact:true}).click();await page.getByRole('button',{name:'Next puzzle →',exact:true}).waitFor();await page.getByRole('button',{name:'Save & leave'}).click();await page.getByRole('button',{name:'Resume practice'}).click();await page.getByRole('heading',{name:'Puzzle 2 of 5'}).waitFor();
+ for(let i=1;i<5;i++){const hide=page.getByRole('button',{name:'Hide pattern & answer'});if(await hide.count())await hide.click();await page.getByRole('button',{name:'Choice A',exact:true}).click();await page.getByRole('button',{name:i===4?'Finish & review':'Next puzzle →',exact:true}).click();}
+ await page.getByRole('heading',{name:'Every discovery counts.'}).waitFor();assert.equal(answers,5);await page.getByRole('button',{name:'Back to dashboard'}).click();await page.getByRole('button',{name:'Review answers'}).click();await page.getByRole('heading',{name:'Every discovery counts.'}).waitFor();await page.getByRole('button',{name:'Back to dashboard'}).click();await page.getByRole('button',{name:'Sign out',exact:true}).click();await page.getByRole('heading',{name:'Welcome back, curious minds.'}).waitFor();
+ activeRole='parent';await page.getByLabel('Account type').selectOption('parent');await page.getByLabel('Parent email',{exact:true}).fill('parent@example.invalid');await page.getByLabel('Password',{exact:true}).fill('ExampleOnly123');await page.getByRole('button',{name:'Sign in',exact:true}).last().click();await page.getByRole('heading',{name:'Celebrate effort. Support discovery.'}).waitFor();await page.getByRole('button',{name:'Open student practice'}).waitFor();assert.equal(await page.locator('.en-history li').count(),1);
+ for(const [width,height] of [[320,480],[390,844],[667,375],[820,1180]]){await page.setViewportSize({width,height});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);}
+ assert.deepEqual(errors,[]);console.log('ThinkHarbor: mocked family registration, confirmation resend, student sign-in, saved answer, leave/resume, completion/review, sign-out, parent sign-in and linked history passed. Server learning model grades the fixtures.');
+}catch(error){console.error('English account scenario failed:',error.message);if(page)console.error(await page.locator('main').innerText().catch(()=>'(page unavailable)')); throw error;}finally{await browser?.close();await server.close();}

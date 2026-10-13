@@ -11,9 +11,10 @@ export const learningStartSchema = z.object({
   category: z.enum(['mixed', ...AVAILABLE_CATEGORIES]).default('mixed'),
   exam: z.enum(['mini', 'standard', 'marathon']).default('mini'),
   difficulty: z.union([z.literal('mixed'), z.number().int().min(1).max(6)]).default('mixed'),
+  locale: z.enum(['tr', 'en']).optional(),
   expectedGrade: z.number().int().min(1).max(4).optional(),
 }).strict();
-export interface LearningSelection { grade: SchoolGrade; difficulty: LearningDifficulty; category: string; exam: string; count: number; bankVersion: string; }
+export interface LearningSelection { locale?: 'tr'|'en'; grade: SchoolGrade; difficulty: LearningDifficulty; category: string; exam: string; count: number; bankVersion: string; }
 export function difficultyChoices(grade: SchoolGrade) {
   const max = EDUCATION_PROFILES[grade].maxDifficulty;
   return Array.from({ length: max }, (_, i) => ({ value: (i + 1) as DifficultyLevel, label: `${i + 1}. seviye · ${i === 0 ? 'Kolay' : i === max - 1 ? 'Zor' : 'Orta'}` }));
