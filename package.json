@@ -26,7 +26,9 @@
     "import:wordwall": "node scripts/import-wordwall.mjs",
     "backup:database": "node scripts/backup-database.mjs",
     "monitor:site": "node scripts/monitor-site.mjs",
-    "test:layout": "node scripts/check-question-layout.mjs"
+    "test:layout": "node scripts/check-question-layout.mjs",
+    "test:smtp": "node --import tsx scripts/test-smtp.ts",
+    "pilot:e2e": "node --import tsx scripts/pilot-family-e2e.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
