@@ -3,7 +3,8 @@ import type { BaseQuestion, DifficultyLevel } from '../../types';
 import { EDUCATION_PROFILES, type SchoolGrade } from '../questions/quality-policy';
 import { AVAILABLE_CATEGORIES } from './available-categories';
 
-export const ACTIVE_BANK_VERSION = 'robot-20261012-colorful-v3';
+// This is a selection policy version; the server fingerprints the actual published bank.
+export const LEARNING_BANK_POLICY = 'published-selection-2';
 export type LearningDifficulty = 'mixed' | DifficultyLevel;
 export const learningStartSchema = z.object({
   mode: z.enum(['practice', 'adaptive', 'exam']),

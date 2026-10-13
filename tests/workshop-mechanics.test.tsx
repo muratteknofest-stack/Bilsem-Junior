@@ -122,7 +122,16 @@ test('all new topics cross editorial publication and server-owned scoring withou
   }
 });
 test('all 29 new topics must pass both AI reviews; approval flags cannot bypass a failed proof',async()=>{
-  for(const type of WORKSHOP_TYPES){let blind=0,editorial=0;const client={models:{async generateContent({contents}:{contents:string}){const q=JSON.parse(contents.split('Soru: ')[1]);if(!q.explanation){blind++;const answer=q.visualConfig.displayMode==='colorful_board'?solveColorful(q.visualConfig):solveWorkshopBoard(q.visualConfig,q.options.map((o:any)=>o.visualData));return {text:JSON.stringify({chosenOptionId:q.options.find((o:any)=>JSON.stringify(o.visualData)===JSON.stringify(answer)).id,uniqueAnswer:true,sufficientInformation:true,issues:[]})};}editorial++;return {text:JSON.stringify({explanationCorrect:true,gradeAppropriate:true,ageAppropriate:true,difficultyAppropriate:true,promptClear:true,distractorsValid:true,issues:[]})};}}};
+  for(const type of WORKSHOP_TYPES){let blind=0,editorial=0;const client={models:{async generateContent({contents}:{contents:string}){const q=JSON.parse(contents.split('Soru: ')[1]);if(!q.explanation){blind++;let answer;
+        if(q.visualConfig.displayMode==='colorful_board'&&q.type===undefined&&q.visualConfig.kind==='figure_completion') {
+          const b=q.visualConfig,s=b.source.size,m=b.missing;
+          assert.equal(b.source.cells[m],null,'Blind reviewer must never receive the hidden answer');
+          // Derive the missing cyclic-row cell from the other visible diagonal equivalents.
+          const target=(Math.floor(m/s)+m%s)%s;
+          const values=b.source.cells.flatMap((color:number|null,i:number)=>color!==null&&(Math.floor(i/s)+i%s)%s===target?[color]:[]);
+          assert.equal(new Set(values).size,1);
+          answer={art:'swatch',color:values[0]};
+        } else answer=q.visualConfig.displayMode==='colorful_board'?solveColorful(q.visualConfig):solveWorkshopBoard(q.visualConfig,q.options.map((o:any)=>o.visualData));return {text:JSON.stringify({chosenOptionId:q.options.find((o:any)=>JSON.stringify(o.visualData)===JSON.stringify(answer)).id,uniqueAnswer:true,sufficientInformation:true,issues:[]})};}editorial++;return {text:JSON.stringify({explanationCorrect:true,gradeAppropriate:true,ageAppropriate:true,difficultyAppropriate:true,promptClear:true,distractorsValid:true,issues:[]})};}}};
     const result=await runQuestionPipeline(client as any,{targetGrade:3,questionType:type,category:generateQuestionByType(type,321,3).category,difficulty:3,maxAttempts:1},{nextSeed:()=>321});assert.equal(result.success,true,`${type}: ${result.validationErrors.join(' ')}`);assert.equal(blind,1);assert.equal(editorial,1);assert.equal(result.qualityReport?.stages.length,9);assert.equal(isQuestionReadyForStudents(result.question),true);
   }
 });

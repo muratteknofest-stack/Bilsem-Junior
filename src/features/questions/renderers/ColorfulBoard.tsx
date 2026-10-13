@@ -1,5 +1,6 @@
 import React from 'react';
-import type { ColorfulBoard as Board, ColorfulValue, ObjectArt } from '../colorful-engine';
+import type { ColorfulValue, ObjectArt } from '../colorful-engine';
+import type { DisplayColorfulBoard as Board, DisplayMosaic } from '../public-visual';
 const colors=['#ef476f','#168aad','#ffba08','#06a77d','#805ad5','#f07822'];
 /** Color always has a second cue: a distinct geometric motif. */
 function Motif({color}:{color:number}) {
@@ -15,17 +16,15 @@ function ObjectShape({value,shadow=false}:{value:ObjectArt;shadow?:boolean}) {
   </g>;
 }
 function Crayon({color}:{color:number}) {return <g><path d="M-83 0L-55 -11H64Q73 -11 73 0Q73 11 64 11H-55Z" fill={colors[color]} stroke="#26324a" strokeWidth="1.5"/><path d="M-38 -11V11M51 -11V11" stroke="#26324a" strokeWidth="2"/><rect x="-28" y="-5" width="56" height="10" rx="4" fill="white" fillOpacity=".4"/><text x="42" y="5" fontSize="14" fontWeight="bold" fill="#111827">{color+1}</text></g>;}
-export function ColorfulArt({value,shadow=false}:{value:ColorfulValue;shadow?:boolean}) {
+export function ColorfulArt({value,shadow=false}:{value:ColorfulValue | DisplayMosaic;shadow?:boolean}) {
   return <svg viewBox={value.art==='crayon'?'-95 -30 190 60':'0 0 100 100'} role="img" aria-label={value.art==='object'?'Nesne çizimi':value.art==='crayon'?`${value.color+1} numaralı kalem`:'Renkli geometrik desen'} className="zp-colorful-art" style={{width:'100%',height:'100%',maxHeight:'100%',display:'block'}}>
-    {value.art==='mosaic'?value.cells.map((color,i)=><g key={i} transform={`translate(${i%value.size*100/value.size} ${Math.floor(i/value.size)*100/value.size}) scale(${.96/value.size})`}><Motif color={color}/></g>):value.art==='swatch'?<Motif color={value.color}/>:value.art==='object'?<g transform={`rotate(${value.tilt*90} 50 50)`}><ObjectShape value={value} shadow={shadow}/></g>:<Crayon color={value.color}/>}
+    {value.art==='mosaic'?value.cells.map((color,i)=><g key={i} data-mosaic-cell={i} transform={`translate(${i%value.size*100/value.size} ${Math.floor(i/value.size)*100/value.size}) scale(${.96/value.size})`}>{color===null?<g aria-label="Eksik kare"><rect width="100" height="100" rx="9" fill="#f1f5f9" stroke="#64748b" strokeWidth="3" strokeDasharray="8 5"/><text x="50" y="67" textAnchor="middle" fontSize="55" fontWeight="800" fill="#172033">?</text></g>:<Motif color={color}/>}</g>):value.art==='swatch'?<Motif color={value.color}/>:value.art==='object'?<g transform={`rotate(${value.tilt*90} 50 50)`}><ObjectShape value={value} shadow={shadow}/></g>:<Crayon color={value.color}/>}
   </svg>;
 }
 export function ColorfulBoard({board:b}:{board:Board}) {
   return <div data-colorful-kind={b.kind} style={{width:360,maxWidth:'100%',aspectRatio:'1.45',display:'flex',alignItems:'center',justifyContent:'center',gap:14}}>
     {b.kind==='spatial_relationship'?<svg viewBox="-110 -110 220 220" role="img" aria-label="Üst üste duran dört numaralı kalem" style={{height:'100%',maxWidth:'100%'}}>{b.layers!.map((color,i)=><g key={color} transform={`rotate(${b.angles![i]})`}><Crayon color={color}/></g>)}</svg>:<>
-      <div style={{position:'relative',height:'100%',aspectRatio:'1'}}><ColorfulArt value={b.source!}/>
-        {b.missing!==undefined&&b.source?.art==='mosaic'&&<div style={{position:'absolute',left:`${b.missing%b.source.size*100/b.source.size}%`,top:`${Math.floor(b.missing/b.source.size)*100/b.source.size}%`,width:`${100/b.source.size}%`,height:`${100/b.source.size}%`,display:'grid',placeItems:'center',background:'#f1f5f9',border:'2px dashed #64748b',borderRadius:6,fontSize:32,fontWeight:800}}>?</div>}
-      </div>
+      <div style={{height:'100%',aspectRatio:'1'}}><ColorfulArt value={b.source?.art==='mosaic'&&b.missing!==undefined?{...b.source,cells:b.source.cells.map((color,i)=>i===b.missing?null:color)}:b.source!}/></div>
       {b.kind==='mirror_reflection'&&<svg viewBox="0 0 36 180" style={{height:'90%',width:36}} role="img" aria-label="Sağda dikey ayna"><rect x="4" y="4" width="28" height="172" rx="10" fill="#dbf4ff" stroke="#367e9c" strokeWidth="3"/><path d="M10 40L26 20M10 85L26 65M10 130L26 110" stroke="white" strokeWidth="5"/></svg>}
     </>}
   </div>;

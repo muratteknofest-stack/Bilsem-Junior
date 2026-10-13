@@ -1,4 +1,5 @@
 import { FocusedQuestionScreen } from './FocusedQuestionScreen';
+import { LearningRefreshNotice } from './LearningRefreshNotice';
 import { ArrowLeft, ArrowRight, Clock3, Gamepad2, Sparkles, Trophy, Tablet, CheckCircle2 } from 'lucide-react';
 import './VerifiedLearningView.css';
 import React, { useEffect, useRef, useState } from 'react';
@@ -140,6 +141,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
   if(session&&!session.result&&q&&renderQuestion) {
     const canVisit=(i:number)=>i>=0&&i<session.questions.length&&(mode==='exam'||!!session.answers[String(i)]||i===nextUnansweredIndex(session));
     return <FocusedQuestionScreen question={renderQuestion} sessionKey={`${session.id}-${index}`} index={index} total={session.questions.length} remaining={remaining} busy={busy} submitted={submitted} response={response} error={error} onChange={changeResponse} onLeave={()=>void leave()} onPrevious={canVisit(index-1)?()=>void goTo(index-1):undefined} onNext={canVisit(index+1)?()=>void goTo(index+1):undefined} onRetry={response?.mode==='choice'&&response.optionId?()=>void submit():undefined} tools={<>
+      <LearningRefreshNotice/>
       <p>Şıkkı seçince cevabın kaydedilir ve sonraki soru açılır. {isExam?'Çözümler deneme bitince gösterilir.':'Önceki soruların çözümlerini buradan inceleyebilirsin.'}</p>
       <nav aria-label="Soru seçimi">{session.questions.map((item,i)=>{const saved=session.answers[String(i)];const label=saved?.correct===undefined?(saved?'Yanıtlandı':'Boş'):(saved.correct?'Doğru':'Yanlış');return <button key={item.id} disabled={busy||!canVisit(i)} aria-current={i===index?'step':undefined} onClick={()=>void goTo(i)} aria-label={`${i+1}. soru, ${label}`}>{i+1} · {label}</button>;})}</nav>
       {response&&response.mode!=='choice'&&<details><summary>Önceki yanıtın</summary><AnswerWorkspace question={renderQuestion} response={response} onChange={changeResponse} submitted/></details>}
@@ -159,6 +161,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
     <div className={isExam ? 'zp-tablet' : 'zp-game-shell'}>
     {isExam && <div className="zp-tablet-camera" aria-hidden="true"><span /></div>}
     <div className="zp-screen">
+    <LearningRefreshNotice/>
     <div className="zp-screen-bar"><span>{isExam ? <Tablet size={17} aria-hidden="true" /> : <Gamepad2 size={19} aria-hidden="true" />} {isExam ? 'ZEKA PARK / DENEME' : 'KEŞFET · DÜŞÜN · ÇÖZ'}</span><span>{grade}. SINIF</span></div>
     {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{error}</div>}
     <AnswerHistory items={history} />

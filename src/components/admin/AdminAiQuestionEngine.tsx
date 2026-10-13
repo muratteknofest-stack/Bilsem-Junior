@@ -147,14 +147,17 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
   const handleReview = async (id: string, action: 'approve' | 'reject' | 'regenerate') => {
     setErrorMessage('');
     try {
+      const reviewed = results.find(item => item.id === id)?.rawOutput;
+      if (!reviewed) throw new Error('Önce soruyu yükleyip inceleyin.');
       const response = await authenticatedFetch('/api/admin/ai-question-review', {
-        method: 'POST', body: JSON.stringify({ questionId: id, action }) });
+        method: 'POST', body: JSON.stringify({ questionId: id, action, expectedRevision: reviewed.revision ?? 0 }) });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error([data.error || data.message || 'İşlem tamamlanamadı.', ...(data.details || [])].join(' '));
       if (action === 'regenerate' && data.question) {
         const replacement = toResult({ ...data, solverVerified: data.question.aiMeta?.solverVerified });
         if (replacement) setResults(previous => previous.map(item => item.id === id ? replacement : item));
-      } else setResults(previous => previous.map(item => item.id === id ? { ...item, status: action === 'approve' ? 'approved' : 'rejected' } : item));
+      } else setResults(previous => previous.map(item => item.id === id ? { ...item,
+        status: action === 'approve' ? 'approved' : 'rejected', rawOutput: data.question || item.rawOutput } : item));
     } catch (error) { setErrorMessage(error instanceof Error ? error.message : 'İşlem tamamlanamadı.'); }
   };
 

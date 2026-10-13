@@ -1,5 +1,5 @@
 import type { BaseQuestion } from '../src/types';
-import { auditQuestion, isQuestionReadyForStudents } from '../src/features/questions/quality';
+import { auditQuestion, isQuestionReadyForStudents, type QuestionVisualReference } from '../src/features/questions/quality';
 
 export type EditorialStatus = 'draft' | 'review' | 'published' | 'archived';
 
@@ -15,7 +15,7 @@ export function prepareEditorialQuestion(
   expectedRevision: number,
   confirmedReview: boolean,
   adminId: string,
-  existingQuestions: BaseQuestion[] = [],
+  existingQuestions: QuestionVisualReference[] = [],
   now = new Date().toISOString(),
 ) {
   const report = auditQuestion(question, existingQuestions);
@@ -38,10 +38,20 @@ export function prepareEditorialQuestion(
     updatedAt: now,
     updatedBy: adminId,
     ...(status === 'published' ? { reviewedBy: adminId } : {}),
+    ...(question.batchValidation ? { batchValidation: {
+      ...question.batchValidation, editorReview: status === 'published' ? 'completed' : 'pending',
+    } } : {}),
     ...(status === 'published' && question.releaseAuthorization ? {
       releaseAuthorization: { ...question.releaseAuthorization, individualHumanReview: true, humanReviewedAt: now },
     } : {}),
   })) as BaseQuestion & { revision: number; updatedBy: string; reviewedBy?: string };
-  if (status !== 'published') delete stored.reviewedBy;
+  if (status !== 'published') {
+    delete stored.reviewedBy;
+    if (stored.releaseAuthorization) {
+      stored.releaseAuthorization.individualHumanReview = false;
+      delete stored.releaseAuthorization.humanReviewedAt;
+    }
+  }
   return stored;
 }
+

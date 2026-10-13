@@ -32,10 +32,13 @@ export function questionContentKey(q: BaseQuestion): string {
     targetGrade: q.targetGrade, skills: q.skills, board: q.visualConfig,
     choices: q.options?.map(o => ({id:o.id,label:o.label,visual:visibleOptionKey(o.visualData)})).sort((a,b)=>a.id.localeCompare(b.id)), notes:q.authoring?.distractorNotes });
 }
-export function questionVisualKey(q: BaseQuestion): string {
+export type QuestionVisualReference = Pick<BaseQuestion, 'id' | 'type' | 'visualConfig'> & {
+  options: Array<Pick<BaseQuestion['options'][number], 'visualData'>>;
+};
+export function questionVisualKey(q: QuestionVisualReference): string {
   return fingerprint({ type: q.type, board: q.visualConfig, choices: q.options?.map(o => visibleOptionKey(o.visualData)).sort() });
 }
-export function auditQuestion(value: unknown, existing: BaseQuestion[] = []): QualityReport {
+export function auditQuestion(value: unknown, existing: QuestionVisualReference[] = []): QualityReport {
   const result: QualityReport = { errors: [], warnings: [], solverVerified: false, fingerprint: '', reviewRequired: [] };
   try {
     if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Geçerli bir soru nesnesi gerekli.');

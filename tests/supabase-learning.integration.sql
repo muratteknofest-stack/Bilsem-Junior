@@ -149,4 +149,20 @@ do $$ declare p jsonb; begin
   begin perform public.change_student_grade('99999999-9999-4999-8999-999999999999',5); raise exception 'invalid grade accepted'; exception when invalid_parameter_value then null; end;
 end $$;
 rollback;
+begin;
+select set_config('request.jwt.claims','{"role":"service_role"}',true);
+do $$ declare saved jsonb; begin
+  saved := public.save_question('{"id":"editorial-revision-fixture","status":"review","revision":1,"prompt":"Original"}',0);
+  saved := public.save_question('{"id":"editorial-revision-fixture","status":"review","revision":2,"prompt":"Changed by another editor"}',1);
+  begin
+    perform public.save_question('{"id":"editorial-revision-fixture","status":"published","revision":2,"prompt":"Stale reviewed content"}',1);
+    raise exception 'stale review overwrote newer editorial content';
+  exception when serialization_failure then null; end;
+  if not exists(select 1 from public.questions where id='editorial-revision-fixture' and revision=2 and status='review' and data->>'prompt'='Changed by another editor') then
+    raise exception 'editorial conflict changed the stored question';
+  end if;
+  saved := public.save_question('{"id":"editorial-revision-fixture","status":"published","revision":3,"prompt":"Current reviewed content","reviewedBy":"test-admin"}',2);
+  if saved->>'revision'<>'3' or saved->>'status'<>'published' then raise exception 'current editorial lease failed'; end if;
+end $$;
+rollback;
 select 'learning integration checks passed; fixtures rolled back' as status;

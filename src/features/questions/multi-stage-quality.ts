@@ -1,11 +1,11 @@
 import type { BaseQuestion } from '../../types';
-import { auditQuestion, questionVisualKey } from './quality';
+import { auditQuestion, questionVisualKey, type QuestionVisualReference } from './quality';
 import { solveQuestion } from './universal-solver';
 import { validateQuestion } from './validator';
 import { assessmentContentKey, inspectEducation, QUALITY_POLICY_VERSION, QUALITY_STAGES,
   type QuestionQualityReport, type QualityStageId, type SchoolGrade } from './quality-policy';
 
-export function assessCandidate(q: BaseQuestion, target: { grade: SchoolGrade; age?: number; difficulty: number }, existing: BaseQuestion[] = []): QuestionQualityReport {
+export function assessCandidate(q: BaseQuestion, target: { grade: SchoolGrade; age?: number; difficulty: number }, existing: QuestionVisualReference[] = []): QuestionQualityReport {
   const audit = auditQuestion(q), solve = solveQuestion(q), education = inspectEducation(q, target.grade, target.age);
   const key = questionVisualKey(q);
   const reasons: Partial<Record<QualityStageId, string[]>> = {
