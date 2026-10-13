@@ -86,3 +86,24 @@ test('English selection balances only its eligible categories, including recent 
 test('English account history and error notices reject invalid data and avoid leaking raw service errors',async()=>{
  const {historySchema,englishAccountError}=await import('../src/features/international/english-account-model');assert.equal(historySchema.safeParse({sessions:[{id:'wrong'}]}).success,false);assert.match(englishAccountError({code:'invalid_credentials'}),/sign-in details/);assert.ok(!englishAccountError(Error('SQL token secret')).includes('secret'));assert.ok(!/[ğüşöçıİ]/.test(englishAccountError(Error('Oturum açılamadı.'))));
 });
+
+import {exportLearningSession} from '../server/account-export';
+import fs from 'node:fs';
+
+test('account export omits private snapshots and unreleased exam grading',()=>{
+ const session={id:'11111111-1111-4111-8111-111111111111',student_id:'22222222-2222-4222-8222-222222222222',mode:'exam',title:'Thinking challenge',created_at:new Date().toISOString(),expires_at:new Date().toISOString(),finished_at:null,result:null,questions:[{correctOptionId:'secret'}],selection:{seed:'private'},answers:{0:{response:{mode:'choice',optionId:'A',correctOptionId:'secret'},correct:true,xp:7,correctOptionId:'secret',explanation:{secret:true}}}};
+ const out=exportLearningSession(session);
+ assert.deepEqual(out.answers,{'0':{response:{mode:'choice',optionId:'A'}}});
+ assert.equal('questions' in out,false);assert.equal('selection' in out,false);assert.ok(!JSON.stringify(out).includes('secret'));
+ const finished=exportLearningSession({...session,finished_at:new Date().toISOString(),result:{totalQuestions:1,correctAnswers:1,wrongAnswers:0,blankAnswers:0,scorePercentage:100,xp:7,totalTimeSeconds:2,secret:true}});
+ assert.equal(finished.answers['0'].correct,true);assert.equal(finished.result?.xp,7);assert.ok(!JSON.stringify(finished).includes('secret'));
+ const practice=exportLearningSession({...session,mode:'practice'});assert.equal(practice.answers['0'].correct,true);
+});
+
+test('home-screen manifest starts the English app with correctly sized PNG icons',()=>{
+ const manifest=JSON.parse(fs.readFileSync('public/thinkharbor.webmanifest','utf8'));
+ assert.equal(manifest.start_url,'/en/');assert.equal(manifest.scope,'/en/');assert.equal(manifest.display,'standalone');assert.equal(manifest.lang,'en');
+ for(const icon of manifest.icons){const png=fs.readFileSync(`public${icon.src}`);assert.equal(png.subarray(1,4).toString(),'PNG');assert.equal(`${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`,icon.sizes);}
+ const apple=fs.readFileSync('public/thinkharbor-180.png');assert.equal(apple.readUInt32BE(16),180);assert.equal(apple.readUInt32BE(20),180);
+ assert.match(fs.readFileSync('en/index.html','utf8'),/rel="manifest" href="\/thinkharbor.webmanifest"/);
+});

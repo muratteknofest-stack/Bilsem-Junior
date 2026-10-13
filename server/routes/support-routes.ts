@@ -6,6 +6,8 @@ import { requireSupabaseAuth, requireVerifiedEmail, requireProfileRole, type Aut
 import { accountSecurityLimiter, adminAiLimiter } from '../rate-limiters';
 import { sharedRateLimit } from '../shared-rate-limit';
 import { prepareQuestionReport, reviewRequestSchema, mayReviewRequest } from '../support-validation';
+import {readQuestionPages} from '../question-pages';
+import {exportLearningSession} from '../account-export';
 
 const routes = Router();
 const access = [requireSupabaseAuth, requireVerifiedEmail];
@@ -56,10 +58,19 @@ routes.get('/account/export', ...access, accountSecurityLimiter, sharedRateLimit
   }
   const progress = await client.from('user_private_state').select('*').in('user_id', profiles.map(p => p.id));
   if (progress.error) throw progress.error;
-  const challenges = await client.from('daily_challenge_attempts').select('id,student_id,day,slot,grade,selected_option,correct,points,answered_at,created_at').in('student_id', profiles.map(p => p.id));
-  if (challenges.error) throw challenges.error;
+  const exportedAt=new Date().toISOString(),ids=profiles.map(p=>p.id);
+  const challenges=await readQuestionPages<{id:string}>(async(afterId,size)=>{
+    let query=client.from('daily_challenge_attempts').select('id,student_id,day,slot,grade,selected_option,correct,points,answered_at,created_at').in('student_id',ids).lte('created_at',exportedAt).order('id').limit(size);
+    if(afterId)query=query.gt('id',afterId);
+    return await query;
+  },'Account data could not be exported completely.');
+  const sessions=await readQuestionPages<{id:string}>(async(afterId,size)=>{
+    let query=client.from('learning_sessions').select('id,student_id,mode,title,created_at,expires_at,finished_at,answers,result').in('student_id',ids).lte('created_at',exportedAt).order('id').limit(size);
+    if(afterId)query=query.gt('id',afterId);
+    return await query;
+  },'Account data could not be exported completely.');
   res.setHeader('Content-Disposition', 'attachment; filename="zekapark-hesap-verilerim.json"');
-  return res.json({ format: 'zekapark-account-export-v1', exportedAt: new Date().toISOString(), profiles, progress: progress.data, dailyChallenges: challenges.data });
+  return res.json({ format: 'zekapark-account-export-v1', exportedAt, profiles, progress: progress.data, dailyChallenges: challenges, learningSessions:sessions.map(exportLearningSession) });
 });
 
 routes.get('/admin/support-requests', ...access, adminAiLimiter, requireProfileRole('admin'), async (req, res) => {
