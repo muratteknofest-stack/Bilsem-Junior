@@ -51,3 +51,12 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Verify English family accounts and saved learning flows
         run: npm run test:english-accounts
+
+      - name: Save ThinkHarbor screen previews for design review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: thinkharbor-design-previews
+          path: test-artifacts/thinkharbor/
+          if-no-files-found: ignore
+          retention-days: 7

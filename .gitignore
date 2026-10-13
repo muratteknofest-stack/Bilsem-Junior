@@ -51,3 +51,7 @@ server/generated-api.mjs
 # Never commit database archives or decrypted backups
 *.enc
 backup-private/
+
+
+# Browser design review output
+test-artifacts/
