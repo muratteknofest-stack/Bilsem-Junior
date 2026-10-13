@@ -7,6 +7,7 @@ export interface PlatformInfo {
   badge?: string;
   icon?: string;
   color?: string;
+  contactEmail?: string;
   sections: { title: string; paragraphs: string[] }[];
 }
 export const PLATFORM_INFO: PlatformInfo[] = [

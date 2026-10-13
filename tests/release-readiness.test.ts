@@ -58,3 +58,29 @@ test('all authentication email templates are Turkish and retain the provider tok
     assert.ok(html.includes(slug === 'reauthentication' ? '{{ .Token }}' : '{{ .ConfirmationURL }}'));
   }
 });
+
+
+test('operator identity and contact links remain visible while legal details are incomplete', () => {
+  const settings = defaultPlatformSettings();
+  settings.business.legalName = 'Quantum tech';
+  settings.business.address = 'Quantum tech lab';
+  settings.business.contactEmail = 'contact@example.com';
+  for (const slug of ['gizlilik-ve-veriler', 'kullanim-kosullari', 'iletisim-ve-destek']) {
+    const html = policyHtml(publicPolicy(slug, settings)!);
+    assert.match(html, /Quantum tech lab/);
+    assert.match(html, /href="mailto:contact@example.com"/);
+    assert.ok(!html.includes('Doğrulanmış Kurumsal Bilgi'));
+    assert.ok(!html.includes('kimlik ve adres bilgileri henüz'));
+  }
+  const privacy = policyHtml(publicPolicy('gizlilik-ve-veriler', settings)!);
+  assert.match(privacy, /hukuki dayanak/);
+  assert.match(privacy, /henüz tamamlanmamıştır/);
+  assert.equal(releaseBlockers(settings).length, 7);
+});
+
+test('an invalid contact in direct HTML input cannot inject a mail link', () => {
+  const info = publicPolicy('iletisim-ve-destek', defaultPlatformSettings())!;
+  const html = policyHtml({ ...info, contactEmail: 'bad@example.com" onclick="alert(1)' });
+  assert.ok(!html.includes('onclick="alert(1)'));
+  assert.match(html, /mailto:zeka.kupu.test@gmail.com/);
+});
