@@ -1,5 +1,4 @@
 import { isAvailableCategory } from '../features/student/available-categories';
-import { StudentGradeSelector } from './StudentGradeSelector';
 import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import confetti from 'canvas-confetti';
@@ -7,38 +6,19 @@ import {
   UserProfile, 
   DailyStudyPlan, 
   SkillMastery, 
-  CognitiveCategory,
-  COGNITIVE_CATEGORY_LABELS 
 } from '../types';
 import {
   Brain,
   Target,
-  Flame,
-  Award,
   Zap,
-  TrendingUp,
-  RotateCcw,
-  Star,
   Trophy,
-  BookOpen,
-  Activity,
-  Play,
-  Copy,
-  Check,
-  KeyRound,
-  Sparkles,
-  Compass,
   ArrowRight,
-  Shield,
-  Layers,
+  Sparkles,
   BarChart3,
-  Calendar,
-  Clock,
-  ChevronRight,
+  Layers,
+  Compass,
   Lightbulb,
-  CheckCircle2,
-  Lock,
-  Users
+  Activity,
 } from 'lucide-react';
 import { sound } from '../lib/sound';
 import { dataService } from '../services/data-service';
@@ -54,6 +34,9 @@ import { StudentStudyHub } from './StudentStudyHub';
 import { WordwallLibrary } from './WordwallLibrary';
 import { levelProgress } from '../features/student/study-hub-model';
 import { getStudyFavorites, saveStudyFavorites } from '../services/student-preferences-service';
+import { StudentHeroBanner } from './student/StudentHeroBanner';
+import { StudentModesGrid } from './student/StudentModesGrid';
+import { StudentSkillsGrid } from './student/StudentSkillsGrid';
 import './landing/design-system.css';
 import './dashboard-design-system.css';
 import {
@@ -62,7 +45,6 @@ import {
   ProfileBannerSkeleton,
   DailyTaskSkeleton,
   ModeCardSkeleton,
-  MasterySkeleton,
 } from './Skeletons';
 
 interface StudentDashboardProps {
@@ -161,34 +143,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const activeMistakes = mistakes ?? dataService.getMistakes();
   
   const [activeTab, setActiveTab] = useState<'modes' | 'plan' | 'skills' | 'challenges' | 'progress'>('modes');
-  const [copiedStudentCode, setCopiedStudentCode] = useState(false);
   const [cheeredUser, setCheeredUser] = useState<string | null>(null);
   const [favorites, setFavorites] = useState(getStudyFavorites);
   const [skillSearch, setSkillSearch] = useState('');
   const prefersReducedMotion = useReducedMotion();
   const [skillFilter, setSkillFilter] = useState<'all' | 'practice' | 'new'>('all');
   useEffect(() => { setFavorites(getStudyFavorites()); }, [activeUser.id]);
-
-  const studentCodeDisplay = activeUser.studentCode || '';
-
-  const handleCopyStudentCode = () => {
-    if (studentCodeDisplay) {
-      navigator.clipboard.writeText(studentCodeDisplay);
-      setCopiedStudentCode(true);
-      sound.playClick();
-      setTimeout(() => setCopiedStudentCode(false), 2000);
-    }
-  };
-
-  const handleAvatarClick = () => {
-    sound.playLevelUp();
-    confetti({ particleCount: 40, spread: 60, origin: { y: 0.3 } });
-  };
-
-  const handleStreakBadgeClick = () => {
-    sound.playSuccess();
-    confetti({ particleCount: 50, spread: 70, origin: { y: 0.35 } });
-  };
 
   const handleCheerPeer = (id: string, name: string) => {
     sound.playSuccess();
@@ -219,10 +179,6 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   });
   const weeklyStats = useMemo(() => dataService.getWeeklyQuestionProgressData(activeUser).summary, [activeUser]);
   const xpProgress = levelProgress(activeUser.xp);
-  const nextLvlXp = xpProgress.level * 250;
-  const currentXp = xpProgress.xp;
-  const progressPct = xpProgress.percent;
-  const remainingXp = xpProgress.remaining;
 
   // Time based greeting
   const greeting = useMemo(() => {
@@ -254,190 +210,47 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   }
 
   return (
-      <div className="zp-dashboard-page zp-student-dashboard w-full min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24 text-zinc-900 dark:text-zinc-100 selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
-        
-        {/* Dynamic Animated Subtle Background Blobs */}
-        <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-          <motion.div 
-            animate={prefersReducedMotion ? undefined : {
-              scale: [1, 1.2, 1],
-              x: [0, 40, 0],
-              y: [0, -30, 0],
-              opacity: [0.3, 0.5, 0.3]
-            }}
-            transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute -top-24 -left-20 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-500/15 rounded-full blur-3xl"
-          />
-          <motion.div 
-            animate={prefersReducedMotion ? undefined : {
-              scale: [1.1, 1, 1.1],
-              x: [0, -35, 0],
-              y: [0, 40, 0],
-              opacity: [0.25, 0.45, 0.25]
-            }}
-            transition={{ duration: 16, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-            className="absolute top-80 -right-20 w-96 h-96 bg-amber-500/10 dark:bg-amber-500/10 rounded-full blur-3xl"
-          />
-        </div>
+    <div className="zp-dashboard-page zp-student-dashboard w-full min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24 text-zinc-900 dark:text-zinc-100 selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
+      {/* Dynamic Animated Subtle Background Blobs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <motion.div 
+          animate={prefersReducedMotion ? undefined : {
+            scale: [1, 1.2, 1],
+            x: [0, 40, 0],
+            y: [0, -30, 0],
+            opacity: [0.3, 0.5, 0.3]
+          }}
+          transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -top-24 -left-20 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-500/15 rounded-full blur-3xl"
+        />
+        <motion.div 
+          animate={prefersReducedMotion ? undefined : {
+            scale: [1.1, 1, 1.1],
+            x: [0, -35, 0],
+            y: [0, 40, 0],
+            opacity: [0.25, 0.45, 0.25]
+          }}
+          transition={{ duration: 16, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+          className="absolute top-80 -right-20 w-96 h-96 bg-amber-500/10 dark:bg-amber-500/10 rounded-full blur-3xl"
+        />
+      </div>
 
-        <main id="student-dashboard" className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6 sm:space-y-8 relative z-10">
-          
-          {/* Next-Gen Futuristic Profile Hero Banner */}
-          <motion.section 
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="zp-dashboard-hero relative overflow-hidden rounded-3xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800/80 p-4 sm:p-6 xl:p-8 shadow-sm transition-all"
-        >
-          <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6">
-            
-            {/* Student Info & Level Progress */}
-            <div className="flex min-w-0 flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full xl:flex-1">
-              
-              {/* Animated 3D-Feel Floating Avatar */}
-              <motion.button
-                type="button"
-                aria-label="Avatar kutlaması"
-                whileHover={prefersReducedMotion ? undefined : { scale: 1.08, rotate: [0, -3, 3, 0] }}
-                whileTap={prefersReducedMotion ? undefined : { scale: 0.95 }}
-                onClick={handleAvatarClick}
-                className="relative w-18 h-18 sm:w-22 sm:h-22 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-50 via-indigo-100/70 to-indigo-200/50 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center text-4xl sm:text-5xl shadow-md border-2 border-indigo-200/60 dark:border-indigo-500/20 shrink-0 cursor-pointer group select-none"
-              >
-                <motion.span 
-                  animate={prefersReducedMotion ? undefined : { y: [0, -4, 0] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  {activeUser.avatar || '🦊'}
-                </motion.span>
-
-                {/* Level Badge on Avatar */}
-                <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white text-xs font-black px-2.5 py-0.5 rounded-full ring-4 ring-white dark:ring-zinc-900 shadow-md flex items-center gap-0.5">
-                  <Star className="w-3 h-3 fill-amber-300 text-amber-300" />
-                  <span>{xpProgress.level}</span>
-                </div>
-              </motion.button>
-
-              <div className="flex-1 min-w-0">
-                <p className="zp-dashboard-kicker">ÖĞRENCİ ALANI / BUGÜN</p>
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight font-['Outfit',sans-serif]">
-                    {greeting.text}, {activeUser.name?.split(' ')[0] || 'Zeka Şampiyonu'} {greeting.emoji}
-                  </h1>
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-800/50">
-                    <Sparkles className="w-3 h-3" /> Seviye {xpProgress.level}
-                  </span>
-                </div>
-
-                <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400 mt-1">
-                  Bilişsel hedeflerine bugün de bir adım daha yaklaşmaya hazır mısın?
-                </p>
-
-                <StudentGradeSelector key={activeUser.id} user={activeUser} onSaved={onUserUpdate} />
-                {/* XP & Next Level Bar */}
-                <div className="mt-3 sm:mt-4 max-w-md w-full">
-                  <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1.5">
-                    <span className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-bold">
-                      <Zap className="w-3.5 h-3.5 fill-current" /> Seviye {xpProgress.level}
-                    </span>
-                    <span className="tabular-nums">
-                      <strong className="text-zinc-900 dark:text-white font-bold">{currentXp}</strong> / {nextLvlXp} XP 
-                      <span className="text-zinc-400 ml-1 text-[11px]">({remainingXp} XP kaldı)</span>
-                    </span>
-                  </div>
-                  
-                  <div className="h-2.5 w-full bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden p-0.5 relative">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progressPct}%` }}
-                      transition={{ duration: 1, ease: "easeOut" }}
-                      className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full relative"
-                    >
-                      <div className="absolute inset-0 bg-white/20 animate-pulse rounded-full" />
-                    </motion.div>
-                  </div>
-                </div>
-
-                {/* Student Code Badge & Parent Portal Switcher */}
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {studentCodeDisplay && (
-                    <motion.button
-                      type="button"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={handleCopyStudentCode}
-                      title="Giriş kodunu kopyala"
-                      className="inline-flex max-w-full flex-wrap items-center gap-2 break-all bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-800 dark:hover:bg-zinc-700/80 px-3 py-1 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-200/70 dark:border-zinc-700/70 transition-colors cursor-pointer group"
-                    >
-                      <KeyRound className="w-3.5 h-3.5 text-zinc-500 group-hover:text-indigo-500 transition-colors" />
-                      <span>Giriş Kodu: <strong className="tracking-wider font-mono text-zinc-900 dark:text-white">{studentCodeDisplay}</strong></span>
-                      {copiedStudentCode ? (
-                        <span className="text-emerald-500 flex items-center gap-1 font-bold"><Check className="w-3 h-3" /> Kopyalandı</span>
-                      ) : (
-                        <Copy className="w-3 h-3 text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-200" />
-                      )}
-                    </motion.button>
-                  )}
-                  {activeUser.id.startsWith('demo_') && <span className="inline-flex items-center rounded-xl border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-bold text-violet-800">Deneme: toplam 3 örnek soru</span>}
-                </div>
-
-              </div>
-            </div>
-            
-            {/* Quick Interactive Stat Cards */}
-            <div className="zp-student-hero-stats grid items-stretch gap-2.5 sm:gap-3 w-full xl:w-auto xl:shrink-0">
-              
-              {/* Streak Pill */}
-              <motion.button 
-                whileHover={{ scale: 1.04, y: -2 }}
-                whileTap={{ scale: 0.96 }}
-                onClick={handleStreakBadgeClick}
-                className="min-w-0 flex items-center gap-2.5 sm:gap-3.5 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-zinc-800/90 dark:to-zinc-800/40 border border-amber-200/60 dark:border-amber-500/20 rounded-2xl p-3 sm:p-4 cursor-pointer shadow-xs text-left group"
-              >
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20 shrink-0 group-hover:scale-110 transition-transform">
-                  <Flame className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse fill-current" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-base sm:text-xl font-black text-amber-950 dark:text-amber-400 leading-tight flex items-center gap-1">
-                    {activeUser.streak || 0} Gün
-                  </div>
-                  <div className="text-[11px] sm:text-xs font-semibold text-amber-700 dark:text-amber-500/80 flex items-center gap-1">
-                    <Shield className="w-3 h-3 text-indigo-500" /> {activeUser.streakFreezeCount || 0} Kalkan
-                  </div>
-                </div>
-              </motion.button>
-
-              {/* Leaderboard Rank Pill */}
-              <motion.button 
-                whileHover={{ scale: 1.04, y: -2 }}
-                whileTap={{ scale: 0.96 }}
-                onClick={() => {
-                  sound.playClick();
-                  onNavigate('leaderboard');
-                }}
-                className="min-w-0 flex items-center gap-2.5 sm:gap-3.5 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-zinc-800/90 dark:to-zinc-800/40 border border-indigo-200/60 dark:border-indigo-500/20 rounded-2xl p-3 sm:p-4 cursor-pointer shadow-xs text-left group"
-              >
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0 group-hover:scale-110 transition-transform">
-                  <Trophy className="w-5 h-5 sm:w-6 sm:h-6 fill-current" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-base sm:text-xl font-black text-indigo-950 dark:text-indigo-400 leading-tight">
-                    {activeUser.xp || 0} XP
-                  </div>
-                  <div className="text-[11px] sm:text-xs font-semibold text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
-                    İlerleme <ChevronRight className="w-3 h-3 hidden sm:inline" />
-                  </div>
-                </div>
-              </motion.button>
-
-            </div>
-
-          </div>
-        </motion.section>
+      <main id="student-dashboard" className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6 sm:space-y-8 relative z-10">
+        {/* Subcomponent: StudentHeroBanner */}
+        <StudentHeroBanner
+          user={activeUser}
+          greeting={greeting}
+          xpProgress={xpProgress}
+          onUserUpdate={onUserUpdate}
+          onNavigate={onNavigate}
+          prefersReducedMotion={prefersReducedMotion}
+        />
 
         <GamificationArena user={activeUser}
           thisWeekQuestions={weeklyStats.thisWeekTotal} lastWeekQuestions={weeklyStats.lastWeekTotal}
           onPractice={() => onStartPractice?.('mixed')}
           onOpenChallenges={() => setActiveTab('challenges')} />
+        
         <StudentStudyHub
           masteries={safeMasteries}
           unresolved={unresolvedMistakesCount}
@@ -574,242 +387,20 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
         {/* Dashboard 2-Column Grid Layout */}
         <div className="zp-student-content-grid">
-          
           {/* Main Content Area (Left Col) */}
           <div className="min-w-0 space-y-6 sm:space-y-8">
-            
             <AnimatePresence mode="wait">
-              
-              {/* TAB 1: QUICK MODES (Hızlı Modlar) */}
+              {/* TAB 1: QUICK MODES (Subcomponent) */}
               {activeTab === 'modes' && (
-                <motion.div 
-                  key="tab-modes"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.25 }}
-                  className="space-y-6"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-50 font-['Outfit',sans-serif] flex items-center gap-2">
-                        <Zap className="w-5 h-5 text-indigo-500" />
-                        BİLSEM Hazırlık Modları
-                      </h2>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                        Zihnini güçlendirecek antrenman türünü seç ve hemen başla
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    
-                    {/* 1. Adaptif BİLSEM Testi (Special Glow & Recommendation) */}
-                    <motion.button
-                      whileHover={{ y: -5, scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => {
-                        sound.playClick();
-                        onStartAdaptive();
-                      }}
-                      className="group relative min-w-0 p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-700 text-white text-left shadow-lg shadow-indigo-500/20 overflow-hidden cursor-pointer flex flex-col justify-between min-h-52 border border-indigo-400/30"
-                    >
-                      <div className="absolute top-0 right-0 w-36 h-36 bg-white/10 rounded-full blur-2xl" />
-                      
-                      <div className="flex items-start justify-between w-full relative z-10">
-                        <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20 group-hover:scale-110 transition-transform">
-                          <Brain className="w-6 h-6 text-white" />
-                        </div>
-                        <span className="text-[11px] font-extrabold uppercase tracking-wider bg-amber-400 text-zinc-900 px-2.5 py-1 rounded-full shadow-xs flex items-center gap-1">
-                          <Sparkles className="w-3 h-3 fill-current" /> Önerilen
-                        </span>
-                      </div>
-
-                      <div className="relative z-10">
-                        <h3 className="text-lg font-black text-white font-['Outfit',sans-serif] flex items-center gap-1.5">
-                          Adaptif Test
-                          <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-                        </h3>
-                        <p className="text-xs text-indigo-100 mt-1 leading-relaxed">
-                          Çalışma geçmişine göre daha çok pratik yapabileceğin alanlardan soru seçer.
-                        </p>
-                      </div>
-                    </motion.button>
-
-                    {/* 2. Gerçek Süreli Deneme Sınavı */}
-                    <motion.button
-                      whileHover={{ y: -5, scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => {
-                        sound.playClick();
-                        onStartExam();
-                      }}
-                      className="zp-dashboard-surface group relative min-w-0 p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-amber-400 dark:hover:border-amber-500/50 transition-all cursor-pointer flex flex-col justify-between min-h-52"
-                    >
-                      <div className="flex items-start justify-between w-full">
-                        <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center border border-amber-200/50 dark:border-amber-800/50 group-hover:scale-110 transition-transform">
-                          <Clock className="w-6 h-6" />
-                        </div>
-                        <span className="text-[11px] font-bold bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 px-2.5 py-1 rounded-full border border-amber-200/60 dark:border-amber-800/40">
-                          Süreli Simülasyon
-                        </span>
-                      </div>
-
-                      <div>
-                        <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-50 font-['Outfit',sans-serif] group-hover:text-amber-600 transition-colors flex items-center gap-1.5">
-                          Deneme Sınavı
-                          <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-amber-500" />
-                        </h3>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
-                          Gerçek BİLSEM tablet sınavı formatında süreye karşı yeteneklerini sına.
-                        </p>
-                      </div>
-                    </motion.button>
-
-                    {/* 3. 10 Soru Karışık Pratik */}
-                    <motion.button
-                      whileHover={{ y: -5, scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => {
-                        sound.playClick();
-                        onStartPractice('mixed');
-                      }}
-                      className="zp-dashboard-surface group relative min-w-0 p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-emerald-400 dark:hover:border-emerald-500/50 transition-all cursor-pointer flex flex-col justify-between min-h-52"
-                    >
-                      <div className="flex items-start justify-between w-full">
-                        <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 flex items-center justify-center border border-emerald-200/50 dark:border-emerald-800/50 group-hover:scale-110 transition-transform">
-                          <Target className="w-6 h-6" />
-                        </div>
-                        <span className="text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-200/60 dark:border-emerald-800/40">
-                          10 Soru Isınma
-                        </span>
-                      </div>
-
-                      <div>
-                        <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-50 font-['Outfit',sans-serif] group-hover:text-emerald-600 transition-colors flex items-center gap-1.5">
-                          Karışık Pratik
-                          <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-emerald-500" />
-                        </h3>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
-                          Tüm kategorilerden derlenen dinamik soru setiyle zihnini zinde tut.
-                        </p>
-                      </div>
-                    </motion.button>
-
-                    {/* 4. Hata Defteri (Hata Avcısı) */}
-                    <motion.button
-                      whileHover={{ y: -5, scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => {
-                        sound.playClick();
-                        onOpenMistakes();
-                      }}
-                      className="zp-dashboard-surface group relative min-w-0 p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 text-left shadow-sm border border-zinc-200/80 dark:border-zinc-800 hover:border-rose-400 dark:hover:border-rose-500/50 transition-all cursor-pointer flex flex-col justify-between min-h-52"
-                    >
-                      <div className="flex items-start justify-between w-full">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform ${
-                          unresolvedMistakesCount > 0 
-                            ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-500 border border-rose-200/50 dark:border-rose-800/50' 
-                            : 'bg-teal-50 dark:bg-teal-950/40 text-teal-500 border border-teal-200/50 dark:border-teal-800/50'
-                        }`}>
-                          <RotateCcw className="w-6 h-6" />
-                        </div>
-                        
-                        {unresolvedMistakesCount > 0 ? (
-                          <span className="text-[11px] font-extrabold bg-rose-500 text-white px-2.5 py-1 rounded-full shadow-xs flex items-center gap-1 animate-pulse">
-                            {unresolvedMistakesCount} Hata Bekliyor
-                          </span>
-                        ) : (
-                          <span className="text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-200/60 dark:border-emerald-800/40">
-                            Tertemiz ✨
-                          </span>
-                        )}
-                      </div>
-
-                      <div>
-                        <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-50 font-['Outfit',sans-serif] group-hover:text-rose-600 transition-colors flex items-center gap-1.5">
-                          Hata Defteri
-                          <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-rose-500" />
-                        </h3>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
-                          {unresolvedMistakesCount > 0 
-                            ? 'Yanıldığın soruları pedagojik yapay zeka ipuçlarıyla yeniden çöz.' 
-                            : 'Tüm hatalarını başarıyla çözdün! Yeni sorularla kendini geliştir.'}
-                        </p>
-                      </div>
-                    </motion.button>
-
-                  </div>
-
-                  {/* Secondary Explore Row: Glossary & Weekly Challenges */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Bilişsel Sözlük & Mini Oyunlar Shortcut Card */}
-                    <motion.button
-                      type="button"
-                      whileHover={{ scale: 1.01 }}
-                      onClick={() => {
-                        sound.playClick();
-                        onNavigate('glossary');
-                      }}
-                      className="min-w-0 w-full p-5 rounded-3xl bg-gradient-to-br from-sky-500/10 via-indigo-500/10 to-purple-500/10 dark:from-sky-950/30 dark:to-purple-950/30 border border-sky-200/80 dark:border-sky-800/40 flex items-center justify-between gap-4 cursor-pointer hover:border-sky-400 transition-all group text-left"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-11 h-11 rounded-2xl bg-sky-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-sky-500/20 group-hover:rotate-6 transition-transform">
-                          <BookOpen className="w-5 h-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <h4 className="text-sm font-bold text-zinc-900 dark:text-white font-['Outfit',sans-serif]">
-                              Bilişsel Sözlük
-                            </h4>
-                            <span className="text-[10px] font-bold bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300 px-1.5 py-0.2 rounded-full shrink-0">
-                              Simülatör
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
-                            İnteraktif görsel kavram mini oyunları
-                          </p>
-                        </div>
-                      </div>
-                      <div className="w-8 h-8 rounded-xl bg-white dark:bg-zinc-800 flex items-center justify-center text-zinc-400 group-hover:text-sky-500 group-hover:translate-x-0.5 transition-all shrink-0 shadow-xs">
-                        <ChevronRight className="w-4 h-4" />
-                      </div>
-                    </motion.button>
-
-                    {/* Haftalık Bilişsel Görevler & Rozetler Shortcut Card */}
-                    <motion.button
-                      type="button"
-                      whileHover={{ scale: 1.01 }}
-                      onClick={() => {
-                        sound.playClick();
-                        setActiveTab('challenges');
-                      }}
-                      className="min-w-0 w-full p-5 rounded-3xl bg-gradient-to-br from-amber-500/10 via-indigo-500/10 to-violet-500/10 dark:from-amber-950/30 dark:to-indigo-950/30 border border-amber-200/80 dark:border-amber-800/40 flex items-center justify-between gap-4 cursor-pointer hover:border-amber-400 transition-all group text-left"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/20 group-hover:rotate-6 transition-transform">
-                          <Trophy className="w-5 h-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <h4 className="text-sm font-bold text-zinc-900 dark:text-white font-['Outfit',sans-serif]">
-                              Haftalık Görevler
-                            </h4>
-                            <span className="text-[10px] font-bold bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 px-1.5 py-0.2 rounded-full shrink-0">
-                              8 Rozet
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
-                            Kategori hedeflerini tamamla, rozetleri kap
-                          </p>
-                        </div>
-                      </div>
-                      <div className="w-8 h-8 rounded-xl bg-white dark:bg-zinc-800 flex items-center justify-center text-zinc-400 group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all shrink-0 shadow-xs">
-                        <ChevronRight className="w-4 h-4" />
-                      </div>
-                    </motion.button>
-                  </div>
-                </motion.div>
+                <StudentModesGrid
+                  unresolvedMistakesCount={unresolvedMistakesCount}
+                  onStartAdaptive={onStartAdaptive}
+                  onStartExam={onStartExam}
+                  onStartPractice={onStartPractice}
+                  onOpenMistakes={onOpenMistakes}
+                  onNavigate={onNavigate}
+                  onOpenChallenges={() => setActiveTab('challenges')}
+                />
               )}
 
               {/* TAB 2: AI PERSONALIZED STUDY PLAN */}
@@ -834,110 +425,21 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 </motion.div>
               )}
 
-              {/* TAB 3: 8 COGNITIVE SKILLS MATRIX */}
+              {/* TAB 3: COGNITIVE SKILLS MATRIX (Subcomponent) */}
               {activeTab === 'skills' && (
-                <motion.div 
-                  key="tab-skills"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.25 }}
-                  className="space-y-6"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-50 font-['Outfit',sans-serif] flex items-center gap-2">
-                        <Brain className="w-5 h-5 text-purple-500" />
-                        {safeMasteries.length} Bilişsel Çalışma Alanı
-                      </h2>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                        Her alandaki ustalık dereceni gör ve istediğin alanda anında antrenmana başla
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="sm:col-span-2 space-y-3">
-                      <label htmlFor="student-skill-search" className="sr-only">Çalışma alanı ara</label>
-                      <input id="student-skill-search" type="search" value={skillSearch} onChange={event => setSkillSearch(event.target.value)} placeholder="Çalışma alanı ara…"
-                        className="min-h-12 w-full rounded-xl border border-zinc-200 bg-white px-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-zinc-700 dark:bg-zinc-900" />
-                      <div className="flex flex-wrap gap-2" aria-label="Çalışma alanı filtreleri">
-                        {([['all', 'Tüm alanlar'], ['practice', 'Pekiştireceklerim'], ['new', 'Henüz keşfetmediklerim']] as const).map(([value, label]) => <button type="button" key={value} aria-pressed={skillFilter === value} onClick={() => setSkillFilter(value)}
-                          className={`min-h-10 rounded-xl border px-3 py-2 text-xs font-bold ${skillFilter === value ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200' : 'border-zinc-200 bg-white text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300'}`}>{label}</button>)}
-                      </div>
-                      <p role="status" className="text-xs text-zinc-500">{visibleMasteries.length} alan gösteriliyor</p>
-                    </div>
-                    {visibleMasteries.length === 0 && <div className="sm:col-span-2 rounded-2xl border border-dashed border-zinc-300 p-8 text-center dark:border-zinc-700">
-                      <p className="text-sm font-semibold">Bu seçimle eşleşen alan yok.</p>
-                      <button type="button" onClick={() => { setSkillSearch(''); setSkillFilter('all'); }} className="mt-3 min-h-11 rounded-xl bg-indigo-50 px-4 text-sm font-bold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200">Tüm alanları göster</button>
-                    </div>}
-                    {visibleMasteries.map((m: SkillMastery, i: number) => {
-                      const cfg = CATEGORY_STYLE_CONFIG[m.category] || {
-                        color: 'text-indigo-600 dark:text-indigo-400',
-                        bgLight: 'bg-indigo-50 dark:bg-indigo-950/30',
-                        borderLight: 'border-indigo-200/60 dark:border-indigo-800/40',
-                        gradient: 'from-indigo-500 to-purple-500',
-                        icon: Sparkles
-                      };
-                      const Icon = cfg.icon;
-                      const masteryPct = Math.min(100, Math.max(0, m.mastery || 0));
-
-                      return (
-                        <motion.div
-                          key={m.category}
-                          initial={{ opacity: 0, scale: 0.96 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.3, delay: i * 0.05 }}
-                          whileHover={{ y: -3 }}
-                          className="zp-dashboard-surface p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-sm flex flex-col justify-between group"
-                        >
-                          <div>
-                            <div className="flex items-start justify-between mb-3">
-                              <div className={`w-11 h-11 rounded-2xl ${cfg.bgLight} ${cfg.color} flex items-center justify-center border ${cfg.borderLight} group-hover:scale-110 transition-transform`}>
-                                <Icon className="w-5 h-5" />
-                              </div>
-                              <span className={`text-xs font-black px-2.5 py-1 rounded-full ${cfg.bgLight} ${cfg.color} border ${cfg.borderLight}`}>
-                                {m.attemptCount > 0 ? `%${masteryPct} Ustalık` : 'Yeni alan'}
-                              </span>
-                            </div>
-
-                            <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 font-['Outfit',sans-serif] group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                              {m.categoryName}
-                            </h3>
-
-                            <div className="flex items-center justify-between text-[11px] text-zinc-400 mt-2 mb-1.5 font-medium">
-                              <span>{m.attemptCount || 0} Çözülen Soru</span>
-                              <span className="text-emerald-600 dark:text-emerald-400 font-bold">{m.attemptCount > 0 ? `%${m.accuracy || 0} Doğruluk` : 'İlk adımını at'}</span>
-                            </div>
-
-                            <div className="h-2 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                              <motion.div 
-                                initial={{ width: 0 }}
-                                animate={{ width: `${masteryPct}%` }}
-                                transition={{ duration: 0.8, delay: i * 0.05 }}
-                                className={`h-full bg-gradient-to-r ${cfg.gradient} rounded-full`}
-                              />
-                            </div>
-                          </div>
-
-                          <button
-                            onClick={() => {
-                              sound.playClick();
-                              onStartPractice(m.category);
-                            }}
-                            className="mt-4 w-full py-2.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800/80 dark:hover:bg-zinc-700/80 text-zinc-700 dark:text-zinc-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer group-hover:bg-indigo-50 dark:group-hover:bg-indigo-950/40 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
-                          >
-                            <Play className="w-3.5 h-3.5 fill-current" />
-                            Bu Kategoride Pratik Yap
-                          </button>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                </motion.div>
+                <StudentSkillsGrid
+                  safeMasteries={safeMasteries}
+                  visibleMasteries={visibleMasteries}
+                  skillSearch={skillSearch}
+                  setSkillSearch={setSkillSearch}
+                  skillFilter={skillFilter}
+                  setSkillFilter={setSkillFilter}
+                  categoryStyleConfig={CATEGORY_STYLE_CONFIG}
+                  onStartPractice={onStartPractice}
+                />
               )}
 
-              {/* TAB 4: WEEKLY CHALLENGES (HAFTALIK BİLİŞSEL GÖREVLER & ROZETLER) */}
+              {/* TAB 4: WEEKLY CHALLENGES */}
               {activeTab === 'challenges' && (
                 <motion.div 
                   key="tab-challenges"
@@ -972,15 +474,11 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                   />
                 </motion.div>
               )}
-
             </AnimatePresence>
-
           </div>
 
           {/* Right Sidebar Gamification Area (Right Col) */}
           <aside className="min-w-0 space-y-4 sm:space-y-6">
-            
-            {/* Daily Streak Card with Milestones & Freeze */}
             <DailyStreakCard 
               user={activeUser} 
               onUserUpdate={onUserUpdate} 
@@ -988,14 +486,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               onOpenDetailsModal={() => onNavigate('achievements')}
             />
 
-            {/* Weekly Challenges Banner Card */}
             <WeeklyChallengesBannerCard
               user={activeUser}
               onOpenChallenges={() => setActiveTab('challenges')}
               onStartPractice={(cat) => onStartPractice(cat)}
             />
             
-            {/* Daily Goal Card (Interactive Questions / Time Modes) */}
             <DailyGoalProgressCard 
               user={activeUser}
               dailyPlan={dailyPlan || undefined}
@@ -1082,12 +578,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 <ArrowRight className="w-3.5 h-3.5" />
               </motion.button>
             </article>
-
           </aside>
-
         </div>
 
-        {/* Rozet koleksiyonu dar yan sütuna sıkıştırılmadan tam genişlikte okunur. */}
+        {/* Rozet koleksiyonu */}
         <BadgesSection
           user={activeUser}
           mistakes={activeMistakes}
@@ -1096,10 +590,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           onStartPractice={() => onStartPractice()}
           onNavigate={onNavigate}
         />
-
       </main>
     </div>
   );
 };
-
-
+export default StudentDashboard;

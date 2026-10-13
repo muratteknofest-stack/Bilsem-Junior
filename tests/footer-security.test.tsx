@@ -43,6 +43,8 @@ test('mobile navigation exposes active route and mistake count, without unsuppor
   const props = { currentRoute: 'mistakes', onNavigate() {}, mistakesCount: 14 };
   const student = renderToStaticMarkup(<MobileBottomNav {...props} userRole="student" />);
   assert.match(student, /<nav aria-label="Öğrenci alt menüsü"/);
+  assert.match(student, /role="tablist"/);
+  assert.match(student, /role="tab"/);
   assert.match(student, /aria-current="page"/);
   assert.match(student, /Tekrar: 14 yanlış soru/);
   const parent = renderToStaticMarkup(<MobileBottomNav {...props} currentRoute="parent" userRole="parent" />);

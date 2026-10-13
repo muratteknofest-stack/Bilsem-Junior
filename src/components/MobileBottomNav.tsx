@@ -83,7 +83,7 @@ export function MobileBottomNav({
       className="md:hidden fixed bottom-0 left-0 w-full z-50 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border-t border-slate-200/80 dark:border-zinc-800/80 shadow-[0_-4px_24px_-4px_rgba(15,23,42,0.08)]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div className="flex items-center justify-around px-2 h-16 max-w-lg mx-auto">
+      <div role="tablist" aria-label="Alt gezinme sekmeleri" className="flex items-center justify-around px-2 h-16 max-w-lg mx-auto">
         {items.map((item) => {
           const active = currentRoute === item.id;
           const Icon = item.icon;
@@ -103,7 +103,7 @@ export function MobileBottomNav({
               }
               onClick={() => handlePress(item.id, active)}
               whileTap={prefersReducedMotion ? undefined : { scale: 0.92 }}
-              className="group relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1.5 min-w-0 select-none outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-2xl cursor-pointer"
+              className="group relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1.5 min-h-[48px] min-w-0 select-none outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-2xl cursor-pointer"
             >
               {/* Active top line indicator */}
               {active && (
@@ -167,7 +167,7 @@ export function MobileBottomNav({
             <a
               key="blog"
               href="/blog"
-              className="group relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1.5 min-w-0 select-none outline-none rounded-2xl cursor-pointer"
+              className="group relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1.5 min-h-[48px] min-w-0 select-none outline-none rounded-2xl cursor-pointer"
             >
               <span className="relative flex items-center justify-center h-8 w-14">
                 <BookOpen
@@ -187,7 +187,7 @@ export function MobileBottomNav({
                   ? '/bilgi/hesap-ve-veli-rehberi'
                   : '/bilgi/hesap-guvenligi'
               }
-              className="group relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1.5 min-w-0 select-none outline-none rounded-2xl cursor-pointer"
+              className="group relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1.5 min-h-[48px] min-w-0 select-none outline-none rounded-2xl cursor-pointer"
             >
               <span className="relative flex items-center justify-center h-8 w-14">
                 <CircleHelp
