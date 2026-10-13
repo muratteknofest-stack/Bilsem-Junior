@@ -59,7 +59,8 @@ import {
   Copy,
   Zap,
   Award,
-  GraduationCap
+  GraduationCap,
+  Loader2
 } from 'lucide-react';
 import { reminderService } from '../services/reminder-service';
 import { StudyReminderSettingsModal } from './StudyReminderSettingsModal';
@@ -130,18 +131,22 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
   const [isSendingReport, setIsSendingReport] = useState(false);
   const [reportSendStatus, setReportSendStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
+  const parentId = parentOrStudent?.id;
+  const parentRole = parentOrStudent?.role;
+  const linkedStudentIds = parentOrStudent?.role === 'parent' ? parentOrStudent.linkedStudentIds : undefined;
+  const linkedIdsKey = (linkedStudentIds || []).join(',');
+
   useEffect(() => {
     let active = true;
-    const ids = parentOrStudent?.role === 'parent' ? parentOrStudent.linkedStudentIds || [] : [];
+    const ids = parentRole === 'parent' ? linkedStudentIds || [] : [];
     setSelectedStudentId(previous => ids.includes(previous) ? previous : ids[0] || '');
-    setLinkedStudents([]);
     Promise.all(ids.map(async id => {
       const snap = await getDoc(doc(db, 'users', id));
       const child = snap.exists() ? snap.data() as UserProfile : null;
-      return child?.id === id && child.role === 'student' && child.linkedParentId === parentOrStudent?.id ? child : null;
+      return child?.id === id && child.role === 'student' && child.linkedParentId === parentId ? child : null;
     })).then(profiles => { if (active) setLinkedStudents(profiles.filter((p): p is UserProfile => !!p)); }).catch(() => {});
     return () => { active = false; };
-  }, [parentOrStudent, studentReload]);
+  }, [parentId, parentRole, linkedIdsKey, studentReload]);
 
   useEffect(() => {
     let isSubscribed = true;
@@ -150,9 +155,12 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
       if (!activeUser) return;
       
       if (activeUser.role === 'parent') {
-        setStudentLoadError(''); setPasswordResetNotice(''); setWeeklyData(null); setDisplayMasteries([]);
         if (!selectedStudentId || !activeUser.linkedStudentIds?.includes(selectedStudentId)) {
-          setStudentLoadError('Bu veli hesabına bağlı öğrenci bulunamadı.'); return;
+          if (isSubscribed) {
+            setStudentLoadError('Bu veli hesabına bağlı öğrenci bulunamadı.');
+            setIsLoadingStudent(false);
+          }
+          return;
         }
         setIsLoadingStudent(true);
         try {
@@ -160,8 +168,11 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
           const snap = await getDoc(docRef);
           if (snap.exists() && isSubscribed) {
             const child = snap.data() as UserProfile;
-            if (child.id !== selectedStudentId || child.role !== 'student' || child.linkedParentId !== activeUser.id) throw new Error('Linked student unavailable');
+            if (child.id !== selectedStudentId || child.role !== 'student' || child.linkedParentId !== activeUser.id) {
+              throw new Error('Linked student unavailable');
+            }
             setCurrentStudent(child);
+            setStudentLoadError('');
             const progress = await dataService.loadRemoteProgressForUser(child.id);
             if (isSubscribed) {
               const childMasteries = progress.masteries || [];
@@ -194,7 +205,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
     return () => {
       isSubscribed = false;
     };
-  }, [parentOrStudent, masteries, selectedStudentId, studentReload]);
+  }, [parentId, parentRole, selectedStudentId, studentReload]);
 
   useEffect(() => {
     if (parentOrStudent?.role !== 'parent') {
@@ -316,8 +327,61 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
   const spentMins = currentStudent.todayMinutesSpent || 0;
   const goalProgressPct = Math.min(100, Math.round((spentMins / targetMins) * 100));
 
-  const studentSelector = parentOrStudent?.role === 'parent' && linkedStudents.length > 1 ? <label className="mb-4 block text-sm font-semibold">Öğrenci seçin<select value={selectedStudentId} disabled={isSwitchingStudent || isResettingPassword} onChange={e => { setSelectedStudentId(e.target.value); setShowPasswordResetModal(false); setShowStudentSettingsModal(false); setNewStudentPassword(''); setConfirmStudentPassword(''); }} className="ml-3 rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900">{linkedStudents.map(child => <option key={child.id} value={child.id}>{child.name} · {child.grade}. sınıf</option>)}</select></label> : null;
-  if (parentOrStudent?.role === 'parent' && (isLoadingStudent || !!studentLoadError || currentStudent.role !== 'student' || currentStudent.id !== selectedStudentId)) return <div className="mx-auto max-w-6xl space-y-4 p-5"><h1 className="text-2xl font-bold">Veli paneli</h1>{studentSelector}<p role={studentLoadError ? 'alert' : 'status'}>{studentLoadError || 'Bağlı öğrencinin bilgileri yükleniyor…'}</p>{studentLoadError && <button type="button" onClick={() => setStudentReload(v => v + 1)} className="min-h-11 rounded-xl bg-indigo-700 px-4 py-2 text-white">Tekrar dene</button>}<AccountCenter /></div>;
+  const studentSelector = parentOrStudent?.role === 'parent' && linkedStudents.length > 1 ? (
+    <label className="mb-4 block text-sm font-semibold">
+      Öğrenci seçin
+      <select
+        value={selectedStudentId}
+        disabled={isSwitchingStudent || isResettingPassword}
+        onChange={e => {
+          setSelectedStudentId(e.target.value);
+          setShowPasswordResetModal(false);
+          setShowStudentSettingsModal(false);
+          setNewStudentPassword('');
+          setConfirmStudentPassword('');
+        }}
+        className="ml-3 rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900"
+      >
+        {linkedStudents.map(child => (
+          <option key={child.id} value={child.id}>
+            {child.name} · {child.grade}. sınıf
+          </option>
+        ))}
+      </select>
+    </label>
+  ) : null;
+
+  if (parentOrStudent?.role === 'parent') {
+    if (studentLoadError && currentStudent.role !== 'student') {
+      return (
+        <div className="mx-auto max-w-6xl space-y-4 p-5">
+          <h1 className="text-2xl font-bold">Veli paneli</h1>
+          {studentSelector}
+          <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-900">
+            <p className="font-semibold">{studentLoadError}</p>
+            <button
+              type="button"
+              onClick={() => setStudentReload(v => v + 1)}
+              className="mt-3 min-h-11 rounded-xl bg-indigo-700 px-5 py-2 text-white font-bold text-sm shadow-sm cursor-pointer"
+            >
+              Tekrar dene
+            </button>
+          </div>
+          <AccountCenter />
+        </div>
+      );
+    }
+    if (isLoadingStudent && (currentStudent.id === 'pending' || currentStudent.role !== 'student')) {
+      return (
+        <div className="mx-auto max-w-6xl min-h-[50vh] flex flex-col items-center justify-center p-8 space-y-3 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 animate-pulse">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+          <p className="text-sm font-semibold text-slate-600 dark:text-zinc-400">Bağlı öğrencinin bilgileri yükleniyor…</p>
+        </div>
+      );
+    }
+  }
 
   return (
     <div className="zp-dashboard-page zp-parent-dashboard min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24 text-zinc-900 dark:text-zinc-100 selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
