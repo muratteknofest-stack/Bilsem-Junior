@@ -4,7 +4,7 @@ import { EDUCATION_PROFILES, type SchoolGrade } from '../questions/quality-polic
 import { AVAILABLE_CATEGORIES } from './available-categories';
 
 // This is a selection policy version; the server fingerprints the actual published bank.
-export const LEARNING_BANK_POLICY = 'published-selection-2';
+export const LEARNING_BANK_POLICY = 'published-selection-3';
 export type LearningDifficulty = 'mixed' | DifficultyLevel;
 export const learningStartSchema = z.object({
   mode: z.enum(['practice', 'adaptive', 'exam']),

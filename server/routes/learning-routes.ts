@@ -10,7 +10,8 @@ import { generateQuestion } from '../../src/features/questions/generators';
 import { EDUCATION_PROFILES, isSchoolGrade } from '../../src/features/questions/quality-policy';
 import { fitsLearningSelection, learningStartSchema, sameLearningSelection, type LearningDifficulty, type LearningSelection } from '../../src/features/student/learning-selection';
 import { loadPublishedLearningBank } from '../learning-bank';
-import { isQuestionReadyForStudents, questionContentKey } from '../../src/features/questions/quality';
+import { isQuestionReadyForStudents } from '../../src/features/questions/quality';
+import { loadRecentQuestionExposure, selectLearningQuestions } from '../learning-question-selection';
 import { AVAILABLE_CATEGORIES } from '../../src/features/student/available-categories';
 import { COGNITIVE_CATEGORY_LABELS, type BaseQuestion, type SkillMastery } from '../../src/types';
 import { prepareQuestionReport } from '../support-validation';
@@ -70,6 +71,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const profile = await client.from('profiles').select('grade').eq('id', student).single();
     if (profile.error) throw profile.error;
     if (!isSchoolGrade(profile.data.grade)) throw new LearningError('Çalışma için 1–4. sınıf bilgisi gerekli.');
+    const grade = profile.data.grade;
     if (parsed.data.expectedGrade !== undefined && parsed.data.expectedGrade !== profile.data.grade) throw new LearningError('Sınıfın başka bir ekranda değişti. Ana sayfaya dönüp yeniden başla.', 409);
     const difficulty = parsed.data.difficulty as LearningDifficulty;
     if (difficulty !== 'mixed' && difficulty > EDUCATION_PROFILES[profile.data.grade].maxDifficulty) throw new LearningError('Bu zorluk seçtiğin sınıf için uygun değil.', 400);
@@ -91,15 +93,13 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     if (active.data && Date.parse(active.data.expires_at) > Date.now() && sameLearningSelection(active.data.selection, selection)) return res.json(learningView(active.data as LearningSession));
     if (active.data) await commit(student, active.data.id, finishLearningSession);
     const candidates = bank.questions.filter(q => fitsLearningSelection(q, selection));
-    for (let i = candidates.length - 1; i > 0; i--) { const j = randomInt(i + 1); [candidates[i], candidates[j]] = [candidates[j], candidates[i]]; }
-    const questions: BaseQuestion[] = [], seen = new Set<string>();
-    for (const q of candidates) { if (!isQuestionReadyForStudents(q)) continue; const key = questionContentKey(q); if (!seen.has(key)) { seen.add(key); questions.push(q); } if (questions.length === count) break; }
-    for (let tries = 0; questions.length < count && tries < count * 50; tries++) {
-      const q = generateQuestion({ profile: 'professional', targetGrade: profile.data.grade, difficulty: difficulty === 'mixed' ? randomInt(1, EDUCATION_PROFILES[profile.data.grade].maxDifficulty + 1) as import('../../src/types').DifficultyLevel : difficulty, category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number], seed: randomInt(1, 2147483647) });
-      const key = questionContentKey(q);
-      if (!seen.has(key) && fitsLearningSelection(q, selection) && isQuestionReadyForStudents(q)) { seen.add(key); questions.push(q); }
-    }
-    if (questions.length !== count) throw new LearningError('Bu çalışma için yeterli doğrulanmış soru hazır değil.');
+    const exposure = await loadRecentQuestionExposure(student);
+    const questions = selectLearningQuestions({ count, category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number],
+      candidates, exposure, canUse: q => fitsLearningSelection(q, selection) && isQuestionReadyForStudents(q),
+      generate: nextCategory => generateQuestion({ profile: 'professional', targetGrade: grade,
+        difficulty: difficulty === 'mixed' ? randomInt(1, EDUCATION_PROFILES[grade].maxDifficulty + 1) as import('../../src/types').DifficultyLevel : difficulty,
+        category: nextCategory, seed: randomInt(1, 2147483647) }),
+    });
     const latestProfile = await client.from('profiles').select('grade').eq('id', student).single();
     if (latestProfile.error) throw latestProfile.error;
     if (latestProfile.data.grade !== selection.grade) throw new LearningError('Sınıfın değişti. Yeni sınıfınla tekrar başla.', 409);

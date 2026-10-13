@@ -12,6 +12,19 @@ export class AnswerRequestGate {
   }
 }
 
+/** Expiry retries are independent of unrelated UI errors and bounded during an outage. */
+export class DeadlineFinishGate {
+  private sessionId = '';
+  private attempts = 0;
+  private nextAttemptAt = 0;
+  take(sessionId: string, deadline: number, now: number, busy: boolean) {
+    if (sessionId !== this.sessionId) { this.sessionId = sessionId; this.attempts = 0; this.nextAttemptAt = 0; }
+    if (!Number.isFinite(deadline) || busy || now < deadline || now < this.nextAttemptAt || this.attempts >= 3) return false;
+    this.nextAttemptAt = now + 1000 * 2 ** this.attempts++;
+    return true;
+  }
+}
+
 export function nextUnansweredIndex(session: LearningSessionView, after = -1): number {
   for (let offset = 1; offset <= session.questions.length; offset++) {
     const index = (after + offset) % session.questions.length;
