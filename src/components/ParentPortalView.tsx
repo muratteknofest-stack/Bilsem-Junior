@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 18676)
-Total output lines: 1430
-
 import { ShopierBilling } from './ShopierBilling';
 import { AccountCenter, FamilyActivation } from './AccountCenter';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -537,7 +534,463 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               ) : (
                 <Mail className="w-4 h-4" />
               )}
-              <span className="truncate">{isSendingReport ? 'Hazırlan…6676 tokens truncated…n Dönem Eğilim</h2>
+              <span className="truncate">{isSendingReport ? 'Hazırlanıyor...' : reportSendStatus === 'success' ? 'Rapor Hazır!' : 'Rapor E-postala'}</span>
+            </motion.button>
+
+            <motion.button 
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                sound.playClick();
+                setShowStudentSettingsModal(true);
+              }}
+              className="px-3 sm:px-4 py-2.5 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl font-semibold flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm shadow-sm border border-zinc-200 dark:border-zinc-700 cursor-pointer min-h-[42px]"
+            >
+              <KeyRound className="w-4 h-4 text-indigo-500" />
+              <span>Giriş Bilgileri</span>
+            </motion.button>
+
+            <motion.button 
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                sound.playClick();
+                setShowReminderModal(true);
+              }}
+              className="col-span-2 sm:col-span-1 px-3 sm:px-4 py-2.5 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl font-semibold flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm shadow-sm border border-zinc-200 dark:border-zinc-700 cursor-pointer min-h-[42px]"
+            >
+              <Settings className="w-4 h-4 text-amber-500" />
+              <span>Hatırlatıcı</span>
+            </motion.button>
+          </div>
+
+        </div>
+      </div>
+
+      {/* Main Dashboard Body */}
+      <div className="zp-dashboard-content max-w-6xl mx-auto px-4 sm:px-6 md:px-12 pt-8 space-y-8 relative z-10">
+        
+        {/* Modern Fluid Segmented Tabs */}
+        <div className="zp-dashboard-tabs flex p-1.5 bg-zinc-200/60 dark:bg-zinc-900/80 rounded-2xl w-full max-w-full overflow-x-auto whitespace-nowrap scrollbar-none border border-zinc-200/70 dark:border-zinc-800/80 shadow-inner gap-1 md:w-fit" role="group" aria-label="Veli paneli bölümleri">
+          <button 
+            type="button"
+            aria-pressed={activeTab === 'overview'}
+            onClick={() => {
+              sound.playClick();
+              setActiveTab('overview');
+            }}
+            className={`relative px-3.5 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors cursor-pointer shrink-0 ${
+              activeTab === 'overview' ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
+            }`}
+          >
+            {activeTab === 'overview' && (
+              <motion.div 
+                layoutId="activeParentTab"
+                className="absolute inset-0 bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200/40 dark:border-zinc-700/40"
+                transition={{ type: "spring", stiffness: 450, damping: 35 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
+              <BarChart2 className="w-4 h-4" /> Gelişim Analizi & Bilişsel Radar
+            </span>
+          </button>
+
+          <button 
+            type="button"
+            aria-pressed={activeTab === 'skills'}
+            onClick={() => {
+              sound.playClick();
+              setActiveTab('skills');
+            }}
+            className={`relative px-3.5 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors cursor-pointer shrink-0 ${
+              activeTab === 'skills' ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
+            }`}
+          >
+            {activeTab === 'skills' && (
+              <motion.div 
+                layoutId="activeParentTab"
+                className="absolute inset-0 bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200/40 dark:border-zinc-700/40"
+                transition={{ type: "spring", stiffness: 450, damping: 35 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
+              <Brain className="w-4 h-4" /> 8 Bilişsel Boyut Haritası
+            </span>
+          </button>
+
+          <button 
+            type="button"
+            aria-pressed={activeTab === 'preferences'}
+            onClick={() => {
+              sound.playClick();
+              setActiveTab('preferences');
+            }}
+            className={`relative px-3.5 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors cursor-pointer shrink-0 ${
+              activeTab === 'preferences' ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
+            }`}
+          >
+            {activeTab === 'preferences' && (
+              <motion.div 
+                layoutId="activeParentTab"
+                className="absolute inset-0 bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200/40 dark:border-zinc-700/40"
+                transition={{ type: "spring", stiffness: 450, damping: 35 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
+              <Bell className="w-4 h-4" /> Bildirim & E-posta
+            </span>
+          </button>
+        </div>
+
+        {parentProfile?.role === 'parent' && <FamilyActivation />}
+        {parentProfile?.role === 'parent' && currentStudent.role === 'student' && <ShopierBilling studentId={currentStudent.id}/>}
+        <AnimatePresence mode="wait">
+          {activeTab === 'overview' && (
+            <motion.div 
+              key="tab-overview"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.25 }}
+              className="space-y-8"
+            >
+              {/* Bento KPI Row */}
+              <div className="zp-dashboard-kpis grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                
+                {/* 1. Bugünkü Çalışma & Dairesel İlerleme */}
+                <motion.div 
+                  whileHover={{ y: -4 }}
+                  className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/70 dark:border-zinc-800 shadow-sm flex flex-col justify-between relative overflow-hidden"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30">
+                      <Clock className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900/30">
+                      Hedef: {targetMins} dk
+                    </span>
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 font-['Outfit',sans-serif]">
+                        {spentMins} <span className="text-sm font-semibold text-zinc-400">dk</span>
+                      </h3>
+                      <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">Bugünkü Odak Süresi</p>
+                    </div>
+
+                    {/* Circular Mini Progress */}
+                    <div className="relative w-12 h-12 flex items-center justify-center">
+                      <svg className="w-12 h-12 -rotate-90">
+                        <circle cx="24" cy="24" r="18" stroke="currentColor" strokeWidth="4" className="text-zinc-100 dark:text-zinc-800" fill="transparent" />
+                        <motion.circle 
+                          cx="24" 
+                          cy="24" 
+                          r="18" 
+                          stroke="currentColor" 
+                          strokeWidth="4" 
+                          className="text-blue-500" 
+                          fill="transparent" 
+                          strokeDasharray={113}
+                          initial={{ strokeDashoffset: 113 }}
+                          animate={{ strokeDashoffset: 113 - (113 * goalProgressPct) / 100 }}
+                          transition={{ duration: 1.2, ease: "easeOut" }}
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <span className="absolute text-[10px] font-bold text-blue-600 dark:text-blue-400">%{goalProgressPct}</span>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* 2. Toplam Çözülen Soru */}
+                <motion.div 
+                  whileHover={{ y: -4 }}
+                  className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/70 dark:border-zinc-800 shadow-sm flex flex-col justify-between"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30">
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-900/30 flex items-center gap-1">
+                      <ArrowUpRight className="w-3 h-3" /> Aktif Pratik
+                    </span>
+                  </div>
+                  <div className="mt-4">
+                    <h3 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 font-['Outfit',sans-serif]">
+                      {currentStudent.totalQuestionsSolved || 0}
+                    </h3>
+                    <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">Toplam Çözülen BİLSEM Sorusu</p>
+                  </div>
+                </motion.div>
+
+                {/* 3. Genel Doğruluk */}
+                <motion.div 
+                  whileHover={{ y: -4 }}
+                  className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/70 dark:border-zinc-800 shadow-sm flex flex-col justify-between"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/30">
+                      <Target className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-900/30">
+                      Başarı Oranı
+                    </span>
+                  </div>
+                  <div className="mt-4">
+                    <h3 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 font-['Outfit',sans-serif]">
+                      %{accuracy}
+                    </h3>
+                    <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">En Güçlü Alanlar Ortalaması</p>
+                  </div>
+                </motion.div>
+
+                {/* 4. Öğrenme Serisi */}
+                <motion.div 
+                  whileHover={{ y: -4 }}
+                  className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/70 dark:border-zinc-800 shadow-sm flex flex-col justify-between"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-500 border border-amber-100 dark:border-amber-900/30">
+                      <Flame className="w-5 h-5 animate-pulse" />
+                    </div>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/50 dark:border-amber-900/30 flex items-center gap-1">
+                      <Shield className="w-3 h-3 text-indigo-500" /> {currentStudent.streakFreezeCount || 0} Kalkan
+                    </span>
+                  </div>
+                  <div className="mt-4">
+                    <h3 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 font-['Outfit',sans-serif]">
+                      {currentStudent.streak || 0} <span className="text-sm font-semibold text-zinc-400">Gün</span>
+                    </h3>
+                    <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">Kesintisiz Öğrenme Disiplini</p>
+                  </div>
+                </motion.div>
+
+              </div>
+
+              {/* Main Visuals Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* Left 2 Cols: Charts & Visuals */}
+                <div className="lg:col-span-2 space-y-6">
+                  
+                  {/* Innovative Chart 1: Switchable Radar vs 30-Day Momentum */}
+                  <div className="zp-dashboard-surface bg-white dark:bg-zinc-900 rounded-3xl p-6 md:p-8 border border-zinc-200/70 dark:border-zinc-800 shadow-sm">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Compass className="w-5 h-5 text-indigo-500" />
+                          <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                            {chartViewMode === 'radar' ? 'Bilişsel Yetenek Radar Haritası' : 'Bu Haftanın Soru Akışı'}
+                          </h2>
+                        </div>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                          {chartViewMode === 'radar' 
+                            ? 'Öğrencinin çalıştığı bilişsel alanlardaki güncel ustalık dağılımı'
+                            : 'Günlere göre gerçekten tamamlanan soru sayısı'}
+                        </p>
+                      </div>
+
+                      {/* Switcher Toggle */}
+                      <div className="flex p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl self-start sm:self-auto border border-zinc-200/50 dark:border-zinc-700/50" role="group" aria-label="Grafik görünümü">
+                        <button
+                          type="button"
+                          aria-pressed={chartViewMode === 'radar'}
+                          onClick={() => {
+                            sound.playClick();
+                            setChartViewMode('radar');
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            chartViewMode === 'radar'
+                              ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-xs'
+                              : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+                          }`}
+                        >
+                          Bilişsel Radar
+                        </button>
+                        <button
+                          type="button"
+                          aria-pressed={chartViewMode === 'momentum'}
+                          onClick={() => {
+                            sound.playClick();
+                            setChartViewMode('momentum');
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            chartViewMode === 'momentum'
+                              ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-xs'
+                              : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+                          }`}
+                        >
+                          Haftalık Akış
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Chart Container */}
+                    <div className="h-[270px] sm:h-[320px] w-full flex items-center justify-center">
+                      <AnimatePresence mode="wait">
+                        {chartViewMode === 'radar' ? (
+                          <motion.div 
+                            key="radar-chart"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ duration: 0.3 }}
+                            className="w-full h-full"
+                          >
+                            <ResponsiveContainer width="100%" height="100%">
+                              <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
+                                <PolarGrid stroke="#e4e4e7" strokeDasharray="3 3" className="dark:stroke-zinc-800" />
+                                <PolarAngleAxis 
+                                  dataKey="category" 
+                                  tick={{ fill: '#71717a', fontSize: 11, fontWeight: 600 }} 
+                                />
+                                <PolarRadiusAxis 
+                                  angle={30} 
+                                  domain={[0, 100]} 
+                                  stroke="#a1a1aa" 
+                                  tick={{ fontSize: 10, fill: '#a1a1aa' }} 
+                                />
+                                <Radar 
+                                  name="Ustalık Puanı" 
+                                  dataKey="mastery" 
+                                  stroke="#6366f1" 
+                                  fill="#6366f1" 
+                                  fillOpacity={0.35} 
+                                  strokeWidth={2.5}
+                                />
+                                <RechartsTooltip 
+                                  content={({ active, payload }) => {
+                                    if (active && payload && payload.length) {
+                                      const data = payload[0].payload;
+                                      return (
+                                        <div className="bg-zinc-900 text-white p-3 rounded-xl shadow-xl text-xs space-y-1">
+                                          <p className="font-bold text-sm text-indigo-300">{data.fullName}</p>
+                                          <p>Ustalık Seviyesi: <strong className="text-white">%{data.mastery}</strong></p>
+                                          <p>Doğruluk Oranı: <strong className="text-emerald-400">%{data.accuracy}</strong></p>
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  }}
+                                />
+                              </RadarChart>
+                            </ResponsiveContainer>
+                          </motion.div>
+                        ) : (
+                          <motion.div 
+                            key="momentum-chart"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ duration: 0.3 }}
+                            className="w-full h-full"
+                          >
+                            <ResponsiveContainer width="100%" height="100%">
+                              <AreaChart data={monthlyMomentumData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                <defs>
+                                  <linearGradient id="colorMomentum" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.25}/>
+                                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                  </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f4f4f5" className="dark:stroke-zinc-800" />
+                                <XAxis 
+                                  dataKey="date" 
+                                  axisLine={false} 
+                                  tickLine={false} 
+                                  tick={{ fill: '#a1a1aa', fontSize: 11, fontWeight: 500 }} 
+                                  dy={12}
+                                  minTickGap={25}
+                                />
+                                <YAxis 
+                                  axisLine={false} 
+                                  tickLine={false} 
+                                  tick={{ fill: '#a1a1aa', fontSize: 11, fontWeight: 500 }}
+                                  domain={[0, 'auto']}
+                                />
+                                <RechartsTooltip 
+                                  contentStyle={{ 
+                                    borderRadius: '12px', 
+                                    backgroundColor: '#18181b', 
+                                    border: 'none', 
+                                    color: '#fff', 
+                                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)', 
+                                    fontWeight: 'bold' 
+                                  }}
+                                  cursor={{ stroke: '#10b981', strokeWidth: 2, strokeDasharray: '3 3' }}
+                                />
+                                <Area 
+                                  type="monotone" 
+                                  dataKey="score" 
+                                  stroke="#10b981" 
+                                  strokeWidth={3}
+                                  fillOpacity={1} 
+                                  fill="url(#colorMomentum)" 
+                                  name="Çözülen Soru"
+                                />
+                              </AreaChart>
+                            </ResponsiveContainer>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+
+                  {/* Animated Weekly Solved Questions Bar Chart */}
+                  <div className="zp-dashboard-surface bg-white dark:bg-zinc-900 rounded-3xl p-6 md:p-8 border border-zinc-200/70 dark:border-zinc-800 shadow-sm">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-2">
+                        <BarChart2 className="w-5 h-5 text-indigo-500" />
+                        <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                          Haftalık Çözülen Soru Dağılımı
+                        </h2>
+                      </div>
+                      <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded-full">
+                        Toplam: {activityData.reduce((a, b) => a + b, 0)} Soru
+                      </span>
+                    </div>
+
+                    <div className="flex items-end justify-between h-44 pt-6 gap-2 sm:gap-4 px-2">
+                      {weekDays.map((day, i) => {
+                        const count = activityData[i];
+                        const heightPct = Math.max(8, (count / maxQuestions) * 100);
+                        const isToday = i === (new Date().getDay() + 6) % 7;
+
+                        return (
+                          <div key={day} className="flex flex-col items-center gap-3 flex-1 group">
+                            <div className="w-full max-w-[44px] h-32 flex flex-col justify-end relative">
+                              <div className="w-full bg-zinc-100 dark:bg-zinc-800/80 rounded-2xl absolute inset-0 -z-0" />
+                              <motion.div 
+                                initial={{ height: 0 }}
+                                animate={{ height: `${heightPct}%` }}
+                                transition={{ duration: 0.8, delay: i * 0.08, type: "spring", stiffness: 300, damping: 25 }}
+                                className={`w-full rounded-2xl relative transition-all duration-300 ${
+                                  isToday 
+                                    ? 'bg-gradient-to-t from-indigo-600 to-indigo-400 shadow-md shadow-indigo-500/20' 
+                                    : 'bg-zinc-300 dark:bg-zinc-700 group-hover:bg-indigo-500/80'
+                                }`}
+                              >
+                                {/* Floating Number Tooltip */}
+                                <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[11px] font-bold px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-md z-20">
+                                  {count} soru
+                                </div>
+                              </motion.div>
+                            </div>
+                            <span className={`text-xs font-bold ${isToday ? 'text-indigo-600 dark:text-indigo-400 font-extrabold' : 'text-zinc-500 dark:text-zinc-400'}`}>
+                              {day}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="zp-dashboard-surface bg-white dark:bg-zinc-900 rounded-3xl p-6 md:p-8 border border-zinc-200/70 dark:border-zinc-800 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <TrendingUp className="w-5 h-5 text-indigo-500 mt-0.5" />
+                      <div>
+                        <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">Uzun Dönem Eğilim</h2>
                         <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
                           Dört haftalık karşılaştırma, yeterli gerçek çalışma verisi biriktiğinde burada gösterilecek.
                         </p>
