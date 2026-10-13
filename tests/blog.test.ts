@@ -58,7 +58,7 @@ test('production pages contain complete text, honest author data, unique metadat
     for (const m of html.matchAll(/href="(\/blog\/[a-z0-9-]+)"/g)) assert.ok(pages.has(`${m[1].slice(1)}/index.html`), m[1]);
   }
   assert.equal(descriptions.size, 30);
-  assert.equal((pages.get('sitemap.xml')!.match(/<loc>/g) || []).length, 33 + PLATFORM_INFO.length);
+  assert.equal((pages.get('sitemap.xml')!.match(/<loc>/g) || []).length, 34 + PLATFORM_INFO.length);
   assert.equal((pages.get('blog/feed.xml')!.match(/<item>/g) || []).length, 30);
   assert.match(pages.get('robots.txt')!, /Allow: \/\nDisallow: \/api\//);
   assert.equal((pages.get('blog/index.html')!.match(/ data-article /g) || []).length, 30);

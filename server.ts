@@ -44,6 +44,7 @@ async function startServer() {
       });
     });
     app.use(/^\/(?:server(?:\.cjs)?|build|\.(?:env|git))(?:[/.].*)?$/, (_req, res) => { res.sendStatus(404); });
+    app.get(/^\/en\/?$/,(_req,res)=>res.sendFile('en/index.html',{root:distPath}));
     app.use(express.static(distPath, { dotfiles: 'deny' }));
     app.use(/^\/(?:robots\.txt|sitemap\.xml|blog-assets\/)/, (_req, res) => { res.sendStatus(404); });
     app.get(/^\/(?:admin(?:\/giris)?|reset-password|wordwall|dashboard|parent|login|register|practice|exam|adaptive)?\/?$/, (req, res) => res.sendFile('index.html', { root: distPath, cacheControl: !/^\/(?:admin|reset-password)(?:\/|$)/.test(req.path) }));

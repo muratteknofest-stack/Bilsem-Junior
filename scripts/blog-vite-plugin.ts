@@ -4,10 +4,17 @@ import { blogConfig, renderBlog } from './blog-engine';
 export function blogPlugin(): Plugin {
   return {
     name: 'zekapark-static-editorial-blog',
-    transformIndexHtml() {
+    transformIndexHtml(_html, context) {
+      if (context.filename.replaceAll('\\','/').endsWith('/en/index.html')) {
+        const config=blogConfig();
+        return [
+          ...(config.origin ? [{tag:'link',attrs:{rel:'canonical',href:config.origin+'/en/'},injectTo:'head' as const},{tag:'link',attrs:{rel:'alternate',hreflang:'tr',href:config.origin+'/'},injectTo:'head' as const},{tag:'link',attrs:{rel:'alternate',hreflang:'en',href:config.origin+'/en/'},injectTo:'head' as const}] : []),
+          {tag:'meta',attrs:{name:'robots',content:config.indexable?'index,follow':'noindex,follow'},injectTo:'head' as const},
+        ];
+      }
       const config = blogConfig();
       return [
-        ...(config.origin ? [{ tag: 'link', attrs: { rel: 'canonical', href: `${config.origin}/` }, injectTo: 'head' as const }] : []),
+        ...(config.origin ? [{ tag: 'link', attrs: { rel: 'canonical', href: `${config.origin}/` }, injectTo: 'head' as const }, { tag:'link',attrs:{rel:'alternate',hreflang:'en',href:config.origin+'/en/'},injectTo:'head' as const }, { tag:'link',attrs:{rel:'alternate',hreflang:'tr',href:config.origin+'/'},injectTo:'head' as const }] : []),
         ...(config.origin ? [{ tag: 'script', attrs: { type: 'application/ld+json' }, children: JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebSite', name: 'ZekaPark', url: config.origin + '/', inLanguage: 'tr' }), injectTo: 'head' as const }] : []),
         { tag: 'meta', attrs: { name: 'robots', content: config.indexable ? 'index,follow,max-image-preview:large' : 'noindex,follow' }, injectTo: 'head' as const },
       ];
@@ -38,3 +45,4 @@ export function blogPlugin(): Plugin {
     },
   };
 }
+

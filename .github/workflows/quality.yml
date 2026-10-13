@@ -33,3 +33,5 @@ jobs:
 
       - name: Check Shopier package controls on mobile and tablet
         run: npm run test:shopier-layout
+      - name: Verify English practice, device progress and mobile layouts
+        run: npm run test:english-browser
