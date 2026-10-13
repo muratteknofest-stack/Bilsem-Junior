@@ -6,8 +6,9 @@ import {readFile} from 'node:fs/promises';
 import {englishBank,englishPuzzle,selectEnglishPuzzles} from '../src/features/international/english-puzzles';
 import {EnglishHome} from '../src/features/international/EnglishHome';
 import {EnglishPuzzleView} from '../src/features/international/EnglishPuzzleView';
-import {ENGLISH_AREAS,ENGLISH_INFO} from '../src/features/international/english-content';
+import {ENGLISH_AREAS,ENGLISH_INFO,ENGLISH_LEVELS} from '../src/features/international/english-content';
 import {parseEnglishProgress,recordEnglishSession,englishProgressStats,emptyEnglishProgress} from '../src/features/international/english-progress';
+import {ENGLISH_BANK_GRADES,ENGLISH_QUESTIONS_PER_GRADE,ENGLISH_TOTAL_QUESTIONS} from '../src/features/international/english-bank-spec';
 import {generateColorfulQuestion,independentlyMatchesColorful} from '../src/features/questions/colorful-engine';
 import {auditQuestion} from '../src/features/questions/quality';
 const bank=englishBank();
@@ -46,7 +47,7 @@ test('English puzzle DOM uses English accessibility labels and memory hides choi
   }
 });
 test('English home positions thinking skills without examination branding or IQ promises',()=>{
-  const html=renderToStaticMarkup(<EnglishHome/>);assert.match(html,/4,000/);assert.match(html,/300/);assert.match(html,/visual reasoning/);assert.ok(!/BİLSEM|BILSEM|guaranteed IQ increase/.test(html));assert.match(html,/not an IQ test/);
+  const html=renderToStaticMarkup(<EnglishHome/>);assert.match(html,/4,000/);assert.match(html,/300/);assert.match(html,/visual reasoning/);assert.ok(!/BİLSEM|BILSEM|guaranteed IQ increase/.test(html));assert.match(html,/not an IQ test/);assert.match(html,/Account puzzles by practice level/);for(const l of ENGLISH_LEVELS)assert.ok(html.includes(l.label));assert.equal((html.match(/<strong>1,000<\/strong>/g)||[]).length,4);
   assert.ok(ENGLISH_INFO.privacy.paragraphs.some(p=>p.includes('IP addresses')));assert.ok(ENGLISH_INFO.privacy.paragraphs.some(p=>p.includes('legal identity')));
 });
 test('device summaries are bounded, reject malformed data and do not count a session twice',()=>{
@@ -67,7 +68,8 @@ test('full English bank has 4,000 proven, distinct stems and 1,000 questions per
  const {generateVisualFingerprint}=await import('../src/features/questions/fingerprint');
  const {learningView,prepareLearningQuestions}=await import('../server/learning-model');
  const bank=englishLearningBank(),seen=new Set<string>();assert.equal(bank.length,4000);
- for(const grade of [1,2,3,4])assert.equal(bank.filter(q=>q.targetGrade===grade).length,1000);
+ assert.equal(ENGLISH_QUESTIONS_PER_GRADE,1000);assert.equal(ENGLISH_TOTAL_QUESTIONS,4000);assert.deepEqual(ENGLISH_LEVELS.map(l=>l.id),[...ENGLISH_BANK_GRADES]);
+ for(const grade of ENGLISH_BANK_GRADES){const rows=bank.filter(q=>q.targetGrade===grade);assert.equal(rows.length,1000);assert.equal(new Set(rows.map(q=>q.id)).size,1000);assert.ok(rows.every(q=>q.status==='published'));assert.ok(rows.every(q=>q.id.startsWith('thinkharbor-visual-1-g'+grade+'-')));}
  for(const q of bank){assert.equal(isQuestionReadyForStudents(q),true);const key=generateVisualFingerprint({prompt:q.prompt,board:q.visualConfig});assert.ok(!seen.has(key));seen.add(key);const en=englishPuzzle(q,q.targetGrade!);assert.ok(!/[ğüşöçıİĞÜŞÖÇ]/.test(en.prompt+en.explanation.steps.join(' ')));
  const session:any={id:crypto.randomUUID(),student_id:crypto.randomUUID(),mode:'exam',title:'Test',questions:prepareLearningQuestions([q]),answers:{},selection:{grade:q.targetGrade,locale:'en'},created_at:new Date().toISOString(),expires_at:new Date(Date.now()+60000).toISOString(),finished_at:null,result:null};
  const publicQ=learningView(session).questions[0];assert.equal(publicQ.prompt,en.prompt);assert.ok(!Object.hasOwn(publicQ,'seed'));assert.ok(!Object.hasOwn(publicQ,'correctOptionId'));if(q.type==='figure_completion')assert.equal((publicQ.visualConfig as any).source.cells[(q.visualConfig as any).missing],null);
@@ -80,8 +82,10 @@ test('English server feedback respects exam secrecy and authoritative, idempoten
  s=finishLearningSession(s,now+2000);const view=learningView(s);assert.equal(view.result!.correctAnswers,1);assert.equal(view.title,'Thinking challenge');assert.match(view.solutions!['0'].explanation.steps.join(' '),/matching choice/);assert.equal(finishLearningSession(s),s);
 });
 test('English selection balances only its eligible categories, including recent reuse',async()=>{
- const {englishBankForGrade}=await import('../server/english-learning-bank');const {selectLearningQuestions}=await import('../server/learning-question-selection');const candidates=englishBankForGrade(1),categories=[...new Set(candidates.map(q=>q.category))];
- for(const count of [5,15,30,45]){const selected=selectLearningQuestions({count,category:'mixed',categories,candidates,exposure:new Map(),canUse:()=>true,generate:()=>{throw Error('No fallback');}});assert.equal(selected.length,count);assert.ok(selected.every(q=>categories.includes(q.category)));assert.equal(new Set(selected.map(q=>q.id)).size,count);}
+ const {englishBankForGrade}=await import('../server/english-learning-bank');const {selectLearningQuestions}=await import('../server/learning-question-selection');
+ for(const grade of ENGLISH_BANK_GRADES){const candidates=englishBankForGrade(grade),categories=[...new Set(candidates.map(q=>q.category))];
+ for(const count of [5,15,30,45]){const selected=selectLearningQuestions({count,category:'mixed',categories,candidates,exposure:new Map(),canUse:()=>true,generate:()=>{throw Error('No fallback');}});assert.equal(selected.length,count);assert.ok(selected.every(q=>categories.includes(q.category)));assert.equal(new Set(selected.map(q=>q.id)).size,count);assert.ok(selected.every(q=>q.targetGrade===grade));}
+ }
 });
 test('English account history and error notices reject invalid data and avoid leaking raw service errors',async()=>{
  const {historySchema,englishAccountError}=await import('../src/features/international/english-account-model');assert.equal(historySchema.safeParse({sessions:[{id:'wrong'}]}).success,false);assert.match(englishAccountError({code:'invalid_credentials'}),/sign-in details/);assert.ok(!englishAccountError(Error('SQL token secret')).includes('secret'));assert.ok(!/[ğüşöçıİ]/.test(englishAccountError(Error('Oturum açılamadı.'))));

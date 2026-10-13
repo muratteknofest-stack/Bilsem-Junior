@@ -1,5 +1,6 @@
 import {generateQuestion} from '../src/features/questions/generators';
 import {ENGLISH_AREAS} from '../src/features/international/english-content';
+import {ENGLISH_BANK_GRADES,ENGLISH_QUESTIONS_PER_GRADE} from '../src/features/international/english-bank-spec';
 import {englishPuzzle} from '../src/features/international/english-puzzles';
 import {generateVisualFingerprint} from '../src/features/questions/fingerprint';
 import {isQuestionReadyForStudents} from '../src/features/questions/quality';
@@ -11,9 +12,9 @@ let cached:BaseQuestion[]|undefined;
 export function englishLearningBank(){
  if(cached)return cached;
  const bank:BaseQuestion[]=[],seen=new Set<string>();
- for(const grade of [1,2,3,4] as const){
+ for(const grade of ENGLISH_BANK_GRADES){
   const counts=new Map<string,number>();let accepted=0;
-  for(let attempt=0;accepted<1000&&attempt<100000;attempt++){
+  for(let attempt=0;accepted<ENGLISH_QUESTIONS_PER_GRADE&&attempt<100000;attempt++){
    const types=ENGLISH_AREAS.filter(a=>a.id!=='shadow_matching'||(counts.get(a.id)||0)<8).sort((a,b)=>(counts.get(a.id)||0)-(counts.get(b.id)||0));
    // Round-robin among viable rules; finite curricula are redistributed without seed-only duplicates.
    const type=types[attempt%types.length].id;
@@ -27,7 +28,7 @@ export function englishLearningBank(){
    bank.push({...q,id:`${ENGLISH_BANK_VERSION}-g${grade}-${String(++accepted).padStart(4,'0')}`,status:'published'});
    counts.set(type,(counts.get(type)||0)+1);
   }
-  if(accepted!==1000)throw Error('The English visual bank could not be verified.');
+  if(accepted!==ENGLISH_QUESTIONS_PER_GRADE)throw Error('The English visual bank could not be verified.');
  }
  cached=bank;return bank;
 }
