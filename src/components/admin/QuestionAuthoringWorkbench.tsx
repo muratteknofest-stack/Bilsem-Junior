@@ -11,7 +11,7 @@ import { QuestionRenderer } from '../../features/questions/renderers/QuestionRen
 import { OptionRenderer } from '../../features/questions/renderers/OptionRenderer';
 import { loadQuestionLibrary, parseQuestionImport, saveEditorialQuestion, StoredQuestion } from '../../services/question-publishing-service';
 import { questionBankService } from '../../services/question-bank-service';
-import { auditEditorialLibrary, indexQuestionVisuals, indexedDuplicates } from '../../features/questions/editorial-library';
+import { auditEditorialLibrary, indexQuestionVisuals, indexedDuplicates, matchesEditorialScope, hasIndividualReview, needsIndividualReview, nextPendingQuestion, type EditorialScope } from '../../features/questions/editorial-library';
 import type { QualityReport } from '../../features/questions/quality';
 
 type Grade = 1 | 2 | 3 | 4;
@@ -62,6 +62,7 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [quality, setQuality] = useState<'all' | 'ready' | 'review' | 'error' | 'human'>(() => reviewMode ? 'human' : 'all');
+  const [scope, setScope] = useState<EditorialScope>({ grade: 'all', type: 'all', difficulty: 'all' });
   const [listPage, setListPage] = useState(0);
   const cancelled = useRef(false);
   const alive = useRef(true);
@@ -82,7 +83,7 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
     } finally { if (alive.current && version===refreshVersion.current) setLoading(false); }
   }
   useEffect(() => { alive.current = true; void refresh(); return () => { alive.current = false; cancelled.current = true; refreshVersion.current++; }; }, [reviewMode, includeArchived]);
-  useEffect(() => { setListPage(0); }, [section, status, quality, search]);
+  useEffect(() => { setListPage(0); }, [section, status, quality, search, scope]);
   useEffect(() => {
     if (!active?.id) return;
     const frame = requestAnimationFrame(() => { previewRef.current?.focus({ preventScroll: true }); previewRef.current?.scrollIntoView({ block: 'start' }); });
@@ -105,7 +106,7 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
     }
     return counts;
   }, [libraryAudit]);
-  const humanReviewPending = useMemo(() => library.filter(q => q.status === 'published' && q.releaseAuthorization?.individualHumanReview === false && !q.reviewedBy).length, [library]);
+  const humanReviewPending = useMemo(() => library.filter(needsIndividualReview).length, [library]);
   const report = useMemo(() => active ? auditQuestion(active, indexedDuplicates(active, visualIndex)) : null, [active, visualIndex]);
   const dirty = active && questionContentKey(active) !== savedKey;
   const pending = Boolean(dirty) || batch.some(q => {const saved=savedById.get(q.id);return !saved||questionContentKey(saved)!==questionContentKey(q);});
@@ -115,11 +116,17 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
   }, [pending, onPendingChanges]);
-  const results = (section === 'library' ? library : batch).filter(q =>
+  const scopedLibrary = useMemo(() => library.filter(q => matchesEditorialScope(q, scope)), [library, scope]);
+  const reviewProgress = useMemo(() => {
+    const published = scopedLibrary.filter(q => q.status === 'published');
+    const reviewed = published.filter(hasIndividualReview).length;
+    return { total: published.length, reviewed, pending: published.length - reviewed };
+  }, [scopedLibrary]);
+  const results = (section === 'library' ? scopedLibrary : batch).filter(q =>
     (status === 'all' || (q.status || 'draft') === status) &&
     (section !== 'library' || quality === 'all' || (() => {
       const report = libraryAudit.get(q.id);
-      return quality === 'human' ? q.status === 'published' && q.releaseAuthorization?.individualHumanReview === false && !q.reviewedBy
+      return quality === 'human' ? needsIndividualReview(q)
         : quality === 'error' ? !!report?.errors.length
         : quality === 'review' ? !!report && !report.errors.length && (report.reviewRequired.length>0 || !report.solverVerified)
         : !report?.errors.length && !report?.reviewRequired.length && !!report?.solverVerified;
@@ -127,8 +134,10 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
     ((q.prompt || '') + (QUESTION_TYPE_LABELS[q.type] || q.type || '') + q.id).toLocaleLowerCase('tr').includes(search.toLocaleLowerCase('tr')));
   const pageCount = Math.max(1, Math.ceil(results.length / 40)), currentPage = Math.min(listPage, pageCount - 1);
   const visibleResults = results.slice(currentPage * 40, (currentPage + 1) * 40);
+  const nextPending = nextPendingQuestion(results, active?.id);
 
   function openQuestion(q: BaseQuestion) {
+    if (saving) return;
     if (dirty && !window.confirm('Kaydedilmemiş düzenlemeler var. Bu düzenlemelerden vazgeçip diğer soruyu açmak istiyor musunuz?')) return;
     setActive(JSON.parse(JSON.stringify(q))); setSavedKey(questionContentKey(q));
     setAnswer(null); setReveal(false); setReview([false, false, false]); setNotice('');
@@ -269,6 +278,23 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
       </div>
       <p className="mt-4 text-sm text-slate-400">Dört farklı seçenek · içerik tabanlı tekrar kontrolü · taslak olarak başlar · yayımlamak için eğitmen onayı gerekir</p>
     </section>}
+    {section === 'library' && <section aria-label="İnceleme kapsamı" className="rounded-2xl border border-slate-700 bg-slate-900 p-4 space-y-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="min-w-0 text-sm text-slate-300 space-y-2"><span>İncelenecek sınıf</span><select aria-label="İncelenecek sınıf" className={field} value={scope.grade} disabled={saving} onChange={e => setScope(previous => ({ ...previous, grade: e.target.value === 'all' ? 'all' : Number(e.target.value) as Grade, difficulty: 'all' }))}><option value="all">Tüm sınıflar</option>{([1, 2, 3, 4] as Grade[]).map(g => <option key={g} value={g}>{g}. sınıf</option>)}</select></label>
+        <label className="min-w-0 text-sm text-slate-300 space-y-2"><span>İncelenecek konu</span><select aria-label="İncelenecek konu" className={field} value={scope.type} disabled={saving} onChange={e => setScope(previous => ({ ...previous, type: e.target.value as EditorialScope['type'] }))}><option value="all">Tüm konular</option>{VERIFIED_TYPES.map(t => <option key={t} value={t}>{QUESTION_TYPE_LABELS[t]}</option>)}</select></label>
+        <label className="min-w-0 text-sm text-slate-300 space-y-2"><span>İncelenecek zorluk</span><select aria-label="İncelenecek zorluk" className={field} value={scope.difficulty} disabled={saving} onChange={e => setScope(previous => ({ ...previous, difficulty: e.target.value === 'all' ? 'all' : Number(e.target.value) as DifficultyLevel }))}><option value="all">Tüm zorluklar</option>{([1, 2, 3, 4, 5, 6] as DifficultyLevel[]).filter(d => scope.grade === 'all' || d <= EDUCATION_PROFILES[scope.grade].maxDifficulty).map(d => <option key={d} value={d}>{d} / 6</option>)}</select></label>
+      </div>
+      {cloudReady && !loading && <div className="space-y-2 text-sm text-slate-200">
+        <p role="status">Seçilen sınıf, konu ve zorlukta: {reviewProgress.reviewed}/{reviewProgress.total} eğitmen incelemesi tamamlandı · {reviewProgress.pending} bekleyen.</p>
+        <progress aria-label="Bireysel eğitmen inceleme ilerlemesi" className="w-full h-2 accent-indigo-400" value={reviewProgress.reviewed} max={Math.max(1, reviewProgress.total)} />
+        <p className="text-xs text-slate-400">İlerleme yayımlanan soruları kapsar; metin araması ve denetim filtresinden bağımsızdır.</p>
+      </div>}
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className={button + ' bg-indigo-600 text-white'} disabled={saving || loading || !cloudReady || !nextPending} onClick={() => { if (nextPending) openQuestion(nextPending); }}><ArrowRight size={16} />Sıradaki bekleyen soru</button>
+        <button type="button" className={button + ' border border-slate-600 text-slate-200'} disabled={saving} onClick={() => { setScope({ grade: 'all', type: 'all', difficulty: 'all' }); setSearch(''); setStatus('all'); setQuality(reviewMode ? 'human' : 'all'); }}>Filtreleri sıfırla</button>
+      </div>
+      <p className="text-xs text-slate-400">Sıradaki soru, listedeki filtrelere göre açılır. Geçiş yapmak soruyu onaylamaz.</p>
+    </section>}
     <div className="grid grid-cols-1 xl:grid-cols-[minmax(260px,320px)_minmax(0,1fr)] gap-5">
       <aside className="rounded-2xl bg-white border border-slate-200 p-4 space-y-3 self-start">
         <div className="flex items-center justify-between"><h3 className="font-bold">{section === 'library' ? 'Kaydedilmiş sorular' : 'Üretilen taslaklar'}</h3><button aria-label="Kütüphaneyi yenile" onClick={() => void refresh()} disabled={loading} className="p-2 rounded-lg hover:bg-slate-100"><RefreshCw size={17} className={loading ? 'animate-spin' : ''} /></button></div>
@@ -280,7 +306,7 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
           {visibleResults.map((q, i) => <button key={q.id} disabled={saving} onClick={() => openQuestion(q)} className={'w-full text-left p-3 rounded-xl border ' + (active?.id === q.id ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:bg-slate-50')}>
             <div className="text-xs text-slate-500 flex justify-between gap-2"><span>{String(currentPage * 40 + i + 1).padStart(2, '0')} · {q.targetGrade || '—'}. sınıf</span><span>{statusLabel[q.status || 'draft']}</span></div>
             <p className="text-sm font-semibold mt-1">{QUESTION_TYPE_LABELS[q.type] || q.type || 'Bilinmeyen tür'}</p><p className="text-sm text-slate-600 line-clamp-2 mt-1">{q.prompt || 'Yönerge eksik'}</p>
-            {section === 'library' && <p className={'mt-2 text-xs font-semibold ' + (libraryAudit.get(q.id)?.errors.length ? 'text-rose-700' : q.releaseAuthorization?.individualHumanReview === false && !q.reviewedBy ? 'text-amber-800' : libraryAudit.get(q.id)?.solverVerified ? 'text-emerald-700' : 'text-amber-700')}>{!libraryAudit.has(q.id)&&!(q.releaseAuthorization?.individualHumanReview===false&&!q.reviewedBy)?'Otomatik denetim sürüyor…':libraryAudit.get(q.id)?.errors.length ? 'Hatalı · ' + libraryAudit.get(q.id)?.errors[0] : q.releaseAuthorization?.individualHumanReview === false && !q.reviewedBy ? 'Yayında · bireysel eğitmen incelemesi bekliyor' : libraryAudit.get(q.id)?.solverVerified ? 'Otomatik kontrol geçti' : 'İnceleme gerekli · ' + (libraryAudit.get(q.id)?.reviewRequired[0] || 'Bağımsız çözüm eksik')}</p>}
+            {section === 'library' && <p className={'mt-2 text-xs font-semibold ' + (libraryAudit.get(q.id)?.errors.length ? 'text-rose-700' : needsIndividualReview(q) ? 'text-amber-800' : libraryAudit.get(q.id)?.solverVerified ? 'text-emerald-700' : 'text-amber-700')}>{!libraryAudit.has(q.id)&&!(needsIndividualReview(q))?'Otomatik denetim sürüyor…':libraryAudit.get(q.id)?.errors.length ? 'Hatalı · ' + libraryAudit.get(q.id)?.errors[0] : needsIndividualReview(q) ? 'Yayında · bireysel eğitmen incelemesi bekliyor' : libraryAudit.get(q.id)?.solverVerified ? 'Otomatik kontrol geçti' : 'İnceleme gerekli · ' + (libraryAudit.get(q.id)?.reviewRequired[0] || 'Bağımsız çözüm eksik')}</p>}
           </button>)}
           {!results.length && <p className="text-sm text-slate-500 p-4">{loading ? 'Kütüphane yükleniyor…' : section === 'library' ? 'Henüz kaydedilmiş bir soru yok veya filtreye uymuyor.' : 'Soru ailesini seçip taslak üretin. İçerik öğrenciye otomatik yayımlanmaz.'}</p>}
         </div>
@@ -293,8 +319,8 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
         }}>Bu cihazdaki eski taslakları al</button>}
       </aside>
       {active && report?.errors.length ? <article ref={previewRef} tabIndex={-1} className="scroll-mt-24 min-w-0 rounded-2xl border border-rose-200 bg-white p-4 sm:p-6 space-y-4"><h3 className="text-lg font-bold text-rose-900">Soru yayına uygun değil</h3><p className="text-sm text-slate-600">Kayıt: {active.id}. Bu taslak öğrencilere sunulmaz. Soruyu denetleyip doğrulanmış aileden yeni bir varyasyon üretin.</p><ul className="list-disc pl-5 text-sm text-rose-800 space-y-1">{report.errors.map((error, i) => <li key={i}>{error}</li>)}</ul>{report.reviewRequired.length > 0 && <ul className="list-disc pl-5 text-sm text-amber-900 space-y-1">{report.reviewRequired.map((reason, i) => <li key={i}>{reason}</li>)}</ul>}<button className={button + ' border border-slate-300'} onClick={() => exportPackage([active])}><FileDown size={16} />İnceleme için JSON indir</button></article> : active && report ? <article ref={previewRef} tabIndex={-1} className="scroll-mt-24 min-w-0 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 space-y-6">
-        {active.reviewedBy && active.releaseAuthorization?.individualHumanReview !== false && <p role="status" className="rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-950">Bu sorunun eğitmen incelemesi tamamlandı.</p>}
-        {active.status === 'published' && active.releaseAuthorization?.individualHumanReview === false && !active.reviewedBy && <p role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">Bu soru otomatik denetim ve sahibinin yayına açma isteğiyle öğrencilerde görünür. Bireysel eğitmen incelemesi henüz tamamlanmadı.</p>}
+        {hasIndividualReview(active) && <p role="status" className="rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-950">Bu sorunun eğitmen incelemesi tamamlandı.</p>}
+        {needsIndividualReview(active) && <p role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">Bu soru otomatik denetim ve sahibinin yayına açma isteğiyle öğrencilerde görünür. Bireysel eğitmen incelemesi henüz tamamlanmadı.</p>}
         {report.reviewRequired.length > 0 && <div role="alert" className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900"><strong>Bu soru öğrencilere sunulamaz.</strong><ul className="list-disc pl-5 mt-2">{report.reviewRequired.map((reason, i) => <li key={i}>{reason}</li>)}</ul><p className="mt-2">Doğrulanmış soru ailesinden yeniden üretin. Metin veya açıklama değişiklikleri yeniden inceleme gerektirir.</p></div>}
         <div className="flex flex-wrap justify-between gap-3 items-center"><div><p className="text-xs text-slate-500">{active.targetGrade}. sınıf · {COGNITIVE_CATEGORY_LABELS[active.category]} · Zorluk {active.difficulty}/6</p><h3 className="text-lg font-bold mt-1">Öğrenci önizlemesi</h3><p className="mt-1 break-all text-xs text-slate-500">Soru: {active.id}</p></div><span className={'px-3 py-1 rounded-full text-sm ' + (report.solverVerified ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900')}>{report.solverVerified ? 'Bağımsız kontroller geçti' : 'İnceleme gerekli · yayına kapalı'}</span><button type="button" className={button + ' border border-indigo-300 bg-indigo-50 text-indigo-800'} onClick={() => { reviewRef.current?.focus({ preventScroll: true }); reviewRef.current?.scrollIntoView({ block: 'start' }); }}>Onay bölümüne git</button></div>
         <p className="text-lg font-semibold leading-relaxed">{active.prompt}</p>
@@ -328,6 +354,7 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
             <button className={button + ' bg-indigo-600 text-white hover:bg-indigo-700'} disabled={saving || !cloudReady || !!report.errors.length || !report.solverVerified || !review.every(Boolean)} onClick={() => void save('published')}>{saving ? <LoaderCircle size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}Onayla ve yayımla</button>
             {library.some(q => q.id === active.id) && <button className={button + ' border text-slate-600'} disabled={saving || !cloudReady || !!report.errors.length} onClick={() => void save('archived')}>Arşivle</button>}
           </div>
+          {section === 'library' && <button type="button" className={button + ' border border-indigo-300 text-indigo-800'} disabled={saving || loading || !cloudReady || !nextPending} onClick={() => { if (nextPending) openQuestion(nextPending); }}>Sonraki soruyu incele<ArrowRight size={16} /></button>}
           <p className="text-xs text-slate-500">Düzenlenen bir soruyu taslak olarak kaydetmek yayından kaldırır. Arşivlenen sorular öğrenci havuzuna alınmaz. Üretim ücretli bir AI çağrısı kullanmaz.</p>
         </section>
       </article> : <div className="min-h-80 rounded-2xl border border-dashed border-slate-600 flex flex-col items-center justify-center text-slate-300 gap-3 p-6 text-center"><WandSparkles size={32} /><h3 className="text-xl font-semibold text-white">İlk sorunu birlikte kontrol edelim</h3><p className="text-sm max-w-md">Bir taslak üretin veya kütüphaneden soru seçin. Burada öğrenci görünümü, çözüm ve yayımlama kontrolleri açılır.</p></div>}

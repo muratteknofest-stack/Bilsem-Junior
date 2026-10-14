@@ -1,5 +1,33 @@
-import type { BaseQuestion } from '../../types';
+import type { BaseQuestion, DifficultyLevel, QuestionType } from '../../types';
 import { auditQuestion, questionVisualKey, type QualityReport, type QuestionVisualReference } from './quality';
+
+export interface EditorialScope {
+  grade: 'all' | 1 | 2 | 3 | 4;
+  type: 'all' | QuestionType;
+  difficulty: 'all' | DifficultyLevel;
+}
+
+export function matchesEditorialScope(question: BaseQuestion, scope: EditorialScope) {
+  return (scope.grade === 'all' || question.targetGrade === scope.grade || question.targetGrades?.includes(scope.grade) === true) &&
+    (scope.type === 'all' || question.type === scope.type) &&
+    (scope.difficulty === 'all' || question.difficulty === scope.difficulty);
+}
+
+export function hasIndividualReview(question: BaseQuestion) {
+  return Boolean(question.reviewedBy?.trim()) && question.releaseAuthorization?.individualHumanReview !== false;
+}
+
+export function needsIndividualReview(question: BaseQuestion) {
+  return question.status === 'published' && !hasIndividualReview(question);
+}
+
+/** Stay inside the visible filters, wrap at the end, and never approve on navigation. */
+export function nextPendingQuestion(questions: BaseQuestion[], activeId?: string) {
+  const position = questions.findIndex(question => question.id === activeId);
+  if (position < 0) return questions.find(needsIndividualReview);
+  return [...questions.slice(position + 1), ...questions.slice(0, position)]
+    .find(question => question.id !== activeId && needsIndividualReview(question));
+}
 
 /** Build once per loaded bank; editing one prompt must not rescan 8,000 diagrams. */
 export function indexQuestionVisuals(questions: QuestionVisualReference[]) {

@@ -108,6 +108,35 @@ try{
  for(const [width,height]of [[320,480],[390,844],[820,1180]]){await page.setViewportSize({width,height});await page.getByRole('button',{name:'Onay bölümüne git',exact:true}).click();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);const heading=await approval.getByRole('heading',{name:'Eğitmen onayı ve yayınlama',exact:true}).boundingBox();assert.ok(heading.y>=0&&heading.y<height);}
  for(const checkbox of await checks.all())await checkbox.check();await publish.click();await page.getByRole('status').filter({hasText:'Kaydedilemedi.'}).waitFor();assert.equal(await page.getByText('Bu sorunun eğitmen incelemesi tamamlandı.',{exact:true}).count(),0);
  await publish.click();await page.getByRole('status').filter({hasText:'Eğitmen onayı kaydedildi. Soru yayında.'}).waitFor();await page.getByText('Bu sorunun eğitmen incelemesi tamamlandı.',{exact:true}).waitFor();assert.equal(reviewSaveAttempts,2);assert.equal(adminRefreshes,0);assert.equal(reviewQuestions.filter(q=>q.reviewedBy).length,1);await page.getByText('49 soru, sahibinin isteğiyle',{exact:false}).waitFor();assert.equal(await checks.evaluateAll(nodes=>nodes.filter(node=>node.checked).length),0);assert.deepEqual(errors,[]);
+ // Scope progress uses only confirmed reviews; navigation cannot approve or carry checks forward.
+ await page.getByRole('status').filter({hasText:'1/50 eğitmen incelemesi tamamlandı · 49 bekleyen.'}).waitFor();
+ await page.getByLabel('İncelenecek sınıf',{exact:true}).selectOption('1');
+ await page.getByRole('status').filter({hasText:'0/0 eğitmen incelemesi tamamlandı · 0 bekleyen.'}).waitFor();
+ assert.equal(await list.getByRole('button').count(),0);
+ assert.equal(await page.getByRole('button',{name:'Sıradaki bekleyen soru',exact:true}).isDisabled(),true);
+ assert.equal(await page.getByLabel('İncelenecek zorluk',{exact:true}).locator('option').count(),3);
+ await page.getByLabel('İncelenecek sınıf',{exact:true}).selectOption('2');
+ await page.getByLabel('İncelenecek konu',{exact:true}).selectOption('paper_folding');
+ assert.equal(await list.getByRole('button').count(),0);
+ await page.getByLabel('İncelenecek konu',{exact:true}).selectOption('mirror_reflection');
+ await page.getByLabel('İncelenecek zorluk',{exact:true}).selectOption('2');
+ assert.equal(await list.getByRole('button').count(),0);
+ await page.getByLabel('İncelenecek zorluk',{exact:true}).selectOption('3');
+ assert.equal(await list.getByRole('button').count(),40);
+ await page.getByRole('button',{name:'Sıradaki bekleyen soru',exact:true}).click();
+ await page.waitForFunction(()=>document.activeElement?.tagName==='ARTICLE');
+ await page.getByRole('button',{name:'Onay bölümüne git',exact:true}).click();
+ await checks.nth(0).check();
+ const firstPendingId=await page.locator('article').getByText(/^Soru: fixture-review-/).textContent();
+ await page.getByRole('button',{name:'Sonraki soruyu incele',exact:true}).click();
+ assert.notEqual(await page.locator('article').getByText(/^Soru: fixture-review-/).textContent(),firstPendingId);
+ assert.equal(await checks.evaluateAll(nodes=>nodes.filter(node=>node.checked).length),0);
+ assert.equal(await publish.isDisabled(),true);assert.equal(reviewSaveAttempts,2);
+ await page.getByRole('button',{name:'Filtreleri sıfırla',exact:true}).click();
+ assert.equal(await page.getByLabel('İncelenecek sınıf',{exact:true}).inputValue(),'all');
+ assert.equal(await page.getByLabel('İncelenecek konu',{exact:true}).inputValue(),'all');
+ assert.equal(await page.getByLabel('İncelenecek zorluk',{exact:true}).inputValue(),'all');
+ for(const [width,height]of [[320,480],[390,844],[820,1180]]){await page.setViewportSize({width,height});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);}
  // A cold/failed admin cache must never masquerade as the actual published total.
  assert.equal(archiveLibraryLoads,0);holdActiveLibrary=true;activeLibraryFailure=true;
  await page.setViewportSize({width:390,height:844});
