@@ -2,6 +2,8 @@
 
 Telefon ekranında uzun soru listesinin altındaki onay alanını bulmak zordu. Yeni yönetici menüsündeki **Eğitmen Onayı** bölümü veya `/admin?section=review` adresi doğrudan yayındaki soruların bireysel inceleme ekranını açar. Yönetici yetkisi ve iki aşamalı doğrulama korunur.
 
+Kütüphane açılışındaki zorunlu token yenilemesi kaldırılmıştır: bu yenileme Auth olayını tetikleyip AdminPortal yetki kontrolünü yeniden başlatıyor, editörü kapatıp tekrar açarak yükleme döngüsüne neden olabiliyordu. İstemci mevcut oturumu doğrular; ayrı sunucu yetki/MFA kontrolleri değişmez.
+
 1. Listeden bir soru seçin. Önizleme görünür alana gelir.
 2. Soruyu çözün; **Cevabı ve çözümü göster** ile karşılaştırın.
 3. **Onay bölümüne git** ile üç inceleme maddesine geçin.

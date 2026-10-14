@@ -17,7 +17,10 @@ async function requireAdminUser() {
   if (typeof auth.authStateReady === 'function') await auth.authStateReady();
   const user = auth.currentUser;
   if (!user || !user.emailVerified) throw new Error('Yönetici oturumu gerekli.');
-  const token = await user.getIdTokenResult(true);
+  // A forced refresh emits an Auth event, closes AdminPortal while it verifies
+  // the claim, then remounts this loader and forces another refresh. Verify the
+  // current session instead; privileged writes are checked again by the API.
+  const token = await user.getIdTokenResult();
   if (token.claims.role !== 'admin') throw new Error('Yönetici yetkisi gerekli.');
   return user;
 }
