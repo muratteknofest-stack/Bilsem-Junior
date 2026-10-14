@@ -7,6 +7,7 @@ import {
   type PlatformSettings,
 } from "../../lib/platform-settings";
 import { LEARNING_EXAMS } from "../../features/student/learning-contract";
+import { SHOPIER_PLANS, SHOPIER_PRODUCT_FIELDS } from "../../lib/shopier-config";
 
 export function AdminSystemSettings({
   onSyncNeeded,
@@ -131,11 +132,12 @@ export function AdminSystemSettings({
           <fieldset disabled={busy} className="space-y-6">
             <section className="rounded-2xl border bg-white p-5 space-y-3">
               <h3 className="text-lg font-bold">Shopier paketleri</h3>
-              <p>Bireysel Shopier hesabındaki iki dijital ürünü bağlayın. 30 gün: 299 TL; 90 gün: 799 TL. Gerçek ürün, fiyat ve bağlantı sunucuda Shopier üzerinden kontrol edilir. Erişim anahtarı bu forma yazılmaz.</p>
-              {(['monthly','quarterly'] as const).map(id => <div key={id} className="grid gap-3 sm:grid-cols-2">
-                <label>{id==='monthly'?'30':'90'} günlük Shopier ürün numarası<input className="block w-full border rounded-lg p-3" value={record.settings.shopier[id==='monthly'?'monthlyProductId':'quarterlyProductId']} onChange={e=>setRecord(r=>r&&({...r,settings:{...r.settings,shopier:{...r.settings.shopier,[id==='monthly'?'monthlyProductId':'quarterlyProductId']:e.target.value}}}))}/></label>
-                <label>Shopier ürün bağlantısı<input type="url" className="block w-full border rounded-lg p-3" value={record.settings.shopier[id==='monthly'?'monthlyUrl':'quarterlyUrl']} onChange={e=>setRecord(r=>r&&({...r,settings:{...r.settings,shopier:{...r.settings.shopier,[id==='monthly'?'monthlyUrl':'quarterlyUrl']:e.target.value}}}))}/></label>
-              </div>)}
+              <p>Shopier hesabındaki üç ayrı dijital ürünü bağlayın. Gerçek ürün, fiyat ve bağlantı sunucuda Shopier üzerinden kontrol edilir. Erişim anahtarı bu forma yazılmaz.</p>
+              {SHOPIER_PLANS.map(plan => {const fields=SHOPIER_PRODUCT_FIELDS[plan.id];return <div key={plan.id} className="space-y-2 rounded-xl border p-3">
+                <h4 className="font-bold">{plan.title} · {plan.days} gün · {(plan.amountKurus/100).toLocaleString('tr-TR')} TL</h4>
+                <div className="grid gap-3 sm:grid-cols-2"><label>{plan.title} ürün numarası<input className="block w-full border rounded-lg p-3" value={record.settings.shopier[fields.id]} onChange={e=>setRecord(r=>r&&({...r,settings:{...r.settings,shopier:{...r.settings.shopier,[fields.id]:e.target.value}}}))}/></label>
+                <label>{plan.title} ürün bağlantısı<input type="url" className="block w-full border rounded-lg p-3" value={record.settings.shopier[fields.url]} onChange={e=>setRecord(r=>r&&({...r,settings:{...r.settings,shopier:{...r.settings.shopier,[fields.url]:e.target.value}}}))}/></label></div>
+              </div>;})}
               <label className="block"><input type="checkbox" checked={record.settings.shopier.enabled} onChange={e=>setRecord(r=>r&&({...r,settings:{...r.settings,shopier:{...r.settings.shopier,enabled:e.target.checked}}}))}/> Shopier satış bağlantılarını aç</label>
               <label className="block"><input type="checkbox" checked={record.settings.shopier.enforcePaidAccess} onChange={e=>setRecord(r=>r&&({...r,settings:{...r.settings,shopier:{...r.settings.shopier,enforcePaidAccess:e.target.checked}}}))}/> Yeni çalışmalar için doğrulanmış paket erişimi iste</label>
               <p className="text-sm">Ücretli erişim başlangıçta kapalıdır. Satışı veya ücretli erişimi açmak için gerçek hesap bağlantısı, işletmeci bilgileri ve kabul kontrolleri tamamlanmalıdır. Mevcut oturumların sonuçları erişilebilir kalır.</p>

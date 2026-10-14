@@ -92,7 +92,7 @@ import {verifyPublicRelease} from '../scripts/check-live-release.mjs';
 test('commercial readiness uses the real operator settings and verified Shopier products',()=>{
  const settings=defaultPlatformSettings();settings.business={legalName:'Test Operator',address:'Test postal address',contactEmail:'test@example.invalid',legalBases:'Test purposes',retention:'Test retention',transfers:'Test providers'};
  settings.release={registrationEnabled:true,emailTested:true,restoreTested:true,familyPilotTested:true,monitoringTested:true};
- settings.shopier={enabled:false,enforcePaidAccess:false,monthlyProductId:'monthly-real',quarterlyProductId:'quarterly-real',monthlyUrl:'https://www.shopier.com/monthly-real',quarterlyUrl:'https://www.shopier.com/quarterly-real'};
+ settings.shopier={enabled:false,enforcePaidAccess:false,monthlyProductId:'monthly-real',quarterlyProductId:'quarterly-real',annualProductId:'annual-real',annualUrl:'https://www.shopier.com/annual-real',monthlyUrl:'https://www.shopier.com/monthly-real',quarterlyUrl:'https://www.shopier.com/quarterly-real'};
  const checks={databaseReady:true,originReady:true,shopierTokenReady:true,productsVerified:true};
  assert.equal(commercialReadiness(settings,checks).readyForPaidLaunch,true);assert.equal(commercialReadiness(settings,checks).paidSalesEnabled,false);
  assert.equal(commercialReadiness(settings,{...checks,productsVerified:false}).readyForPaidLaunch,false);
@@ -109,7 +109,7 @@ test('free registration does not imply completed commercial launch checks',()=>{
 
 function releaseFetch(overrides:Record<string,{status?:number;body?:string;headers?:Record<string,string>}>={}){
  return async (input:Parameters<typeof fetch>[0],init?:RequestInit)=>{const url=input instanceof URL?input:new URL(typeof input==='string'?input:input.url);const path=url.pathname;const status=init?.method==='POST'?(new Headers(init.headers).has('Origin')?403:401):path==='/api/release-unknown'?404:path.startsWith('/api/')&&!path.startsWith('/api/public/')?401:200;
- const body=path==='/'?'<html lang="tr"><title>ZekaPark</title></html>':path==='/robots.txt'?'User-agent: *\nDisallow: /admin':path==='/sitemap.xml'?'https://zekapark.vercel.app/':path==='/api/public/platform'?JSON.stringify({registrationOpen:true,policyVersion:'fixture-1'}):path==='/api/public/shopier'?JSON.stringify({ready:false,enforced:false,plans:[{},{}]}):'fixture';
+ const body=path==='/'?'<html lang="tr"><title>ZekaPark</title></html>':path==='/robots.txt'?'User-agent: *\nDisallow: /admin':path==='/sitemap.xml'?'https://zekapark.vercel.app/':path==='/api/public/platform'?JSON.stringify({registrationOpen:true,policyVersion:'fixture-1'}):path==='/api/public/shopier'?JSON.stringify({ready:false,enforced:false,plans:[{},{},{}]}):'fixture';
  const override=overrides[path]||{};return new Response(override.body??body,{status:override.status??status,headers:{'x-content-type-options':'nosniff','x-frame-options':'DENY','cache-control':'no-store',...override.headers}});
  };
 }
