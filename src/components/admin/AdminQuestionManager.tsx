@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 interface AdminQuestionManagerProps {
-  onInspectInStudio: (type: any, seed: number, difficulty: any) => void;
+  onInspectInStudio: (type: any, seed: number, difficulty: any, grade?: 1|2|3|4) => void;
   onNavigateToAnalytics?: () => void;
   onNavigateToBulkGenerator?: () => void;
 }
@@ -687,7 +687,7 @@ export const AdminQuestionManager: React.FC<AdminQuestionManagerProps> = ({
             setActiveQuestion(null);
           }}
           onOpenStudio={() => {
-            onInspectInStudio(activeQuestion.type, activeQuestion.seed, activeQuestion.difficulty);
+            onInspectInStudio(activeQuestion.type, activeQuestion.seed, activeQuestion.difficulty, activeQuestion.targetGrade);
             setIsDetailModalOpen(false);
           }}
         />

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { BaseQuestion, DifficultyLevel, QuestionType, QUESTION_TYPE_LABELS, DIFFICULTY_LABELS, DIFFICULTY_COLORS } from '../../types';
 import { GRADE_CONFIGS, GradeLevelConfig, ALL_GRADES } from '../../features/questions/grade-config';
-import { generateQuestionForGrade, generateQuestionByType } from '../../features/questions/generators';
+import { generateQuestion, ALL_QUESTION_TYPES } from '../../features/questions/generators';
+import { EDUCATION_PROFILES } from '../../features/questions/quality-policy';
 import { validateQuestion } from '../../features/questions/validator';
 import { QuestionRenderer } from '../../features/questions/renderers/QuestionRenderer';
 import { OptionRenderer } from '../../features/questions/renderers/OptionRenderer';
@@ -29,6 +30,8 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
+const generateQuestionForGrade=(grade:1|2|3|4,seed:number,type:QuestionType,difficulty:DifficultyLevel)=>generateQuestion({profile:'complete',targetGrade:grade,type,seed,difficulty});
+
 interface GradeQuestionItem {
   id: string;
   grade: 1 | 2 | 3 | 4;
@@ -39,7 +42,7 @@ interface GradeQuestionItem {
 }
 
 interface AdminGradeQuestionPoolProps {
-  onInspectInStudio: (type: QuestionType, seed: number, difficulty: DifficultyLevel) => void;
+  onInspectInStudio: (type: QuestionType, seed: number, difficulty: DifficultyLevel, grade?: 1|2|3|4) => void;
 }
 
 export const AdminGradeQuestionPool: React.FC<AdminGradeQuestionPoolProps> = ({
@@ -54,7 +57,7 @@ export const AdminGradeQuestionPool: React.FC<AdminGradeQuestionPoolProps> = ({
   // Questions grouped by grade: Record<1 | 2 | 3 | 4, GradeQuestionItem[]>
   const [questionsByGrade, setQuestionsByGrade] = useState<Record<1 | 2 | 3 | 4, GradeQuestionItem[]>>(() => {
     const initialSeed = 45120;
-    return {
+    const pool:Record<1|2|3|4,GradeQuestionItem[]> = {
       1: [
         {
           id: 'gr1_q1',
@@ -62,7 +65,7 @@ export const AdminGradeQuestionPool: React.FC<AdminGradeQuestionPoolProps> = ({
           type: 'figure_completion',
           difficulty: 2,
           seed: initialSeed + 101,
-          question: generateQuestionByType('figure_completion', initialSeed + 101, 2),
+          question: generateQuestionForGrade(1, initialSeed + 101, 'figure_completion', 2),
         },
         {
           id: 'gr1_q2',
@@ -70,7 +73,7 @@ export const AdminGradeQuestionPool: React.FC<AdminGradeQuestionPoolProps> = ({
           type: 'odd_one_out',
           difficulty: 1,
           seed: initialSeed + 102,
-          question: generateQuestionByType('odd_one_out', initialSeed + 102, 1),
+          question: generateQuestionForGrade(1, initialSeed + 102, 'odd_one_out', 1),
         },
       ],
       2: [
@@ -80,7 +83,7 @@ export const AdminGradeQuestionPool: React.FC<AdminGradeQuestionPoolProps> = ({
           type: 'matrix_2x2',
           difficulty: 3,
           seed: initialSeed + 201,
-          question: generateQuestionByType('matrix_2x2', initialSeed + 201, 3),
+          question: generateQuestionForGrade(2, initialSeed + 201, 'matrix_2x2', 3),
         },
         {
           id: 'gr2_q2',
@@ -88,7 +91,7 @@ export const AdminGradeQuestionPool: React.FC<AdminGradeQuestionPoolProps> = ({
           type: 'mirror_reflection',
           difficulty: 2,
           seed: initialSeed + 202,
-          question: generateQuestionByType('mirror_reflection', initialSeed + 202, 2),
+          question: generateQuestionForGrade(2, initialSeed + 202, 'mirror_reflection', 2),
         },
       ],
       3: [
@@ -98,7 +101,7 @@ export const AdminGradeQuestionPool: React.FC<AdminGradeQuestionPoolProps> = ({
           type: 'visual_analogy',
           difficulty: 4,
           seed: initialSeed + 301,
-          question: generateQuestionByType('visual_analogy', initialSeed + 301, 4),
+          question: generateQuestionForGrade(3, initialSeed + 301, 'visual_analogy', 4),
         },
         {
           id: 'gr3_q2',
@@ -106,7 +109,7 @@ export const AdminGradeQuestionPool: React.FC<AdminGradeQuestionPoolProps> = ({
           type: 'number_pattern',
           difficulty: 3,
           seed: initialSeed + 302,
-          question: generateQuestionByType('number_pattern', initialSeed + 302, 3),
+          question: generateQuestionForGrade(3, initialSeed + 302, 'number_pattern', 3),
         },
       ],
       4: [
@@ -116,7 +119,7 @@ export const AdminGradeQuestionPool: React.FC<AdminGradeQuestionPoolProps> = ({
           type: 'matrix_3x3',
           difficulty: 5,
           seed: initialSeed + 401,
-          question: generateQuestionByType('matrix_3x3', initialSeed + 401, 5),
+          question: generateQuestionForGrade(4, initialSeed + 401, 'matrix_3x3', 5),
         },
         {
           id: 'gr4_q2',
@@ -124,10 +127,12 @@ export const AdminGradeQuestionPool: React.FC<AdminGradeQuestionPoolProps> = ({
           type: 'logical_sequence',
           difficulty: 5,
           seed: initialSeed + 402,
-          question: generateQuestionByType('logical_sequence', initialSeed + 402, 5),
+          question: generateQuestionForGrade(4, initialSeed + 402, 'logical_sequence', 5),
         },
       ],
     };
+    for(const grade of ALL_GRADES)for(const item of pool[grade]){item.seed=item.question.seed;item.difficulty=item.question.difficulty;}
+    return pool;
   });
 
   const toggleExplanation = (id: string) => {
@@ -150,7 +155,7 @@ export const AdminGradeQuestionPool: React.FC<AdminGradeQuestionPoolProps> = ({
         const q = generateQuestionForGrade(g, newSeed, item.type, item.difficulty);
         return {
           ...item,
-          seed: newSeed,
+          seed: q.seed,
           question: q,
         };
       });
@@ -170,7 +175,7 @@ export const AdminGradeQuestionPool: React.FC<AdminGradeQuestionPoolProps> = ({
         const q = generateQuestionForGrade(grade, newSeed, item.type, item.difficulty);
         return {
           ...item,
-          seed: newSeed,
+          seed: q.seed,
           question: q,
         };
       }),
@@ -191,7 +196,7 @@ export const AdminGradeQuestionPool: React.FC<AdminGradeQuestionPoolProps> = ({
       grade,
       type: randomType,
       difficulty: cfg.defaultDifficulty,
-      seed: newSeed,
+      seed: q.seed,
       question: q,
     };
 
@@ -224,7 +229,9 @@ export const AdminGradeQuestionPool: React.FC<AdminGradeQuestionPoolProps> = ({
         const q = generateQuestionForGrade(grade, item.seed, newType, item.difficulty);
         return {
           ...item,
-          type: newType,
+          type: q.type,
+          seed: q.seed,
+          difficulty: q.difficulty,
           question: q,
         };
       }),
@@ -245,7 +252,8 @@ export const AdminGradeQuestionPool: React.FC<AdminGradeQuestionPoolProps> = ({
         const q = generateQuestionForGrade(grade, item.seed, item.type, newDiff);
         return {
           ...item,
-          difficulty: newDiff,
+          difficulty: q.difficulty,
+          seed: q.seed,
           question: q,
         };
       }),
@@ -263,7 +271,7 @@ export const AdminGradeQuestionPool: React.FC<AdminGradeQuestionPoolProps> = ({
         const q = generateQuestionForGrade(grade, newSeed, item.type, item.difficulty);
         return {
           ...item,
-          seed: newSeed,
+          seed: q.seed,
           question: q,
         };
       }),
@@ -642,7 +650,7 @@ export const AdminGradeQuestionPool: React.FC<AdminGradeQuestionPoolProps> = ({
                               </button>
 
                               <button
-                                onClick={() => onInspectInStudio(q.type, item.seed, q.difficulty)}
+                                onClick={() => onInspectInStudio(q.type, q.seed, q.difficulty, grade)}
                                 title="Soru Mimarı & SVG Stüdyosunda Detaylı İncele"
                                 className="p-1.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-700 hover:bg-purple-100 cursor-pointer transition-colors flex items-center gap-1 text-[11px] font-bold px-2"
                               >
@@ -679,9 +687,9 @@ export const AdminGradeQuestionPool: React.FC<AdminGradeQuestionPoolProps> = ({
                                 }
                                 className="w-full p-1.5 rounded-xl bg-white border border-slate-300 font-semibold text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
                               >
-                                {cfg.recommendedTypes.map((t) => (
+                                {ALL_QUESTION_TYPES.map((t) => (
                                   <option key={t} value={t}>
-                                    ⭐ {QUESTION_TYPE_LABELS[t]}
+                                    {cfg.recommendedTypes.includes(t)?'⭐ ':''}{QUESTION_TYPE_LABELS[t]}
                                   </option>
                                 ))}
                               </select>
@@ -692,7 +700,7 @@ export const AdminGradeQuestionPool: React.FC<AdminGradeQuestionPoolProps> = ({
                                 Sınıf Zorluğu
                               </label>
                               <div className="flex gap-1">
-                                {([1, 2, 3, 4, 5, 6] as DifficultyLevel[]).map((lvl) => {
+                                {([1, 2, 3, 4, 5, 6] as DifficultyLevel[]).filter(lvl=>lvl<=EDUCATION_PROFILES[grade].maxDifficulty).map((lvl) => {
                                   const isRecommended = cfg.difficultyRange.includes(lvl);
                                   return (
                                     <button

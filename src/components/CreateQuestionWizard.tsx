@@ -45,11 +45,12 @@ import { OptionRenderer } from '../features/questions/renderers/OptionRenderer';
 import { VisualExplanationOverlay } from '../features/questions/renderers/VisualExplanationOverlay';
 import { QuestionQualityChecker } from './QuestionQualityChecker';
 import {
-  generateQuestionByType,
+  generateQuestion,
   ALL_QUESTION_TYPES,
   CATEGORY_TYPES_MAP,
 } from '../features/questions/generators';
 import { GRADE_CONFIGS, ALL_GRADES } from '../features/questions/grade-config';
+import { EDUCATION_PROFILES } from '../features/questions/quality-policy';
 import { validateQuestion } from '../features/questions/validator';
 import { runMultiPassQuestionTests, stampQuestionVerification } from '../features/questions/verifier';
 
@@ -106,12 +107,12 @@ export const CreateQuestionWizard: React.FC<CreateQuestionWizardProps> = ({ onCl
   // Generate base procedural question based on type, seed, difficulty
   const baseGenerated = useMemo<BaseQuestion>(() => {
     try {
-      return generateQuestionByType(type, seed, difficulty);
+      return generateQuestion({profile:'complete',type,seed,difficulty,targetGrade});
     } catch (err) {
       console.error('Failed to generate procedural question:', err);
-      return generateQuestionByType('visual_sequence', seed, 2);
+      return generateQuestion({profile:'complete',type,seed:seed+10007,difficulty,targetGrade});
     }
-  }, [type, seed, difficulty]);
+  }, [type, seed, difficulty, targetGrade]);
 
   // Sync default prompts & explanations when engine or seed changes
   useEffect(() => {
@@ -135,7 +136,8 @@ export const CreateQuestionWizard: React.FC<CreateQuestionWizardProps> = ({ onCl
       targetGrade,
       targetGrades: [targetGrade],
       category,
-      difficulty,
+      difficulty:baseGenerated.difficulty,
+      seed:baseGenerated.seed,
       ageGroup: targetGrade <= 2 ? '1-2' : '3-4',
       prompt: prompt.trim() || baseGenerated.prompt,
       secondaryPrompt: secondaryPrompt.trim() || undefined,
@@ -454,7 +456,7 @@ export const CreateQuestionWizard: React.FC<CreateQuestionWizardProps> = ({ onCl
                         Zorluk Seviyesi (1-6)
                       </label>
                       <div className="grid grid-cols-6 gap-1">
-                        {([1, 2, 3, 4, 5, 6] as DifficultyLevel[]).map((lvl) => (
+                        {([1, 2, 3, 4, 5, 6] as DifficultyLevel[]).filter(lvl=>lvl<=EDUCATION_PROFILES[targetGrade].maxDifficulty).map((lvl) => (
                           <button
                             key={lvl}
                             onClick={() => {

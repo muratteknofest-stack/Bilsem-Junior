@@ -140,12 +140,12 @@ export const AdminPanelView: React.FC = () => {
     }
   };
 
-  const handleInspectInStudio = (type: QuestionType, seed: number, diff: DifficultyLevel) => {
+  const handleInspectInStudio = (type: QuestionType, seed: number, diff: DifficultyLevel, grade?: 1|2|3|4) => {
     setStudioType(type);
     setStudioSeed(seed);
     setStudioDifficulty(diff);
-    const stored=questionBankService.getAll().filter(q=>q.type===type&&q.seed===seed&&q.difficulty===diff).sort((a,b)=>Number(b.status==='published')-Number(a.status==='published'))[0];
-    if(stored){setStudioGeneratedQuestion(structuredClone(stored));setStudioError(null);}else handleStudioGenerate(type,seed,diff);
+    const stored=questionBankService.getAll().filter(q=>q.type===type&&q.seed===seed&&q.difficulty===diff&&(!grade||q.targetGrade===grade)).sort((a,b)=>Number(b.status==='published')-Number(a.status==='published'))[0];
+    if(stored){setStudioGeneratedQuestion(structuredClone(stored));setStudioError(null);}else handleStudioGenerate(type,seed,diff,grade);
     setActiveTab('studio');
     sound.playClick();
   };

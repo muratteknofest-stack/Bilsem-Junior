@@ -11,6 +11,8 @@ const parent={id:parentId,role:'parent',name:'Pilot veli',linked_student_ids:[st
 const admin={...parent,role:'admin',name:'Test yöneticisi',linked_student_ids:[]};
 const reviewQuestions=Array.from({length:50},(_,i)=>({...generateQuestion({type:'mirror_reflection',targetGrade:2,difficulty:3,seed:70000+i*991}),id:`fixture-review-${String(i+1).padStart(4,'0')}`,status:'published',revision:2,updatedAt:'2026-10-14T06:00:00Z',releaseAuthorization:{individualHumanReview:false},batchValidation:{editorReview:'pending'}}));
 let reviewSaveAttempts=0,publishedReviewLoads=0,adminRefreshes=0,adminAal='aal1';
+let archiveLibraryLoads=0,holdActiveLibrary=false,activeLibraryFailure=false;const heldLibrary=[];
+const archivedQuestion={...reviewQuestions[0],id:'fixture-archived',status:'archived'};
 let activeRole='parent',requests=[],resends=0,registrationCount=0,historyFails=true,deleteAttempts=0,unconfirmed=true,previewFault='',summaryAttempts=0,successfulCompletion=false;
 function session(role){const id=role==='student'?studentId:parentId,encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url'),metadata={provider:'email',role};return {access_token:`${encode({alg:'HS256',typ:'JWT'})}.${encode({sub:id,role:'authenticated',aal:role==='admin'?adminAal:'aal1',exp:Math.floor(Date.now()/1000)+3600,iat:Math.floor(Date.now()/1000),session_id:'99999999-9999-4999-8999-999999999999',app_metadata:metadata})}.dGVzdC1zaWduYXR1cmU`,refresh_token:'fixture-refresh',token_type:'bearer',expires_in:3600,user:{id,aud:'authenticated',email:role==='parent'?'parent@example.invalid':role==='admin'?'admin@example.invalid':'explorer1234@zekapark.com',email_confirmed_at:new Date().toISOString(),app_metadata:metadata,user_metadata:{},factors:role==='admin'?[{id:'88888888-8888-4888-8888-888888888888',factor_type:'totp',status:'verified',friendly_name:'Isolated fixture'}]:[],created_at:new Date().toISOString()}};}
 try{
@@ -21,7 +23,15 @@ try{
   else if(u.pathname.includes('/auth/v1/user'))value=session(activeRole).user;
   else if(u.pathname.includes('/auth/v1/logout'))value={};
   else if(u.pathname.includes('/rest/v1/profiles'))value=u.searchParams.get('id')===`eq.${studentId}`?student:activeRole==='admin'?admin:parent;
-  else if(u.pathname.includes('/rest/v1/questions')){assert.equal(activeRole,'admin');if(u.searchParams.get('status')==='eq.published')publishedReviewLoads++;value=(u.searchParams.get('status')==='eq.published'?reviewQuestions:[]).filter(q=>q.id>(u.searchParams.get('id')?.replace(/^gt\./,'')||'')).slice(0,Number(u.searchParams.get('limit')||500)).map(q=>({id:q.id,status:q.status,data:q}));}
+  else if(u.pathname.includes('/rest/v1/questions')){
+   assert.equal(activeRole,'admin');if(adminAal!=='aal2'){await route.fulfill({status:403,contentType:'application/json',body:'{"message":"MFA required"}'});return;}
+   const status=u.searchParams.get('status');
+   if(status==='neq.archived'&&holdActiveLibrary)await new Promise(resolve=>heldLibrary.push(resolve));
+   if(status==='neq.archived'&&activeLibraryFailure){await route.fulfill({status:503,contentType:'application/json',body:'{"message":"Fixture unavailable"}'});return;}
+   if(status==='eq.published')publishedReviewLoads++;else if(!status)archiveLibraryLoads++;
+   const candidates=status==='eq.published'?reviewQuestions:status==='neq.archived'?reviewQuestions:[...reviewQuestions,archivedQuestion];
+   value=candidates.filter(q=>q.id>(u.searchParams.get('id')?.replace(/^gt\./,'')||'')).slice(0,Number(u.searchParams.get('limit')||500)).map(q=>({id:q.id,status:q.status,data:q}));
+  }
   else if(u.pathname.includes('/rest/v1/user_private_state'))value={user_id:activeRole==='parent'?parentId:studentId,values:{}};
   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(value)});
  });
@@ -98,5 +108,24 @@ try{
  for(const [width,height]of [[320,480],[390,844],[820,1180]]){await page.setViewportSize({width,height});await page.getByRole('button',{name:'Onay bölümüne git',exact:true}).click();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);const heading=await approval.getByRole('heading',{name:'Eğitmen onayı ve yayınlama',exact:true}).boundingBox();assert.ok(heading.y>=0&&heading.y<height);}
  for(const checkbox of await checks.all())await checkbox.check();await publish.click();await page.getByRole('status').filter({hasText:'Kaydedilemedi.'}).waitFor();assert.equal(await page.getByText('Bu sorunun eğitmen incelemesi tamamlandı.',{exact:true}).count(),0);
  await publish.click();await page.getByRole('status').filter({hasText:'Eğitmen onayı kaydedildi. Soru yayında.'}).waitFor();await page.getByText('Bu sorunun eğitmen incelemesi tamamlandı.',{exact:true}).waitFor();assert.equal(reviewSaveAttempts,2);assert.equal(adminRefreshes,0);assert.equal(reviewQuestions.filter(q=>q.reviewedBy).length,1);await page.getByText('49 soru, sahibinin isteğiyle',{exact:false}).waitFor();assert.equal(await checks.evaluateAll(nodes=>nodes.filter(node=>node.checked).length),0);assert.deepEqual(errors,[]);
+ // A cold/failed admin cache must never masquerade as the actual published total.
+ assert.equal(archiveLibraryLoads,0);holdActiveLibrary=true;activeLibraryFailure=true;
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('http://127.0.0.1:5186/tests/browser/turkish-accounts.html?mode=workbench');
+ await page.getByRole('button',{name:'Menüyü Aç',exact:true}).click();await page.locator('aside').getByRole('button').filter({hasText:'Soru Tasarım Stüdyosu'}).click();
+ await page.getByText('Canlı soru adetleri yükleniyor…',{exact:true}).waitFor();assert.equal(await page.getByText(/soru · .*44 konu/).count(),0);
+ holdActiveLibrary=false;for(const release of heldLibrary.splice(0))release();
+ await page.getByRole('alert').filter({hasText:'Canlı soru adetleri yüklenemedi.'}).waitFor();activeLibraryFailure=false;await page.getByRole('button',{name:'Yeniden yükle',exact:true}).click();
+ await page.getByText('1. sınıf yayımlanan banka:',{exact:false}).waitFor();
+ await page.getByRole('button',{name:/2\. Sınıf|2\. sınıf/}).first().click();await page.getByText('50 soru · 1/44 konu',{exact:false}).waitFor();assert.equal(archiveLibraryLoads,0);
+ // Archives require an explicit load. The full curriculum remains available in grade one.
+ await page.getByRole('button',{name:'Menüyü Aç',exact:true}).click();await page.locator('aside').getByRole('button').filter({hasText:'Soru Bankası & Yönetim'}).click();
+ await page.getByRole('button',{name:'Editoryal Atölye & Bulut Kütüphanesi',exact:true}).click();await page.getByLabel('Arşivlenmiş soruları da yükle').waitFor();assert.equal(archiveLibraryLoads,0);
+ await page.getByLabel('Arşivlenmiş soruları da yükle').check();await page.getByText('51 kayıt',{exact:false}).waitFor();assert.ok(archiveLibraryLoads>0);
+ await page.getByLabel('Arşivlenmiş soruları da yükle').uncheck();await page.getByText('50 kayıt',{exact:false}).waitFor();
+ await page.getByRole('button',{name:/Üretim ve taslaklar/}).click();await page.getByLabel('Hedef sınıf').selectOption('1');await page.getByLabel('Soru ailesi').selectOption('matrix_3x3');
+ assert.equal(await page.getByLabel('Soru ailesi').locator('option[value=matrix_3x3]').isDisabled(),false);
+ await page.getByLabel('Adet',{exact:true}).fill('1');await page.getByRole('button',{name:'Taslak üret',exact:true}).click();await page.getByRole('status').filter({hasText:'1 taslak hazır.'}).waitFor();
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);assert.deepEqual(errors,[]);
  console.log('Turkish isolated browser: registration, grade, consent, confirmation retry, unconfirmed-parent rejection, verified login, export, history failure/retry, deletion request, secure family switching clipboard denial/success, review validation/refresh/empty state admin deletion stale-scope rejection/receipt validation/confirmed completion and actual admin portal MFA/educator review navigation/paging/three approvals/save retry passed. This is not a real email/pilot acceptance record.');
 }catch(error){console.error('Turkish component scenario failed:',error.message);if(page)console.error(await page.locator('body').innerText().catch(()=>'(page unavailable)'));throw error;}finally{await browser?.close();await server.close();}

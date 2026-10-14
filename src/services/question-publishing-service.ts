@@ -25,10 +25,10 @@ async function requireAdminUser() {
   return user;
 }
 
-export async function loadQuestionLibrary(options: { publishedOnly?: boolean } = {}): Promise<StoredQuestion[]> {
+export async function loadQuestionLibrary(options: { publishedOnly?: boolean; includeArchived?: boolean } = {}): Promise<StoredQuestion[]> {
   await requireAdminUser();
   const ref = collection(db, 'questions');
-  const snapshot = await getDocs(options.publishedOnly ? query(ref, where('status', '==', 'published')) : ref);
+  const snapshot = await getDocs(options.publishedOnly ? query(ref, where('status', '==', 'published')) : options.includeArchived===false ? query(ref,where('status','!=','archived')) : ref);
   // Keep invalid legacy drafts visible so editors can inspect and repair them.
   // A remote failure must propagate; local data must never masquerade as cloud data.
   return snapshot.docs
