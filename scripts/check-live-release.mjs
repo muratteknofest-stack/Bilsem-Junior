@@ -15,7 +15,7 @@ export async function verifyPublicRelease(origin,fetcher=fetch){
   if(path==='/api/public/platform'){
    const data=await response.json();assert.equal(typeof data.registrationOpen,'boolean');assert.equal(typeof data.policyVersion,'string');assert.ok(data.policyVersion.length);registrationOpen=data.registrationOpen;
   }else if(path==='/api/public/shopier'){
-   const data=await response.json();assert.equal(typeof data.ready,'boolean');assert.equal(typeof data.enforced,'boolean');assert.ok(Array.isArray(data.plans)&&data.plans.length===2);paidSalesReady=data.ready;
+   const data=await response.json();assert.equal(typeof data.ready,'boolean');assert.equal(typeof data.enforced,'boolean');assert.ok(Array.isArray(data.plans)&&data.plans.length===3);paidSalesReady=data.ready;
   }else{
    const body=await response.text();if(path==='/')assert.match(body,/<html[^>]*lang="tr"/i);
    if(path==='/robots.txt')assert.ok(!/^Disallow:\s*\/\s*$/mi.test(body));

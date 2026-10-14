@@ -16,7 +16,7 @@ export async function shopierGet(resource:'orders'|'products',id:string,fetcher:
   },10_000); } catch(error) {if(error instanceof ShopierError)throw error;throw new ShopierError('Shopier bağlantısı tamamlanamadı. Yeniden dene.',503);}
 }
 export async function verifyShopierProducts(s:ShopierSettings) {
-  if(!shopierConfigured(s))throw new ShopierError('İki gerçek Shopier ürününü yapılandırın.');
+  if(!shopierConfigured(s))throw new ShopierError('Üç gerçek Shopier ürününü yapılandırın.');
   for(const plan of SHOPIER_PLANS) {
     const configured=shopierProduct(s,plan.id),p=await shopierGet('products',configured.id) as any;
     if(p?.id!==configured.id||(p.variants!==undefined&&(!Array.isArray(p.variants)||p.variants.length))||(p.options!==undefined&&(!Array.isArray(p.options)||p.options.length))||p.type!=='digital'||p.stockStatus!=='inStock'||p.priceData?.currency!=='TRY'||p.priceData?.discount!==false

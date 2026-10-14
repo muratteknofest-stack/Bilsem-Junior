@@ -2,7 +2,7 @@ import { getServiceClient } from './supabase-admin';
 import { readPlatformSettings } from './platform-settings';
 import { shopierGet } from './shopier-client';
 import { accessExpiry, verifiedShopierOrder, ShopierError, type AccessReceipt } from './shopier-model';
-import type { ShopierSettings } from '../src/lib/shopier-config';
+import { SHOPIER_PRODUCT_FIELDS, type ShopierSettings, type ShopierPlanId } from '../src/lib/shopier-config';
 import { withRequestDeadline } from '../src/lib/request-deadline';
 export async function assertShopierFamily(parentId:string,studentId:string) {
   const db=getServiceClient();
@@ -16,7 +16,7 @@ export async function shopierAccess(parentId:string,studentId:string,settings:Sh
   try { return await withRequestDeadline(async signal=>{
     await assertShopierFamily(parentId,studentId);
     const db=getServiceClient();
-    const result=await db.from('shopier_access_orders').select('order_id,activated_at,duration_days,buyer_email_sha256,product_id,plan_id')
+    const result=await db.from('shopier_access_orders').select('order_id,activated_at,duration_days,amount_kurus,buyer_email_sha256,product_id,plan_id')
       .eq('parent_id',parentId).eq('student_id',studentId).order('activated_at').limit(51);
     if(result.error||!result.data||result.data.length>50)throw new ShopierError('Erişim kayıtları doğrulanamadı.',503);
     if(!result.data.length)return {active:false,expiresAt:null};
@@ -26,8 +26,10 @@ export async function shopierAccess(parentId:string,studentId:string,settings:Sh
       if(signal.aborted)throw new ShopierError('Doğrulama süresi aşıldı.',503);
       const group=await Promise.all(result.data.slice(i,i+3).map(async receipt=>{
         const raw=await shopierGet('orders',receipt.order_id,fetch,process.env.SHOPIER_ACCESS_TOKEN,signal);
-        try {const bound={...settings,monthlyProductId:'',quarterlyProductId:'', [receipt.plan_id==='monthly'?'monthlyProductId':'quarterlyProductId']:receipt.product_id};
-          const proof=verifiedShopierOrder(raw,receipt.order_id,{sha256:receipt.buyer_email_sha256},bound);
+        try {const fields=SHOPIER_PRODUCT_FIELDS[receipt.plan_id as ShopierPlanId];
+          if(!fields)throw new ShopierError('Erişim planı doğrulanamadı.');
+          const bound={...settings,monthlyProductId:'',quarterlyProductId:'',annualProductId:'',[fields.id]:receipt.product_id};
+          const proof=verifiedShopierOrder(raw,receipt.order_id,{sha256:receipt.buyer_email_sha256},bound,Date.now(),{planId:receipt.plan_id,amountKurus:receipt.amount_kurus});
           return proof.productId===receipt.product_id&&proof.planId===receipt.plan_id&&proof.days===receipt.duration_days ? receipt : null;
         } catch(error){if(error instanceof ShopierError && error.status!==503)return null;throw error;}
       }));
