@@ -1,3 +1,4 @@
+import { topicCategory, type LearningTopic } from './features/student/learning-topics';
 import { ProgressSyncBanner } from './components/ProgressSyncBanner';
 import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useAuth } from './contexts/AuthContext';
@@ -78,6 +79,7 @@ export default function App() {
   const [masteries, setMasteries] = useState<SkillMastery[]>(() => dataService.getSkillMasteries());
   const [mistakes, setMistakes] = useState<MistakeItem[]>(() => dataService.getMistakes());
   const [dailyPlan, setDailyPlan] = useState<DailyStudyPlan>(() => dataService.getDailyPlan());
+  const [selectedPracticeTopic, setSelectedPracticeTopic] = useState<LearningTopic>('mixed');
   const [selectedPracticeCategory, setSelectedPracticeCategory] = useState<CognitiveCategory | 'mixed'>('mixed');
   const [activeAlert, setActiveAlert] = useState<ReminderAlertEvent | null>(null);
   const [showGlobalReminderModal, setShowGlobalReminderModal] = useState(false);
@@ -249,7 +251,8 @@ export default function App() {
     setCurrentRoute('login');
   };
 
-  const navigateTo = (targetRoute: string) => {
+  const navigateTo = (targetRoute: string, practiceTopic: LearningTopic = 'mixed') => {
+    if (targetRoute === 'practice') setSelectedPracticeTopic(practiceTopic);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     if (targetRoute === 'admin' || targetRoute === 'login:admin') { window.location.assign(ADMIN_PANEL_PATH); return; }
@@ -423,7 +426,7 @@ export default function App() {
         <Suspense fallback={<div className="min-h-[50vh] flex items-center justify-center" role="status">Yükleniyor…</div>}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
-            key={currentRoute === 'practice' ? `practice-${selectedPracticeCategory}` : currentRoute}
+            key={currentRoute === 'practice' ? `practice-${selectedPracticeCategory}-${selectedPracticeTopic}` : currentRoute}
             initial={reducedMotion ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -10 }}
@@ -446,9 +449,11 @@ export default function App() {
                 mistakes={mistakes}
                 onUserUpdate={(u) => setCurrentUser(u)}
                 onStartPractice={(category) => {
+                  setSelectedPracticeTopic('mixed');
                   setSelectedPracticeCategory((category as CognitiveCategory | 'mixed') || 'mixed');
                   navigateTo('practice');
                 }}
+                onStartTopicPractice={topic => { setSelectedPracticeTopic(topic); setSelectedPracticeCategory(topicCategory(topic, 'mixed')); navigateTo('practice', topic); }}
                 onStartAdaptive={() => navigateTo('adaptive')}
                 onStartExam={() => navigateTo('exams')}
                 onOpenMistakes={() => navigateTo('mistakes')}
@@ -476,7 +481,7 @@ export default function App() {
                 onNavigateHome={leaveTest}
                 onOpenMistakes={() => navigateTo('mistakes')}
               />
-            ) : <VerifiedLearningView key={`verified-${selectedPracticeCategory}`} mode="practice" initialCategory={selectedPracticeCategory} onNavigateHome={leaveTest} />)}
+            ) : <VerifiedLearningView key={`verified-${selectedPracticeCategory}-${selectedPracticeTopic}`} mode="practice" initialCategory={selectedPracticeCategory} initialTopic={selectedPracticeTopic} onNavigateHome={leaveTest} />)}
 
             {currentRoute === 'adaptive' && (
               <VerifiedLearningView mode="adaptive" onNavigateHome={leaveTest} />

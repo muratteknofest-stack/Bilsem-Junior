@@ -6,6 +6,7 @@ import { dataService } from './data-service';
 import type { LearningCategory, LearningMode, LearningSessionView, LearningSessionUpdate } from '../features/student/learning-contract';
 import type { QuestionResponse } from '../features/questions/answer-interactions';
 import type { UserProfile } from '../types';
+import type { LearningTopic } from '../features/student/learning-topics';
 import type { LearningDifficulty } from '../features/student/learning-selection';
 import { isSchoolGrade, type SchoolGrade } from '../features/questions/quality-policy';
 import { LearningRefreshQueue } from '../features/student/learning-refresh';
@@ -58,7 +59,7 @@ export const learningService = {
     return sessions.save(userId, payload as LearningSessionView);
   },
   review: (mistakeId: string) => request('review', { mistakeId }),
-  start: (mode: LearningMode, category: LearningCategory = 'mixed', exam = 'mini', difficulty: LearningDifficulty = 'mixed', locale?: 'tr'|'en') => request('start', { mode, category, exam, difficulty, ...(locale ? {locale} : {}), expectedGrade: dataService.getCurrentUser().grade }),
+  start: (mode: LearningMode, category: LearningCategory = 'mixed', exam = 'mini', difficulty: LearningDifficulty = 'mixed', locale?: 'tr'|'en', topic: LearningTopic = 'mixed') => request('start', { mode, category, exam, difficulty, ...(topic !== 'mixed' ? {topic} : {}), ...(locale ? {locale} : {}), expectedGrade: dataService.getCurrentUser().grade }),
   async changeGrade(grade: SchoolGrade): Promise<UserProfile> {
     const userId = auth.currentUser?.uid;
     const payload = await learningApi('grade', { method: 'PATCH', body: JSON.stringify({ grade }) });

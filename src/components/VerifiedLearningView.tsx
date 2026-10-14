@@ -4,7 +4,8 @@ import { ArrowLeft, ArrowRight, Clock3, Gamepad2, Sparkles, Trophy, Tablet, Chec
 import './VerifiedLearningView.css';
 import React, { useEffect, useRef, useState } from 'react';
 import type { BaseQuestion } from '../types';
-import { COGNITIVE_CATEGORY_LABELS } from '../types';
+import { LEARNING_TOPICS, isLearningTopic, topicCategory, type LearningTopic } from '../features/student/learning-topics';
+import { COGNITIVE_CATEGORY_LABELS, QUESTION_TYPE_LABELS } from '../types';
 import { AVAILABLE_CATEGORIES, isAvailableCategory } from '../features/student/available-categories';
 import { LEARNING_EXAMS, type LearningCategory, type LearningMode, type LearningSessionView } from '../features/student/learning-contract';
 import { isResponseComplete, isResponseEmpty, type QuestionResponse } from '../features/questions/answer-interactions';
@@ -21,9 +22,10 @@ import { difficultyChoices, type LearningDifficulty } from '../features/student/
 import { isSchoolGrade } from '../features/questions/quality-policy';
 
 const button = 'min-h-11 rounded-xl bg-indigo-700 px-5 py-3 font-bold text-white disabled:opacity-50 focus-visible:outline-4 focus-visible:outline-indigo-300';
-interface Props { mode: LearningMode; initialCategory?: LearningCategory; reviewMistakeId?: string; onNavigateHome: () => void; }
-export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMistakeId, onNavigateHome }: Props) {
+interface Props { mode: LearningMode; initialCategory?: LearningCategory; initialTopic?: LearningTopic; reviewMistakeId?: string; onNavigateHome: () => void; }
+export function VerifiedLearningView({ mode, initialCategory = 'mixed', initialTopic = 'mixed', reviewMistakeId, onNavigateHome }: Props) {
   const [category, setCategory] = useState<LearningCategory>(isAvailableCategory(initialCategory) ? initialCategory : 'mixed');
+  const [topic, setTopic] = useState<LearningTopic>(isLearningTopic(initialTopic) ? initialTopic : 'mixed');
   const [exam, setExam] = useState('mini');
   const [difficulty, setDifficulty] = useState<LearningDifficulty>('mixed');
   const selectedGrade = dataService.getCurrentUser().grade;
@@ -61,7 +63,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
   };
   const start = async () => { const saved = await run(() => {
     if (mode === 'adaptive' && session?.result) remember(session);
-    return reviewMistakeId ? learningService.review(reviewMistakeId) : learningService.start(mode, category, exam, difficulty);
+    return reviewMistakeId ? learningService.review(reviewMistakeId) : learningService.start(mode, topicCategory(topic, category), exam, difficulty, undefined, topic);
   }); if (saved && mounted.current) { const next = mode === 'exam' ? 0 : nextUnansweredIndex(saved); setIndex(next < 0 ? saved.questions.length - 1 : next); } };
   const savePending = async () => {
     if (!session || mode !== 'exam' || session.result || Date.now() >= Date.parse(session.expiresAt)) return true;
@@ -119,7 +121,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
         if (!mounted.current) return advanced.session;
         // Keep the completed question visible and retryable if loading the next one fails.
         setSession(advanced.session);
-        const nextSession = await learningService.start(mode, category, exam, difficulty);
+        const nextSession = await learningService.start(mode, topicCategory(topic, category), exam, difficulty, undefined, topic);
         if (mounted.current) setIndex(0);
         return nextSession;
       }
@@ -176,10 +178,12 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', reviewMi
       <div className="zp-welcome"><div className="zp-welcome-icon" aria-hidden="true">{isExam ? <Tablet size={42} /> : <Sparkles size={42} />}</div><div><p className="zp-eyebrow">{isExam ? 'Kendi hızında, gerçek sınav deneyimi' : 'Küçük adımlar, büyük keşifler'}</p><p className="zp-welcome-title">{isExam ? 'Tabletini hazırla.' : 'Zihnini oyuna davet et!'}</p></div></div>
       <h2 className="text-xl font-bold">{mode === 'exam' ? 'Denemeni seç' : mode === 'adaptive' ? 'Sana uygun sorularla ilerle' : 'Bugün hangi alanda çalışalım?'}</h2>
       <p className="font-semibold text-indigo-700">{grade}. sınıf soruları · Sınıfını öğrenci profilinden değiştirebilirsin.</p>
-      <p className="text-slate-600">{mode === 'exam' ? 'Cevaplarını sınav boyunca değiştirebilirsin. Sonuç ve açıklamalar bitirdiğinde gösterilir. Devam eden denemen varsa kaldığın yerden açılır.' : mode === 'adaptive' ? 'Çalışma geçmişine göre tekrar edebileceğin bir alan seçilir. Her sorudan sonra açıklamasını inceleyebilirsin.' : 'Beş soruluk bir çalışma seni bekliyor. Yarım kalan çalışman varsa önce ona devam edebilirsin.'}</p>
-      {mode === 'practice' && <label className="block font-semibold">Çalışma alanı<select value={category} onChange={e => setCategory(e.target.value as LearningCategory)} disabled={busy} className="mt-2 block min-h-12 w-full rounded-xl border border-slate-300 bg-white p-3"><option value="mixed">Karışık pratik</option>{AVAILABLE_CATEGORIES.map(c => <option key={c} value={c}>{COGNITIVE_CATEGORY_LABELS[c]}</option>)}</select></label>}
+      <p className="text-slate-600">{mode === 'exam' ? 'Cevaplarını sınav boyunca değiştirebilirsin. Sonuç ve açıklamalar bitirdiğinde gösterilir. Devam eden denemen varsa kaldığın yerden açılır.' : mode === 'adaptive' ? 'Çalışma geçmişine göre tekrar edebileceğin bir alan seçilir. Her sorudan sonra açıklamasını inceleyebilirsin.' : 'En fazla beş soruluk bir çalışma seni bekliyor. Yarım kalan çalışman varsa önce ona devam edebilirsin.'}</p>
+      {!reviewMistakeId && <label className="block min-w-0 font-semibold"><span>Soru konusu</span><select aria-label="Soru konusu" value={topic} onChange={e => setTopic(e.target.value as LearningTopic)} disabled={busy} className="mt-2 block min-h-12 w-full min-w-0 rounded-xl border border-slate-300 bg-white p-3 text-base"><option value="mixed">Tüm konular · karışık</option>{LEARNING_TOPICS.map(type => <option key={type} value={type}>{QUESTION_TYPE_LABELS[type]}</option>)}</select><span className="mt-1 block text-sm font-normal text-slate-600">{topic === 'mixed' ? '44 konu arasından birini seçerek yalnızca o konuyu çalışabilirsin.' : 'Testte yalnızca seçtiğin konunun yayımlanmış soruları kullanılır. Az soru varsa test mevcut uygun soru sayısıyla açılır.'}</span></label>}
+      {mode === 'practice' && topic === 'mixed' && <label className="block font-semibold">Çalışma alanı<select value={category} onChange={e => setCategory(e.target.value as LearningCategory)} disabled={busy} className="mt-2 block min-h-12 w-full rounded-xl border border-slate-300 bg-white p-3"><option value="mixed">Karışık pratik</option>{AVAILABLE_CATEGORIES.map(c => <option key={c} value={c}>{COGNITIVE_CATEGORY_LABELS[c]}</option>)}</select></label>}
+      {topic !== 'mixed' && <p className="rounded-xl bg-indigo-50 p-3 font-semibold text-indigo-900">Seçilen konu: {QUESTION_TYPE_LABELS[topic]} · {grade}. sınıf</p>}
       {!reviewMistakeId && <label className="block font-semibold">Zorluk düzeyi<select value={difficulty} onChange={e => setDifficulty(e.target.value === 'mixed' ? 'mixed' : Number(e.target.value) as LearningDifficulty)} disabled={busy} className="mt-2 block min-h-12 w-full rounded-xl border border-slate-300 bg-white p-3"><option value="mixed">Karışık zorluk</option>{difficultyChoices(grade).map(d => <option key={d.value} value={d.value}>{d.label}</option>)}</select><span className="mt-1 block text-sm font-normal text-slate-600">Yalnızca sınıfına uygun seviyeler gösterilir. Seçimini değiştirirsen yeni bir çalışma başlar.</span></label>}
-      {mode === 'exam' && <fieldset className="flex flex-wrap gap-3"><legend className="mb-2 font-semibold">Deneme süresi</legend>{exams.map(e => <label key={e.id} className={`zp-exam-choice flex min-h-12 items-center gap-2 rounded-xl border border-slate-200 p-4 ${exam === e.id ? 'is-selected' : ''}`}><input type="radio" name="learning-exam" value={e.id} checked={exam === e.id} disabled={busy} onChange={() => setExam(e.id)} />{e.title} · {e.count} soru · {e.seconds / 60} dakika</label>)}</fieldset>}
+      {mode === 'exam' && <fieldset className="flex flex-wrap gap-3"><legend className="mb-2 font-semibold">Deneme süresi</legend>{exams.map(e => <label key={e.id} className={`zp-exam-choice flex min-h-12 items-center gap-2 rounded-xl border border-slate-200 p-4 ${exam === e.id ? 'is-selected' : ''}`}><input type="radio" name="learning-exam" value={e.id} checked={exam === e.id} disabled={busy} onChange={() => setExam(e.id)} />{e.title} · {topic !== 'mixed' ? 'En fazla ' : ''}{e.count} soru · {e.seconds / 60} dakika</label>)}</fieldset>}
       <button type="button" disabled={busy} onClick={() => void start()} className={button}>{busy ? 'Çalışman hazırlanıyor…' : 'Başla / devam et'}</button>
     </section> : <>
       {session.result && <section aria-label="Çalışma sonucu" className="zp-result space-y-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-5">

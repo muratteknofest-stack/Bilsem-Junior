@@ -5,6 +5,7 @@ import {LoginPage} from '../../src/components/LoginPage';
 import {AccountCenter} from '../../src/components/AccountCenter';
 import {AccountDeletionAction} from '../../src/components/admin/AccountDeletionAction';
 import {QuestionReviewStatus} from '../../src/components/admin/QuestionReviewStatus';
+import App from '../../src/App';
 import {AdminPortal} from '../../src/components/AdminPortal';
 import {supabase} from '../../src/lib/supabase';
 import {openLinkedParentSession,openLinkedStudentSession} from '../../src/services/account-security-service';
@@ -26,4 +27,10 @@ function ReviewPortalFixture(){
  if(error)return <p role="alert">{error}</p>;
  return ready?<AuthProvider><AdminPortal/></AuthProvider>:<p role="status">Yalıtılmış yönetici senaryosu açılıyor…</p>;
 }
-createRoot(document.getElementById('root')!).render(new URLSearchParams(location.search).get('mode')==='workbench'?<ReviewPortalFixture/>:<AuthProvider><Fixture/></AuthProvider>);
+function StudentAppFixture(){
+ const [ready,setReady]=useState(false),[error,setError]=useState('');
+ useEffect(()=>{let active=true;void supabase.auth.signInWithPassword({email:'student@example.invalid',password:'ExampleOnly123'}).then(result=>{if(!active)return;if(result.error)setError(result.error.message);else setReady(true);});return()=>{active=false;};},[]);
+ if(error)return <p role="alert">{error}</p>;
+ return ready?<AuthProvider><App/></AuthProvider>:<p role="status">Yalıtılmış öğrenci senaryosu açılıyor…</p>;
+}
+createRoot(document.getElementById('root')!).render(new URLSearchParams(location.search).get('mode')==='student-app'?<StudentAppFixture/>:new URLSearchParams(location.search).get('mode')==='workbench'?<ReviewPortalFixture/>:<AuthProvider><Fixture/></AuthProvider>);
