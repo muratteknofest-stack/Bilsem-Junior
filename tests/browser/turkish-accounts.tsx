@@ -5,6 +5,8 @@ import {LoginPage} from '../../src/components/LoginPage';
 import {AccountCenter} from '../../src/components/AccountCenter';
 import {AccountDeletionAction} from '../../src/components/admin/AccountDeletionAction';
 import {QuestionReviewStatus} from '../../src/components/admin/QuestionReviewStatus';
+import {AdminPortal} from '../../src/components/AdminPortal';
+import {supabase} from '../../src/lib/supabase';
 import {openLinkedParentSession,openLinkedStudentSession} from '../../src/services/account-security-service';
 import '../../src/index.css';
 function Fixture(){
@@ -18,4 +20,10 @@ function Fixture(){
  if(mode==='student')return <main className="p-4"><h1>Öğrenci oturumu doğrulandı</h1><p>{userProfile?.role}</p><button onClick={async()=>{await openLinkedParentSession('11111111-1111-4111-8111-111111111111','ExampleOnly123');setMode('parent');}}>Veli hesabına dön</button></main>;
  return <LoginPage initialMode={mode==='register'?'register':'login'} initialRole="parent" onNavigateHome={()=>setMode('register')} onLoginSuccess={role=>setMode(role)}/>;
 }
-createRoot(document.getElementById('root')!).render(<AuthProvider><Fixture/></AuthProvider>);
+function ReviewPortalFixture(){
+ const [ready,setReady]=useState(false),[error,setError]=useState('');
+ useEffect(()=>{let active=true;void supabase.auth.signInWithPassword({email:'admin@example.invalid',password:'ExampleOnly123'}).then(result=>{if(!active)return;if(result.error)setError(result.error.message);else setReady(true);});return()=>{active=false;};},[]);
+ if(error)return <p role="alert">{error}</p>;
+ return ready?<AuthProvider><AdminPortal/></AuthProvider>:<p role="status">Yalıtılmış yönetici senaryosu açılıyor…</p>;
+}
+createRoot(document.getElementById('root')!).render(new URLSearchParams(location.search).get('mode')==='workbench'?<ReviewPortalFixture/>:<AuthProvider><Fixture/></AuthProvider>);

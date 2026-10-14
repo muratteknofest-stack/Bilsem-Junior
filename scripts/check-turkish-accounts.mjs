@@ -2,20 +2,26 @@
 import assert from 'node:assert/strict';
 import {createServer} from 'vite';
 import {chromium} from 'playwright';
+import {generateQuestion} from '../src/features/questions/generators/index.ts';
+import {prepareEditorialQuestion} from '../server/editorial-validation.ts';
 process.env.VITE_SUPABASE_URL='https://turkish-fixture.invalid';process.env.VITE_SUPABASE_PUBLISHABLE_KEY='sb_publishable_isolated_fixture';
 const server=await createServer({server:{host:'127.0.0.1',port:5186,strictPort:true}});await server.listen();let browser,page;
 const parentId='11111111-1111-4111-8111-111111111111',studentId='22222222-2222-4222-8222-222222222222';
 const parent={id:parentId,role:'parent',name:'Pilot veli',linked_student_ids:[studentId],xp:0,level:1},student={id:studentId,role:'student',name:'Kaşif',grade:2,student_code:'EXPLORER1234',linked_parent_id:parentId,xp:0,level:1};
+const admin={...parent,role:'admin',name:'Test yöneticisi',linked_student_ids:[]};
+const reviewQuestions=Array.from({length:50},(_,i)=>({...generateQuestion({type:'mirror_reflection',targetGrade:2,difficulty:3,seed:70000+i*991}),id:`fixture-review-${String(i+1).padStart(4,'0')}`,status:'published',revision:2,updatedAt:'2026-10-14T06:00:00Z',releaseAuthorization:{individualHumanReview:false},batchValidation:{editorReview:'pending'}}));
+let reviewSaveAttempts=0,publishedReviewLoads=0,adminRefreshes=0,adminAal='aal1';
 let activeRole='parent',requests=[],resends=0,registrationCount=0,historyFails=true,deleteAttempts=0,unconfirmed=true,previewFault='',summaryAttempts=0,successfulCompletion=false;
-function session(role){const id=role==='parent'?parentId:studentId,encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url');return {access_token:`${encode({alg:'HS256',typ:'JWT'})}.${encode({sub:id,role:'authenticated',exp:Math.floor(Date.now()/1000)+3600,iat:Math.floor(Date.now()/1000),session_id:'99999999-9999-4999-8999-999999999999',app_metadata:{provider:'email'}})}.dGVzdC1zaWduYXR1cmU`,refresh_token:'fixture-refresh',token_type:'bearer',expires_in:3600,user:{id,aud:'authenticated',email:role==='parent'?'parent@example.invalid':'explorer1234@zekapark.com',email_confirmed_at:new Date().toISOString(),app_metadata:{provider:'email'},user_metadata:{},created_at:new Date().toISOString()}};}
+function session(role){const id=role==='student'?studentId:parentId,encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url'),metadata={provider:'email',role};return {access_token:`${encode({alg:'HS256',typ:'JWT'})}.${encode({sub:id,role:'authenticated',aal:role==='admin'?adminAal:'aal1',exp:Math.floor(Date.now()/1000)+3600,iat:Math.floor(Date.now()/1000),session_id:'99999999-9999-4999-8999-999999999999',app_metadata:metadata})}.dGVzdC1zaWduYXR1cmU`,refresh_token:'fixture-refresh',token_type:'bearer',expires_in:3600,user:{id,aud:'authenticated',email:role==='parent'?'parent@example.invalid':role==='admin'?'admin@example.invalid':'explorer1234@zekapark.com',email_confirmed_at:new Date().toISOString(),app_metadata:metadata,user_metadata:{},factors:role==='admin'?[{id:'88888888-8888-4888-8888-888888888888',factor_type:'totp',status:'verified',friendly_name:'Isolated fixture'}]:[],created_at:new Date().toISOString()}};}
 try{
  browser=await chromium.launch({headless:true});page=await browser.newPage({viewport:{width:390,height:844}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.route('https://turkish-fixture.invalid/**',async route=>{
   const u=new URL(route.request().url());let value=[];
-  if(u.pathname.includes('/auth/v1/token')){if(unconfirmed){unconfirmed=false;await route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({error_code:'email_not_confirmed',code:'email_not_confirmed',msg:'Email not confirmed'})});return;}value=session(activeRole);}
+  if(u.pathname.includes('/auth/v1/token')){if(activeRole==='admin'&&u.searchParams.get('grant_type')==='refresh_token')adminRefreshes++;if(unconfirmed){unconfirmed=false;await route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({error_code:'email_not_confirmed',code:'email_not_confirmed',msg:'Email not confirmed'})});return;}value=session(activeRole);}
   else if(u.pathname.includes('/auth/v1/user'))value=session(activeRole).user;
   else if(u.pathname.includes('/auth/v1/logout'))value={};
-  else if(u.pathname.includes('/rest/v1/profiles'))value=u.searchParams.get('id')===`eq.${studentId}`?student:parent;
+  else if(u.pathname.includes('/rest/v1/profiles'))value=u.searchParams.get('id')===`eq.${studentId}`?student:activeRole==='admin'?admin:parent;
+  else if(u.pathname.includes('/rest/v1/questions')){assert.equal(activeRole,'admin');if(u.searchParams.get('status')==='eq.published')publishedReviewLoads++;value=(u.searchParams.get('status')==='eq.published'?reviewQuestions:[]).filter(q=>q.id>(u.searchParams.get('id')?.replace(/^gt\./,'')||'')).slice(0,Number(u.searchParams.get('limit')||500)).map(q=>({id:q.id,status:q.status,data:q}));}
   else if(u.pathname.includes('/rest/v1/user_private_state'))value={user_id:activeRole==='parent'?parentId:studentId,values:{}};
   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(value)});
  });
@@ -26,6 +32,12 @@ try{
   else if(u.pathname==='/api/auth/resend-confirmation'){resends++;value={success:true,message:'Uygun bir hesap varsa doğrulama bağlantısı gönderilecektir.'};}
   else if(u.pathname==='/api/account/requests'){if(historyFails){historyFails=false;await route.fulfill({status:503,contentType:'application/json',body:'{"error":"Fixture unavailable"}'});return;}value={requests};}
   else if(u.pathname==='/api/account/export')value={format:'zekapark-account-export-v1',profiles:[parent,student],learningSessions:[]};
+  else if(u.pathname==='/api/admin/questions/save'){
+   assert.equal(activeRole,'admin');assert.equal(adminAal,'aal2');assert.equal(body.status,'published');assert.equal(body.confirmedReview,true);assert.equal(body.expectedRevision,2);reviewSaveAttempts++;
+   if(reviewSaveAttempts===1){await route.fulfill({status:503,contentType:'application/json',body:'{"error":"Yalıtılmış kayıt kesintisi"}'});return;}
+   const saved=prepareEditorialQuestion(body.question,body.status,body.expectedRevision,body.confirmedReview,parentId,reviewQuestions.filter(q=>q.id!==body.question.id));
+   const i=reviewQuestions.findIndex(q=>q.id===saved.id);assert.ok(i>=0);reviewQuestions[i]=saved;value={question:saved};
+  }
   else if(u.pathname==='/api/account/deletion-request'){assert.deepEqual(body,{confirmed:true});assert.equal(activeRole,'parent');requests=[{id:'55555555-5555-4555-8555-555555555555',kind:'deletion',status:'open'}];value={id:requests[0].id};}
   else if(u.pathname==='/api/parent/student-session'){assert.equal(body.studentId,studentId);activeRole='student';const s=session(activeRole);value={studentId,access_token:s.access_token,refresh_token:s.refresh_token};}
   else if(u.pathname==='/api/parent/return-session'){activeRole='parent';const s=session(activeRole);value={parentId,verified:true,access_token:s.access_token,refresh_token:s.refresh_token};}
@@ -70,5 +82,21 @@ try{
  await preview.click();await page.getByText('Doğrulanan kapsam:',{exact:false}).waitFor();await approve();await finish.click();await page.getByRole('alert').filter({hasText:'Silme sonucu doğrulanamadı'}).waitFor();assert.equal(await finish.count(),0);
  await page.goto('http://127.0.0.1:5186/tests/browser/turkish-accounts.html?mode=admin&refreshFailure=1');await preview.click();await page.getByText('Doğrulanan kapsam:',{exact:false}).waitFor();await approve();await finish.click();await page.getByRole('status').filter({hasText:'Bu silme işlemi tamamlanmış.'}).waitFor();await page.getByRole('alert').filter({hasText:'Silme tamamlandı, ancak bildirim listesi yenilenemedi.'}).waitFor();assert.equal(await finish.count(),0);assert.equal(deleteAttempts,4);
  await preview.click();await page.getByRole('status').filter({hasText:'Bu silme işlemi tamamlanmış.'}).waitFor();assert.equal(await finish.count(),0);assert.deepEqual(errors,[]);
- console.log('Turkish isolated browser: registration, grade, consent, confirmation retry, unconfirmed-parent rejection, verified login, export, history failure/retry, deletion request, secure family switching clipboard denial/success, review validation/refresh/empty state and admin deletion stale-scope rejection/receipt validation/confirmed completion passed. This is not a real email/pilot acceptance record.');
+ // The real portal still requires MFA before opening the new review screen.
+ await page.setViewportSize({width:390,height:844});activeRole='admin';await page.goto('http://127.0.0.1:5186/tests/browser/turkish-accounts.html?mode=workbench&section=review');
+ await page.getByRole('heading',{name:'İki aşamalı yönetici doğrulaması',exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'Onayla ve yayımla',exact:true}).count(),0);assert.equal(reviewSaveAttempts,0);
+ adminAal='aal2';await page.goto('http://127.0.0.1:5186/tests/browser/turkish-accounts.html?mode=workbench&section=review');
+ await page.getByRole('heading',{name:'Eğitmen Onayı',exact:true,level:2}).waitFor();await page.getByText('50 soru, sahibinin isteğiyle',{exact:false}).waitFor();assert.ok(publishedReviewLoads>0);assert.equal(adminRefreshes,0);
+ const list=page.locator('[aria-label="Soru listesi"]');assert.equal(await list.getByRole('button').count(),40);
+ await page.getByRole('button',{name:'Menüyü Aç',exact:true}).click();await page.getByRole('button').filter({hasText:'Eğitmen Onayı'}).click();
+ await page.getByRole('button',{name:'Sonraki sayfa',exact:true}).click();assert.equal(await list.getByRole('button').count(),10);await list.getByRole('button').first().click();await page.getByRole('heading',{name:'Öğrenci önizlemesi',exact:true}).waitFor();
+ await page.waitForFunction(()=>document.activeElement?.tagName==='ARTICLE');const selected=await page.getByRole('heading',{name:'Öğrenci önizlemesi',exact:true}).boundingBox();assert.ok(selected.y>=0&&selected.y<844,'Selected question must scroll into view');
+ await page.getByRole('button',{name:'Onay bölümüne git',exact:true}).click();
+ const approval=page.getByRole('region',{name:'Eğitmen onayı ve yayınlama',exact:true}),publish=approval.getByRole('button',{name:'Onayla ve yayımla',exact:true});
+ assert.equal(await publish.isDisabled(),true);const checks=approval.getByRole('checkbox');assert.equal(await checks.count(),3);await checks.nth(0).check();await checks.nth(1).check();assert.equal(await publish.isDisabled(),true);assert.equal(reviewSaveAttempts,0);
+ await list.getByRole('button').nth(1).click();await page.getByRole('button',{name:'Onay bölümüne git',exact:true}).click();assert.equal(await checks.evaluateAll(nodes=>nodes.filter(node=>node.checked).length),0);assert.equal(await publish.isDisabled(),true);
+ for(const [width,height]of [[320,480],[390,844],[820,1180]]){await page.setViewportSize({width,height});await page.getByRole('button',{name:'Onay bölümüne git',exact:true}).click();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);const heading=await approval.getByRole('heading',{name:'Eğitmen onayı ve yayınlama',exact:true}).boundingBox();assert.ok(heading.y>=0&&heading.y<height);}
+ for(const checkbox of await checks.all())await checkbox.check();await publish.click();await page.getByRole('status').filter({hasText:'Kaydedilemedi.'}).waitFor();assert.equal(await page.getByText('Bu sorunun eğitmen incelemesi tamamlandı.',{exact:true}).count(),0);
+ await publish.click();await page.getByRole('status').filter({hasText:'Eğitmen onayı kaydedildi. Soru yayında.'}).waitFor();await page.getByText('Bu sorunun eğitmen incelemesi tamamlandı.',{exact:true}).waitFor();assert.equal(reviewSaveAttempts,2);assert.equal(adminRefreshes,0);assert.equal(reviewQuestions.filter(q=>q.reviewedBy).length,1);await page.getByText('49 soru, sahibinin isteğiyle',{exact:false}).waitFor();assert.equal(await checks.evaluateAll(nodes=>nodes.filter(node=>node.checked).length),0);assert.deepEqual(errors,[]);
+ console.log('Turkish isolated browser: registration, grade, consent, confirmation retry, unconfirmed-parent rejection, verified login, export, history failure/retry, deletion request, secure family switching clipboard denial/success, review validation/refresh/empty state admin deletion stale-scope rejection/receipt validation/confirmed completion and actual admin portal MFA/educator review navigation/paging/three approvals/save retry passed. This is not a real email/pilot acceptance record.');
 }catch(error){console.error('Turkish component scenario failed:',error.message);if(page)console.error(await page.locator('body').innerText().catch(()=>'(page unavailable)'));throw error;}finally{await browser?.close();await server.close();}

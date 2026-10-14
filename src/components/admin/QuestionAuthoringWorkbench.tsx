@@ -31,8 +31,8 @@ function exportPackage(questions: BaseQuestion[]) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function QuestionAuthoringWorkbench({ initialSection = 'compose', initialCount = 1, initialType = 'matrix_2x2', onPendingChanges }: {
-  initialSection?: Section; initialCount?: number; initialType?: QuestionType; onPendingChanges?: (pending: boolean) => void;
+export function QuestionAuthoringWorkbench({ initialSection = 'compose', initialCount = 1, initialType = 'matrix_2x2', reviewMode = false, onPendingChanges }: {
+  initialSection?: Section; initialCount?: number; initialType?: QuestionType; reviewMode?: boolean; onPendingChanges?: (pending: boolean) => void;
 }) {
   const [section, setSection] = useState<Section>(initialSection);
   const [grade, setGrade] = useState<Grade>(2);
@@ -56,15 +56,17 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
-  const [quality, setQuality] = useState<'all' | 'ready' | 'review' | 'error' | 'human'>('all');
+  const [quality, setQuality] = useState<'all' | 'ready' | 'review' | 'error' | 'human'>(() => reviewMode ? 'human' : 'all');
+  const [listPage, setListPage] = useState(0);
   const cancelled = useRef(false);
   const alive = useRef(true);
   const importRef = useRef<HTMLInputElement>(null);
+  const previewRef = useRef<HTMLElement>(null), reviewRef = useRef<HTMLElement>(null);
 
   async function refresh() {
     setLoading(true); setCloudError('');
     try {
-      const items = await loadQuestionLibrary();
+      const items = await loadQuestionLibrary({ publishedOnly: reviewMode });
       if (alive.current) { setLibrary(items); setCloudReady(true); }
     } catch {
       if (alive.current) {
@@ -73,7 +75,13 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
       }
     } finally { if (alive.current) setLoading(false); }
   }
-  useEffect(() => { alive.current = true; void refresh(); return () => { alive.current = false; cancelled.current = true; }; }, []);
+  useEffect(() => { alive.current = true; void refresh(); return () => { alive.current = false; cancelled.current = true; }; }, [reviewMode]);
+  useEffect(() => { setListPage(0); }, [section, status, quality, search]);
+  useEffect(() => {
+    if (!active?.id) return;
+    const frame = requestAnimationFrame(() => { previewRef.current?.focus({ preventScroll: true }); previewRef.current?.scrollIntoView({ block: 'start' }); });
+    return () => cancelAnimationFrame(frame);
+  }, [active?.id]);
   const allKnown = useMemo(() => [...library, ...batch], [library, batch]);
   const libraryAudit = useMemo(() => new Map(library.map(q => [q.id, auditQuestion(q)])), [library]);
   const qualityCounts = useMemo(() => {
@@ -105,6 +113,8 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
         : !report?.errors.length && !report?.reviewRequired.length && !!report?.solverVerified;
     })()) &&
     ((q.prompt || '') + (QUESTION_TYPE_LABELS[q.type] || q.type || '') + q.id).toLocaleLowerCase('tr').includes(search.toLocaleLowerCase('tr')));
+  const pageCount = Math.max(1, Math.ceil(results.length / 40)), currentPage = Math.min(listPage, pageCount - 1);
+  const visibleResults = results.slice(currentPage * 40, (currentPage + 1) * 40);
 
   function openQuestion(q: BaseQuestion) {
     if (dirty && !window.confirm('Kaydedilmemiş düzenlemeler var. Bu düzenlemelerden vazgeçip diğer soruyu açmak istiyor musunuz?')) return;
@@ -163,7 +173,7 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
       setLibrary(prev => [stored, ...prev.filter(q => q.id !== stored.id)]);
       setBatch(prev => prev.map(q => q.id === stored.id ? stored : q));
       setActive(stored); setSavedKey(questionContentKey(stored)); setReview([false, false, false]);
-      setNotice(nextStatus === 'published' ? 'Soru Supabase’e kaydedildi ve öğrenci havuzunda yayımlandı.' : 'Supabase’e kaydedildi · ' + statusLabel[nextStatus]);
+      setNotice(nextStatus === 'published' ? 'Eğitmen onayı kaydedildi. Soru yayında.' : 'Kaydedildi · ' + statusLabel[nextStatus]);
     } catch (err) {
       if (alive.current) setNotice('Kaydedilemedi. Taslak ekranda korunuyor. ' + (err instanceof Error ? err.message : 'Yönetici yetkisini ve bağlantıyı kontrol edin.'));
     } finally { if (alive.current) setSaving(false); }
@@ -202,15 +212,17 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
 
   return <div className="space-y-5 text-slate-900">
     <header className="flex flex-wrap items-start justify-between gap-4">
-      <div><p className="text-sm font-semibold text-indigo-300 mb-1">ZekaPark · Editoryal çalışma alanı</p><h2 className="text-2xl sm:text-3xl font-bold text-white">Soru Atölyesi</h2><p className="mt-2 text-sm text-slate-300 max-w-2xl">Özgün varyasyon üret, öğrenci görünümünde çöz, denetle ve yayımla. Sorular resmî sınav kopyası değildir.</p></div>
+      <div><p className="text-sm font-semibold text-indigo-300 mb-1">ZekaPark · Editoryal çalışma alanı</p><h2 className="text-2xl sm:text-3xl font-bold text-white">{reviewMode ? 'Eğitmen Onayı' : 'Soru Atölyesi'}</h2><p className="mt-2 text-sm text-slate-300 max-w-2xl">{reviewMode ? 'Yayındaki sorulardan birini seç, kendin çöz ve açıklamayı kontrol et. Onay kutuları seçilen sorunun “Eğitmen onayı ve yayınlama” bölümündedir.' : 'Özgün varyasyon üret, öğrenci görünümünde çöz, denetle ve yayımla. Sorular resmî sınav kopyası değildir.'}</p></div>
       <div className="flex flex-wrap gap-2">
-        <button className={button + ' bg-slate-800 text-white hover:bg-slate-700'} onClick={() => importRef.current?.click()}><FolderOpen size={16} />JSON içe aktar</button>
+        {!reviewMode && <button className={button + ' bg-slate-800 text-white hover:bg-slate-700'} onClick={() => importRef.current?.click()}><FolderOpen size={16} />JSON içe aktar</button>}
         <input ref={importRef} type="file" accept=".json,application/json" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) void importFile(f); e.target.value = ''; }} />
         <button className={button + ' bg-slate-800 text-white hover:bg-slate-700'} onClick={() => exportPackage(active ? [active] : results)} disabled={!active && !results.length}><FileDown size={16} />JSON indir</button>
       </div>
     </header>
     <nav aria-label="Soru atölyesi bölümleri" className="flex flex-wrap gap-2">
-      <button className={button + (section === 'compose' ? ' bg-indigo-600 text-white' : ' bg-slate-800 text-slate-200')} onClick={() => setSection('compose')}><WandSparkles size={17} />Üretim ve taslaklar {batch.length > 0 && '(' + batch.length + ')'}</button>
+      {!reviewMode && <button className={button + (section === 'compose' ? ' bg-indigo-600 text-white' : ' bg-slate-800 text-slate-200')} onClick={() => setSection('compose')}><WandSparkles size={17} />Üretim ve taslaklar {batch.length > 0 && '(' + batch.length + ')'}</button>}
+      <button type="button" className={button + ' bg-slate-800 text-slate-200'} onClick={() => { setSection('library'); if (reviewMode) { setQuality('human'); setStatus('all'); setSearch(''); } }}><FolderOpen size={17} />{reviewMode ? 'Bekleyen incelemeler' : 'Bulut kütüphanesi'}</button>
+      {reviewMode && <button type="button" className={button + ' bg-slate-800 text-slate-200'} onClick={() => { setQuality('all'); setStatus('all'); setSearch(''); }}>Tüm yayındaki sorular</button>}
       {!!batch.length && (
         <>
           <button
@@ -248,28 +260,30 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
       <aside className="rounded-2xl bg-white border border-slate-200 p-4 space-y-3 self-start">
         <div className="flex items-center justify-between"><h3 className="font-bold">{section === 'library' ? 'Kaydedilmiş sorular' : 'Üretilen taslaklar'}</h3><button aria-label="Kütüphaneyi yenile" onClick={() => void refresh()} disabled={loading} className="p-2 rounded-lg hover:bg-slate-100"><RefreshCw size={17} className={loading ? 'animate-spin' : ''} /></button></div>
         <label className="relative block"><Search size={16} className="absolute left-3 top-3.5 text-slate-400" /><input aria-label="Sorularda ara" className={field + ' pl-9'} placeholder="Yönerge veya soru türü ara" value={search} onChange={e => setSearch(e.target.value)} /></label>
-        <select aria-label="Duruma göre filtrele" className={field} value={status} onChange={e => setStatus(e.target.value)}><option value="all">Tüm durumlar</option>{Object.entries(statusLabel).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select>
+        <select aria-label="Duruma göre filtrele" className={field} value={status} onChange={e => setStatus(e.target.value)}><option value="all">Tüm durumlar</option>{Object.entries(statusLabel).filter(([key]) => !reviewMode || key === 'published').map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select>
         {section === 'library' && <><p className="text-xs text-slate-600" role="status">{library.length} kayıt · {qualityCounts.error} hatalı · {qualityCounts.review} inceleme gerekli · {qualityCounts.ready} otomatik kontrolden geçti</p>
           <select aria-label="Denetim sonucuna göre filtrele" className={field} value={quality} onChange={e => setQuality(e.target.value as typeof quality)}><option value="all">Tüm denetim sonuçları</option><option value="error">Hatalı ({qualityCounts.error})</option><option value="review">İnceleme gerekli ({qualityCounts.review})</option><option value="human">Eğitmen incelemesi bekliyor ({humanReviewPending})</option><option value="ready">Otomatik kontrol geçti ({qualityCounts.ready})</option></select></>}
-        <div className="space-y-2 max-h-[680px] overflow-y-auto">
-          {results.map((q, i) => <button key={q.id} disabled={saving} onClick={() => openQuestion(q)} className={'w-full text-left p-3 rounded-xl border ' + (active?.id === q.id ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:bg-slate-50')}>
-            <div className="text-xs text-slate-500 flex justify-between gap-2"><span>{String(i + 1).padStart(2, '0')} · {q.targetGrade || '—'}. sınıf</span><span>{statusLabel[q.status || 'draft']}</span></div>
+        <div aria-label="Soru listesi" className="space-y-2 max-h-72 xl:max-h-[680px] overflow-y-auto">
+          {visibleResults.map((q, i) => <button key={q.id} disabled={saving} onClick={() => openQuestion(q)} className={'w-full text-left p-3 rounded-xl border ' + (active?.id === q.id ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:bg-slate-50')}>
+            <div className="text-xs text-slate-500 flex justify-between gap-2"><span>{String(currentPage * 40 + i + 1).padStart(2, '0')} · {q.targetGrade || '—'}. sınıf</span><span>{statusLabel[q.status || 'draft']}</span></div>
             <p className="text-sm font-semibold mt-1">{QUESTION_TYPE_LABELS[q.type] || q.type || 'Bilinmeyen tür'}</p><p className="text-sm text-slate-600 line-clamp-2 mt-1">{q.prompt || 'Yönerge eksik'}</p>
             {section === 'library' && <p className={'mt-2 text-xs font-semibold ' + (libraryAudit.get(q.id)?.errors.length ? 'text-rose-700' : q.releaseAuthorization?.individualHumanReview === false && !q.reviewedBy ? 'text-amber-800' : libraryAudit.get(q.id)?.solverVerified ? 'text-emerald-700' : 'text-amber-700')}>{libraryAudit.get(q.id)?.errors.length ? 'Hatalı · ' + libraryAudit.get(q.id)?.errors[0] : q.releaseAuthorization?.individualHumanReview === false && !q.reviewedBy ? 'Yayında · bireysel eğitmen incelemesi bekliyor' : libraryAudit.get(q.id)?.solverVerified ? 'Otomatik kontrol geçti' : 'İnceleme gerekli · ' + (libraryAudit.get(q.id)?.reviewRequired[0] || 'Bağımsız çözüm eksik')}</p>}
           </button>)}
           {!results.length && <p className="text-sm text-slate-500 p-4">{loading ? 'Kütüphane yükleniyor…' : section === 'library' ? 'Henüz kaydedilmiş bir soru yok veya filtreye uymuyor.' : 'Soru ailesini seçip taslak üretin. İçerik öğrenciye otomatik yayımlanmaz.'}</p>}
         </div>
-        {section === 'library' && <button className={button + ' text-slate-600 border w-full'} onClick={() => {
+        {results.length > 40 && <nav aria-label="Soru listesi sayfaları" className="space-y-2"><p className="text-xs text-slate-600">{currentPage * 40 + 1}–{Math.min((currentPage + 1) * 40, results.length)} / {results.length} soru</p><div className="flex flex-wrap gap-2"><button type="button" className={button + ' border'} disabled={saving || currentPage === 0} onClick={() => setListPage(currentPage - 1)}>Önceki sayfa</button><button type="button" className={button + ' border'} disabled={saving || currentPage + 1 >= pageCount} onClick={() => setListPage(currentPage + 1)}>Sonraki sayfa</button></div></nav>}
+        {section === 'library' && !reviewMode && <button className={button + ' text-slate-600 border w-full'} onClick={() => {
           const legacy = questionBankService.getAll().filter(q => q.isCustom && auditQuestion(q).errors.length === 0);
           const known = new Set(allKnown.map(questionVisualKey));
           const items = legacy.filter(q => { const k = questionVisualKey(q); if (known.has(k)) return false; known.add(k); return true; }).map(q => ({ ...q, id: crypto.randomUUID(), status: 'draft' as const }));
           setBatch(prev => [...items, ...prev]); setSection('compose'); setNotice(items.length + ' eski cihaz taslağı inceleme için alındı. Supabase’e kaydetmeden bulutta görünmez.');
         }}>Bu cihazdaki eski taslakları al</button>}
       </aside>
-      {active && report?.errors.length ? <article className="min-w-0 rounded-2xl border border-rose-200 bg-white p-4 sm:p-6 space-y-4"><h3 className="text-lg font-bold text-rose-900">Soru yayına uygun değil</h3><p className="text-sm text-slate-600">Kayıt: {active.id}. Bu taslak öğrencilere sunulmaz. Soruyu denetleyip doğrulanmış aileden yeni bir varyasyon üretin.</p><ul className="list-disc pl-5 text-sm text-rose-800 space-y-1">{report.errors.map((error, i) => <li key={i}>{error}</li>)}</ul>{report.reviewRequired.length > 0 && <ul className="list-disc pl-5 text-sm text-amber-900 space-y-1">{report.reviewRequired.map((reason, i) => <li key={i}>{reason}</li>)}</ul>}<button className={button + ' border border-slate-300'} onClick={() => exportPackage([active])}><FileDown size={16} />İnceleme için JSON indir</button></article> : active && report ? <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 space-y-6">
+      {active && report?.errors.length ? <article ref={previewRef} tabIndex={-1} className="scroll-mt-24 min-w-0 rounded-2xl border border-rose-200 bg-white p-4 sm:p-6 space-y-4"><h3 className="text-lg font-bold text-rose-900">Soru yayına uygun değil</h3><p className="text-sm text-slate-600">Kayıt: {active.id}. Bu taslak öğrencilere sunulmaz. Soruyu denetleyip doğrulanmış aileden yeni bir varyasyon üretin.</p><ul className="list-disc pl-5 text-sm text-rose-800 space-y-1">{report.errors.map((error, i) => <li key={i}>{error}</li>)}</ul>{report.reviewRequired.length > 0 && <ul className="list-disc pl-5 text-sm text-amber-900 space-y-1">{report.reviewRequired.map((reason, i) => <li key={i}>{reason}</li>)}</ul>}<button className={button + ' border border-slate-300'} onClick={() => exportPackage([active])}><FileDown size={16} />İnceleme için JSON indir</button></article> : active && report ? <article ref={previewRef} tabIndex={-1} className="scroll-mt-24 min-w-0 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 space-y-6">
+        {active.reviewedBy && active.releaseAuthorization?.individualHumanReview !== false && <p role="status" className="rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-950">Bu sorunun eğitmen incelemesi tamamlandı.</p>}
         {active.status === 'published' && active.releaseAuthorization?.individualHumanReview === false && !active.reviewedBy && <p role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">Bu soru otomatik denetim ve sahibinin yayına açma isteğiyle öğrencilerde görünür. Bireysel eğitmen incelemesi henüz tamamlanmadı.</p>}
         {report.reviewRequired.length > 0 && <div role="alert" className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900"><strong>Bu soru öğrencilere sunulamaz.</strong><ul className="list-disc pl-5 mt-2">{report.reviewRequired.map((reason, i) => <li key={i}>{reason}</li>)}</ul><p className="mt-2">Doğrulanmış soru ailesinden yeniden üretin. Metin veya açıklama değişiklikleri yeniden inceleme gerektirir.</p></div>}
-        <div className="flex flex-wrap justify-between gap-3 items-center"><div><p className="text-xs text-slate-500">{active.targetGrade}. sınıf · {COGNITIVE_CATEGORY_LABELS[active.category]} · Zorluk {active.difficulty}/6</p><h3 className="text-lg font-bold mt-1">Öğrenci önizlemesi</h3></div><span className={'px-3 py-1 rounded-full text-sm ' + (report.solverVerified ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900')}>{report.solverVerified ? 'Bağımsız kontroller geçti' : 'İnceleme gerekli · yayına kapalı'}</span></div>
+        <div className="flex flex-wrap justify-between gap-3 items-center"><div><p className="text-xs text-slate-500">{active.targetGrade}. sınıf · {COGNITIVE_CATEGORY_LABELS[active.category]} · Zorluk {active.difficulty}/6</p><h3 className="text-lg font-bold mt-1">Öğrenci önizlemesi</h3><p className="mt-1 break-all text-xs text-slate-500">Soru: {active.id}</p></div><span className={'px-3 py-1 rounded-full text-sm ' + (report.solverVerified ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900')}>{report.solverVerified ? 'Bağımsız kontroller geçti' : 'İnceleme gerekli · yayına kapalı'}</span><button type="button" className={button + ' border border-indigo-300 bg-indigo-50 text-indigo-800'} onClick={() => { reviewRef.current?.focus({ preventScroll: true }); reviewRef.current?.scrollIntoView({ block: 'start' }); }}>Onay bölümüne git</button></div>
         <p className="text-lg font-semibold leading-relaxed">{active.prompt}</p>
         {active.secondaryPrompt && <p className="text-sm text-slate-600">{active.secondaryPrompt}</p>}
         <QuestionRenderer question={active} />
@@ -285,14 +299,16 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
           <label className="block text-sm space-y-2"><span>Çözüm adımları · her satır bir adım</span><textarea className={field} rows={5} value={active.explanation.steps.join('\n')} disabled={saving} onChange={e => edit({ explanation: { ...active.explanation, steps: e.target.value.split('\n') } })} /></label>
           <div className="grid grid-cols-2 gap-4"><label className="text-sm space-y-2"><span>Doğru cevap</span><select className={field} value={active.correctOptionId} disabled={saving} onChange={e => edit({ correctOptionId: e.target.value })}>{active.options.map(o => <option key={o.id}>{o.id}</option>)}</select></label><label className="text-sm space-y-2"><span>Tahmini süre (sn)</span><input className={field} type="number" min={10} max={600} value={active.estimatedSeconds} disabled={saving} onChange={e => edit({ estimatedSeconds: Number(e.target.value) })} /></label></div>
         </div></details>
-        <section className="rounded-xl border border-slate-200 p-4 space-y-3">
-          <h4 className="font-bold flex gap-2 items-center"><ShieldCheck size={18} />Yayımlama öncesi denetim</h4>
+        <section ref={reviewRef} tabIndex={-1} aria-label="Eğitmen onayı ve yayınlama" className="scroll-mt-24 rounded-xl border border-indigo-300 bg-indigo-50/30 p-4 space-y-3">
+          <h4 className="font-bold flex gap-2 items-center"><ShieldCheck size={18} />Eğitmen onayı ve yayınlama</h4>
           {active.authoring && <p className="text-sm text-slate-600">Ölçülen beceri: {active.authoring.objective}</p>}
           {report.errors.length ? <ul className="list-disc pl-5 text-sm text-rose-800 space-y-1">{report.errors.map((e, i) => <li key={i}>{e}</li>)}</ul> : <p className="text-sm text-emerald-800 flex gap-2"><CheckCircle2 size={16} />Yapı, seçenek benzersizliği ve tekrar denetimi geçti.</p>}
           {report.warnings.map((w, i) => <p key={i} className="text-sm text-amber-900">{w}</p>)}
           {report.reviewRequired.map((reason,i)=><p key={`review-${i}`} className="text-sm text-amber-900">İnceleme gerekli: {reason}</p>)}
           {report.mechanics&&<div className="space-y-2 border-t pt-3" aria-label="Soru ve şık mekanik analizi"><p className="font-semibold text-sm">{report.mechanics.uniqueVisibleOptions}/4 farklı şık · {report.mechanics.matchingOptions} kural eşleşmesi · {report.mechanics.passed?'Mekanik denetim geçti':'Mekanik denetim tamamlanmadı'}</p>{report.mechanics.choices.map(choice=><p key={choice.id} className="text-sm"><strong>{choice.id}: {choice.ruleMatch?'Doğru aday':'Çeldirici'}</strong> · {active.authoring?.distractorNotes[choice.id]||choice.reason}</p>)}</div>}
           <fieldset className="space-y-3 border-t pt-3" disabled={saving}><legend className="text-sm font-semibold pt-3">Eğitmen incelemesi</legend>{checks.map((label, i) => <label key={label} className="flex items-start gap-3 text-sm leading-6 cursor-pointer"><input className="mt-1 w-4 h-4 accent-indigo-600" type="checkbox" checked={review[i]} onChange={e => setReview(previous => previous.map((v, n) => n === i ? e.target.checked : v))} />{label}</label>)}</fieldset>
+          <p className="text-sm text-slate-700">{review.filter(Boolean).length}/3 inceleme maddesi onaylandı. Yayındaki bir soru için de aynı düğmeyle bireysel eğitmen onayı kaydedilir.</p>
+          {!cloudReady && <p role="status" className="text-sm text-amber-900">Onay kaydetmek için soru kütüphanesinin yönetici oturumuyla yüklenmesi gerekiyor.</p>}
           <div className="flex flex-wrap gap-2 pt-2">
             <button className={button + ' bg-slate-900 text-white'} disabled={saving || !cloudReady || !!report.errors.length} onClick={() => void save('draft')}><Save size={16} />Taslağı kaydet</button>
             <button className={button + ' border text-slate-700'} disabled={saving || !cloudReady || !!report.errors.length} onClick={() => void save('review')}>İncelemeye al</button>

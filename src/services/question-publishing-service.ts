@@ -17,14 +17,18 @@ async function requireAdminUser() {
   if (typeof auth.authStateReady === 'function') await auth.authStateReady();
   const user = auth.currentUser;
   if (!user || !user.emailVerified) throw new Error('Yönetici oturumu gerekli.');
-  const token = await user.getIdTokenResult(true);
+  // A forced refresh emits an Auth event, closes AdminPortal while it verifies
+  // the claim, then remounts this loader and forces another refresh. Verify the
+  // current session instead; privileged writes are checked again by the API.
+  const token = await user.getIdTokenResult();
   if (token.claims.role !== 'admin') throw new Error('Yönetici yetkisi gerekli.');
   return user;
 }
 
-export async function loadQuestionLibrary(): Promise<StoredQuestion[]> {
+export async function loadQuestionLibrary(options: { publishedOnly?: boolean } = {}): Promise<StoredQuestion[]> {
   await requireAdminUser();
-  const snapshot = await getDocs(collection(db, 'questions'));
+  const ref = collection(db, 'questions');
+  const snapshot = await getDocs(options.publishedOnly ? query(ref, where('status', '==', 'published')) : ref);
   // Keep invalid legacy drafts visible so editors can inspect and repair them.
   // A remote failure must propagate; local data must never masquerade as cloud data.
   return snapshot.docs

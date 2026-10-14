@@ -77,6 +77,7 @@ import { AdminAiQuestionEngine } from './admin/AdminAiQuestionEngine';
 type AdminTab =
   | 'dashboard'
   | 'questions'
+  | 'question_review'
   | 'bulk_generator'
   | 'ai_engine'
   | 'studio'
@@ -98,7 +99,7 @@ const CATEGORY_ICONS_CONFIG: Record<string, { icon: any; color: string; bg: stri
 };
 
 export const AdminPanelView: React.FC = () => {
-  const [activeTab, updateActiveTab] = useState<AdminTab>('dashboard');
+  const [activeTab, updateActiveTab] = useState<AdminTab>(() => new URLSearchParams(window.location.search).get('section') === 'review' ? 'question_review' : 'dashboard');
   const pendingQuestions = useRef(false);
   const onPendingQuestions = useCallback((pending: boolean) => { pendingQuestions.current = pending; }, []);
   const setActiveTab = (tab: AdminTab) => {
@@ -167,6 +168,7 @@ export const AdminPanelView: React.FC = () => {
   const tabs: { id: AdminTab; label: string; icon: any; badge?: string }[] = [
     { id: 'dashboard', label: 'Genel Bakış', icon: Activity },
     { id: 'questions', label: 'Soru Bankası & Yönetim', icon: FileQuestion, badge: 'Havuz' },
+    { id: 'question_review', label: 'Eğitmen Onayı', icon: CheckCircle2, badge: 'İnceleme' },
     { id: 'bulk_generator', label: 'Toplu Soru Motoru', icon: Zap, badge: 'Turbo' },
     { id: 'ai_engine', label: 'Yapay Zeka Soru Üret', icon: Sparkles, badge: 'AI' },
     { id: 'studio', label: 'Soru Tasarım Stüdyosu', icon: Cpu, badge: 'Canlı' },
@@ -421,6 +423,7 @@ export const AdminPanelView: React.FC = () => {
               )}
 
               {/* TAB 2: QUESTIONS MANAGER & STUDIO */}
+              {activeTab === 'question_review' && <QuestionAuthoringWorkbench initialSection="library" reviewMode onPendingChanges={onPendingQuestions} />}
               {activeTab === 'questions' && (
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 p-2 rounded-2xl border border-slate-800">
