@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Download, 
   Trash2, 
@@ -127,6 +127,9 @@ export function AccountCenter() {
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [deletion, setDeletion] = useState<{ id: string; status: string; created_at?: string } | null>(null);
   const [copiedId, setCopiedId] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
+  const copyActive=useRef(true),copyTimer=useRef<ReturnType<typeof setTimeout>|null>(null),copyBusy=useRef(false);
+  useEffect(()=>{copyActive.current=true;return()=>{copyActive.current=false;if(copyTimer.current)clearTimeout(copyTimer.current);};},[]);
   const [historyError,setHistoryError]=useState(false);
   const [refreshHistory,setRefreshHistory]=useState(0);
 
@@ -192,10 +195,19 @@ export function AccountCenter() {
     }
   }
 
-  const handleCopyId = (id: string) => {
-    navigator.clipboard.writeText(id);
-    setCopiedId(true);
-    setTimeout(() => setCopiedId(false), 2000);
+  const handleCopyId = async (id: string) => {
+    if(copyBusy.current)return;
+    copyBusy.current=true;setIsCopying(true);setCopiedId(false);setNotice(null);
+    if(copyTimer.current)clearTimeout(copyTimer.current);
+    try{
+      if(!navigator.clipboard?.writeText)throw new Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(id);
+      if(!copyActive.current)return;
+      setCopiedId(true);setNotice({type:'success',message:'Talep kodu panoya kopyalandı.'});
+      copyTimer.current=setTimeout(()=>setCopiedId(false),2000);
+    }catch{
+      if(copyActive.current)setNotice({type:'error',message:'Talep kodu kopyalanamadı. Ekrandaki kodu seçip elle kopyalayabilirsiniz.'});
+    }finally{copyBusy.current=false;if(copyActive.current)setIsCopying(false);}
   };
 
   return (
@@ -288,9 +300,11 @@ export function AccountCenter() {
                 </code>
                 <button
                   type="button"
-                  onClick={() => handleCopyId(deletion.id)}
+                  onClick={() => void handleCopyId(deletion.id)}
+                  disabled={isCopying}
+                  aria-label={copiedId?'Talep kodu kopyalandı':'Talep numarasını kopyala'}
                   title="Talep numarasını kopyala"
-                  className="inline-flex items-center gap-1 rounded-md p-1 text-slate-500 hover:text-slate-800 dark:hover:text-zinc-200"
+                  className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-md p-2 text-slate-500 hover:text-slate-800 dark:hover:text-zinc-200 disabled:opacity-40"
                 >
                   {copiedId ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
                 </button>
