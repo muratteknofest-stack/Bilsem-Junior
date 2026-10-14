@@ -48,13 +48,13 @@ type AnswerApi = {
 /** Advance only after the server acknowledges the answer; reviewing never scores it again. */
 export async function saveAndAdvance(
   session: LearningSessionView, index: number, response: QuestionResponse, api: AnswerApi,
-  onSaved: (saved: LearningSessionView) => void,
+  onSaved: (saved: LearningSessionView) => void | Promise<void>,
 ) {
   if (session.result || (session.mode !== 'exam' && session.answers[String(index)])) {
     return { session, index };
   }
   const saved = await api.answer(session.id, index, response);
-  onSaved(saved); // Preserve the acknowledged answer even if finishing later fails.
+  await onSaved(saved); // Preserve the acknowledged answer even if finishing later fails.
   if (saved.result) return { session: saved, index };
   const next = nextUnansweredIndex(saved, index);
   if (next >= 0) return { session: saved, index: next };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useSyncExternalStore } from 'react';
 import { UserProfile, UserRole } from '../types';
 import {
   Zap, User, LogOut, Settings, Award, 
@@ -29,7 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   isSwitchingStudent = false
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [soundOn, setSoundOn] = useState(sound.enabled === true);
+  const soundOn = useSyncExternalStore(sound.subscribe, sound.getSnapshot, sound.getServerSnapshot);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -41,10 +41,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   const toggleSound = () => {
-    sound.playClick();
-    const isNowMuted = !soundOn;
-    sound.enabled = !isNowMuted;
-    setSoundOn(!isNowMuted);
+    sound.enabled = !sound.enabled;
+    if (sound.enabled) { sound.unlock(); sound.playClick(); }
   };
 
   const isLanding = currentRoute === 'landing' || !currentUser;

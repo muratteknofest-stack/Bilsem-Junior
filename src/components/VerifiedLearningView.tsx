@@ -1,3 +1,6 @@
+import { useReducedMotion } from 'motion/react';
+import { sound } from '../lib/sound';
+import { AnswerFeedbackLedger, feedbackDuration, type AnswerFeedback } from '../features/student/answer-feedback';
 import { FocusedQuestionScreen } from './FocusedQuestionScreen';
 import { LearningRefreshNotice } from './LearningRefreshNotice';
 import { ArrowLeft, ArrowRight, Clock3, Gamepad2, Sparkles, Trophy, Tablet, CheckCircle2 } from 'lucide-react';
@@ -24,6 +27,10 @@ import { isSchoolGrade } from '../features/questions/quality-policy';
 const button = 'min-h-11 rounded-xl bg-indigo-700 px-5 py-3 font-bold text-white disabled:opacity-50 focus-visible:outline-4 focus-visible:outline-indigo-300';
 interface Props { mode: LearningMode; initialCategory?: LearningCategory; initialTopic?: LearningTopic; reviewMistakeId?: string; onNavigateHome: () => void; }
 export function VerifiedLearningView({ mode, initialCategory = 'mixed', initialTopic = 'mixed', reviewMistakeId, onNavigateHome }: Props) {
+  const reducedMotion = useReducedMotion();
+  const feedbackLedger = useRef(new AnswerFeedbackLedger());
+  const [feedback, setFeedback] = useState<AnswerFeedback | null>(null);
+  const celebratedResult = useRef('');
   const [category, setCategory] = useState<LearningCategory>(isAvailableCategory(initialCategory) ? initialCategory : 'mixed');
   const [topic, setTopic] = useState<LearningTopic>(isLearningTopic(initialTopic) ? initialTopic : 'mixed');
   const [exam, setExam] = useState('mini');
@@ -61,7 +68,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', initialT
     }); }
     catch (err) { if (mounted.current) setError(err instanceof Error ? err.message : 'İşlem tamamlanamadı. Yeniden dene.'); return null; }
   };
-  const start = async () => { const saved = await run(() => {
+  const start = async () => { sound.unlock(); const saved = await run(() => {
     if (mode === 'adaptive' && session?.result) remember(session);
     return reviewMistakeId ? learningService.review(reviewMistakeId) : learningService.start(mode, topicCategory(topic, category), exam, difficulty, undefined, topic);
   }); if (saved && mounted.current) { const next = mode === 'exam' ? 0 : nextUnansweredIndex(saved); setIndex(next < 0 ? saved.questions.length - 1 : next); } };
@@ -113,8 +120,17 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', initialT
   const submit = async (pending = response) => {
     if (!session || !canSubmitLearningAnswer(session, index) || !pending || !isResponseComplete(q as BaseQuestion, pending)) return;
     await run(async () => {
-      const advanced = await saveAndAdvance(session, index, pending, learningService, saved => {
-        if (mounted.current) { setSession(saved); setResponse(saved.answers[String(index)]?.response as QuestionResponse ?? null); }
+      const advanced = await saveAndAdvance(session, index, pending, learningService, async saved => {
+        if (!mounted.current) return;
+        setSession(saved); setResponse(saved.answers[String(index)]?.response as QuestionResponse ?? null);
+        const confirmed = feedbackLedger.current.take(saved, index);
+        if (!confirmed) return;
+        setFeedback(confirmed);
+        if (confirmed.kind === 'correct') sound.playSuccess();
+        else if (confirmed.kind === 'incorrect') sound.playError();
+        else sound.playClick();
+        await new Promise(resolve => setTimeout(resolve, feedbackDuration(reducedMotion)));
+        if (mounted.current) setFeedback(null);
       });
       if (mode === 'adaptive' && !reviewMistakeId && advanced.session.result) {
         remember(advanced.session);
@@ -131,6 +147,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', initialT
   };
   const changeResponse = (pending: QuestionResponse) => {
     if (busy || !canSubmitLearningAnswer(session, index)) return;
+    sound.unlock();
     setResponse(pending);
     if (pending.mode === 'choice' && pending.optionId) void submit(pending);
   };
@@ -139,7 +156,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', initialT
     if (index < session.questions.length - 1) setIndex(index + 1);
     else await finish();
   };
-  const restart = () => { setSession(null); setResponse(null); setIndex(0); setError(''); };
+  const restart = () => { feedbackLedger.current.reset(); setFeedback(null); setSession(null); setResponse(null); setIndex(0); setError(''); };
   const chooseNewDifficulty = async () => {
     if (!session || busy || !await savePending()) return;
     const completed = session.result ? session : await run(() => learningService.finish(session.id));
@@ -147,9 +164,15 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', initialT
   };
   const answeredCount = session ? Object.keys(session.answers).length : 0;
   const isExam = mode === 'exam';
+  useEffect(() => {
+    if (!session?.result || (mode === 'adaptive' && !reviewMistakeId) || celebratedResult.current === session.id) return;
+    celebratedResult.current = session.id;
+    if (session.result.correctAnswers > 0) sound.playLevelUp();
+    else sound.playTransition();
+  }, [session?.id, session?.result, mode, reviewMistakeId]);
   if(session&&!session.result&&q&&renderQuestion) {
     const canVisit=(i:number)=>i>=0&&i<session.questions.length&&(mode==='exam'||!!session.answers[String(i)]||i===nextUnansweredIndex(session));
-    return <FocusedQuestionScreen question={renderQuestion} sessionKey={`${session.id}-${index}`} index={index} total={session.questions.length} remaining={remaining} busy={busy} submitted={submitted} expired={expired} response={response} error={error} onChange={changeResponse} onLeave={()=>void leave()} onPrevious={canVisit(index-1)?()=>void goTo(index-1):undefined} onNext={canVisit(index+1)?()=>void goTo(index+1):undefined} onRetry={needsFinish?()=>void finish():response?.mode==='choice'&&response.optionId?()=>void submit():undefined} onRetryLabel={needsFinish?'Sonuçları yükle':'Yeniden gönder'} onReloadResults={()=>void finish()} tools={<>
+    return <FocusedQuestionScreen feedback={feedback} question={renderQuestion} sessionKey={`${session.id}-${index}`} index={index} total={session.questions.length} remaining={remaining} busy={busy} submitted={submitted} expired={expired} response={response} error={error} onChange={changeResponse} onLeave={()=>void leave()} onPrevious={canVisit(index-1)?()=>void goTo(index-1):undefined} onNext={canVisit(index+1)?()=>void goTo(index+1):undefined} onRetry={needsFinish?()=>void finish():response?.mode==='choice'&&response.optionId?()=>void submit():undefined} onRetryLabel={needsFinish?'Sonuçları yükle':'Yeniden gönder'} onReloadResults={()=>void finish()} tools={<>
       <LearningRefreshNotice/>
       <p>Şıkkı seçince cevabın kaydedilir ve sonraki soru açılır. {isExam?'Çözümler deneme bitince gösterilir.':'Önceki soruların çözümlerini buradan inceleyebilirsin.'}</p>
       <nav aria-label="Soru seçimi">{session.questions.map((item,i)=>{const saved=session.answers[String(i)];const label=saved?.correct===undefined?(saved?'Yanıtlandı':'Boş'):(saved.correct?'Doğru':'Yanlış');return <button key={item.id} disabled={busy||!canVisit(i)} aria-current={i===index?'step':undefined} onClick={()=>void goTo(i)} aria-label={`${i+1}. soru, ${label}`}>{i+1} · {label}</button>;})}</nav>
