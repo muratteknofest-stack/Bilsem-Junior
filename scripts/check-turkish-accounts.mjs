@@ -110,15 +110,16 @@ try{
  await publish.click();await page.getByRole('status').filter({hasText:'Eğitmen onayı kaydedildi. Soru yayında.'}).waitFor();await page.getByText('Bu sorunun eğitmen incelemesi tamamlandı.',{exact:true}).waitFor();assert.equal(reviewSaveAttempts,2);assert.equal(adminRefreshes,0);assert.equal(reviewQuestions.filter(q=>q.reviewedBy).length,1);await page.getByText('49 soru, sahibinin isteğiyle',{exact:false}).waitFor();assert.equal(await checks.evaluateAll(nodes=>nodes.filter(node=>node.checked).length),0);assert.deepEqual(errors,[]);
  // A cold/failed admin cache must never masquerade as the actual published total.
  assert.equal(archiveLibraryLoads,0);holdActiveLibrary=true;activeLibraryFailure=true;
+ await page.setViewportSize({width:390,height:844});
  await page.goto('http://127.0.0.1:5186/tests/browser/turkish-accounts.html?mode=workbench');
- await page.getByRole('button',{name:'Menüyü Aç',exact:true}).click();await page.getByRole('button').filter({hasText:'Soru Tasarım Stüdyosu'}).click();
+ await page.getByRole('button',{name:'Menüyü Aç',exact:true}).click();await page.locator('aside').getByRole('button').filter({hasText:'Soru Tasarım Stüdyosu'}).click();
  await page.getByText('Canlı soru adetleri yükleniyor…',{exact:true}).waitFor();assert.equal(await page.getByText(/soru · .*44 konu/).count(),0);
  holdActiveLibrary=false;for(const release of heldLibrary.splice(0))release();
  await page.getByRole('alert').filter({hasText:'Canlı soru adetleri yüklenemedi.'}).waitFor();await page.getByRole('button',{name:'Yeniden yükle',exact:true}).click();
  await page.getByText('1. sınıf yayımlanan banka:',{exact:false}).waitFor();
  await page.getByRole('button',{name:/2\. Sınıf|2\. sınıf/}).first().click();await page.getByText('50 soru · 1/44 konu',{exact:false}).waitFor();assert.equal(archiveLibraryLoads,0);
  // Archives require an explicit load. The full curriculum remains available in grade one.
- await page.getByRole('button',{name:'Menüyü Aç',exact:true}).click();await page.getByRole('button').filter({hasText:'Soru Bankası & Yönetim'}).click();
+ await page.getByRole('button',{name:'Menüyü Aç',exact:true}).click();await page.locator('aside').getByRole('button').filter({hasText:'Soru Bankası & Yönetim'}).click();
  await page.getByRole('button',{name:'Bulut kütüphanesi',exact:true}).click();await page.getByLabel('Arşivlenmiş soruları da yükle').waitFor();assert.equal(archiveLibraryLoads,0);
  await page.getByLabel('Arşivlenmiş soruları da yükle').check();await page.getByText('51 kayıt',{exact:false}).waitFor();assert.ok(archiveLibraryLoads>0);
  await page.getByLabel('Arşivlenmiş soruları da yükle').uncheck();await page.getByText('50 kayıt',{exact:false}).waitFor();
