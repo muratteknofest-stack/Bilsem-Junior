@@ -1,4 +1,4 @@
-import React,{useState} from 'react';
+import React,{useEffect,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {AuthProvider,useAuth} from '../../src/contexts/AuthContext';
 import {LoginPage} from '../../src/components/LoginPage';
@@ -8,6 +8,8 @@ import {openLinkedParentSession,openLinkedStudentSession} from '../../src/servic
 import '../../src/index.css';
 function Fixture(){
  const {userProfile}=useAuth();const [mode,setMode]=useState(new URLSearchParams(location.search).get('mode')||'register');
+ // Like the real App, restore the verified role after AuthProvider's loading boundary remounts children.
+ useEffect(()=>{if(userProfile?.role==='parent'||userProfile?.role==='student'){const role=userProfile.role;setMode(current=>['admin','completed'].includes(current)?current:role);}},[userProfile?.id,userProfile?.role]);
  if(mode==='admin')return <main className="p-4"><AccountDeletionAction requestId="55555555-5555-4555-8555-555555555555" onCompleted={async()=>setMode('completed')}/></main>;
  if(mode==='completed')return <main><h1>Silme tamamlandı</h1></main>;
  if(mode==='parent')return <main className="mx-auto max-w-xl p-4"><h1>Veli oturumu doğrulandı</h1><AccountCenter/><button onClick={async()=>{await openLinkedStudentSession('22222222-2222-4222-8222-222222222222');setMode('student');}}>Bağlı öğrenciye geç</button></main>;
