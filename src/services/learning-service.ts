@@ -59,7 +59,7 @@ export const learningService = {
     return sessions.save(userId, payload as LearningSessionView);
   },
   review: (mistakeId: string) => request('review', { mistakeId }),
-  start: (mode: LearningMode, category: LearningCategory = 'mixed', exam = 'mini', difficulty: LearningDifficulty = 'mixed', locale?: 'tr'|'en', topic: LearningTopic = 'mixed') => request('start', { mode, category, exam, difficulty, ...(topic !== 'mixed' ? {topic} : {}), ...(locale ? {locale} : {}), expectedGrade: dataService.getCurrentUser().grade }),
+  start: (mode: LearningMode, category: LearningCategory = 'mixed', exam = 'mini', difficulty: LearningDifficulty = 'mixed', locale?: 'tr'|'en', topic: LearningTopic = 'mixed', questionCount?: number) => request('start', { mode, category, exam, difficulty, ...(topic !== 'mixed' ? {topic} : {}), ...(locale ? {locale} : {}), ...(mode === 'adaptive' && questionCount !== undefined ? {questionCount} : {}), expectedGrade: dataService.getCurrentUser().grade }),
   async changeGrade(grade: SchoolGrade): Promise<UserProfile> {
     const userId = auth.currentUser?.uid;
     const payload = await learningApi('grade', { method: 'PATCH', body: JSON.stringify({ grade }) });

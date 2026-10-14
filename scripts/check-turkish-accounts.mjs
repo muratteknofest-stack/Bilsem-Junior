@@ -61,7 +61,8 @@ try{
    assert.ok(LEARNING_TOPICS.includes(body.topic));assert.equal(body.category,topicCategory(body.topic,'mixed'));
    topicRequests.push(body);
    const level=body.difficulty==='mixed'?1:body.difficulty;
-   const questions=[0,1].map(i=>generateQuestion({profile:'complete',targetGrade:student.grade,type:body.topic,difficulty:level,seed:90000+topicRequests.length*997+i*37}));
+   const count=body.mode==='adaptive'?body.questionCount:2;
+   const questions=Array.from({length:count},(_,i)=>generateQuestion({profile:'complete',targetGrade:student.grade,type:body.topic,difficulty:level,seed:90000+topicRequests.length*997+i*37}));
    const s={id:crypto.randomUUID(),student_id:studentId,mode:body.mode,title:body.topic+' konu testi',questions:prepareLearningQuestions(questions),answers:{},created_at:new Date().toISOString(),expires_at:new Date(Date.now()+3600000).toISOString(),finished_at:null,result:null,revision:0,rewarded_xp:0};topicSessions.set(s.id,s);value=learningView(s);
   }
   else if(/^\/api\/learning\/[^/]+\/(answer|finish)$/.test(u.pathname)){
@@ -206,7 +207,7 @@ try{
   assert.equal(await page.getByLabel('Soru konusu',{exact:true}).locator('option').count(),45);
   for(const [width,height]of [[320,480],[390,844],[820,1180]]){await page.setViewportSize({width,height});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);}
   await page.getByLabel('Zorluk düzeyi',{exact:false}).selectOption('1');
-  await page.getByRole('button',{name:'Başla / devam et',exact:true}).click();
+  await page.getByRole('button',{name:'Yeni testi başlat',exact:true}).click();
   await page.getByRole('main',{name:'Soru çözme ekranı',exact:true}).waitFor();
   assert.equal(topicRequests.at(-1).topic,chosen);assert.equal(topicRequests.at(-1).expectedGrade,grade);assert.equal(topicRequests.at(-1).difficulty,1);
   await page.getByRole('button',{name:'Çalışmadan çık',exact:true}).click();
@@ -215,7 +216,7 @@ try{
   await page.getByRole('heading',{name:'Bugün hangi alanda çalışalım?',exact:true}).waitFor();
   assert.equal(await page.getByLabel('Soru konusu',{exact:true}).inputValue(),'mixed');
   await page.getByLabel('Soru konusu',{exact:true}).selectOption('punch_folding');
-  await page.getByRole('button',{name:'Başla / devam et',exact:true}).click();
+  await page.getByRole('button',{name:'Yeni testi başlat',exact:true}).click();
   await page.getByRole('main',{name:'Soru çözme ekranı',exact:true}).waitFor();assert.equal(topicRequests.at(-1).topic,'punch_folding');
  }
  assert.equal(topicRequests.length,8);assert.deepEqual(errors,[]);
@@ -251,7 +252,7 @@ try{
  await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
  await page.getByRole('button',{name:'Menüyü aç',exact:true}).click();await page.getByRole('button',{name:'Sesi aç',exact:true}).waitFor();
  await page.getByRole('button',{name:'Sesi aç',exact:true}).click();await page.getByRole('button',{name:'Menüyü kapat',exact:true}).click();
- await page.getByRole('button',{name:'Konu testini aç',exact:true}).click();await page.getByRole('button',{name:'Başla / devam et',exact:true}).click();
+ await page.getByRole('button',{name:'Konu testini aç',exact:true}).click();await page.getByRole('button',{name:'Yeni testi başlat',exact:true}).click();
  await page.getByRole('main',{name:'Soru çözme ekranı',exact:true}).waitFor();
  const reducedSession=[...topicSessions.values()].at(-1);await page.locator('#option-card-'+reducedSession.questions[0].correctOptionId).click();
  await page.locator('.zp-feedback[data-kind=correct]').waitFor();
@@ -260,10 +261,38 @@ try{
  await page.locator('.zp-focus-footer').getByText('2 / 2',{exact:true}).waitFor();await page.getByRole('button',{name:'Çalışmadan çık',exact:true}).click();
  await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
  await page.getByRole('button').filter({hasText:'Deneme Sınavı'}).first().click();await page.getByRole('heading',{name:'Denemeni seç',exact:true}).waitFor();
- await page.getByLabel('Soru konusu',{exact:true}).selectOption('paper_folding');await page.getByRole('button',{name:'Başla / devam et',exact:true}).click();
+ await page.getByLabel('Soru konusu',{exact:true}).selectOption('paper_folding');await page.getByRole('button',{name:'Yeni testi başlat',exact:true}).click();
  await page.getByRole('main',{name:'Soru çözme ekranı',exact:true}).waitFor();
  const examSession=[...topicSessions.values()].at(-1);assert.equal(examSession.mode,'exam');
  await page.locator('#option-card-'+examSession.questions[0].correctOptionId).click();await page.locator('.zp-feedback[data-kind=saved]').waitFor();
  assert.equal(await page.locator('.zp-feedback[data-kind=correct],.zp-feedback[data-kind=incorrect]').count(),0);assert.deepEqual(errors,[]);
- console.log('Turkish isolated browser: registration, grade, consent, confirmation retry, unconfirmed-parent rejection, verified login, export, history failure/retry, deletion request, secure family switching clipboard denial/success, review validation/refresh/empty state admin deletion stale-scope rejection/receipt validation/confirmed completion acknowledged correct/wrong feedback, failed-save silence, muted reload, reduced motion and hidden exam correctness; student App topic handoff/reset across all four grades at 320/390/820 px and actual admin portal MFA/educator review navigation/paging/three approvals/save retry passed. This is not a real email/pilot acceptance record.');
+ // Adaptive is a finite student-sized test, with a fresh draw on every re-entry.
+ for(const grade of [1,2,3,4]){
+  student.grade=grade;
+  await page.goto('http://127.0.0.1:5186/tests/browser/turkish-accounts.html?mode=student-app');
+  await page.getByRole('button',{name:/Adaptif Test/}).click();
+  await page.getByRole('heading',{name:'Sana uygun sorularla ilerle',exact:true}).waitFor();
+  const count=page.getByRole('spinbutton',{name:'Soru sayısı',exact:true}),begin=page.getByRole('button',{name:'Yeni testi başlat',exact:true});
+  assert.equal(await count.inputValue(),'10');
+  for(const invalid of ['', '0','51','2.5']){await count.fill(invalid);assert.equal(await begin.isDisabled(),true);}
+  await count.fill('3');assert.equal(await begin.isEnabled(),true);
+  await page.getByLabel('Soru konusu',{exact:true}).selectOption('matrix_3x3');
+  for(const [width,height]of [[320,480],[390,844],[820,1180]]){await page.setViewportSize({width,height});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);}
+  await begin.click();await page.getByRole('main',{name:'Soru çözme ekranı',exact:true}).waitFor();
+  const adaptive=[...topicSessions.values()].at(-1),starts=topicRequests.length;
+  assert.equal(adaptive.mode,'adaptive');assert.equal(adaptive.questions.length,3);assert.equal(topicRequests.at(-1).questionCount,3);
+  for(let i=0;i<3;i++){
+   await page.locator('.zp-focus-footer').getByText(`${i+1} / 3`,{exact:true}).waitFor();
+   await page.locator('#option-card-'+adaptive.questions[i].correctOptionId).click();
+  }
+  await page.getByRole('heading',{name:'Çalışman tamamlandı',exact:true}).waitFor();
+  assert.equal(topicRequests.length,starts,'Finishing the selected count must not start another test');
+  assert.equal(topicSessions.get(adaptive.id).result.totalQuestions,3);assert.equal(topicSessions.get(adaptive.id).result.correctAnswers,3);
+  await page.getByRole('button',{name:'Yeni çalışma',exact:true}).click();
+  assert.equal(await count.inputValue(),'3');await count.fill('2');await begin.click();
+  await page.locator('.zp-focus-footer').getByText('1 / 2',{exact:true}).waitFor();
+  const fresh=[...topicSessions.values()].at(-1);assert.notEqual(fresh.id,adaptive.id);assert.notDeepEqual(fresh.questions[0].visualConfig,adaptive.questions[0].visualConfig);
+  await page.getByRole('button',{name:'Çalışmadan çık',exact:true}).click();
+ }
+ console.log('Turkish isolated browser: registration, grade, consent, confirmation retry, unconfirmed-parent rejection, verified login, export, history failure/retry, deletion request, secure family switching clipboard denial/success, review validation/refresh/empty state admin deletion stale-scope rejection/receipt validation/confirmed completion acknowledged correct/wrong feedback, failed-save silence, muted reload, reduced motion and hidden exam correctness; adaptive count validation, finite 3-question completion and fresh 2-question restarts in grades 1–4; student App topic handoff/reset across all four grades at 320/390/820 px and actual admin portal MFA/educator review navigation/paging/three approvals/save retry passed. This is not a real email/pilot acceptance record.');
 }catch(error){console.error('Turkish component scenario failed:',error.message);if(page)console.error(await page.locator('body').innerText().catch(()=>'(page unavailable)'));throw error;}finally{await browser?.close();await server.close();}

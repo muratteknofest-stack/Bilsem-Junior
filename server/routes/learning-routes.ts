@@ -12,7 +12,7 @@ import { requireSupabaseAuth, requireVerifiedEmail, requireProfileRole, type Aut
 import { authenticatedRateLimitKey } from '../rate-limiters';
 import { generateQuestion } from '../../src/features/questions/generators';
 import { EDUCATION_PROFILES, isSchoolGrade } from '../../src/features/questions/quality-policy';
-import { fitsLearningSelection, learningStartSchema, sameLearningSelection, type LearningDifficulty, type LearningSelection } from '../../src/features/student/learning-selection';
+import { DEFAULT_ADAPTIVE_COUNT, fitsLearningSelection, learningStartSchema, sameLearningSelection, type LearningDifficulty, type LearningSelection } from '../../src/features/student/learning-selection';
 import { topicCategory, topicQuestionCount } from '../../src/features/student/learning-topics';
 import { questionVisualKey } from '../../src/features/questions/quality';
 import { loadPublishedLearningBank } from '../learning-bank';
@@ -93,7 +93,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     }
     const configuration = await readPlatformSettings();
     const settings = configuredExams(configuration.settings).find(e => e.id === exam)!;
-    const requestedCount = mode === 'exam' ? settings.count : mode === 'adaptive' ? 1 : 5;
+    const requestedCount = mode === 'exam' ? settings.count : mode === 'adaptive' ? parsed.data.questionCount ?? DEFAULT_ADAPTIVE_COUNT : 5;
     const bank = locale === 'en' ? {questions:englishBankForGrade(grade),bankVersion:ENGLISH_BANK_VERSION} : await loadPublishedLearningBank({ grade: profile.data.grade, difficulty, category, topic });
     const seen = new Set<string>();
     const topicCandidates = topic === 'mixed' ? bank.questions : bank.questions.filter(q => {
@@ -107,8 +107,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const selection: LearningSelection = { topic, grade: profile.data.grade, difficulty, category, exam: mode === 'exam' ? exam : '', count, bankVersion: bank.bankVersion, ...(locale === 'en' ? { locale } : {}) };
     const active = await client.from('learning_sessions').select('*').eq('student_id', student).eq('mode', mode).is('finished_at', null).maybeSingle();
     if (active.error) throw active.error;
-    if (active.data && Date.parse(active.data.expires_at) > Date.now() && sameLearningSelection(active.data.selection, selection)) return res.json(learningView(active.data as LearningSession));
-    if (active.data) await commit(student, active.data.id, finishLearningSession);
+    // Starting a test always draws a fresh shuffled set. Explicit GET/resume keeps its snapshot.
     const englishReady = (q: BaseQuestion) => (q.visualConfig as Record<string,unknown>)?.displayMode === 'colorful_board' && ENGLISH_AREAS.some(a => a.id === q.type);
     const candidates = topicCandidates.filter(q => fitsLearningSelection(q, selection) && (locale !== 'en' || englishReady(q)));
     if (locale === 'en' && candidates.length < count) throw new LearningError('This activity is not available in English at this level. Try mixed practice.', 422);
@@ -123,6 +122,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const latestProfile = await client.from('profiles').select('grade').eq('id', student).single();
     if (latestProfile.error) throw latestProfile.error;
     if (latestProfile.data.grade !== selection.grade) throw new LearningError('Sınıfın değişti. Yeni sınıfınla tekrar başla.', 409);
+    if (active.data) await commit(student, active.data.id, finishLearningSession);
     const now = new Date(), seconds = mode === 'exam' ? settings.seconds : 3600;
     const session = { id: randomUUID(), student_id: student, mode, title: topic !== 'mixed' ? `${QUESTION_TYPE_LABELS[topic]} · ${mode === 'exam' ? 'Konu denemesi' : 'Konu testi'}` : mode === 'exam' ? settings.title : mode === 'adaptive' ? 'Adaptif çalışma' : category === 'mixed' ? 'Karışık pratik' : COGNITIVE_CATEGORY_LABELS[category as keyof typeof COGNITIVE_CATEGORY_LABELS], questions: prepareLearningQuestions(questions), answers: {}, created_at: now.toISOString(), expires_at: new Date(now.getTime() + seconds * 1000).toISOString(), finished_at: null, result: null };
     const inserted = await client.from('learning_sessions').insert({ ...session, selection }).select('*').single();
