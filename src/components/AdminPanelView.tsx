@@ -58,7 +58,7 @@ import {
   DIFFICULTY_LABELS,
   ALL_COGNITIVE_CATEGORIES
 } from '../types';
-import { ALL_QUESTION_TYPES, generateQuestionByType } from '../features/questions/generators';
+import { ALL_QUESTION_TYPES, generateQuestion, generateQuestionByType } from '../features/questions/generators';
 import { validateQuestion } from '../features/questions/validator';
 
 // Modular Admin Components
@@ -120,21 +120,23 @@ export const AdminPanelView: React.FC = () => {
   const [studioDifficulty, setStudioDifficulty] = useState<DifficultyLevel>(2);
   const [studioGeneratedQuestion, setStudioGeneratedQuestion] = useState<BaseQuestion>(() => {
     try {
-      return generateQuestionByType('matrix_2x2', 42, 2);
+      return generateQuestion({profile:'complete',type:'matrix_2x2',seed:42,difficulty:2,targetGrade:1});
     } catch {
       return questionBankService.getAll()[0];
     }
   });
 
-  const handleStudioGenerate = (type?: QuestionType, seed?: number, diff?: DifficultyLevel) => {
+  const [studioError, setStudioError] = useState<string | null>(null);
+  const handleStudioGenerate = (type?: QuestionType, seed?: number, diff?: DifficultyLevel, grade?: 1|2|3|4) => {
     const t = type ?? studioType;
     const s = seed ?? studioSeed;
     const d = diff ?? studioDifficulty;
     try {
-      const q = generateQuestionByType(t, s, d);
-      setStudioGeneratedQuestion(q);
+      const targetGrade=grade||studioGeneratedQuestion.targetGrade||1;
+      const q = generateQuestion({profile:'complete',type:t,seed:s,difficulty:d,targetGrade});
+      setStudioGeneratedQuestion(q);setStudioSeed(q.seed);setStudioDifficulty(q.difficulty);setStudioError(null);
     } catch (err) {
-      console.error('Failed to generate in studio:', err);
+      setStudioError(err instanceof Error?err.message:'Soru üretilemedi.');
     }
   };
 
@@ -142,7 +144,8 @@ export const AdminPanelView: React.FC = () => {
     setStudioType(type);
     setStudioSeed(seed);
     setStudioDifficulty(diff);
-    handleStudioGenerate(type, seed, diff);
+    const stored=questionBankService.getAll().filter(q=>q.type===type&&q.seed===seed&&q.difficulty===diff).sort((a,b)=>Number(b.status==='published')-Number(a.status==='published'))[0];
+    if(stored){setStudioGeneratedQuestion(structuredClone(stored));setStudioError(null);}else handleStudioGenerate(type,seed,diff);
     setActiveTab('studio');
     sound.playClick();
   };
@@ -508,6 +511,7 @@ export const AdminPanelView: React.FC = () => {
                   difficulty={studioDifficulty}
                   onDifficultyChange={setStudioDifficulty}
                   generatedQuestion={studioGeneratedQuestion}
+                  generationError={studioError}
                   onGenerate={handleStudioGenerate}
                   onOpenWizard={() => setShowCreateWizard(true)}
                 />

@@ -13,6 +13,7 @@ import { generateWorkshopQuestion as generateWorkshopV1 } from './workshop-engin
 import { WORKSHOP_ENGINE_VERSION } from './workshop-mechanics';
 import { WORKSHOP_TYPES } from './topic-catalog';
 import { analyzeQuestionMechanics, visibleOptionKey, type MechanicalReport } from './mechanical-quality';
+import { COMPLETE_ENGINE, generateCompleteCurriculum } from './complete-curriculum';
 
 export interface QualityReport {
   errors: string[];
@@ -36,7 +37,8 @@ export type QuestionVisualReference = Pick<BaseQuestion, 'id' | 'type' | 'visual
   options: Array<Pick<BaseQuestion['options'][number], 'visualData'>>;
 };
 export function questionVisualKey(q: QuestionVisualReference): string {
-  return fingerprint({ type: q.type, board: q.visualConfig, choices: q.options?.map(o => visibleOptionKey(o.visualData)).sort() });
+  const board=(q.visualConfig as Record<string,unknown>)?.displayMode==='curriculum_board'?Object.fromEntries(Object.entries(q.visualConfig as Record<string,unknown>).filter(([k])=>k!=='grade')):q.visualConfig;
+  return fingerprint({ type: q.type, board, choices: q.options?.map(o => visibleOptionKey(o.visualData)).sort() });
 }
 export function auditQuestion(value: unknown, existing: QuestionVisualReference[] = []): QualityReport {
   const result: QualityReport = { errors: [], warnings: [], solverVerified: false, fingerprint: '', reviewRequired: [] };
@@ -58,6 +60,15 @@ export function auditQuestion(value: unknown, existing: QuestionVisualReference[
     if (!Number.isFinite(q.estimatedSeconds) || q.estimatedSeconds < 10 || q.estimatedSeconds > 600) result.errors.push('Tahmini süre 10–600 saniye arasında olmalı.');
     if (!q.visualConfig || typeof cfg?.displayMode !== 'string') result.errors.push('Görsel gösterim yapılandırması eksik.');
     if (!Array.isArray(q.skills) || q.skills.length === 0) result.warnings.push('Ölçülen beceriyi belirtin.');
+    if(cfg?.displayMode==='curriculum_board') {
+      if(q.authoring?.engine!==COMPLETE_ENGINE||!isSchoolGrade(q.targetGrade))result.errors.push('Müfredat sürümü veya hedef sınıf tanınmıyor.');
+      else {
+        const reference=generateCompleteCurriculum(q.type,q.seed,q.difficulty,q.targetGrade);
+        for(const field of ['prompt','secondaryPrompt','explanation','visualConfig','category','authoring'] as const)if(fingerprint(q[field])!==fingerprint(reference[field]))result.reviewRequired.push('Müfredat şablonu değişmiş: '+field);
+        const options=(x:BaseQuestion)=>x.options.map(({id,label,visualData})=>({id,label,visualData})).sort((a,b)=>a.id.localeCompare(b.id));
+        if(fingerprint(options(q))!==fingerprint(options(reference)))result.reviewRequired.push('Müfredat seçenekleri değiştirilmiş.');
+      }
+    }
     const actual = q.options.map(o => fingerprint(o.visualData));
     if (new Set(actual).size !== q.options.length) result.errors.push('Görünür içerikleri aynı olan seçenekler var.');
     if (q.options.some(o => o.visualData === undefined || o.visualData === null)) result.errors.push('Boş seçenek içeriği var.');

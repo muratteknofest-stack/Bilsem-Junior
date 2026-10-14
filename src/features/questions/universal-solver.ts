@@ -6,6 +6,7 @@ import { generateVisualFingerprint as fingerprint } from './fingerprint';
 import { solveWorkshopBoard, type WorkshopBoard, type WorkshopValue } from './workshop-mechanics';
 import { independentlyMatchesWorkshop } from './workshop-independent-solver';
 import { WORKSHOP_TYPES } from './topic-catalog';
+import { solveComplete, independentlyMatchesComplete, type CompleteBoard, type CompleteValue } from './complete-curriculum';
 
 export interface UniversalSolverResult {
   canSolve: boolean;
@@ -26,6 +27,15 @@ export function solveQuestion(q: BaseQuestion): UniversalSolverResult {
   });
   try {
     if (!q || !Array.isArray(q.options) || q.options.length !== 4 || q.options.some(o => !o)) return failure('Dört geçerli seçenek gerekli.');
+    if ((q.visualConfig as Record<string, unknown>)?.displayMode === 'curriculum_board') {
+      const b=q.visualConfig as unknown as CompleteBoard;
+      if(b.kind!==q.type||b.grade!==q.targetGrade)return failure('Müfredat konusu veya sınıfı uyuşmuyor.');
+      const independent=q.options.filter(o=>independentlyMatchesComplete(b,o.visualData as CompleteValue));
+      const expected=solveComplete(b,q.options.map(o=>o.visualData as CompleteValue));
+      const primary=q.options.filter(o=>fingerprint(o.visualData)===fingerprint(expected));
+      if(primary.length!==1||independent.length!==1||primary[0].id!==independent[0].id)return failure('Müfredat için tek doğru aday kanıtlanamadı.',true);
+      return {canSolve:true,isMatch:primary[0].id===q.correctOptionId,expectedAnswerId:primary[0].id,expectedFingerprint:fingerprint(expected),solverMethod:'CurriculumCandidateProof-v1',confidence:1,ambiguityDetected:false,proofSteps:['Görünür verilenler ve aday koşulları bağımsız denetlendi.','Tek uygun seçenek: '+primary[0].id]};
+    }
     if ((q.visualConfig as Record<string, unknown>)?.displayMode === 'colorful_board') {
       const b=q.visualConfig as unknown as ColorfulBoard;
       if(b.kind!==q.type)return failure('Konu ile çizim uyuşmuyor.');

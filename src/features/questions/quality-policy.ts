@@ -69,6 +69,16 @@ export function inspectEducation(q: BaseQuestion, grade: SchoolGrade, age?: numb
   }
   if((q.visualConfig as Record<string,unknown>).displayMode==='colorful_board'){const c=q.visualConfig as unknown as ColorfulBoard;metrics.gridSize=c.source?.art==='mosaic'?c.source.size:0;metrics.itemCount=metrics.gridSize**2||c.layers?.length||1;}
   const audience: string[] = [], difficulty: string[] = [], visual: string[] = [];
+  if((q.visualConfig as Record<string,unknown>).displayMode==='curriculum_board'){
+    const c=q.visualConfig as import('./complete-curriculum').CompleteBoard;
+    metrics.gridSize=c.size;
+    metrics.itemCount=c.sequence?.filter(Boolean).length||c.matrix?.filter(Boolean).length||c.grids?.reduce((sum,g)=>sum+g.filter(Boolean).length,0)||c.source?.filter(Boolean).length||c.pieces?.length||0;
+    metrics.symbolCount=c.letters?.length||0;metrics.peopleCount=c.names?.length||0;
+    const nums=[...(c.values||[]),...(c.base||[]),...(c.examples||[]).flat(),...(c.equations||[]).map(r=>r[2]),c.input,...q.options.map(o=>(o.visualData as {textNumber?:unknown}).textNumber)].filter((n):n is number=>typeof n==='number');
+    metrics.maxNumber=Math.max(0,...nums);
+    if(nums.some(n=>!Number.isSafeInteger(n)||n<0)||metrics.maxNumber>p.maxNumber)difficulty.push('NUMBER_LOAD: Müfredat sayıları sınıf sınırını aşıyor.');
+    if(c.letters&&c.letters.length>p.maxSymbols)difficulty.push('WORKING_MEMORY: Harf sayısı sınıf sınırını aşıyor.');
+  }
   if (age !== undefined && (!Number.isInteger(age) || age < p.ages[0] || age > p.ages[1])) audience.push('AGE_PROFILE: Yaş seçilen sınıfın içerik profili dışında.');
   if (q.targetGrade !== undefined && q.targetGrade !== grade) audience.push('GRADE_MISMATCH: Soru sınıfı istekle uyuşmuyor.');
   if (q.ageGroup !== 'all' && q.ageGroup !== (grade <= 2 ? '1-2' : '3-4')) audience.push('AGE_GROUP: Sınıf grubu etiketi uyuşmuyor.');

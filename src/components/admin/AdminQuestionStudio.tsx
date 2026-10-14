@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   QuestionType,
   DifficultyLevel,
@@ -15,6 +15,8 @@ import { OptionRenderer } from '../../features/questions/renderers/OptionRendere
 import { VisualExplanationOverlay } from '../../features/questions/renderers/VisualExplanationOverlay';
 import { questionBankService } from '../../services/question-bank-service';
 import confetti from 'canvas-confetti';
+import { saveEditorialQuestion } from '../../services/question-publishing-service';
+import { EDUCATION_PROFILES } from '../../features/questions/quality-policy';
 import { sound } from '../../lib/sound';
 import {
   Sparkles,
@@ -48,8 +50,9 @@ interface AdminQuestionStudioProps {
   difficulty: DifficultyLevel;
   onDifficultyChange: (diff: DifficultyLevel) => void;
   generatedQuestion: BaseQuestion;
-  onGenerate: (type?: QuestionType, seed?: number, diff?: DifficultyLevel) => void;
+  onGenerate: (type?: QuestionType, seed?: number, diff?: DifficultyLevel, grade?: 1|2|3|4) => void;
   onOpenWizard?: () => void;
+  generationError?: string | null;
 }
 
 export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
@@ -62,11 +65,16 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
   generatedQuestion,
   onGenerate,
   onOpenWizard,
+  generationError,
 }) => {
   const [copiedJson, setCopiedJson] = useState(false);
   const [activeCanvasBg, setActiveCanvasBg] = useState<'white' | 'slate' | 'grid'>('white');
   const [viewMode, setViewMode] = useState<'visual' | 'json'>('visual');
   const [saveToast, setSaveToast] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [bank, setBank] = useState(() => questionBankService.getAll());
+  useEffect(() => questionBankService.subscribe(() => setBank(questionBankService.getAll())), []);
 
   // Interactive Student Solve Simulation Mode
   const [testMode, setTestMode] = useState<boolean>(false);
@@ -92,6 +100,7 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
 
   // Find initial grade from difficulty & type
   const detectGrade = (): 1 | 2 | 3 | 4 => {
+    if(generatedQuestion.targetGrade)return generatedQuestion.targetGrade;
     if (difficulty <= 2) return 1;
     if (difficulty === 3) return 2;
     if (difficulty === 4) return 3;
@@ -99,6 +108,12 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
   };
 
   const [selectedGrade, setSelectedGrade] = useState<1 | 2 | 3 | 4 | 'custom'>(detectGrade());
+
+  useEffect(() => {if(generatedQuestion.targetGrade)setSelectedGrade(generatedQuestion.targetGrade);}, [generatedQuestion.id]);
+  const targetGrade=selectedGrade==='custom'?(generatedQuestion.targetGrade||1):selectedGrade;
+  const liveRows=useMemo(()=>bank.filter(q=>q.status==='published'&&(q.targetGrade===targetGrade||q.targetGrades?.includes(targetGrade))),[bank,targetGrade]);
+  const liveCounts=useMemo(()=>{const counts=new Map<QuestionType,number>();for(const q of liveRows)counts.set(q.type,(counts.get(q.type)||0)+1);return counts;},[liveRows]);
+  const liveCount=(type:QuestionType)=>liveCounts.get(type)||0;
 
   // Active question combined with inline edits
   const activeQuestion: BaseQuestion = {
@@ -129,44 +144,40 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
       newType = cfg.recommendedTypes[0];
       onTypeChange(newType);
     }
-    onGenerate(newType, seed, newDiff);
+    onGenerate(newType, seed, newDiff, g);
   };
 
   const handleRandomize = () => {
     sound.playClick();
     const newSeed = Math.floor(Math.random() * 900000) + 100000;
     onSeedChange(newSeed);
-    onGenerate(selectedType, newSeed, difficulty);
+    onGenerate(selectedType, newSeed, difficulty, targetGrade);
   };
 
   const handleQuickSeed = (s: number) => {
     sound.playClick();
     onSeedChange(s);
-    onGenerate(selectedType, s, difficulty);
+    onGenerate(selectedType, s, difficulty, targetGrade);
   };
 
-  const handleSaveToBank = () => {
-    sound.playSuccess();
-    confetti({ particleCount: 50, spread: 65, origin: { y: 0.5 } });
-    const targetG = selectedGrade !== 'custom' ? selectedGrade : (generatedQuestion.targetGrade || 2);
-    const toSave: BaseQuestion = {
-      ...activeQuestion,
-      targetGrade: targetG,
-      targetGrades: [targetG],
-      isCustom: true,
-      status: 'draft',
-      updatedAt: new Date().toISOString(),
-    };
-    questionBankService.createCustomQuestion(toSave);
-    setSaveToast(`Soru taslak olarak kaydedildi; yayımlamadan önce inceleyin. (ID: ${toSave.id})`);
-    setTimeout(() => setSaveToast(null), 3500);
+  const handleSaveToBank = async () => {
+    if(saving)return;
+    setSaving(true);setSaveError(null);setSaveToast(null);
+    try {
+      const stored=questionBankService.getAll().find(q=>q.id===activeQuestion.id);
+      const preservePublished=stored?.status==='published';
+      const toSave={...activeQuestion,id:preservePublished?crypto.randomUUID():activeQuestion.id,targetGrade,targetGrades:[targetGrade],isCustom:true,status:'draft' as const};
+      const confirmed=await saveEditorialQuestion(toSave,'draft',preservePublished?0:Number((stored as BaseQuestion & {revision?:number})?.revision||0),false);
+      setSaveToast(`Taslak buluta kaydedildi. (ID: ${confirmed.id})`);
+      sound.playSuccess();confetti({particleCount:50,spread:65,origin:{y:.5}});
+    }catch(error){setSaveError(error instanceof Error?error.message:'Taslak kaydedilemedi.');}
+    finally{setSaving(false);}
   };
 
-  const copyJsonToClipboard = () => {
+  const copyJsonToClipboard = async () => {
     sound.playClick();
     const jsonStr = JSON.stringify(activeQuestion, null, 2);
-    navigator.clipboard.writeText(jsonStr);
-    setCopiedJson(true);
+    try{await navigator.clipboard.writeText(jsonStr);setCopiedJson(true);}catch{setSaveError('Kopyalanamadı. JSON indir seçeneğini kullanabilirsiniz.');}
     setTimeout(() => setCopiedJson(false), 2000);
   };
 
@@ -195,6 +206,11 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
 
   return (
     <div className="space-y-6">
+      {(generationError||saveError)&&<p role="alert" className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-rose-900">{generationError||saveError}</p>}
+      <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-indigo-950 text-sm" aria-live="polite">
+        {targetGrade}. sınıf yayımlanan banka: <strong>{liveRows.length.toLocaleString('tr-TR')} soru · {new Set(liveRows.map(q=>q.type)).size}/44 konu</strong>.
+        <span className="block">Yıldız öneriyi belirtir. Konu yanındaki adet, bu sınıfta gerçekten yayımlanan soruları gösterir.</span>
+      </div>
       {/* Toast Alert */}
       {saveToast && (
         <div className="fixed bottom-6 right-6 z-50 bg-emerald-600 text-white font-bold text-xs px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
@@ -276,7 +292,7 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
                 onChange={(e) => {
                   const t = e.target.value as QuestionType;
                   onTypeChange(t);
-                  onGenerate(t, seed, difficulty);
+                  onGenerate(t, seed, difficulty, targetGrade);
                 }}
                 className="w-full p-2.5 rounded-xl border border-slate-700 text-xs sm:text-sm font-semibold bg-slate-950 text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
               >
@@ -285,7 +301,7 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
                     <optgroup label={`⭐ ${activeGradeConfig.title} İçin Önerilen Motorlar`}>
                       {activeGradeConfig.recommendedTypes.map((t) => (
                         <option key={t} value={t}>
-                          ⭐ {QUESTION_TYPE_LABELS[t]}
+                          ⭐ {QUESTION_TYPE_LABELS[t]} — {liveCount(t)} soru
                         </option>
                       ))}
                     </optgroup>
@@ -294,7 +310,7 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
                         (t) => !activeGradeConfig.recommendedTypes.includes(t)
                       ).map((t) => (
                         <option key={t} value={t}>
-                          {QUESTION_TYPE_LABELS[t]}
+                          {QUESTION_TYPE_LABELS[t]} — {liveCount(t)} soru
                         </option>
                       ))}
                     </optgroup>
@@ -302,7 +318,7 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
                 ) : (
                   ALL_QUESTION_TYPES.map((t) => (
                     <option key={t} value={t}>
-                      {QUESTION_TYPE_LABELS[t]}
+                      {QUESTION_TYPE_LABELS[t]} — {liveCount(t)} soru
                     </option>
                   ))
                 )}
@@ -324,7 +340,7 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
                   onChange={(e) => {
                     const num = parseInt(e.target.value) || 1;
                     onSeedChange(num);
-                    onGenerate(selectedType, num, difficulty);
+                    onGenerate(selectedType, num, difficulty, targetGrade);
                   }}
                   className="flex-1 p-2.5 rounded-xl border border-slate-700 font-mono text-sm bg-slate-950 text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
                 />
@@ -364,12 +380,12 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
                 </span>
               </div>
               <div className="grid grid-cols-6 gap-1.5">
-                {([1, 2, 3, 4, 5, 6] as DifficultyLevel[]).map((lvl) => (
+                {([1, 2, 3, 4, 5, 6] as DifficultyLevel[]).filter(lvl=>lvl<=EDUCATION_PROFILES[targetGrade].maxDifficulty).map((lvl) => (
                   <button
                     key={lvl}
                     onClick={() => {
                       onDifficultyChange(lvl);
-                      onGenerate(selectedType, seed, lvl);
+                      onGenerate(selectedType, seed, lvl, targetGrade);
                     }}
                     className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                       difficulty === lvl
@@ -388,7 +404,7 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
               <button
                 onClick={() => {
                   sound.playClick();
-                  onGenerate();
+                  onGenerate(selectedType,seed,difficulty,targetGrade);
                 }}
                 className="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-purple-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
               >
@@ -500,11 +516,12 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
                 {/* Save to Bank Primary Button */}
                 <button
                   onClick={handleSaveToBank}
+                  disabled={saving||!!generationError}
                   className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
                   title="Soruyu Soru Bankası Havuzuna Kaydet"
                 >
                   <Save className="w-3.5 h-3.5" />
-                  <span>Havuza Kaydet</span>
+                  <span>{saving?'Kaydediliyor…':'Taslağı Buluta Kaydet'}</span>
                 </button>
 
                 {/* Test Mode Toggle */}
