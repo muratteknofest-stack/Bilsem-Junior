@@ -7,6 +7,8 @@ import { AVAILABLE_CATEGORIES } from './available-categories';
 // This is a selection policy version; the server fingerprints the actual published bank.
 export const LEARNING_BANK_POLICY = 'published-selection-3';
 export type LearningDifficulty = 'mixed' | DifficultyLevel;
+export const DEFAULT_ADAPTIVE_COUNT = 10;
+export const MAX_LEARNING_QUESTIONS = 50;
 export const learningStartSchema = z.object({
   topic: z.enum(['mixed', ...LEARNING_TOPICS]).default('mixed'),
   mode: z.enum(['practice', 'adaptive', 'exam']),
@@ -15,6 +17,7 @@ export const learningStartSchema = z.object({
   difficulty: z.union([z.literal('mixed'), z.number().int().min(1).max(6)]).default('mixed'),
   locale: z.enum(['tr', 'en']).optional(),
   expectedGrade: z.number().int().min(1).max(4).optional(),
+  questionCount: z.number().int().min(1).max(MAX_LEARNING_QUESTIONS).optional(),
 }).strict();
 export interface LearningSelection { topic?: LearningTopic; locale?: 'tr'|'en'; grade: SchoolGrade; difficulty: LearningDifficulty; category: string; exam: string; count: number; bankVersion: string; }
 export function difficultyChoices(grade: SchoolGrade) {

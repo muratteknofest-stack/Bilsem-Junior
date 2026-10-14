@@ -21,7 +21,7 @@ import { learningService } from '../services/learning-service';
 import { AnswerRequestGate, DeadlineFinishGate, canSubmitLearningAnswer, nextUnansweredIndex, saveAndAdvance } from '../features/student/answer-progression';
 import { AnswerHistory, type ReviewedAnswer } from './AnswerHistory';
 import { dataService } from '../services/data-service';
-import { difficultyChoices, type LearningDifficulty } from '../features/student/learning-selection';
+import { DEFAULT_ADAPTIVE_COUNT, MAX_LEARNING_QUESTIONS, difficultyChoices, type LearningDifficulty } from '../features/student/learning-selection';
 import { isSchoolGrade } from '../features/questions/quality-policy';
 
 const button = 'min-h-11 rounded-xl bg-indigo-700 px-5 py-3 font-bold text-white disabled:opacity-50 focus-visible:outline-4 focus-visible:outline-indigo-300';
@@ -35,6 +35,8 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', initialT
   const [topic, setTopic] = useState<LearningTopic>(isLearningTopic(initialTopic) ? initialTopic : 'mixed');
   const [exam, setExam] = useState('mini');
   const [difficulty, setDifficulty] = useState<LearningDifficulty>('mixed');
+  const [questionCount, setQuestionCount] = useState(String(DEFAULT_ADAPTIVE_COUNT));
+  const validQuestionCount = /^\d+$/.test(questionCount) && Number(questionCount) >= 1 && Number(questionCount) <= MAX_LEARNING_QUESTIONS;
   const selectedGrade = dataService.getCurrentUser().grade;
   const grade = isSchoolGrade(selectedGrade) ? selectedGrade : 1;
   const [exams, setExams] = useState<Array<{id: string; title: string; count: number; seconds: number}>>([...LEARNING_EXAMS]);
@@ -68,9 +70,8 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', initialT
     }); }
     catch (err) { if (mounted.current) setError(err instanceof Error ? err.message : 'İşlem tamamlanamadı. Yeniden dene.'); return null; }
   };
-  const start = async () => { sound.unlock(); const saved = await run(() => {
-    if (mode === 'adaptive' && session?.result) remember(session);
-    return reviewMistakeId ? learningService.review(reviewMistakeId) : learningService.start(mode, topicCategory(topic, category), exam, difficulty, undefined, topic);
+  const start = async () => { if (mode === 'adaptive' && !validQuestionCount) return; sound.unlock(); const saved = await run(() => {
+    return reviewMistakeId ? learningService.review(reviewMistakeId) : learningService.start(mode, topicCategory(topic, category), exam, difficulty, undefined, topic, Number(questionCount));
   }); if (saved && mounted.current) { const next = mode === 'exam' ? 0 : nextUnansweredIndex(saved); setIndex(next < 0 ? saved.questions.length - 1 : next); } };
   const savePending = async () => {
     if (!session || mode !== 'exam' || session.result || Date.now() >= Date.parse(session.expiresAt)) return true;
@@ -132,15 +133,6 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', initialT
         await new Promise(resolve => setTimeout(resolve, feedbackDuration(reducedMotion)));
         if (mounted.current) setFeedback(null);
       });
-      if (mode === 'adaptive' && !reviewMistakeId && advanced.session.result) {
-        remember(advanced.session);
-        if (!mounted.current) return advanced.session;
-        // Keep the completed question visible and retryable if loading the next one fails.
-        setSession(advanced.session);
-        const nextSession = await learningService.start(mode, topicCategory(topic, category), exam, difficulty, undefined, topic);
-        if (mounted.current) setIndex(0);
-        return nextSession;
-      }
       if (mounted.current) setIndex(advanced.index);
       return advanced.session;
     });
@@ -165,7 +157,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', initialT
   const answeredCount = session ? Object.keys(session.answers).length : 0;
   const isExam = mode === 'exam';
   useEffect(() => {
-    if (!session?.result || (mode === 'adaptive' && !reviewMistakeId) || celebratedResult.current === session.id) return;
+    if (!session?.result || celebratedResult.current === session.id) return;
     celebratedResult.current = session.id;
     if (session.result.correctAnswers > 0) sound.playLevelUp();
     else sound.playTransition();
@@ -201,18 +193,19 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', initialT
       <div className="zp-welcome"><div className="zp-welcome-icon" aria-hidden="true">{isExam ? <Tablet size={42} /> : <Sparkles size={42} />}</div><div><p className="zp-eyebrow">{isExam ? 'Kendi hızında, gerçek sınav deneyimi' : 'Küçük adımlar, büyük keşifler'}</p><p className="zp-welcome-title">{isExam ? 'Tabletini hazırla.' : 'Zihnini oyuna davet et!'}</p></div></div>
       <h2 className="text-xl font-bold">{mode === 'exam' ? 'Denemeni seç' : mode === 'adaptive' ? 'Sana uygun sorularla ilerle' : 'Bugün hangi alanda çalışalım?'}</h2>
       <p className="font-semibold text-indigo-700">{grade}. sınıf soruları · Sınıfını öğrenci profilinden değiştirebilirsin.</p>
-      <p className="text-slate-600">{mode === 'exam' ? 'Cevaplarını sınav boyunca değiştirebilirsin. Sonuç ve açıklamalar bitirdiğinde gösterilir. Devam eden denemen varsa kaldığın yerden açılır.' : mode === 'adaptive' ? 'Çalışma geçmişine göre tekrar edebileceğin bir alan seçilir. Her sorudan sonra açıklamasını inceleyebilirsin.' : 'En fazla beş soruluk bir çalışma seni bekliyor. Yarım kalan çalışman varsa önce ona devam edebilirsin.'}</p>
+      <p className="text-slate-600">{mode === 'exam' ? 'Cevaplarını sınav boyunca değiştirebilirsin. Sonuç ve açıklamalar bitirdiğinde gösterilir.' : mode === 'adaptive' ? 'Soru sayını seç. Çalışma geçmişine göre sana uygun bir alan belirlenir; seçtiğin sayıda soruyu tamamlayınca sonuçlarını görürsün.' : 'En fazla beş soruluk bir çalışma seni bekliyor.'} Her yeni başlangıçta sorular karıştırılır; yakın zamanda gördüğün sorular yerine farklı sorulara öncelik verilir.</p>
       {!reviewMistakeId && <label className="block min-w-0 font-semibold"><span>Soru konusu</span><select aria-label="Soru konusu" value={topic} onChange={e => setTopic(e.target.value as LearningTopic)} disabled={busy} className="mt-2 block min-h-12 w-full min-w-0 rounded-xl border border-slate-300 bg-white p-3 text-base"><option value="mixed">Tüm konular · karışık</option>{LEARNING_TOPICS.map(type => <option key={type} value={type}>{QUESTION_TYPE_LABELS[type]}</option>)}</select><span className="mt-1 block text-sm font-normal text-slate-600">{topic === 'mixed' ? '44 konu arasından birini seçerek yalnızca o konuyu çalışabilirsin.' : 'Testte yalnızca seçtiğin konunun yayımlanmış soruları kullanılır. Az soru varsa test mevcut uygun soru sayısıyla açılır.'}</span></label>}
       {mode === 'practice' && topic === 'mixed' && <label className="block font-semibold">Çalışma alanı<select value={category} onChange={e => setCategory(e.target.value as LearningCategory)} disabled={busy} className="mt-2 block min-h-12 w-full rounded-xl border border-slate-300 bg-white p-3"><option value="mixed">Karışık pratik</option>{AVAILABLE_CATEGORIES.map(c => <option key={c} value={c}>{COGNITIVE_CATEGORY_LABELS[c]}</option>)}</select></label>}
       {topic !== 'mixed' && <p className="rounded-xl bg-indigo-50 p-3 font-semibold text-indigo-900">Seçilen konu: {QUESTION_TYPE_LABELS[topic]} · {grade}. sınıf</p>}
       {!reviewMistakeId && <label className="block font-semibold">Zorluk düzeyi<select value={difficulty} onChange={e => setDifficulty(e.target.value === 'mixed' ? 'mixed' : Number(e.target.value) as LearningDifficulty)} disabled={busy} className="mt-2 block min-h-12 w-full rounded-xl border border-slate-300 bg-white p-3"><option value="mixed">Karışık zorluk</option>{difficultyChoices(grade).map(d => <option key={d.value} value={d.value}>{d.label}</option>)}</select><span className="mt-1 block text-sm font-normal text-slate-600">Yalnızca sınıfına uygun seviyeler gösterilir. Seçimini değiştirirsen yeni bir çalışma başlar.</span></label>}
+      {mode === 'adaptive' && !reviewMistakeId && <label className="block font-semibold"><span>Kaç soru çözmek istersin?</span><input aria-label="Soru sayısı" aria-describedby="adaptive-count-help" aria-invalid={!validQuestionCount} type="number" inputMode="numeric" min={1} max={MAX_LEARNING_QUESTIONS} step={1} value={questionCount} onChange={e => setQuestionCount(e.target.value)} disabled={busy} className="mt-2 block min-h-12 w-full min-w-0 rounded-xl border border-slate-300 bg-white p-3 text-base"/><span id="adaptive-count-help" className="mt-1 block text-sm font-normal text-slate-600">1–{MAX_LEARNING_QUESTIONS} arasında bir tam sayı seç. Konu havuzu küçükse test mevcut uygun soru sayısıyla açılır.</span></label>}
       {mode === 'exam' && <fieldset className="flex flex-wrap gap-3"><legend className="mb-2 font-semibold">Deneme süresi</legend>{exams.map(e => <label key={e.id} className={`zp-exam-choice flex min-h-12 items-center gap-2 rounded-xl border border-slate-200 p-4 ${exam === e.id ? 'is-selected' : ''}`}><input type="radio" name="learning-exam" value={e.id} checked={exam === e.id} disabled={busy} onChange={() => setExam(e.id)} />{e.title} · {topic !== 'mixed' ? 'En fazla ' : ''}{e.count} soru · {e.seconds / 60} dakika</label>)}</fieldset>}
-      <button type="button" disabled={busy} onClick={() => void start()} className={button}>{busy ? 'Çalışman hazırlanıyor…' : 'Başla / devam et'}</button>
+      <button type="button" disabled={busy || (mode === 'adaptive' && !validQuestionCount)} onClick={() => void start()} className={button}>{busy ? 'Çalışman hazırlanıyor…' : 'Yeni testi başlat'}</button>
     </section> : <>
       {session.result && <section aria-label="Çalışma sonucu" className="zp-result space-y-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
         <Trophy size={38} aria-hidden="true" />
         <h2 className="text-xl font-extrabold">Çalışman tamamlandı</h2><p>{session.result.correctAnswers} doğru · {session.result.wrongAnswers} yanlış · {session.result.blankAnswers} boş · %{session.result.scorePercentage} başarı</p><p className="font-bold text-emerald-800">{session.result.xp} XP kazandın</p>
-        <p className="text-sm">Sorular arasında geçerek çözüm açıklamalarını inceleyebilirsin.</p><button type="button" disabled={busy} onClick={mode === 'adaptive' ? () => void start() : restart} className={button}>{mode === 'adaptive' ? 'Sıradaki soruya geç' : 'Yeni çalışma'}</button>
+        <p className="text-sm">Sorular arasında geçerek çözüm açıklamalarını inceleyebilirsin.</p><button type="button" disabled={busy} onClick={restart} className={button}>Yeni çalışma</button>
       </section>}
       {q && renderQuestion && <section className="zp-session space-y-5 p-4 sm:p-7">
         <div className="zp-round-header"><div><p className="zp-eyebrow">{COGNITIVE_CATEGORY_LABELS[q.category]}</p><p className="zp-round-title">{isExam ? 'Soru' : 'Sıradaki keşfin'} <span>{index + 1} / {session.questions.length}</span></p><p className="zp-round-detail">{q.targetGrade}. sınıf · Zorluk {q.difficulty}</p></div>{!session.result && <div className={`zp-timer ${remaining <= 60 ? 'zp-timer-low' : ''}`} role="timer" aria-label="Kalan süre"><Clock3 size={21} aria-hidden="true" /><span><small>Kalan süre</small>{Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}</span></div>}</div>
