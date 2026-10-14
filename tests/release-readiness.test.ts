@@ -114,7 +114,7 @@ function releaseFetch(overrides:Record<string,{status?:number;body?:string;heade
  };
 }
 test('live release checks distinguish free registration and disabled paid sales',async()=>{
- const report=await verifyPublicRelease(new URL('https://zekapark.vercel.app'),releaseFetch());assert.deepEqual(report,{checks:15,registrationOpen:true,paidSalesReady:false});
+ const report=await verifyPublicRelease(new URL('https://zekapark.vercel.app'),releaseFetch());assert.deepEqual(report,{checks:17,registrationOpen:true,paidSalesReady:false});
 });
 test('live release refuses sign-in walls, private exports, missing protection and indexing blocks',async()=>{
  const origin=new URL('https://zekapark.vercel.app');

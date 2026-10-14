@@ -25,9 +25,10 @@ test('API rejects standalone child signup, anonymous account access, malformed J
   try {
     const legacy = await fetch(base+'/api/register-student', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
     assert.equal(legacy.status,410); assert.equal((await legacy.json()).code,'FAMILY_REGISTRATION_REQUIRED');
-    for (const path of ['/api/account/export','/api/account/requests','/api/admin/support-requests','/api/challenges/today']) {
+    for (const path of ['/api/account/export','/api/account/requests','/api/admin/support-requests','/api/challenges/today','/api/admin/question-review-summary','/api/admin/support-requests/55555555-5555-4555-8555-555555555555/deletion']) {
       const response = await fetch(base+path); assert.equal(response.status,401); assert.match(response.headers.get('content-type') || '', /json/);
     }
+    const deletion = await fetch(base+'/api/admin/support-requests/55555555-5555-4555-8555-555555555555/complete-deletion',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});assert.equal(deletion.status,401);
     const malformed = await fetch(base+'/api/questions/report', {method:'POST',headers:{'Content-Type':'application/json'},body:'{'});
     assert.equal(malformed.status,400); assert.ok((await malformed.json()).requestId);
     const oversized = await fetch(base+'/api/questions/report', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ text:'x'.repeat(300000) })});

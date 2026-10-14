@@ -13,6 +13,7 @@ import { createClient } from '@supabase/supabase-js';
  *   npx tsx scripts/pilot-family-e2e.ts [optional-base-url]
  */
 
+if(process.env.PILOT_OWNER_CONSENT_ACKNOWLEDGED!=='true')throw Error('Gerçek pilot kaydı için veli tarafından koşullar ve pilot kapsamı açıkça onaylanmalı. Kayıt başlatılmadı.');
 const suppliedEmail = process.env.PILOT_PARENT_EMAIL?.trim();
 if (!suppliedEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(suppliedEmail) || /\.(internal|invalid|test)$/.test(suppliedEmail)) {
   throw new Error('PILOT_PARENT_EMAIL: doğrulama e-postasını alabilen gerçek pilot adresi gerekli. Test başlatılmadı.');
@@ -253,7 +254,7 @@ async function runPilot() {
 }
 
 runPilot().catch((err) => {
-  console.error('\n❌ Pilot test sırasında hata oluştu:', err);
+  console.error('Pilot tamamlanmadı. E-posta doğrulamasını, etkinleştirmeyi ve güvenli pilot ayarlarını kontrol edin. Kişisel bilgiler veya sağlayıcı yanıtı yazdırılmadı.');
   process.exit(1);
 });
 
