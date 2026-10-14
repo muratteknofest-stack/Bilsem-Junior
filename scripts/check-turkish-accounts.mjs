@@ -12,7 +12,7 @@ try{
  browser=await chromium.launch({headless:true});page=await browser.newPage({viewport:{width:390,height:844}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.route('https://turkish-fixture.invalid/**',async route=>{
   const u=new URL(route.request().url());let value=[];
-  if(u.pathname.includes('/auth/v1/token')){if(unconfirmed){unconfirmed=false;await route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({code:'email_not_confirmed',msg:'Email not confirmed'})});return;}value=session(activeRole);}
+  if(u.pathname.includes('/auth/v1/token')){if(unconfirmed){unconfirmed=false;await route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({error_code:'email_not_confirmed',code:'email_not_confirmed',msg:'Email not confirmed'})});return;}value=session(activeRole);}
   else if(u.pathname.includes('/auth/v1/user'))value=session(activeRole).user;
   else if(u.pathname.includes('/auth/v1/logout'))value={};
   else if(u.pathname.includes('/rest/v1/profiles'))value=u.searchParams.get('id')===`eq.${studentId}`?student:parent;

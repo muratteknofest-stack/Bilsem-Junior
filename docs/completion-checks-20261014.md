@@ -16,7 +16,7 @@ Fixture bileşenleri yalnızca geliştirme testi içindir; üretim paketine ekle
 
 ## Yedek ve geri dönüş
 
-Eski varsayılan CLI dökümüne ek olarak v2 arşiv Auth verilerini açıkça içerir. Oturum, refresh token, geçici doğrulama ve flow state verileri yeniden canlandırılmaz. Her dosyanın SHA-256 özeti şifreli arşivin içindedir; AES-GCM bütünlüğü ve dosya özetleri çözümden önce doğrulanır.
+Eski varsayılan CLI dökümüne ek olarak v2 arşiv Auth verilerini açıkça içerir. Oturum, refresh token, geçici doğrulama ve flow state verileri yeniden canlandırılmaz. Yönetilen Auth şema sürüm kayıtları ve instance yapılandırması hedef ortamdan korunur. Auth kullanıcı ve kimlik tablolarının COPY dökümü arşiv oluşturulmadan kontrol edilir. Her dosyanın SHA-256 özeti şifreli arşivin içindedir; AES-GCM bütünlüğü ve dosya özetleri çözümden önce doğrulanır.
 
 `npm run restore:database -- /özel/yedek.enc` yalnızca boş ve yerel izole Supabase hedefini kabul eder. `RESTORE_DATABASE_URL` ve `BACKUP_ENCRYPTION_KEY` güvenli ortamdan sağlanır; üretim/uzak hedefler reddedilir. Kaynak ve hedef Auth şema sürümleri uyumlu olmalıdır. Target varsayılan tablo yetkileri önce kapatılır; roller, uygulama şeması, Auth verileri ve uygulama verileri tek transaction içinde yüklenir. Auth/profil ve aile bağları doğrulanmadan başarı verilmez. Storage nesnelerinin dosya içeriği ayrıca yedeklenmelidir.
 

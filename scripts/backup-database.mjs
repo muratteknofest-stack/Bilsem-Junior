@@ -14,7 +14,7 @@ const secureUrl = url.toString();
 const dir = await mkdtemp(path.join(tmpdir(), 'zekapark-backup-'));
 try {
   const files = {};
-  for (const [name, flags] of [['roles.sql', ['--role-only']], ['schema.sql', []], ['data.sql', ['--data-only', '--use-copy']], ['auth-data.sql',['--schema','auth','--data-only','--use-copy','--exclude','auth.sessions,auth.refresh_tokens,auth.one_time_tokens,auth.flow_state,auth.mfa_challenges']]]) {
+  for (const [name, flags] of [['roles.sql', ['--role-only']], ['schema.sql', []], ['data.sql', ['--data-only', '--use-copy']], ['auth-data.sql',['--schema','auth','--data-only','--use-copy','--exclude','auth.sessions,auth.refresh_tokens,auth.one_time_tokens,auth.flow_state,auth.mfa_challenges,auth.schema_migrations,auth.instances']]]) {
     const file = path.join(dir, name);
     await new Promise((resolve, reject) => {
       const child = spawn('npx', ['--yes', 'supabase@2.81.3', 'db', 'dump', '--db-url', secureUrl, '--file', file, ...flags], { stdio: 'ignore', timeout: 15 * 60_000 });
@@ -23,6 +23,7 @@ try {
     });
     files[name] = await readFile(file, 'utf8');
     if (!files[name].trim()) throw Error('Boş yedek kabul edilmedi.');
+    if(name==='auth-data.sql'&&(!/COPY\s+auth\.users\s*\(/i.test(files[name])||!/COPY\s+auth\.identities\s*\(/i.test(files[name])))throw Error('Auth kullanıcı ve kimlik tablolarının yedeği doğrulanamadı.');
   }
   const manifest=backupManifest(files);verifyBackupManifest(manifest);
   const archive = Buffer.from(JSON.stringify(manifest));
