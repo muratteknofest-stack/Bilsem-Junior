@@ -26,6 +26,7 @@ jobs:
       - run: npm audit --audit-level=moderate
       - run: npm run vercel-build
       - run: npm run security:http
+      - run: npm run test:load
       - name: Install Chromium for mobile and tablet layout checks
         run: npx playwright install --with-deps chromium
       - name: Check question layouts on mobile and tablet viewports
@@ -61,9 +62,24 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  turkish-accounts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:turkish-accounts
+
   live-release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [quality, english-accounts]
+    needs: [quality, english-accounts, turkish-accounts]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

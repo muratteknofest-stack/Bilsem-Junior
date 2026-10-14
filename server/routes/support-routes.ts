@@ -8,6 +8,7 @@ import { sharedRateLimit } from '../shared-rate-limit';
 import { prepareQuestionReport, reviewRequestSchema, mayReviewRequest } from '../support-validation';
 import {readQuestionPages} from '../question-pages';
 import {exportLearningSession} from '../account-export';
+import {deletionConfirmation, deletionPreview, executeDeletion, DeletionError} from '../account-deletion';
 
 const routes = Router();
 const access = [requireSupabaseAuth, requireVerifiedEmail];
@@ -73,12 +74,30 @@ routes.get('/account/export', ...access, accountSecurityLimiter, sharedRateLimit
   return res.json({ format: 'zekapark-account-export-v1', exportedAt, profiles, progress: progress.data, dailyChallenges: challenges, learningSessions:sessions.map(exportLearningSession) });
 });
 
+routes.get('/admin/question-review-summary', ...access, requireProfileRole('admin'), adminAiLimiter, async(_req,res)=>{
+  const result=await getServiceClient().rpc('question_review_summary');
+  if(result.error)throw result.error;
+  return res.json({grades:result.data});
+});
 routes.get('/admin/support-requests', ...access, adminAiLimiter, requireProfileRole('admin'), async (req, res) => {
   const status = z.enum(['open','reviewing','resolved','dismissed']).safeParse(req.query.status || 'open');
   if (!status.success) return res.status(400).json({ error: 'Geçersiz durum.' });
   const { data, error } = await getServiceClient().from('support_requests').select('*').eq('status', status.data).order('created_at', { ascending: false }).limit(100);
   if (error) throw error;
   return res.json({ requests: data });
+});
+routes.get('/admin/support-requests/:id/deletion', ...access, requireProfileRole('admin'), accountSecurityLimiter, async(req,res)=>{
+  const id=z.uuid().safeParse(req.params.id);
+  if(!id.success)return res.status(400).json({error:'Talep kimliği geçersiz.'});
+  try{return res.json(await deletionPreview(id.data));}
+  catch(error){if(error instanceof DeletionError)return res.status(error.status).json({error:error.message});throw error;}
+});
+routes.post('/admin/support-requests/:id/complete-deletion', ...access, requireProfileRole('admin'), accountSecurityLimiter, sharedRateLimit('account-deletion-complete',6,3600), async(req:AuthenticatedRequest,res)=>{
+  const parsed=deletionConfirmation.safeParse(req.body);
+  const id=z.uuid().safeParse(req.params.id);
+  if(!parsed.success||!id.success)return res.status(400).json({error:'Silme kapsamı ve saklama incelemesi açıkça onaylanmalı.'});
+  try{return res.json(await executeDeletion(id.data,req.authUser!.uid,parsed.data.members));}
+  catch(error){if(error instanceof DeletionError)return res.status(error.status).json({error:error.message});throw error;}
 });
 routes.post('/admin/support-requests/:id', ...access, adminAiLimiter, requireProfileRole('admin'), sharedRateLimit('admin-support-review', 60, 600), async (req: AuthenticatedRequest, res) => {
   const parsed = reviewRequestSchema.safeParse(req.body);

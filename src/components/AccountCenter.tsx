@@ -127,9 +127,12 @@ export function AccountCenter() {
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [deletion, setDeletion] = useState<{ id: string; status: string; created_at?: string } | null>(null);
   const [copiedId, setCopiedId] = useState(false);
+  const [historyError,setHistoryError]=useState(false);
+  const [refreshHistory,setRefreshHistory]=useState(0);
 
   useEffect(() => {
     let active = true;
+    setIsLoadingRequests(true);setHistoryError(false);
     request('/api/account/requests')
       .then(body => {
         if (!active) return;
@@ -137,13 +140,13 @@ export function AccountCenter() {
         setDeletion(found);
       })
       .catch(() => {
-        // Silently tolerate request history lookup failures on initial render
+        if(active)setHistoryError(true);
       })
       .finally(() => {
         if (active) setIsLoadingRequests(false);
       });
     return () => { active = false; };
-  }, []);
+  }, [refreshHistory]);
 
   async function exportData() {
     setIsExporting(true);
@@ -264,7 +267,7 @@ export function AccountCenter() {
               <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
               <span>Talep durumu kontrol ediliyor…</span>
             </div>
-          ) : deletion ? (
+          ) : historyError ? <div role="alert" className="space-y-2 text-sm text-rose-800 dark:text-rose-300"><p>Silme talebinizin durumu yüklenemedi. Yeniden deneyin; yeni bir talep oluşturulmadı.</p><button type="button" onClick={()=>setRefreshHistory(v=>v+1)} className="min-h-11 rounded-lg border border-rose-300 px-3 py-2">Talep durumunu yeniden yükle</button></div> : deletion ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900/40 dark:bg-amber-950/20">
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-2">

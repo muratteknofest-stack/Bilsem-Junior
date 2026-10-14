@@ -4,7 +4,7 @@ import {pathToFileURL} from 'node:url';
 import {verifyHealthResponse} from './verify-live-release.mjs';
 
 export async function verifyPublicRelease(origin,fetcher=fetch){
- const checks=[['/',200],['/blog',200],['/reset-password',200],['/bilgi/gizlilik-ve-veriler',200],['/paketler',200],['/robots.txt',200],['/sitemap.xml',200],['/api/public/platform',200],['/api/public/shopier',200],['/api/account/export',401],['/api/learning/history',401],['/api/admin/platform-settings',401],['/api/release-unknown',404]];
+ const checks=[['/',200],['/blog',200],['/reset-password',200],['/bilgi/gizlilik-ve-veriler',200],['/paketler',200],['/robots.txt',200],['/sitemap.xml',200],['/api/public/platform',200],['/api/public/shopier',200],['/api/account/export',401],['/api/learning/history',401],['/api/admin/platform-settings',401],['/api/admin/question-review-summary',401],['/api/admin/support-requests/55555555-5555-4555-8555-555555555555/deletion',401],['/api/release-unknown',404]];
  let registrationOpen=false,paidSalesReady=false;
  for(const [path,status] of checks){
   const response=await fetcher(new URL(path,origin),{redirect:'manual',signal:AbortSignal.timeout(10_000)});
