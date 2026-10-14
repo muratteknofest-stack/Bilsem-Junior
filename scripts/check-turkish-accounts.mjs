@@ -10,7 +10,7 @@ const parentId='11111111-1111-4111-8111-111111111111',studentId='22222222-2222-4
 const parent={id:parentId,role:'parent',name:'Pilot veli',linked_student_ids:[studentId],xp:0,level:1},student={id:studentId,role:'student',name:'Kaşif',grade:2,student_code:'EXPLORER1234',linked_parent_id:parentId,xp:0,level:1};
 const admin={...parent,role:'admin',name:'Test yöneticisi',linked_student_ids:[]};
 const reviewQuestions=Array.from({length:50},(_,i)=>({...generateQuestion({type:'mirror_reflection',targetGrade:2,difficulty:3,seed:70000+i*991}),id:`fixture-review-${String(i+1).padStart(4,'0')}`,status:'published',revision:2,updatedAt:'2026-10-14T06:00:00Z',releaseAuthorization:{individualHumanReview:false},batchValidation:{editorReview:'pending'}}));
-let reviewSaveAttempts=0,adminAal='aal1';
+let reviewSaveAttempts=0,publishedReviewLoads=0,adminAal='aal1';
 let activeRole='parent',requests=[],resends=0,registrationCount=0,historyFails=true,deleteAttempts=0,unconfirmed=true,previewFault='',summaryAttempts=0,successfulCompletion=false;
 function session(role){const id=role==='student'?studentId:parentId,encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url'),metadata={provider:'email',role};return {access_token:`${encode({alg:'HS256',typ:'JWT'})}.${encode({sub:id,role:'authenticated',aal:role==='admin'?adminAal:'aal1',exp:Math.floor(Date.now()/1000)+3600,iat:Math.floor(Date.now()/1000),session_id:'99999999-9999-4999-8999-999999999999',app_metadata:metadata})}.dGVzdC1zaWduYXR1cmU`,refresh_token:'fixture-refresh',token_type:'bearer',expires_in:3600,user:{id,aud:'authenticated',email:role==='parent'?'parent@example.invalid':role==='admin'?'admin@example.invalid':'explorer1234@zekapark.com',email_confirmed_at:new Date().toISOString(),app_metadata:metadata,user_metadata:{},factors:role==='admin'?[{id:'88888888-8888-4888-8888-888888888888',factor_type:'totp',status:'verified',friendly_name:'Isolated fixture'}]:[],created_at:new Date().toISOString()}};}
 try{
@@ -21,7 +21,7 @@ try{
   else if(u.pathname.includes('/auth/v1/user'))value=session(activeRole).user;
   else if(u.pathname.includes('/auth/v1/logout'))value={};
   else if(u.pathname.includes('/rest/v1/profiles'))value=u.searchParams.get('id')===`eq.${studentId}`?student:activeRole==='admin'?admin:parent;
-  else if(u.pathname.includes('/rest/v1/questions')){assert.equal(activeRole,'admin');assert.equal(u.searchParams.get('status'),'eq.published');value=reviewQuestions.filter(q=>q.id>(u.searchParams.get('id')?.replace(/^gt\./,'')||'')).slice(0,Number(u.searchParams.get('limit')||500)).map(q=>({id:q.id,status:q.status,data:q}));}
+  else if(u.pathname.includes('/rest/v1/questions')){assert.equal(activeRole,'admin');if(u.searchParams.get('status')==='eq.published')publishedReviewLoads++;value=(u.searchParams.get('status')==='eq.published'?reviewQuestions:[]).filter(q=>q.id>(u.searchParams.get('id')?.replace(/^gt\./,'')||'')).slice(0,Number(u.searchParams.get('limit')||500)).map(q=>({id:q.id,status:q.status,data:q}));}
   else if(u.pathname.includes('/rest/v1/user_private_state'))value={user_id:activeRole==='parent'?parentId:studentId,values:{}};
   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(value)});
  });
@@ -86,7 +86,7 @@ try{
  await page.setViewportSize({width:390,height:844});activeRole='admin';await page.goto('http://127.0.0.1:5186/tests/browser/turkish-accounts.html?mode=workbench&section=review');
  await page.getByRole('heading',{name:'İki aşamalı yönetici doğrulaması',exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'Onayla ve yayımla',exact:true}).count(),0);assert.equal(reviewSaveAttempts,0);
  adminAal='aal2';await page.goto('http://127.0.0.1:5186/tests/browser/turkish-accounts.html?mode=workbench&section=review');
- await page.getByRole('heading',{name:'Eğitmen Onayı',exact:true,level:2}).waitFor();await page.getByText('50 soru, sahibinin isteğiyle',{exact:false}).waitFor();
+ await page.getByRole('heading',{name:'Eğitmen Onayı',exact:true,level:2}).waitFor();await page.getByText('50 soru, sahibinin isteğiyle',{exact:false}).waitFor();assert.ok(publishedReviewLoads>0);
  const list=page.locator('[aria-label="Soru listesi"]');assert.equal(await list.getByRole('button').count(),40);
  await page.getByRole('button',{name:'Menüyü Aç',exact:true}).click();await page.getByRole('button').filter({hasText:'Eğitmen Onayı'}).click();
  await page.getByRole('button',{name:'Sonraki sayfa',exact:true}).click();assert.equal(await list.getByRole('button').count(),10);await list.getByRole('button').first().click();await page.getByRole('heading',{name:'Öğrenci önizlemesi',exact:true}).waitFor();
