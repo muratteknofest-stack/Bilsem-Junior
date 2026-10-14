@@ -16,10 +16,11 @@ export function publishedBankVersion(questions: BaseQuestion[]) {
   return `${LEARNING_BANK_POLICY}:${questions.length ? 'published' : 'generated'}:${hash.digest('hex')}`;
 }
 
-export async function loadPublishedLearningBank(selection: Pick<LearningSelection, 'grade' | 'category' | 'difficulty'>) {
+export async function loadPublishedLearningBank(selection: Pick<LearningSelection, 'grade' | 'category' | 'difficulty' | 'topic'>) {
   const client = getServiceClient();
   const rows = await readQuestionPages<{ id: string; data: BaseQuestion }>((afterId, pageSize) => {
     let query = client.from('questions').select('id,data').eq('status', 'published').eq('target_grade', selection.grade);
+    if (selection.topic && selection.topic !== 'mixed') query = query.eq('type', selection.topic);
     if (selection.category !== 'mixed') query = query.eq('category', selection.category);
     if (selection.difficulty !== 'mixed') query = query.eq('difficulty', selection.difficulty);
     if (afterId) query = query.gt('id', afterId);

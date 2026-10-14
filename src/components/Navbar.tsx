@@ -90,7 +90,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Family Two-Way Role Switcher (Öğrenci <-> Veli) */}
         {!isLanding && role !== 'admin' && (
-          <div className="hidden sm:flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
+          <div className="hidden lg:flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
             <button
               type="button"
               disabled={isSwitchingStudent}
@@ -131,7 +131,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Admin Navigation Quick Switcher */}
         {!isLanding && role === 'admin' && (
-          <div className="hidden md:flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
+          <div className="hidden lg:flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
             <button
               onClick={() => {
                 sound.playClick();
@@ -164,7 +164,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         )}
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden lg:flex items-center gap-3">
           
           {/* Audio Toggle */}
           <button 
@@ -216,7 +216,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Mobile Menu Button */}
-        <div className="md:hidden flex items-center gap-2">
+        <div className="lg:hidden flex items-center gap-2">
           <button 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label={isMobileMenuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
@@ -235,7 +235,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="absolute top-full left-0 w-full bg-white dark:bg-slate-900 border-b border-zinc-200 dark:border-slate-800 p-4 flex flex-col gap-3 md:hidden z-50 shadow-lg"
+            className="absolute top-full left-0 w-full bg-white dark:bg-slate-900 border-b border-zinc-200 dark:border-slate-800 p-4 flex flex-col gap-3 lg:hidden z-50 shadow-lg"
           >
             <a href="/en/" lang="en" hrefLang="en" className="inline-flex min-h-11 items-center rounded-xl bg-indigo-50 px-3 text-sm font-bold text-indigo-800">English · Thinking games</a>
             <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-slate-800">

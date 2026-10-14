@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {createServer} from 'vite';
 import {chromium} from 'playwright';
 import {generateQuestion} from '../src/features/questions/generators/index.ts';
+import {LEARNING_TOPICS,topicCategory} from '../src/features/student/learning-topics.ts';
+import {prepareLearningQuestions,learningView} from '../server/learning-model.ts';
 import {prepareEditorialQuestion} from '../server/editorial-validation.ts';
 process.env.VITE_SUPABASE_URL='https://turkish-fixture.invalid';process.env.VITE_SUPABASE_PUBLISHABLE_KEY='sb_publishable_isolated_fixture';
 const server=await createServer({server:{host:'127.0.0.1',port:5186,strictPort:true}});await server.listen();let browser,page;
@@ -13,6 +15,7 @@ const reviewQuestions=Array.from({length:50},(_,i)=>({...generateQuestion({type:
 let reviewSaveAttempts=0,publishedReviewLoads=0,adminRefreshes=0,adminAal='aal1';
 let archiveLibraryLoads=0,holdActiveLibrary=false,activeLibraryFailure=false;const heldLibrary=[];
 const archivedQuestion={...reviewQuestions[0],id:'fixture-archived',status:'archived'};
+let topicRequests=[],topicSessions=new Map();
 let activeRole='parent',requests=[],resends=0,registrationCount=0,historyFails=true,deleteAttempts=0,unconfirmed=true,previewFault='',summaryAttempts=0,successfulCompletion=false;
 function session(role){const id=role==='student'?studentId:parentId,encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url'),metadata={provider:'email',role};return {access_token:`${encode({alg:'HS256',typ:'JWT'})}.${encode({sub:id,role:'authenticated',aal:role==='admin'?adminAal:'aal1',exp:Math.floor(Date.now()/1000)+3600,iat:Math.floor(Date.now()/1000),session_id:'99999999-9999-4999-8999-999999999999',app_metadata:metadata})}.dGVzdC1zaWduYXR1cmU`,refresh_token:'fixture-refresh',token_type:'bearer',expires_in:3600,user:{id,aud:'authenticated',email:role==='parent'?'parent@example.invalid':role==='admin'?'admin@example.invalid':'explorer1234@zekapark.com',email_confirmed_at:new Date().toISOString(),app_metadata:metadata,user_metadata:{},factors:role==='admin'?[{id:'88888888-8888-4888-8888-888888888888',factor_type:'totp',status:'verified',friendly_name:'Isolated fixture'}]:[],created_at:new Date().toISOString()}};}
 try{
@@ -42,6 +45,16 @@ try{
   else if(u.pathname==='/api/auth/resend-confirmation'){resends++;value={success:true,message:'Uygun bir hesap varsa doğrulama bağlantısı gönderilecektir.'};}
   else if(u.pathname==='/api/account/requests'){if(historyFails){historyFails=false;await route.fulfill({status:503,contentType:'application/json',body:'{"error":"Fixture unavailable"}'});return;}value={requests};}
   else if(u.pathname==='/api/account/export')value={format:'zekapark-account-export-v1',profiles:[parent,student],learningSessions:[]};
+  else if(u.pathname==='/api/learning/grade'){student.grade=body.grade;value={profile:{...student}};}
+  else if(u.pathname==='/api/learning/start'){
+   assert.equal(activeRole,'student');assert.equal(body.expectedGrade,student.grade);
+   assert.ok(LEARNING_TOPICS.includes(body.topic));assert.equal(body.category,topicCategory(body.topic,'mixed'));
+   topicRequests.push(body);
+   const level=body.difficulty==='mixed'?1:body.difficulty;
+   const questions=[0,1].map(i=>generateQuestion({profile:'complete',targetGrade:student.grade,type:body.topic,difficulty:level,seed:90000+topicRequests.length*997+i*37}));
+   const s={id:crypto.randomUUID(),student_id:studentId,mode:body.mode,title:body.topic+' konu testi',questions:prepareLearningQuestions(questions),answers:{},created_at:new Date().toISOString(),expires_at:new Date(Date.now()+3600000).toISOString(),finished_at:null,result:null,revision:0,rewarded_xp:0};topicSessions.set(s.id,s);value=learningView(s);
+  }
+  else if(u.pathname==='/api/learning/rewards')value={claims:[]};
   else if(u.pathname==='/api/admin/questions/save'){
    assert.equal(activeRole,'admin');assert.equal(adminAal,'aal2');assert.equal(body.status,'published');assert.equal(body.confirmedReview,true);assert.equal(body.expectedRevision,2);reviewSaveAttempts++;
    if(reviewSaveAttempts===1){await route.fulfill({status:503,contentType:'application/json',body:'{"error":"Yalıtılmış kayıt kesintisi"}'});return;}
@@ -156,5 +169,36 @@ try{
  assert.equal(await page.getByLabel('Soru ailesi').locator('option[value=matrix_3x3]').isDisabled(),false);
  await page.getByLabel('Adet',{exact:true}).fill('1');await page.getByRole('button',{name:'Taslak üret',exact:true}).click();await page.getByRole('status').filter({hasText:'1 taslak hazır.'}).waitFor();
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);assert.deepEqual(errors,[]);
- console.log('Turkish isolated browser: registration, grade, consent, confirmation retry, unconfirmed-parent rejection, verified login, export, history failure/retry, deletion request, secure family switching clipboard denial/success, review validation/refresh/empty state admin deletion stale-scope rejection/receipt validation/confirmed completion and actual admin portal MFA/educator review navigation/paging/three approvals/save retry passed. This is not a real email/pilot acceptance record.');
+ // The actual App must hand the dashboard's exact topic to the verified learning API.
+ activeRole='student';
+ for(const grade of [1,2,3,4]){
+  student.grade=grade;
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('http://127.0.0.1:5186/tests/browser/turkish-accounts.html?mode=student-app');
+  await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
+  const topics=page.getByRole('region',{name:'Konuya göre test',exact:true});
+  assert.equal(await topics.getByLabel('Test konusu',{exact:true}).locator('option').count(),44);
+  await topics.getByLabel('Test konusu',{exact:true}).selectOption(grade===1?'matrix_3x3':'paper_folding');
+  for(const [width,height]of [[320,480],[390,844],[820,1180]]){await page.setViewportSize({width,height});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);}
+  const chosen=await topics.getByLabel('Test konusu',{exact:true}).inputValue();
+  await topics.getByRole('button',{name:'Konu testini aç',exact:true}).click();
+  await page.getByRole('heading',{name:'Bugün hangi alanda çalışalım?',exact:true}).waitFor();
+  assert.equal(await page.getByLabel('Soru konusu',{exact:true}).inputValue(),chosen);
+  assert.equal(await page.getByLabel('Soru konusu',{exact:true}).locator('option').count(),45);
+  for(const [width,height]of [[320,480],[390,844],[820,1180]]){await page.setViewportSize({width,height});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);}
+  await page.getByLabel('Zorluk düzeyi',{exact:false}).selectOption('1');
+  await page.getByRole('button',{name:'Başla / devam et',exact:true}).click();
+  await page.getByRole('main',{name:'Soru çözme ekranı',exact:true}).waitFor();
+  assert.equal(topicRequests.at(-1).topic,chosen);assert.equal(topicRequests.at(-1).expectedGrade,grade);assert.equal(topicRequests.at(-1).difficulty,1);
+  await page.getByRole('button',{name:'Çalışmadan çık',exact:true}).click();
+  await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
+  await page.getByRole('button').filter({hasText:'Karışık Pratik'}).first().click();
+  await page.getByRole('heading',{name:'Bugün hangi alanda çalışalım?',exact:true}).waitFor();
+  assert.equal(await page.getByLabel('Soru konusu',{exact:true}).inputValue(),'mixed');
+  await page.getByLabel('Soru konusu',{exact:true}).selectOption('punch_folding');
+  await page.getByRole('button',{name:'Başla / devam et',exact:true}).click();
+  await page.getByRole('main',{name:'Soru çözme ekranı',exact:true}).waitFor();assert.equal(topicRequests.at(-1).topic,'punch_folding');
+ }
+ assert.equal(topicRequests.length,8);assert.deepEqual(errors,[]);
+ console.log('Turkish isolated browser: registration, grade, consent, confirmation retry, unconfirmed-parent rejection, verified login, export, history failure/retry, deletion request, secure family switching clipboard denial/success, review validation/refresh/empty state admin deletion stale-scope rejection/receipt validation/confirmed completion student App topic handoff/reset across all four grades at 320/390/820 px and actual admin portal MFA/educator review navigation/paging/three approvals/save retry passed. This is not a real email/pilot acceptance record.');
 }catch(error){console.error('Turkish component scenario failed:',error.message);if(page)console.error(await page.locator('body').innerText().catch(()=>'(page unavailable)'));throw error;}finally{await browser?.close();await server.close();}

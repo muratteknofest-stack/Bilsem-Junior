@@ -1,3 +1,7 @@
+import { StudentTopicPractice } from './student/StudentTopicPractice';
+import { isSchoolGrade } from '../features/questions/quality-policy';
+import { isDemoUser } from '../lib/demo-access';
+import type { QuestionType } from '../types';
 import { isAvailableCategory } from '../features/student/available-categories';
 import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
@@ -55,6 +59,7 @@ interface StudentDashboardProps {
   mistakes?: any[];
   onUserUpdate: (u: UserProfile) => void;
   onStartPractice: (category?: string) => void;
+  onStartTopicPractice?: (topic: QuestionType) => void;
   onStartAdaptive: () => void;
   onStartExam: () => void;
   onOpenMistakes: () => void;
@@ -134,6 +139,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   mistakes,
   onUserUpdate,
   onStartPractice,
+  onStartTopicPractice,
   onStartAdaptive,
   onStartExam,
   onOpenMistakes,
@@ -245,6 +251,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           onNavigate={onNavigate}
           prefersReducedMotion={prefersReducedMotion}
         />
+
+        {onStartTopicPractice && isSchoolGrade(activeUser.grade) && !isDemoUser(activeUser.id) && <StudentTopicPractice grade={activeUser.grade} onStart={onStartTopicPractice} />}
 
         <GamificationArena user={activeUser}
           thisWeekQuestions={weeklyStats.thisWeekTotal} lastWeekQuestions={weeklyStats.lastWeekTotal}

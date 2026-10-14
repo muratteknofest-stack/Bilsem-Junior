@@ -13,11 +13,13 @@ import { authenticatedRateLimitKey } from '../rate-limiters';
 import { generateQuestion } from '../../src/features/questions/generators';
 import { EDUCATION_PROFILES, isSchoolGrade } from '../../src/features/questions/quality-policy';
 import { fitsLearningSelection, learningStartSchema, sameLearningSelection, type LearningDifficulty, type LearningSelection } from '../../src/features/student/learning-selection';
+import { topicCategory, topicQuestionCount } from '../../src/features/student/learning-topics';
+import { questionVisualKey } from '../../src/features/questions/quality';
 import { loadPublishedLearningBank } from '../learning-bank';
 import { isQuestionReadyForStudents } from '../../src/features/questions/quality';
 import { loadRecentQuestionExposure, selectLearningQuestions } from '../learning-question-selection';
 import { AVAILABLE_CATEGORIES } from '../../src/features/student/available-categories';
-import { COGNITIVE_CATEGORY_LABELS, type BaseQuestion, type SkillMastery } from '../../src/types';
+import { QUESTION_TYPE_LABELS, COGNITIVE_CATEGORY_LABELS, type BaseQuestion, type SkillMastery } from '../../src/types';
 import { prepareQuestionReport } from '../support-validation';
 import { LearningError, answerLearningSession, finishLearningSession, learningTotals, learningView, learningUpdateView, prepareLearningQuestions, type LearningSession } from '../learning-model';
 import { eligibleReward, type RewardFacts } from '../learning-rewards';
@@ -72,7 +74,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const parsed = startSchema.safeParse(req.body);
     if (!parsed.success) throw new LearningError('Çalışma seçenekleri geçersiz.', 400);
     await requireLearningAccess(req.authUser!.uid);
-    const { mode, exam, locale } = parsed.data, student = req.authUser!.uid, client = getServiceClient();
+    const { mode, exam, locale, topic } = parsed.data, student = req.authUser!.uid, client = getServiceClient();
     const profile = await client.from('profiles').select('grade').eq('id', student).single();
     if (profile.error) throw profile.error;
     if (!isSchoolGrade(profile.data.grade)) throw new LearningError('Çalışma için 1–4. sınıf bilgisi gerekli.');
@@ -80,8 +82,9 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     if (parsed.data.expectedGrade !== undefined && parsed.data.expectedGrade !== profile.data.grade) throw new LearningError('Sınıfın başka bir ekranda değişti. Ana sayfaya dönüp yeniden başla.', 409);
     const difficulty = parsed.data.difficulty as LearningDifficulty;
     if (difficulty !== 'mixed' && difficulty > EDUCATION_PROFILES[profile.data.grade].maxDifficulty) throw new LearningError('Bu zorluk seçtiğin sınıf için uygun değil.', 400);
-    let category = mode === 'exam' ? 'mixed' : parsed.data.category;
-    if (mode === 'adaptive' && locale !== 'en') {
+    if (locale === 'en' && topic !== 'mixed') throw new LearningError('Topic selection is available in the Turkish curriculum.', 400);
+    let category = topicCategory(topic, mode === 'exam' ? 'mixed' : parsed.data.category);
+    if (mode === 'adaptive' && locale !== 'en' && topic === 'mixed') {
       const progress = await client.from('user_private_state').select('values').eq('user_id', student).maybeSingle();
       if (progress.error) throw progress.error;
       let masteries: SkillMastery[] = [];
@@ -90,21 +93,30 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     }
     const configuration = await readPlatformSettings();
     const settings = configuredExams(configuration.settings).find(e => e.id === exam)!;
-    const count = mode === 'exam' ? settings.count : mode === 'adaptive' ? 1 : 5;
-    const bank = locale === 'en' ? {questions:englishBankForGrade(grade),bankVersion:ENGLISH_BANK_VERSION} : await loadPublishedLearningBank({ grade: profile.data.grade, difficulty, category });
-    const selection: LearningSelection = { grade: profile.data.grade, difficulty, category, exam: mode === 'exam' ? exam : '', count, bankVersion: bank.bankVersion, ...(locale === 'en' ? { locale } : {}) };
+    const requestedCount = mode === 'exam' ? settings.count : mode === 'adaptive' ? 1 : 5;
+    const bank = locale === 'en' ? {questions:englishBankForGrade(grade),bankVersion:ENGLISH_BANK_VERSION} : await loadPublishedLearningBank({ grade: profile.data.grade, difficulty, category, topic });
+    const seen = new Set<string>();
+    const topicCandidates = topic === 'mixed' ? bank.questions : bank.questions.filter(q => {
+      if (q.type !== topic || q.targetGrade !== grade || q.category !== category || q.difficulty > EDUCATION_PROFILES[grade].maxDifficulty || (difficulty !== 'mixed' && q.difficulty !== difficulty) || !isQuestionReadyForStudents(q)) return false;
+      const key = questionVisualKey(q);
+      if (seen.has(key)) return false;
+      seen.add(key); return true;
+    });
+    const count = topicQuestionCount(topicCandidates, requestedCount, topic);
+    if (!count) throw new LearningError('Seçilen sınıf, konu ve zorlukta yayımlanmış soru yok. Zorluk filtresini değiştirip yeniden dene.', 422);
+    const selection: LearningSelection = { topic, grade: profile.data.grade, difficulty, category, exam: mode === 'exam' ? exam : '', count, bankVersion: bank.bankVersion, ...(locale === 'en' ? { locale } : {}) };
     const active = await client.from('learning_sessions').select('*').eq('student_id', student).eq('mode', mode).is('finished_at', null).maybeSingle();
     if (active.error) throw active.error;
     if (active.data && Date.parse(active.data.expires_at) > Date.now() && sameLearningSelection(active.data.selection, selection)) return res.json(learningView(active.data as LearningSession));
     if (active.data) await commit(student, active.data.id, finishLearningSession);
     const englishReady = (q: BaseQuestion) => (q.visualConfig as Record<string,unknown>)?.displayMode === 'colorful_board' && ENGLISH_AREAS.some(a => a.id === q.type);
-    const candidates = bank.questions.filter(q => fitsLearningSelection(q, selection) && (locale !== 'en' || englishReady(q)));
+    const candidates = topicCandidates.filter(q => fitsLearningSelection(q, selection) && (locale !== 'en' || englishReady(q)));
     if (locale === 'en' && candidates.length < count) throw new LearningError('This activity is not available in English at this level. Try mixed practice.', 422);
     const exposure = await loadRecentQuestionExposure(student);
-    const questions = selectLearningQuestions({ count, category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number],
+    const questions = selectLearningQuestions({ count, allowGeneration: topic === 'mixed', category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number],
       ...(locale === 'en' ? {categories:[...new Set(candidates.map(q=>q.category))]} : {}),
       candidates, exposure, canUse: q => fitsLearningSelection(q, selection) && isQuestionReadyForStudents(q) && (locale !== 'en' || englishReady(q)),
-      generate: nextCategory => { if (locale === 'en') throw new LearningError('English practice is temporarily unavailable. Please try again.', 503); return generateQuestion({ profile: 'professional', targetGrade: grade,
+      generate: nextCategory => { if (topic !== 'mixed') throw new LearningError('Seçilen konunun yayımlanmış soruları kullanılmalı.'); if (locale === 'en') throw new LearningError('English practice is temporarily unavailable. Please try again.', 503); return generateQuestion({ profile: 'professional', targetGrade: grade,
         difficulty: difficulty === 'mixed' ? randomInt(1, EDUCATION_PROFILES[grade].maxDifficulty + 1) as import('../../src/types').DifficultyLevel : difficulty,
         category: nextCategory, seed: randomInt(1, 2147483647) }); },
     });
@@ -112,7 +124,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     if (latestProfile.error) throw latestProfile.error;
     if (latestProfile.data.grade !== selection.grade) throw new LearningError('Sınıfın değişti. Yeni sınıfınla tekrar başla.', 409);
     const now = new Date(), seconds = mode === 'exam' ? settings.seconds : 3600;
-    const session = { id: randomUUID(), student_id: student, mode, title: mode === 'exam' ? settings.title : mode === 'adaptive' ? 'Adaptif çalışma' : category === 'mixed' ? 'Karışık pratik' : COGNITIVE_CATEGORY_LABELS[category as keyof typeof COGNITIVE_CATEGORY_LABELS], questions: prepareLearningQuestions(questions), answers: {}, created_at: now.toISOString(), expires_at: new Date(now.getTime() + seconds * 1000).toISOString(), finished_at: null, result: null };
+    const session = { id: randomUUID(), student_id: student, mode, title: topic !== 'mixed' ? `${QUESTION_TYPE_LABELS[topic]} · ${mode === 'exam' ? 'Konu denemesi' : 'Konu testi'}` : mode === 'exam' ? settings.title : mode === 'adaptive' ? 'Adaptif çalışma' : category === 'mixed' ? 'Karışık pratik' : COGNITIVE_CATEGORY_LABELS[category as keyof typeof COGNITIVE_CATEGORY_LABELS], questions: prepareLearningQuestions(questions), answers: {}, created_at: now.toISOString(), expires_at: new Date(now.getTime() + seconds * 1000).toISOString(), finished_at: null, result: null };
     const inserted = await client.from('learning_sessions').insert({ ...session, selection }).select('*').single();
     if (inserted.error?.code === '23505') { const concurrent = await client.from('learning_sessions').select('*').eq('student_id', student).eq('mode', mode).is('finished_at', null).single(); if (concurrent.error) throw concurrent.error; if (!sameLearningSelection(concurrent.data.selection, selection)) throw new LearningError('Başka bir ekranda farklı bir çalışma başlatıldı. Yeniden dene.', 409); return res.json(learningView(concurrent.data as LearningSession)); }
     if (inserted.error) throw inserted.error;

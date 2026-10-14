@@ -52,7 +52,7 @@ export function balancedCategoryPlan(count: number, category: CognitiveCategory 
 export function selectLearningQuestions(options: {
   count: number; category: CognitiveCategory | 'mixed'; candidates: BaseQuestion[];
   exposure: ReadonlyMap<string, number>; canUse: (question: BaseQuestion) => boolean;
-  generate: (category: CognitiveCategory) => BaseQuestion; randomIndex?: (max: number) => number; categories?: CognitiveCategory[];
+  generate: (category: CognitiveCategory) => BaseQuestion; randomIndex?: (max: number) => number; categories?: CognitiveCategory[]; allowGeneration?: boolean;
 }) {
   const randomIndex = options.randomIndex || randomInt;
   const configured = options.category === 'mixed' && options.categories ? shuffle([...new Set(options.categories)], randomIndex) : undefined;
@@ -82,7 +82,7 @@ export function selectLearningQuestions(options: {
   for (const category of plan) {
     let chosen = take(category, false);
     // Prefer a new proven variant before reusing a recently assigned bank question.
-    for (let attempt = 0; !chosen && attempt < 50; attempt++) {
+    for (let attempt = 0; !chosen && options.allowGeneration !== false && attempt < 50; attempt++) {
       try {
         const question = options.generate(category);
         if (question.category !== category || !options.canUse(question)) continue;
