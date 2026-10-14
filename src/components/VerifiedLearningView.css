@@ -108,3 +108,7 @@
   .zp-learning *, .zp-learning *::before, .zp-learning *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   .zp-game .zp-answer-option:hover:not(:disabled), .zp-game .zp-answer-option:active:not(:disabled) { transform: none; }
 }
+
+.zp-learning .zp-result{animation:zp-result-arrive .4s ease-out both;background:linear-gradient(145deg,#f0fff5,#e7f7ff);border:2px solid #a3dec1;box-shadow:0 6px 0 #bce5d955}.zp-learning .zp-result>svg{color:#cb971e;filter:drop-shadow(0 3px 0 #ddbe6855)}
+@keyframes zp-result-arrive{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(prefers-reduced-motion:reduce){.zp-learning .zp-result{animation:none}}

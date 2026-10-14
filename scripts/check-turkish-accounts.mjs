@@ -4,7 +4,7 @@ import {createServer} from 'vite';
 import {chromium} from 'playwright';
 import {generateQuestion} from '../src/features/questions/generators/index.ts';
 import {LEARNING_TOPICS,topicCategory} from '../src/features/student/learning-topics.ts';
-import {prepareLearningQuestions,learningView} from '../server/learning-model.ts';
+import {prepareLearningQuestions,learningView,answerLearningSession,finishLearningSession} from '../server/learning-model.ts';
 import {prepareEditorialQuestion} from '../server/editorial-validation.ts';
 process.env.VITE_SUPABASE_URL='https://turkish-fixture.invalid';process.env.VITE_SUPABASE_PUBLISHABLE_KEY='sb_publishable_isolated_fixture';
 const server=await createServer({server:{host:'127.0.0.1',port:5186,strictPort:true}});await server.listen();let browser,page;
@@ -15,11 +15,21 @@ const reviewQuestions=Array.from({length:50},(_,i)=>({...generateQuestion({type:
 let reviewSaveAttempts=0,publishedReviewLoads=0,adminRefreshes=0,adminAal='aal1';
 let archiveLibraryLoads=0,holdActiveLibrary=false,activeLibraryFailure=false;const heldLibrary=[];
 const archivedQuestion={...reviewQuestions[0],id:'fixture-archived',status:'archived'};
-let topicRequests=[],topicSessions=new Map();
+let topicRequests=[],topicSessions=new Map(),failNextLearningAnswer=false;
 let activeRole='parent',requests=[],resends=0,registrationCount=0,historyFails=true,deleteAttempts=0,unconfirmed=true,previewFault='',summaryAttempts=0,successfulCompletion=false;
 function session(role){const id=role==='student'?studentId:parentId,encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url'),metadata={provider:'email',role};return {access_token:`${encode({alg:'HS256',typ:'JWT'})}.${encode({sub:id,role:'authenticated',aal:role==='admin'?adminAal:'aal1',exp:Math.floor(Date.now()/1000)+3600,iat:Math.floor(Date.now()/1000),session_id:'99999999-9999-4999-8999-999999999999',app_metadata:metadata})}.dGVzdC1zaWduYXR1cmU`,refresh_token:'fixture-refresh',token_type:'bearer',expires_in:3600,user:{id,aud:'authenticated',email:role==='parent'?'parent@example.invalid':role==='admin'?'admin@example.invalid':'explorer1234@zekapark.com',email_confirmed_at:new Date().toISOString(),app_metadata:metadata,user_metadata:{},factors:role==='admin'?[{id:'88888888-8888-4888-8888-888888888888',factor_type:'totp',status:'verified',friendly_name:'Isolated fixture'}]:[],created_at:new Date().toISOString()}};}
 try{
- browser=await chromium.launch({headless:true});page=await browser.newPage({viewport:{width:390,height:844}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ browser=await chromium.launch({headless:true});page=await browser.newPage({viewport:{width:390,height:844}});
+ await page.addInitScript(()=>{
+  window.__audioTones=[];
+  class FixtureAudioContext{
+   state='suspended';currentTime=0;destination={};
+   resume(){this.state='running';return Promise.resolve();}suspend(){this.state='suspended';return Promise.resolve();}
+   createOscillator(){return{type:'sine',frequency:{setValueAtTime(f){window.__audioTones.push(f);},exponentialRampToValueAtTime(){}},connect(){},start(){},stop(){}};}
+   createGain(){return{gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){}};}
+  }
+  window.AudioContext=FixtureAudioContext;
+ });const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.route('https://turkish-fixture.invalid/**',async route=>{
   const u=new URL(route.request().url());let value=[];
   if(u.pathname.includes('/auth/v1/token')){if(activeRole==='admin'&&u.searchParams.get('grant_type')==='refresh_token')adminRefreshes++;if(unconfirmed){unconfirmed=false;await route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({error_code:'email_not_confirmed',code:'email_not_confirmed',msg:'Email not confirmed'})});return;}value=session(activeRole);}
@@ -53,6 +63,15 @@ try{
    const level=body.difficulty==='mixed'?1:body.difficulty;
    const questions=[0,1].map(i=>generateQuestion({profile:'complete',targetGrade:student.grade,type:body.topic,difficulty:level,seed:90000+topicRequests.length*997+i*37}));
    const s={id:crypto.randomUUID(),student_id:studentId,mode:body.mode,title:body.topic+' konu testi',questions:prepareLearningQuestions(questions),answers:{},created_at:new Date().toISOString(),expires_at:new Date(Date.now()+3600000).toISOString(),finished_at:null,result:null,revision:0,rewarded_xp:0};topicSessions.set(s.id,s);value=learningView(s);
+  }
+  else if(/^\/api\/learning\/[^/]+\/(answer|finish)$/.test(u.pathname)){
+   const [,id,action]=u.pathname.match(/\/api\/learning\/([^/]+)\/(answer|finish)/);
+   let current=topicSessions.get(id);assert.ok(current);
+   if(action==='answer'){
+    if(failNextLearningAnswer){failNextLearningAnswer=false;await route.fulfill({status:503,contentType:'application/json',body:'{"error":"Yalıtılmış cevap kayıt kesintisi"}'});return;}
+    current=answerLearningSession(current,body.index,body.response);
+   }else current=finishLearningSession(current);
+   topicSessions.set(id,current);value=learningView(current);
   }
   else if(u.pathname==='/api/learning/rewards')value={claims:[]};
   else if(u.pathname==='/api/admin/questions/save'){
@@ -200,5 +219,51 @@ try{
   await page.getByRole('main',{name:'Soru çözme ekranı',exact:true}).waitFor();assert.equal(topicRequests.at(-1).topic,'punch_folding');
  }
  assert.equal(topicRequests.length,8);assert.deepEqual(errors,[]);
- console.log('Turkish isolated browser: registration, grade, consent, confirmation retry, unconfirmed-parent rejection, verified login, export, history failure/retry, deletion request, secure family switching clipboard denial/success, review validation/refresh/empty state admin deletion stale-scope rejection/receipt validation/confirmed completion student App topic handoff/reset across all four grades at 320/390/820 px and actual admin portal MFA/educator review navigation/paging/three approvals/save retry passed. This is not a real email/pilot acceptance record.');
+ // Correctness feedback follows the acknowledged answer; failed saves never celebrate.
+ await page.setViewportSize({width:390,height:844});
+ const currentSession=[...topicSessions.values()].at(-1),correctId=currentSession.questions[0].correctOptionId;
+ const beforeFailure=await page.evaluate(()=>window.__audioTones.length);failNextLearningAnswer=true;
+ await page.locator('#option-card-'+correctId).click();
+ await page.getByRole('alert').filter({hasText:'Yalıtılmış cevap kayıt kesintisi'}).waitFor();
+ assert.equal(await page.locator('.zp-feedback').count(),0);assert.equal(await page.evaluate(()=>window.__audioTones.length),beforeFailure);
+ await page.getByRole('button',{name:'Yeniden gönder',exact:true}).click();
+ await page.locator('.zp-feedback[data-kind=correct]').waitFor();assert.equal(await page.locator('.zp-feedback').getByText('Doğru cevap!',{exact:true}).count(),1);
+ await page.waitForFunction(()=>parseFloat(getComputedStyle(document.querySelector('.zp-feedback-card')).opacity)>=.99);
+ await page.screenshot({path:'/tmp/zekapark-correct-feedback.png'});
+ await page.locator('.zp-focus-footer').getByText('2 / 2',{exact:true}).waitFor();
+ const successTones=await page.evaluate(()=>window.__audioTones.filter(f=>f===659.25).length);assert.ok(successTones>0);
+ await page.getByRole('button',{name:'‹ Önceki',exact:true}).click();assert.equal(await page.locator('.zp-feedback').count(),0);
+ assert.equal(await page.evaluate(()=>window.__audioTones.filter(f=>f===659.25).length),successTones);
+ await page.getByRole('button',{name:'Sonraki ›',exact:true}).click();
+ await page.getByRole('button',{name:'Sorular ve çalışma araçları',exact:true}).click();
+ const tools=page.getByRole('dialog',{name:'Sorular ve çalışma araçları',exact:true});
+ await tools.getByRole('button',{name:'Sesi kapat',exact:true}).click();await tools.getByRole('button',{name:'Kapat ✕',exact:true}).click();
+ const mutedCount=await page.evaluate(()=>window.__audioTones.length);
+ const second=topicSessions.get(currentSession.id).questions[1],wrongId=second.options.find(o=>o.id!==second.correctOptionId).id;
+ await page.locator('#option-card-'+wrongId).click();await page.locator('.zp-feedback[data-kind=incorrect]').waitFor();
+ await page.waitForFunction(()=>parseFloat(getComputedStyle(document.querySelector('.zp-feedback-card')).opacity)>=.99);
+ await page.screenshot({path:'/tmp/zekapark-wrong-feedback.png'});
+ await page.getByRole('heading',{name:'Çalışman tamamlandı',exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.__audioTones.length),mutedCount);
+ assert.equal(topicSessions.get(currentSession.id).result.correctAnswers,1);assert.equal(topicSessions.get(currentSession.id).result.wrongAnswers,1);
+ // Mute survives a reload; reduced-motion turns off movement while keeping the message.
+ await page.emulateMedia({reducedMotion:'reduce'});
+ await page.goto('http://127.0.0.1:5186/tests/browser/turkish-accounts.html?mode=student-app');
+ await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Menüyü aç',exact:true}).click();await page.getByRole('button',{name:'Sesi aç',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Sesi aç',exact:true}).click();await page.getByRole('button',{name:'Menüyü kapat',exact:true}).click();
+ await page.getByRole('button',{name:'Konu testini aç',exact:true}).click();await page.getByRole('button',{name:'Başla / devam et',exact:true}).click();
+ await page.getByRole('main',{name:'Soru çözme ekranı',exact:true}).waitFor();
+ const reducedSession=[...topicSessions.values()].at(-1);await page.locator('#option-card-'+reducedSession.questions[0].correctOptionId).click();
+ await page.locator('.zp-feedback[data-kind=correct]').waitFor();
+ assert.equal(await page.locator('.zp-feedback-card').evaluate(e=>getComputedStyle(e).animationName),'none');
+ assert.equal(await page.locator('.zp-feedback-particles').evaluate(e=>getComputedStyle(e).display),'none');
+ await page.locator('.zp-focus-footer').getByText('2 / 2',{exact:true}).waitFor();await page.getByRole('button',{name:'Çalışmadan çık',exact:true}).click();
+ await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
+ await page.getByRole('button').filter({hasText:'Deneme Sınavı'}).first().click();await page.getByRole('heading',{name:'Denemeni seç',exact:true}).waitFor();
+ await page.getByLabel('Soru konusu',{exact:true}).selectOption('paper_folding');await page.getByRole('button',{name:'Başla / devam et',exact:true}).click();
+ await page.getByRole('main',{name:'Soru çözme ekranı',exact:true}).waitFor();
+ const examSession=[...topicSessions.values()].at(-1);assert.equal(examSession.mode,'exam');
+ await page.locator('#option-card-'+examSession.questions[0].correctOptionId).click();await page.locator('.zp-feedback[data-kind=saved]').waitFor();
+ assert.equal(await page.locator('.zp-feedback[data-kind=correct],.zp-feedback[data-kind=incorrect]').count(),0);assert.deepEqual(errors,[]);
+ console.log('Turkish isolated browser: registration, grade, consent, confirmation retry, unconfirmed-parent rejection, verified login, export, history failure/retry, deletion request, secure family switching clipboard denial/success, review validation/refresh/empty state admin deletion stale-scope rejection/receipt validation/confirmed completion acknowledged correct/wrong feedback, failed-save silence, muted reload, reduced motion and hidden exam correctness; student App topic handoff/reset across all four grades at 320/390/820 px and actual admin portal MFA/educator review navigation/paging/three approvals/save retry passed. This is not a real email/pilot acceptance record.');
 }catch(error){console.error('Turkish component scenario failed:',error.message);if(page)console.error(await page.locator('body').innerText().catch(()=>'(page unavailable)'));throw error;}finally{await browser?.close();await server.close();}
