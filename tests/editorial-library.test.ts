@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateQuestion } from '../src/features/questions/generators';
-import { auditEditorialLibrary, indexQuestionVisuals, indexedDuplicates } from '../src/features/questions/editorial-library';
+import { auditEditorialLibrary, indexQuestionVisuals, indexedDuplicates, matchesEditorialScope, hasIndividualReview, needsIndividualReview, nextPendingQuestion } from '../src/features/questions/editorial-library';
 import { auditQuestion, questionVisualKey } from '../src/features/questions/quality';
 const source=()=>generateQuestion({profile:'complete',type:'paper_folding',targetGrade:1,difficulty:2,seed:91231});
 test('indexed duplicate checks preserve the full scan result across edits and answer ordering',()=>{
@@ -31,4 +31,37 @@ test('background audit still rejects wrong keys rather than trusting publication
   const q=source();q.status='published';q.correctOptionId=q.options.find(o=>o.id!==q.correctOptionId)!.id;
   const result=await auditEditorialLibrary([q],{signal:new AbortController().signal,yieldToUI:async()=>{},onProgress:()=>{}});
   assert.equal(result?.get(q.id)?.solverVerified,false);assert.ok(result!.get(q.id)!.errors.length>0);
+});
+
+test('review scope combines grade, topic and difficulty, including multi-grade records', () => {
+  const q = source();
+  const scope = { grade: 1 as const, type: 'paper_folding' as const, difficulty: 2 as const };
+  assert.equal(matchesEditorialScope(q, scope), true);
+  assert.equal(matchesEditorialScope({ ...q, targetGrade: 2, targetGrades: [2] }, scope), false);
+  assert.equal(matchesEditorialScope({ ...q, type: 'mirror_reflection' }, scope), false);
+  assert.equal(matchesEditorialScope({ ...q, difficulty: 1 }, scope), false);
+  assert.equal(matchesEditorialScope({ ...q, targetGrade: 2, targetGrades: [1, 2] }, scope), true);
+  assert.equal(matchesEditorialScope(q, { grade: 'all', type: 'all', difficulty: 'all' }), true);
+});
+test('review queues never infer human approval from automatic release or missing metadata', () => {
+  const pending = { ...source(), status: 'published' as const };
+  assert.equal(needsIndividualReview(pending), true);
+  assert.equal(hasIndividualReview(pending), false);
+  assert.equal(needsIndividualReview({ ...pending, status: 'draft' }), false);
+  assert.equal(hasIndividualReview({ ...pending, reviewedBy: '  ' }), false);
+  const reviewed = { ...pending, reviewedBy: 'educator' };
+  assert.equal(hasIndividualReview(reviewed), true);
+  assert.equal(needsIndividualReview(reviewed), false);
+  const contradictory = { ...reviewed, releaseAuthorization: { individualHumanReview: false } } as typeof reviewed;
+  assert.equal(needsIndividualReview(contradictory), true);
+});
+test('next review wraps inside the filtered list, skips completed records and preserves current question', () => {
+  const a = { ...source(), id: 'a', status: 'published' as const };
+  const b = { ...a, id: 'b', reviewedBy: 'educator' }, c = { ...a, id: 'c' };
+  assert.equal(nextPendingQuestion([a, b, c], 'a')?.id, 'c');
+  assert.equal(nextPendingQuestion([a, b, c], 'c')?.id, 'a');
+  assert.equal(nextPendingQuestion([b, c], 'a')?.id, 'c');
+  assert.equal(nextPendingQuestion([a, b], 'a'), undefined);
+  assert.equal(nextPendingQuestion([], 'a'), undefined);
+  assert.equal('reviewedBy' in a, false);
 });
