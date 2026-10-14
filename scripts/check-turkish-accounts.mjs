@@ -27,7 +27,7 @@ try{
    assert.equal(activeRole,'admin');if(adminAal!=='aal2'){await route.fulfill({status:403,contentType:'application/json',body:'{"message":"MFA required"}'});return;}
    const status=u.searchParams.get('status');
    if(status==='neq.archived'&&holdActiveLibrary)await new Promise(resolve=>heldLibrary.push(resolve));
-   if(status==='neq.archived'&&activeLibraryFailure){activeLibraryFailure=false;await route.fulfill({status:503,contentType:'application/json',body:'{"message":"Fixture unavailable"}'});return;}
+   if(status==='neq.archived'&&activeLibraryFailure){await route.fulfill({status:503,contentType:'application/json',body:'{"message":"Fixture unavailable"}'});return;}
    if(status==='eq.published')publishedReviewLoads++;else if(!status)archiveLibraryLoads++;
    const candidates=status==='eq.published'?reviewQuestions:status==='neq.archived'?reviewQuestions:[...reviewQuestions,archivedQuestion];
    value=candidates.filter(q=>q.id>(u.searchParams.get('id')?.replace(/^gt\./,'')||'')).slice(0,Number(u.searchParams.get('limit')||500)).map(q=>({id:q.id,status:q.status,data:q}));
@@ -115,7 +115,7 @@ try{
  await page.getByRole('button',{name:'Menüyü Aç',exact:true}).click();await page.locator('aside').getByRole('button').filter({hasText:'Soru Tasarım Stüdyosu'}).click();
  await page.getByText('Canlı soru adetleri yükleniyor…',{exact:true}).waitFor();assert.equal(await page.getByText(/soru · .*44 konu/).count(),0);
  holdActiveLibrary=false;for(const release of heldLibrary.splice(0))release();
- await page.getByRole('alert').filter({hasText:'Canlı soru adetleri yüklenemedi.'}).waitFor();await page.getByRole('button',{name:'Yeniden yükle',exact:true}).click();
+ await page.getByRole('alert').filter({hasText:'Canlı soru adetleri yüklenemedi.'}).waitFor();activeLibraryFailure=false;await page.getByRole('button',{name:'Yeniden yükle',exact:true}).click();
  await page.getByText('1. sınıf yayımlanan banka:',{exact:false}).waitFor();
  await page.getByRole('button',{name:/2\. Sınıf|2\. sınıf/}).first().click();await page.getByText('50 soru · 1/44 konu',{exact:false}).waitFor();assert.equal(archiveLibraryLoads,0);
  // Archives require an explicit load. The full curriculum remains available in grade one.
