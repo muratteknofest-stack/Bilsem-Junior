@@ -15,6 +15,7 @@ import { questionVisualTheme } from '../visual-vocabulary';
 import { WorkshopBoard } from './WorkshopBoard';
 import type { WorkshopBoard as WorkshopBoardData } from '../workshop-mechanics';
 import { useMemoryStudy } from './MemoryStudy';
+import { CompleteBoard } from './CompleteBoard';
 
 interface QuestionRendererProps {
   question: BaseQuestion;
@@ -26,6 +27,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({ question }) 
   const mode = typeof visualConfig.displayMode === 'string' ? visualConfig.displayMode : 'default';
   
   const renderEngine = () => {
+    if(mode==='curriculum_board')return <CompleteBoard board={visualConfig as unknown as import('../complete-curriculum').CompleteBoard}/>;
     if(mode==='colorful_board')return memory.hidden&&question.type==='visual_memory'?<p role="status">Desen gizlendi. Belleğindeki deseni seç.</p>:<ColorfulBoard board={visualConfig as unknown as ColorfulBoardData}/>;
     if (mode === 'workshop_board') return memory.hidden&&question.type==='visual_memory'?<p role="status" className="rounded-2xl border border-indigo-200 p-6 text-indigo-900">Desen gizlendi. Belleğinde tuttuğun deseni seçeneklerden seç.</p>:<WorkshopBoard board={visualConfig as unknown as WorkshopBoardData} />;
     if (mode === 'verified_board') return <ProfessionalBoard board={visualConfig as Board} theme={questionVisualTheme(question)} />;

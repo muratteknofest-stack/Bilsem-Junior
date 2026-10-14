@@ -13,7 +13,7 @@ export const BATCH_POLICY = 'balanced-bank-2';
 export const PROFESSIONAL_BANK_POLICY = 'reasoning-bank-3';
 export { professionalGradeTypes, professionalDifficulty } from '../src/features/questions/reasoning-profile';
 import { professionalGradeTypes, professionalDifficulty } from '../src/features/questions/reasoning-profile';
-export const stemKey = (q: BaseQuestion) => generateVisualFingerprint({ prompt:q.prompt?.trim(),board:q.visualConfig });
+export const stemKey = (q: BaseQuestion) => generateVisualFingerprint({ prompt:q.prompt?.trim(),board:(q.visualConfig as Record<string,unknown>)?.displayMode==='curriculum_board'?Object.fromEntries(Object.entries(q.visualConfig as Record<string,unknown>).filter(([k])=>k!=='grade')):q.visualConfig });
 export function gradeTypes(grade:SchoolGrade):QuestionType[]{
   return STUDENT_TYPES.filter(type=>grade!==1 || !['operation_machine','matrix_3x3','raven_matrix'].includes(type));
 }
@@ -102,5 +102,6 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   await writeFile(args.output,JSON.stringify(result));
   console.log(JSON.stringify({batchId:result.batchId,...result.summary},null,2));
 }
+
 
 

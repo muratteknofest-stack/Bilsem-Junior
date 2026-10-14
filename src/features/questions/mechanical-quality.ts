@@ -5,11 +5,13 @@ import { generateVisualFingerprint as fingerprint } from './fingerprint';
 import { solveQuestion } from './universal-solver';
 import { isVisualSymbol } from './visual-vocabulary';
 import { TANGRAM_POLYGONS } from './workshop-mechanics';
+import { validCompleteValue } from './complete-curriculum';
 
 /** Identity follows renderer precedence: invisible metadata never makes a new choice. */
 export function visibleOptionKey(value:unknown):string {
   const v=value as Record<string,unknown>|null;
   if(!v||typeof v!=='object')return fingerprint(null);
+  if(v.curriculum==='piece'&&Array.isArray(v.points))return fingerprint({curriculum:'piece',points:v.points.map(p=>JSON.stringify(p)).sort()});
   if(v.figure!==undefined){const f=v.figure as any;return fingerprint({figure:{shape:f.shape,half:f.half,lines:f.lines,outerFill:f.outerFill,innerFill:f.innerFill,...(f.outerFill!=='empty'||f.innerFill!=='empty'?{inner:f.inner}:{})}});}
   if(v.symbol!==undefined)return fingerprint({symbol:v.symbol});
   if(Array.isArray(v.polygon))return fingerprint({polygon:v.polygon.map(p=>JSON.stringify(p)).sort()});
@@ -36,6 +38,7 @@ export function analyzeQuestionMechanics(q:BaseQuestion):MechanicalReport {
     if(allowed[0]==='textNumber'&&(!['string','number'].includes(typeof value.textNumber)||typeof value.textNumber==='string'&&!value.textNumber.trim()||typeof value.textNumber==='number'&&!Number.isFinite(value.textNumber)))errors.push(`${option.id}: Şık metni veya sayısı geçersiz.`);
   }
   if(mode==='colorful_board'&&q.options.some(o=>!validColorfulValue(o.visualData)))errors.push('Çizilmeyen veya geçersiz renkli seçenek alanı.');
+  if(mode==='curriculum_board'&&q.options.some(o=>!validCompleteValue(o.visualData)))errors.push('Müfredat seçeneğinde çizilmeyen veya geçersiz alan.');
   const solve=solveQuestion(q), matches=q.options.filter(o=>fingerprint(o.visualData)===solve.expectedFingerprint);
   if(solve.canSolve&&(!solve.isMatch||solve.ambiguityDetected))errors.push('ANSWER_MECHANICS: Mekanik çözüm tek bir doğru şık ve cevap anahtarıyla uyuşmuyor.');
   const choices=q.options.map((option,i)=>{const ruleMatch=solve.canSolve&&!solve.ambiguityDetected&&option.id===solve.expectedAnswerId;return {id:option.id,visibleKey:keys[i],ruleMatch,reason:ruleMatch?'Verilenlerden hesaplanan tek doğru şık.':solve.canSolve&&!solve.ambiguityDetected?'Verilen kurala uymayan çeldirici.':'Bağımsız kanıt tamamlanamadığı için bu şık onaylanamaz.'};});

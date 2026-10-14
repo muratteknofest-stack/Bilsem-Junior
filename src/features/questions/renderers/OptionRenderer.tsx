@@ -8,6 +8,8 @@ import { TileDiagram } from './ProfessionalBoard';
 import { questionVisualTheme } from '../visual-vocabulary';
 import { WorkshopShape } from './WorkshopBoard';
 import { useMemoryStudy } from './MemoryStudy';
+import { CompleteOption } from './CompleteBoard';
+import { validCompleteValue } from '../complete-curriculum';
 
 interface OptionRendererProps {
   option: Pick<VisualOption, 'id' | 'label' | 'visualData'>;
@@ -60,6 +62,7 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
   }
 
   const renderVisualContent = () => {
+    if((visualData as Record<string,unknown>)?.curriculum&&validCompleteValue(visualData))return <CompleteOption value={visualData}/>;
     if(validColorfulValue(visualData))return <ColorfulArt value={visualData} shadow={questionType==='shadow_matching'}/>;
     if (!visualData && !option.label) {
       return (

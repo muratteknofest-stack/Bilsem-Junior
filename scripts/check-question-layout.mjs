@@ -42,6 +42,24 @@ for(const type of ['mirror_reflection','figure_completion','visual_memory','shad
  count++;
  if(grade===2)await page.screenshot({path:output+'/zekapark-'+type+'.png'});
 }
+// Every curriculum topic, both beginner and advanced, uses the real focused screen.
+for(const [width,height] of [[320,480],[390,844],[768,1024]])for(const grade of [1,4]){
+ await page.setViewportSize({width,height});
+ for(const type of await page.evaluate(()=>window.__types)){
+  await page.evaluate(({type,grade})=>window.__showComplete(type,grade,grade===1?2:6),{type,grade});
+  await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+  if(type==='visual_memory')await page.getByRole('button',{name:'Deseni gizle ve cevapla'}).click();
+  const bad=await page.evaluate(()=>{
+   const root=document.querySelector('.zp-focus'),cards=[...document.querySelectorAll('.zp-answer-option')];
+   const errors=cards.length===4?[]:['missing-options'];
+   if(root.scrollHeight>root.clientHeight+1||root.scrollWidth>root.clientWidth+1)errors.push('overflow');
+   for(const card of cards){const r=card.getBoundingClientRect();if(r.height<44||r.width<44||r.bottom>innerHeight+1||r.right>innerWidth+1)errors.push('card');for(const svg of card.querySelectorAll('svg')){const v=svg.getBoundingClientRect();if(v.top<r.top-1||v.bottom>r.bottom+1||v.left<r.left-1||v.right>r.right+1)errors.push('clipped-svg');}}
+   return errors;
+  });
+  if(bad.length)failures.push({width,height,grade,type,curriculum:true,result:bad});count++;
+ }
+}
+await page.evaluate(()=>window.__show('mirror_reflection',3));
 await page.getByRole('button',{name:'Sorular ve çalışma araçları'}).click();
 if(!await page.locator('dialog[open]').isVisible())throw Error('Tools dialog did not open');
 await page.keyboard.press('Escape');
@@ -53,3 +71,4 @@ await fs.writeFile(output+'/results.json',JSON.stringify({count,failures},null,2
 await browser.close();await server.close();
 
 if(failures.length)process.exitCode=1;
+
