@@ -120,7 +120,7 @@ try{
  await page.getByRole('button',{name:/2\. Sınıf|2\. sınıf/}).first().click();await page.getByText('50 soru · 1/44 konu',{exact:false}).waitFor();assert.equal(archiveLibraryLoads,0);
  // Archives require an explicit load. The full curriculum remains available in grade one.
  await page.getByRole('button',{name:'Menüyü Aç',exact:true}).click();await page.locator('aside').getByRole('button').filter({hasText:'Soru Bankası & Yönetim'}).click();
- await page.getByRole('button',{name:'Bulut kütüphanesi',exact:true}).click();await page.getByLabel('Arşivlenmiş soruları da yükle').waitFor();assert.equal(archiveLibraryLoads,0);
+ await page.getByRole('button',{name:'Editoryal Atölye & Bulut Kütüphanesi',exact:true}).click();await page.getByLabel('Arşivlenmiş soruları da yükle').waitFor();assert.equal(archiveLibraryLoads,0);
  await page.getByLabel('Arşivlenmiş soruları da yükle').check();await page.getByText('51 kayıt',{exact:false}).waitFor();assert.ok(archiveLibraryLoads>0);
  await page.getByLabel('Arşivlenmiş soruları da yükle').uncheck();await page.getByText('50 kayıt',{exact:false}).waitFor();
  await page.getByRole('button',{name:/Üretim ve taslaklar/}).click();await page.getByLabel('Hedef sınıf').selectOption('1');await page.getByLabel('Soru ailesi').selectOption('matrix_3x3');
