@@ -60,7 +60,7 @@ import { QuestionRenderer } from '../../features/questions/renderers/QuestionRen
 import { OptionRenderer } from '../../features/questions/renderers/OptionRenderer';
 
 export interface AdminBulkQuestionGeneratorProps {
-  onInspectInStudio: (type: QuestionType, seed: number, difficulty: DifficultyLevel) => void;
+  onInspectInStudio: (type: QuestionType, seed: number, difficulty: DifficultyLevel, grade?: 1|2|3|4) => void;
   onNavigateToQuestionBank?: () => void;
 }
 
@@ -1165,7 +1165,7 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
                     <button
                       onClick={() => {
                         sound.playClick();
-                        onInspectInStudio(q.type, q.seed, q.difficulty);
+                        onInspectInStudio(q.type, q.seed, q.difficulty, q.targetGrade);
                       }}
                       title="Soru Tasarım Stüdyosunda İncele"
                       className="p-1.5 rounded-lg bg-slate-700/60 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"

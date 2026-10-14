@@ -17,6 +17,8 @@ import {
   writeBatch,
   onSnapshot,
   getDocs,
+  query,
+  where,
 } from '../lib/supabase-data';
 import { auth, db } from '../lib/platform';
 import { onAuthStateChanged } from '../lib/supabase';
@@ -55,6 +57,15 @@ class QuestionBankService {
   private questions: BaseQuestion[] = [];
   private initialized: boolean = false;
   private listeners: Set<() => void> = new Set();
+  private cloudStatus: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
+  private refreshCloud: (() => Promise<void>) | undefined;
+
+  public getCloudStatus() { return this.cloudStatus; }
+  public retryCloudLoad() {
+    if (!this.refreshCloud || this.cloudStatus === 'loading') return;
+    this.cloudStatus = 'loading'; this.notify();
+    void this.refreshCloud();
+  }
 
   constructor() {
     this.init();
@@ -111,15 +122,19 @@ class QuestionBankService {
           }
           if (version !== authVersion) return;
           stopRemote?.();
+          this.refreshCloud = undefined;
           this.questions = [];
+          this.cloudStatus = isAdmin ? 'loading' : 'idle';
           this.notify();
           if (!isAdmin) return;
-          stopRemote = onSnapshot(collection(db, 'questions'), (snapshot) => {
+          const subscription = onSnapshot(query(collection(db, 'questions'), where('status', '!=', 'archived')), (snapshot) => {
             this.questions = snapshot.docs.map((d: { data: () => BaseQuestion; id: string }) => ({
               ...(d.data() as BaseQuestion), id: d.id,
             }));
+            this.cloudStatus = 'ready';
             this.notify();
-          }, (err) => console.warn('Supabase soru havuzu yüklenemedi:', err));
+          }, (err) => { this.cloudStatus = 'error'; this.notify(); console.warn('Supabase soru havuzu yüklenemedi:', err); });
+          stopRemote = subscription; this.refreshCloud = subscription.refresh;
         })();
       }, (err) => console.warn('Soru havuzu oturum kontrolü başarısız:', err));
     }

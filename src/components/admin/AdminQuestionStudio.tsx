@@ -74,7 +74,8 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [bank, setBank] = useState(() => questionBankService.getAll());
-  useEffect(() => questionBankService.subscribe(() => setBank(questionBankService.getAll())), []);
+  const [cloudStatus,setCloudStatus]=useState(()=>questionBankService.getCloudStatus());
+  useEffect(() => questionBankService.subscribe(() => {setBank(questionBankService.getAll());setCloudStatus(questionBankService.getCloudStatus());}), []);
 
   // Interactive Student Solve Simulation Mode
   const [testMode, setTestMode] = useState<boolean>(false);
@@ -208,7 +209,7 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
     <div className="space-y-6">
       {(generationError||saveError)&&<p role="alert" className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-rose-900">{generationError||saveError}</p>}
       <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-indigo-950 text-sm" aria-live="polite">
-        {targetGrade}. sınıf yayımlanan banka: <strong>{liveRows.length.toLocaleString('tr-TR')} soru · {new Set(liveRows.map(q=>q.type)).size}/44 konu</strong>.
+        {cloudStatus==='ready'?<>{targetGrade}. sınıf yayımlanan banka: <strong>{liveRows.length.toLocaleString('tr-TR')} soru · {new Set(liveRows.map(q=>q.type)).size}/44 konu</strong>.</>:cloudStatus==='error'?<><span role="alert">Canlı soru adetleri yüklenemedi.</span> <button type="button" className="underline min-h-11 px-2" onClick={()=>questionBankService.retryCloudLoad()}>Yeniden yükle</button></>:<span>Canlı soru adetleri yükleniyor…</span>}
         <span className="block">Yıldız öneriyi belirtir. Konu yanındaki adet, bu sınıfta gerçekten yayımlanan soruları gösterir.</span>
       </div>
       {/* Toast Alert */}
@@ -301,7 +302,7 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
                     <optgroup label={`⭐ ${activeGradeConfig.title} İçin Önerilen Motorlar`}>
                       {activeGradeConfig.recommendedTypes.map((t) => (
                         <option key={t} value={t}>
-                          ⭐ {QUESTION_TYPE_LABELS[t]} — {liveCount(t)} soru
+                          ⭐ {QUESTION_TYPE_LABELS[t]} — {cloudStatus==='ready'?liveCount(t)+' soru':'adet bekleniyor'}
                         </option>
                       ))}
                     </optgroup>
@@ -310,7 +311,7 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
                         (t) => !activeGradeConfig.recommendedTypes.includes(t)
                       ).map((t) => (
                         <option key={t} value={t}>
-                          {QUESTION_TYPE_LABELS[t]} — {liveCount(t)} soru
+                          {QUESTION_TYPE_LABELS[t]} — {cloudStatus==='ready'?liveCount(t)+' soru':'adet bekleniyor'}
                         </option>
                       ))}
                     </optgroup>
@@ -318,7 +319,7 @@ export const AdminQuestionStudio: React.FC<AdminQuestionStudioProps> = ({
                 ) : (
                   ALL_QUESTION_TYPES.map((t) => (
                     <option key={t} value={t}>
-                      {QUESTION_TYPE_LABELS[t]} — {liveCount(t)} soru
+                      {QUESTION_TYPE_LABELS[t]} — {cloudStatus==='ready'?liveCount(t)+' soru':'adet bekleniyor'}
                     </option>
                   ))
                 )}

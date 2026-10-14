@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 import { fromSupabaseRow, toSupabaseRow } from './supabase-shape';
 
 type Ref = { table: string; id?: string; userId?: string };
-type Filter = { field: string; value: unknown };
+type Filter = { field: string; operator: '==' | '!='; value: unknown };
 type Query = Ref & { filters?: Filter[]; max?: number };
 const tables: Record<string, string> = {
   users: 'profiles', questions: 'questions',
@@ -22,7 +22,10 @@ export function collection(_db: unknown, name: string): Ref {
   if (!table) throw new Error('Bilinmeyen koleksiyon.');
   return { table };
 }
-export const where = (field: string, _operator: string, value: unknown): Filter => ({ field, value });
+export const where = (field: string, operator: string, value: unknown): Filter => {
+  if (operator !== '==' && operator !== '!=') throw new Error('Desteklenmeyen sorgu işlemi.');
+  return { field, operator, value };
+};
 export const limit = (max: number) => ({ max });
 export function query(ref: Ref, ...constraints: Array<Filter | { max: number }>): Query {
   return { ...ref, filters: constraints.filter((item): item is Filter => 'field' in item),
@@ -49,7 +52,7 @@ export async function getDocs(ref: Query) {
     if (take <= 0) break;
     let request = supabase.from(ref.table).select('*').order(key, { ascending: true }).limit(take);
     for (const filter of ref.filters ?? [])
-      request = request.eq(filter.field, filter.value as string);
+      request = filter.operator === '!=' ? request.neq(filter.field, filter.value as string) : request.eq(filter.field, filter.value as string);
     if (cursor) request = request.gt(key, cursor);
     const { data, error } = await request;
     if (error) throw error;
@@ -106,11 +109,12 @@ export function onSnapshot(ref: Query, onNext: (snapshot: any) => void, onError?
     }, () => void refresh())
     .subscribe();
   const poll = ref.table === 'profiles' ? setInterval(() => void refresh(), 30000) : null;
-  return () => {
+  const unsubscribe = () => {
     active = false;
     if (poll) clearInterval(poll);
     void supabase.removeChannel(channel);
   };
+  return Object.assign(unsubscribe, { refresh });
 }
 export function writeBatch(_db: unknown) {
   const actions: Array<() => Promise<unknown>> = [];
