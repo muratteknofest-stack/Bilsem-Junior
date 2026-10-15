@@ -25,9 +25,18 @@ test('provider failures and malformed prices cannot create successful results or
   const fetcher: typeof fetch=async()=> ++calls===1 ? new Response('private provider details',{status:403})
     : Response.json({id:'wrong',type:'physical',url:'https://invalid.example',priceData:{currency:'TRY',price:'0.001'}});
   const report=await inspectShopierProducts(settings,fetcher,'private-test-token');
-  assert.deepEqual(report.products[0],{plan:'monthly',readable:false});
+  assert.deepEqual(report.products[0],{plan:'monthly',readable:false,httpStatus:403});
   assert.equal(report.products[1].priceMatches,false);
   assert.equal(JSON.stringify(report).includes('private'),false);
   assert.deepEqual(await inspectShopierProducts(settings,fetcher,''),{configured:false,products:[]});
   assert.equal(calls,3);
+});
+test('only fixed network codes are reported; request details and arbitrary exception strings remain private', async () => {
+  let calls=0;
+  const fetcher: typeof fetch=async()=>{ const error=new Error('private credentials or URL');
+    Object.assign(error,{cause:{code:++calls===1?'ENOTFOUND':'private-unknown-code'}}); throw error; };
+  const report=await inspectShopierProducts(settings,fetcher,'private-test-token');
+  assert.deepEqual(report.products[0],{plan:'monthly',readable:false,networkCode:'ENOTFOUND'});
+  assert.deepEqual(report.products[1],{plan:'quarterly',readable:false});
+  assert.equal(JSON.stringify(report).includes('private'),false);
 });
