@@ -29,7 +29,7 @@
     "test:layout": "node scripts/check-question-layout.mjs",
     "test:smtp": "node --import tsx scripts/test-smtp.ts",
     "pilot:e2e": "node --import tsx scripts/pilot-family-e2e.ts",
-    "test:shopier-layout": "node scripts/check-shopier-layout.mjs",
+    "test:shopier-layout": "node --import tsx scripts/check-shopier-layout.mjs",
     "test:english": "node --import tsx --test tests/english-version.test.tsx",
     "test:english-browser": "node scripts/check-english-version.mjs",
     "test:english-accounts": "node --import tsx scripts/check-english-accounts.mjs",
