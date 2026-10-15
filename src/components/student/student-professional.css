@@ -122,3 +122,5 @@
 .dark .zp-student-pro .zp-daily-snapshot { border-color:#36564e; background:linear-gradient(140deg,#233046,#203e38); }
 .dark .zp-daily-ring>strong { color:#a0e8d7; }
 @media(max-width:520px) { .zp-student-pro .zp-pro-hero { padding:17px; }.zp-pro-hero-content { gap:15px; }.zp-student-pro .zp-student-hero-stats>button { padding:8px 10px; }.zp-student-pro .zp-student-profile-copy>p { font-size:10px; }.zp-grade-settings { margin-top:7px; }.zp-student-profile-copy>div.mt-3 { margin-top:10px; } }
+.dark .zp-student-pro [aria-label="Konuya göre test"] select { background:#26354d; border-color:#465673; color:#f0f2ff; }
+@media(max-width:350px) { .zp-study-navigation>button { font-size:9px; } }
