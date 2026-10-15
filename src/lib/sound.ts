@@ -1,252 +1,84 @@
-/**
- * Self-contained Web Audio API Sound Synthesizer for educational feedback
- * Runs client-side with 0 external network requests
- */
-
+/** Soft offline Web Audio cues, with no music or audio downloads. */
 export class SoundEngine {
   private ctx: AudioContext | null = null;
   private output: GainNode | null = null;
   private active = true;
+  private level = .45;
   private listeners = new Set<() => void>();
+  private voices = new Set<OscillatorNode>();
+  private lastClick = -Infinity;
   constructor() {
-    try { if (typeof window !== 'undefined') this.active = window.localStorage.getItem('zekapark-sound-enabled-v1') !== 'false'; } catch {}
+    try {
+      if (typeof window !== 'undefined') {
+        this.active = window.localStorage.getItem('zekapark-sound-enabled-v1') !== 'false';
+        const saved = window.localStorage.getItem('zekapark-sound-volume-v1');
+        if (saved !== null && saved.trim() !== '' && Number.isFinite(Number(saved))) this.level = Math.min(1, Math.max(0, Number(saved)));
+      }
+    } catch {}
   }
+  private persist(key: string, value: string) { try { window.localStorage.setItem(key, value); } catch {} }
+  private notify() { for (const listener of this.listeners) listener(); }
+  private applyOutput() { try { this.output?.gain.setValueAtTime(this.active ? this.level : 0, this.ctx?.currentTime || 0); } catch {} }
+  private stopVoices() { for (const voice of this.voices) { try { voice.stop(); voice.disconnect?.(); } catch {} } this.voices.clear(); }
   get enabled() { return this.active; }
   set enabled(value: boolean) {
-    this.active = Boolean(value);
-    try { if (typeof window !== 'undefined') window.localStorage.setItem('zekapark-sound-enabled-v1', String(this.active)); } catch {}
-    try { this.output?.gain.setValueAtTime(this.active ? 1 : 0, this.ctx?.currentTime || 0); } catch {}
-    for (const listener of this.listeners) listener();
+    this.active = Boolean(value); if (!this.active) this.stopVoices();
+    this.persist('zekapark-sound-enabled-v1', String(this.active)); this.applyOutput(); this.notify();
+  }
+  get volume() { return this.level; }
+  set volume(value: number) {
+    if (!Number.isFinite(value)) return;
+    this.level = Math.min(1, Math.max(0, value)); if (this.level === 0) this.stopVoices();
+    this.persist('zekapark-sound-volume-v1', String(this.level)); this.applyOutput(); this.notify();
   }
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   getSnapshot = () => this.enabled;
   getServerSnapshot = () => true;
-  /** Called during the tap, before awaiting the answer API, for mobile audio activation. */
+  getVolumeSnapshot = () => this.volume;
+  getServerVolumeSnapshot = () => .45;
+  /** Invoke during a tap, before awaiting the answer save on mobile. */
   unlock() { this.getContext(); }
-
-
   private getContext(): AudioContext | null {
-    if (!this.enabled) return null;
+    if (!this.active || this.level === 0) return null;
     try {
       if (!this.ctx && typeof window !== 'undefined') {
         const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioCtx) {
-          this.ctx = new AudioCtx();
-          this.output = this.ctx.createGain();
-          this.output.gain.setValueAtTime(1, this.ctx.currentTime);
-          this.output.connect(this.ctx.destination);
-        }
+        if (AudioCtx) { this.ctx = new AudioCtx(); this.output = this.ctx.createGain(); this.output.connect(this.ctx.destination); this.applyOutput(); }
       }
-      if (this.ctx && this.ctx.state === 'suspended') {
-        void this.ctx.resume().catch(() => {});
-      }
+      if (this.ctx?.state === 'suspended') void this.ctx.resume().catch(() => {});
       return this.ctx;
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   }
-
-  playSuccess() {
-    const ctx = this.getContext();
-    if (!ctx) return;
-
+  private melody(notes: number[], spacing: number, duration: number, peak = .1) {
+    const ctx = this.getContext(); if (!ctx) return;
     try {
-      const now = ctx.currentTime;
-      // Cheerful chime: C5 -> E5 -> G5
-      const freqs = [523.25, 659.25, 783.99];
-      freqs.forEach((f, i) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(f, now + i * 0.08);
-
-        gain.gain.setValueAtTime(0.12, now + i * 0.08);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.25);
-
-        osc.connect(gain);
-        gain.connect(this.output || ctx.destination);
-
-        osc.start(now + i * 0.08);
-        osc.stop(now + i * 0.08 + 0.25);
-      });
-    } catch {}
-  }
-
-  playError() {
-    const ctx = this.getContext();
-    if (!ctx) return;
-
-    try {
-      const now = ctx.currentTime;
-      // Gentle, friendly low wobble: G3 -> F3
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(220, now);
-      osc.frequency.exponentialRampToValueAtTime(160, now + 0.2);
-
-      gain.gain.setValueAtTime(0.1, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-
-      osc.connect(gain);
-      gain.connect(this.output || ctx.destination);
-
-      osc.start(now);
-      osc.stop(now + 0.25);
-    } catch {}
-  }
-
-  playClick() {
-    const ctx = this.getContext();
-    if (!ctx) return;
-
-    try {
-      const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(800, now);
-
-      gain.gain.setValueAtTime(0.05, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
-
-      osc.connect(gain);
-      gain.connect(this.output || ctx.destination);
-
-      osc.start(now);
-      osc.stop(now + 0.04);
-    } catch {}
-  }
-
-  playTransition() {
-    const ctx = this.getContext();
-    if (!ctx) return;
-    try {
-      const now = ctx.currentTime;
-      [392, 523.25].forEach((frequency, i) => {
-        const osc = ctx.createOscillator(), gain = ctx.createGain(), start = now + i * 0.055;
+      if (this.voices.size + notes.length > 24) this.stopVoices();
+      notes.forEach((frequency, i) => {
+        const start = ctx.currentTime + i * spacing, osc = ctx.createOscillator(), gain = ctx.createGain();
         osc.type = 'sine'; osc.frequency.setValueAtTime(frequency, start);
-        gain.gain.setValueAtTime(0.035, start); gain.gain.exponentialRampToValueAtTime(0.001, start + 0.13);
-        osc.connect(gain); gain.connect(this.output || ctx.destination); osc.start(start); osc.stop(start + 0.13);
+        gain.gain.setValueAtTime(.001, start);
+        gain.gain.exponentialRampToValueAtTime(peak, start + .012);
+        gain.gain.exponentialRampToValueAtTime(.001, start + duration);
+        osc.connect(gain); gain.connect(this.output || ctx.destination); this.voices.add(osc);
+        osc.onended = () => { this.voices.delete(osc); osc.disconnect(); gain.disconnect(); };
+        osc.start(start); osc.stop(start + duration + .015);
       });
     } catch {}
   }
-
-  playLevelUp() {
-    const ctx = this.getContext();
-    if (!ctx) return;
-
-    try {
-      const now = ctx.currentTime;
-      const notes = [440, 554.37, 659.25, 880];
-      notes.forEach((f, i) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(f, now + i * 0.1);
-
-        gain.gain.setValueAtTime(0.15, now + i * 0.1);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.35);
-
-        osc.connect(gain);
-        gain.connect(this.output || ctx.destination);
-
-        osc.start(now + i * 0.1);
-        osc.stop(now + i * 0.1 + 0.35);
-      });
-    } catch {}
+  playSuccess() { this.melody([523.25, 659.25, 783.99], .07, .24, .09); }
+  playError() { this.melody([261.63, 220], .085, .2, .065); }
+  playClick() {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (now - this.lastClick < 60) return;
+    this.lastClick = now; this.melody([800], 0, .045, .045);
   }
-
+  playTransition() { this.melody([392, 523.25], .045, .12, .035); }
+  playLevelUp() { this.melody([440, 554.37, 659.25, 880], .09, .3, .1); }
   playCombo(comboCount: number) {
-    const ctx = this.getContext();
-    if (!ctx) return;
-
-    try {
-      const now = ctx.currentTime;
-      // Calculate dynamic base pitch based on streak count
-      const basePitch = Math.min(1200, 440 + Math.min(comboCount, 12) * 55);
-      const isHighCombo = comboCount >= 5;
-      
-      const freqs = isHighCombo
-        ? [basePitch, basePitch * 1.25, basePitch * 1.5, basePitch * 2]
-        : [basePitch, basePitch * 1.25, basePitch * 1.5];
-
-      freqs.forEach((f, i) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = isHighCombo ? 'triangle' : 'sine';
-        osc.frequency.setValueAtTime(f, now + i * 0.06);
-
-        gain.gain.setValueAtTime(0.12, now + i * 0.06);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.22);
-
-        osc.connect(gain);
-        gain.connect(this.output || ctx.destination);
-
-        osc.start(now + i * 0.06);
-        osc.stop(now + i * 0.06 + 0.22);
-      });
-    } catch {}
+    const count = Number.isFinite(comboCount) ? Math.min(12, Math.max(0, comboCount)) : 0, base = 440 + count * 30;
+    this.melody([base, base * 1.25, base * 1.5], .055, .2, .08);
   }
-
-  playComboMilestone(comboCount: number) {
-    const ctx = this.getContext();
-    if (!ctx) return;
-
-    try {
-      const now = ctx.currentTime;
-      // Grand celebration chord arpeggio
-      const notes = [523.25, 659.25, 783.99, 1046.5, 1318.51];
-      notes.forEach((f, i) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(f, now + i * 0.07);
-
-        gain.gain.setValueAtTime(0.16, now + i * 0.07);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.4);
-
-        osc.connect(gain);
-        gain.connect(this.output || ctx.destination);
-
-        osc.start(now + i * 0.07);
-        osc.stop(now + i * 0.07 + 0.4);
-      });
-    } catch {}
-  }
-
-  playReminderChime() {
-    const ctx = this.getContext();
-    if (!ctx) return;
-
-    try {
-      const now = ctx.currentTime;
-      // Gentle, friendly dual-tone bell chime: E5 (659.25Hz) -> A5 (880Hz) -> C#6 (1108.73Hz)
-      const notes = [
-        { freq: 659.25, time: 0, dur: 0.4 },
-        { freq: 880.0, time: 0.15, dur: 0.6 },
-        { freq: 1108.73, time: 0.32, dur: 0.8 },
-      ];
-
-      notes.forEach(({ freq, time, dur }) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, now + time);
-
-        gain.gain.setValueAtTime(0.14, now + time);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + time + dur);
-
-        osc.connect(gain);
-        gain.connect(this.output || ctx.destination);
-
-        osc.start(now + time);
-        osc.stop(now + time + dur);
-      });
-    } catch {}
-  }
+  playComboMilestone(_comboCount: number) { this.melody([523.25, 659.25, 783.99, 1046.5], .075, .3, .09); }
+  playReminderChime() { this.melody([659.25, 880, 1108.73], .16, .5, .065); }
 }
-
 export const sound = new SoundEngine();

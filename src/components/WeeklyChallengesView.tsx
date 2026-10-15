@@ -9,7 +9,7 @@ import {
 import { weeklyChallengesService } from '../services/weekly-challenges-service';
 import { sound } from '../lib/sound';
 import { motion, AnimatePresence } from 'motion/react';
-import confetti from 'canvas-confetti';
+import confetti from '../lib/student-confetti';
 import {
   Trophy,
   Award,

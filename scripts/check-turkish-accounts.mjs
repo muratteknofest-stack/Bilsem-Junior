@@ -1,5 +1,6 @@
 // Real Turkish components with isolated Auth/API fixtures. No live account or email is created.
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
 import {createServer} from 'vite';
 import {chromium} from 'playwright';
 import {generateQuestion} from '../src/features/questions/generators/index.ts';
@@ -196,6 +197,42 @@ try{
   await page.setViewportSize({width:390,height:844});
   await page.goto('http://127.0.0.1:5186/tests/browser/turkish-accounts.html?mode=student-app');
   await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
+  if(grade===1){
+   await fs.mkdir('test-artifacts/student',{recursive:true});
+   await page.getByText('Görünüm ve ses',{exact:true}).click();
+   await page.getByRole('slider',{name:'Ses düzeyi',exact:true}).fill('0');
+   assert.equal(await page.getByRole('button',{name:'Sesi dene',exact:true}).isDisabled(),true);
+   await page.getByRole('slider',{name:'Ses düzeyi',exact:true}).fill('25');
+   await page.getByRole('button',{name:'Hareketli efektler',exact:false}).click();
+   assert.equal(await page.locator('.zp-student-pro').getAttribute('data-reduced-motion'),'true');
+   assert.equal(await page.evaluate(()=>localStorage.getItem('zekapark-motion-enabled-v1')),'false');
+   assert.equal(await page.evaluate(()=>localStorage.getItem('zekapark-sound-volume-v1')),'0.25');
+   await page.reload();
+   await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
+   assert.equal(await page.locator('.zp-student-pro').getAttribute('data-reduced-motion'),'true');
+   await page.getByText('Görünüm ve ses',{exact:true}).click();
+   assert.equal(await page.getByRole('slider',{name:'Ses düzeyi',exact:true}).inputValue(),'25');
+   await page.getByRole('button',{name:'Hareketli efektler',exact:false}).click();
+   await page.getByRole('slider',{name:'Ses düzeyi',exact:true}).fill('45');
+   await page.getByText('Görünüm ve ses',{exact:true}).click();
+   const navigation=page.getByRole('navigation',{name:'Öğrenci paneli bölümleri',exact:true});
+   for(const name of ['Kişisel planım','Yeteneklerim','Görevlerim','İlerlemem','Çalışma alanım']){
+    await navigation.getByRole('button',{name,exact:true}).click();
+    await page.getByRole('region',{name,exact:true}).waitFor();
+    assert.equal(await navigation.getByRole('button',{name,exact:true}).getAttribute('aria-pressed'),'true');
+   }
+   await page.getByRole('heading',{name:'Bugün nasıl çalışmak istersin?',exact:true}).waitFor();
+   await page.waitForFunction(()=>[...document.querySelectorAll('.zp-mode-card')].every(e=>parseFloat(getComputedStyle(e).opacity)>=.99));
+   for(const [width,height]of [[320,568],[390,844],[820,1180],[1440,1000]]){
+    await page.setViewportSize({width,height});await page.evaluate(()=>scrollTo(0,0));
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
+    await page.screenshot({path:`test-artifacts/student/dashboard-${width}.png`});
+   }
+   await page.evaluate(()=>document.documentElement.classList.add('dark'));
+   await page.screenshot({path:'test-artifacts/student/dashboard-dark.png'});
+   await page.evaluate(()=>document.documentElement.classList.remove('dark'));
+   await page.setViewportSize({width:390,height:844});
+  }
   const topics=page.getByRole('region',{name:'Konuya göre test',exact:true});
   assert.equal(await topics.getByLabel('Test konusu',{exact:true}).locator('option').count(),44);
   await topics.getByLabel('Test konusu',{exact:true}).selectOption(grade===1?'matrix_3x3':'paper_folding');

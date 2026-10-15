@@ -18,7 +18,7 @@ import {
   ArrowRight,
   TrendingUp,
 } from 'lucide-react';
-import confetti from 'canvas-confetti';
+import confetti from '../lib/student-confetti';
 
 interface DailyGoalProgressCardProps {
   user: UserProfile;
