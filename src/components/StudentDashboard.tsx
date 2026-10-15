@@ -9,6 +9,7 @@ import { dataService } from '../services/data-service';
 import { isAvailableCategory } from '../features/student/available-categories';
 import { useStudentReducedMotion } from '../features/student/experience-preferences';
 import { levelProgress } from '../features/student/study-hub-model';
+import { dailyMissions } from '../features/student/gamification-model';
 import { getStudyFavorites, saveStudyFavorites } from '../services/student-preferences-service';
 import { StudentHeroBanner } from './student/StudentHeroBanner';
 import { StudentModesGrid } from './student/StudentModesGrid';
@@ -127,6 +128,7 @@ export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries
     && (skillFilter === 'all' || (skillFilter === 'new' ? !m.attemptCount : m.attemptCount > 0 && m.mastery < 80)));
   const weekly = useMemo(() => dataService.getWeeklyQuestionProgressData(activeUser).summary, [activeUser]);
   const xpProgress = levelProgress(activeUser.xp);
+  const dailyGoal = dailyMissions(activeUser)[0];
   const hour = new Date().getHours();
   const greeting = hour >= 5 && hour < 12 ? { text: 'Günaydın', emoji: '☀️' }
     : hour < 18 ? { text: 'Merhaba', emoji: '✦' } : { text: 'İyi akşamlar', emoji: '🌙' };
@@ -150,7 +152,7 @@ export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries
                   {onStartTopicPractice && isSchoolGrade(activeUser.grade) && !isDemoUser(activeUser.id) && <StudentTopicPractice grade={activeUser.grade} onStart={onStartTopicPractice} />}
                   <WordwallLibrary key={`wordwall-${activeUser.id}-${activeUser.grade}`} initialGrade={activeUser.grade} />
                 </>}
-                {activeTab === 'plan' && <><StudentStudyHub masteries={safeMasteries} unresolved={unresolved} savedExam={dataService.getActiveExam()} favorites={favorites} onFavoriteChange={value => setFavorites(saveStudyFavorites(value))} onPractice={onStartPractice} onMistakes={onOpenMistakes} onResumeExam={onStartExam} />
+                {activeTab === 'plan' && <><DailyGoalProgressCard user={activeUser} dailyPlan={dailyPlan || undefined} onUserUpdate={onUserUpdate} onStartPractice={() => onStartPractice('mixed')} /><StudentStudyHub masteries={safeMasteries} unresolved={unresolved} savedExam={dataService.getActiveExam()} favorites={favorites} onFavoriteChange={value => setFavorites(saveStudyFavorites(value))} onPractice={onStartPractice} onMistakes={onOpenMistakes} onResumeExam={onStartExam} />
                   <TodayPersonalizedStudyPlanCard user={activeUser} masteries={safeMasteries} mistakes={activeMistakes} onStartPractice={onStartPractice} onStartAdaptive={onStartAdaptive} onOpenMistakes={onOpenMistakes} onUserUpdate={onUserUpdate} /></>}
                 {activeTab === 'skills' && <StudentSkillsGrid safeMasteries={safeMasteries} visibleMasteries={visibleMasteries} skillSearch={skillSearch} setSkillSearch={setSkillSearch} skillFilter={skillFilter} setSkillFilter={setSkillFilter} categoryStyleConfig={CATEGORY_STYLE_CONFIG} onStartPractice={onStartPractice} />}
                 {activeTab === 'challenges' && <><GamificationArena user={activeUser} thisWeekQuestions={weekly.thisWeekTotal} lastWeekQuestions={weekly.lastWeekTotal} onPractice={() => onStartPractice('mixed')} onOpenChallenges={() => document.getElementById('zp-weekly-missions')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })} />
@@ -160,7 +162,14 @@ export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries
             </AnimatePresence>
           </section>
           <aside className="zp-student-aside" aria-label="Günlük ilerlemem">
-            <DailyGoalProgressCard user={activeUser} dailyPlan={dailyPlan || undefined} onUserUpdate={onUserUpdate} onStartPractice={() => onStartPractice('mixed')} />
+            <article className="zp-daily-snapshot" aria-labelledby="zp-daily-snapshot-title">
+              <div className="zp-panel-eyebrow"><Target size={16} aria-hidden="true" /> BUGÜNKÜ HEDEFİN</div>
+              <h2 id="zp-daily-snapshot-title">{dailyGoal.completed ? 'Hedefini tamamladın!' : 'Her soru bir adım.'}</h2>
+              <div className="zp-daily-meter"><div className="zp-daily-ring" style={{ background: `conic-gradient(#5caa94 ${dailyGoal.progress}%, #e6f0ed 0)` }} aria-hidden="true"><strong>%{dailyGoal.progress}</strong></div><div><strong>{dailyGoal.current}<span> / {dailyGoal.target}</span></strong><p>bugün çözülen soru</p></div></div>
+              <progress className="sr-only" aria-label="Günlük soru hedefim" value={Math.min(dailyGoal.current, dailyGoal.target)} max={dailyGoal.target} />
+              <button type="button" className="zp-daily-start" onClick={() => onStartPractice('mixed')}>{dailyGoal.completed ? 'Keşfetmeye devam et' : 'Kısa pratiğe başla'}<ArrowUpRight size={16} aria-hidden="true" /></button>
+              <button type="button" className="zp-daily-edit" onClick={() => switchSection('plan')}>Hedefimi düzenle</button>
+            </article>
             <article className="zp-week-overview"><div className="zp-panel-eyebrow"><BarChart3 size={16} aria-hidden="true" /> BU HAFTA</div><h2>Küçük adımlar, kalıcı ilerleme.</h2><div className="zp-week-stats"><div><strong>{weekly.thisWeekTotal}</strong><span>çözülen soru</span></div><div><strong>{activeUser.streak || 0}<Flame size={19} aria-hidden="true" /></strong><span>günlük seri</span></div></div><button type="button" onClick={() => switchSection('progress')}>İlerlememi incele <ArrowUpRight size={16} aria-hidden="true" /></button></article>
             <DailyStreakCard user={activeUser} onUserUpdate={onUserUpdate} onStartPractice={() => onStartPractice('mixed')} onOpenDetailsModal={() => onNavigate('achievements')} />
             <p className="zp-study-note"><Sparkles size={17} aria-hidden="true" /> Kendi hızında ilerle. Her soru yeni bir keşif.</p>

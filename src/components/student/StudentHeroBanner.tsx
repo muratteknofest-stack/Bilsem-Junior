@@ -105,9 +105,7 @@ export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({
               <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight font-['Outfit',sans-serif]">
                 {greeting.text}, {user.name?.split(' ')[0] || 'Zeka Şampiyonu'} {greeting.emoji}
               </h1>
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-800/50">
-                <Sparkles className="w-3 h-3" /> Seviye {xpProgress.level}
-              </span>
+
             </div>
 
             <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400 mt-1">
@@ -141,7 +139,7 @@ export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({
             </div>
 
             {copyError && <p role="status" className="mt-2 text-xs">{copyError}</p>}
-            {/* Student Code Badge */}
+            <details className="zp-profile-tools"><summary>Hesap ve giriş bilgileri</summary>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {studentCodeDisplay && (
                 <motion.button
@@ -187,6 +185,7 @@ export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({
                 </span>
               )}
             </div>
+            </details>
           </div>
         </div>
 
