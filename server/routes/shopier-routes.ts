@@ -1,4 +1,7 @@
 import { Router } from 'express';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { ShopierSalesPage } from '../../src/components/ShopierSalesPage';
 import { z } from 'zod';
 import { SHOPIER_PLANS, shopierProduct } from '../../src/lib/shopier-config';
 import { readPlatformSettings } from '../platform-settings';
@@ -6,7 +9,7 @@ import { shopierReady, shopierGet } from '../shopier-client';
 import { verifiedShopierOrder, ShopierError } from '../shopier-model';
 import { shopierAccess, assertShopierFamily } from '../shopier-access';
 import { getServiceClient } from '../supabase-admin';
-import { requireSupabaseAuth,requireVerifiedEmail,requireProfileRole,escapeHtml,type AuthenticatedRequest } from '../security';
+import { requireSupabaseAuth,requireVerifiedEmail,requireProfileRole,type AuthenticatedRequest } from '../security';
 import { sharedRateLimit } from '../shared-rate-limit';
 import { accountSecurityLimiter } from '../rate-limiters';
 const routes=Router();
@@ -20,7 +23,7 @@ export function shopierView(settings:import('../../src/lib/platform-settings').P
 }
 routes.get('/public/shopier',async(_req,res)=>res.json(await publicShopierView()));
 export function shopierPageHtml(config:ReturnType<typeof shopierView>) {
-  return `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ZekaPark paketleri</title><link rel="stylesheet" href="/blog-assets/blog.css"></head><body><header class="header"><nav class="wrap nav"><a class="brand" href="/">ZekaPark</a><a href="/login?role=parent">Veli paneli</a></nav></header><main class="wrap policy"><h1>ZekaPark çalışma paketleri</h1><p>${escapeHtml(config.brand)} · Bir öğrenci için 1–4. sınıf düzeylerinde 44 konuda çalışma, adaptif testler, denemeler ve veli ilerleme takibi.</p><p>${config.ready?'Satın alırken veli hesabındaki e-postayı kullan. Sonra veli panelinde Shopier sipariş numaranla erişimini doğrula.':'Ücretli satış henüz açılmadı. Aşağıdaki fiyatlar planlanan lansman fiyatlarıdır; mevcut ücretsiz kullanım devam eder.'}</p>${config.plans.map(p=>`<section class="platform-info-card"><h2>${escapeHtml(p.title)} · ${p.days} gün</h2><p>${(p.amountKurus/100).toLocaleString('tr-TR')} TL · Tek seferlik ödeme, otomatik yenileme yok.</p><p>Öğrenci sınıfını değiştirebilir; erişim bir öğrenci hesabına tanımlanır. Süre ilk doğrulanmış aktivasyondan başlar.</p>${p.url?'<a class="button" href="/login?role=parent">Veli panelinden satın al</a>':'<p role="status">Yakında · Satış henüz açılmadı</p>'}</section>`).join('')}<p>Sınav başarısı, resmî BİLSEM bağlantısı, zekâ tanısı veya canlı ders vaat edilmez.</p><p><a href="/bilgi/kullanim-kosullari">Kullanım koşulları</a> · <a href="/bilgi/gizlilik-ve-veriler">Gizlilik</a> · <a href="/bilgi/iletisim-ve-destek">İletişim</a></p></main></body></html>`;
+  return `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f8f7f2"><meta name="description" content="ZekaPark ile 1–4. sınıflar için 44 konuda renkli testler, adaptif çalışma ve veli takibi. Aylık, 3 aylık ve yıllık paketleri keşfedin."><title>ZekaPark · Renkli keşif paketleri</title><link rel="icon" href="/logo.svg"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/sales/sales.css"></head><body>${renderToStaticMarkup(React.createElement(ShopierSalesPage,config))}</body></html>`;
 }
 routes.get('/public/shopier/page',async(_req,res)=>{res.type('html').send(shopierPageHtml(await publicShopierView()));});
 routes.use('/parent/shopier',requireSupabaseAuth,requireVerifiedEmail,requireProfileRole('parent'),accountSecurityLimiter);

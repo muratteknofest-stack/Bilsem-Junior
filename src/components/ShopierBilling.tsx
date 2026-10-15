@@ -3,6 +3,7 @@ import { authenticatedFetch } from '../lib/api-client';
 import { auth } from '../lib/supabase';
 import { withRequestDeadline } from '../lib/request-deadline';
 import { ShopierPackageCards } from './ShopierPackageCards';
+import { ShopierActivationForm } from './ShopierActivationForm';
 type View={ready:boolean;enforced:boolean;plans:Array<{id:string;title:string;days:number;amountKurus:number;url:string|null}>;access:{active:boolean;expiresAt:string|null}};
 async function request(path:string,body?:unknown) {
   return withRequestDeadline(async signal=>{const r=await authenticatedFetch(path,{signal,...(body?{method:'POST',body:JSON.stringify(body)}:{})});
@@ -21,15 +22,15 @@ export function ShopierBilling({studentId}:{studentId:string}) {
     catch(cause){if(epoch.current===version&&auth.currentUser?.uid===owner)setError(cause instanceof Error?cause.message:'Sipariş doğrulanamadı.');}
     finally{if(epoch.current===version)setBusy(false);}
   }
-  return <details className="rounded-2xl border bg-white p-4 my-4"><summary className="min-h-11 cursor-pointer font-bold">Shopier paketleri ve erişim</summary>
-    <div className="space-y-3 mt-3"><a href="/paketler" className="underline">Paketler ve kullanım koşulları</a>
+  return <details className="zp-billing"><summary><span className="zp-billing-summary-icon" aria-hidden="true">✦</span><span>Shopier paketleri ve erişim<small>Yeni keşiflere yer açın</small></span><span className="zp-billing-chevron" aria-hidden="true">⌄</span></summary>
+    <div className="zp-billing-content"><a href="/paketler" className="zp-sales-text-link">Paketler ve kullanım koşulları</a>
     {error&&<><p role="alert" className="text-rose-700">{error}</p>{!view&&<button type="button" onClick={()=>setReload(v=>v+1)} className="min-h-11 underline">Tekrar dene</button>}</>}
     {!view&&!error&&<p role="status">Paketler yükleniyor…</p>}
-    {view&&<><p role="status">{view.access.active?`Bu öğrencinin paket erişimi ${new Date(view.access.expiresAt!).toLocaleDateString('tr-TR')} tarihine kadar aktif.`:view.enforced?'Aktif paket bulunamadı.':'Ücretli erişim zorunluluğu kapalı; mevcut ücretsiz kullanım devam ediyor.'}</p>
+    {view&&<><p role="status" className="zp-billing-status">{view.access.active?`Bu öğrencinin paket erişimi ${new Date(view.access.expiresAt!).toLocaleDateString('tr-TR')} tarihine kadar aktif.`:view.enforced?'Aktif paket bulunamadı.':'Ücretli erişim zorunluluğu kapalı; mevcut ücretsiz kullanım devam ediyor.'}</p>
       <ShopierPackageCards plans={view.plans} ready={view.ready}/>
-      {view.ready?<><p>Shopier’de veli hesabındaki e-postayla tek paket satın al. Sipariş numaranı aşağıda doğrulayınca erişim bu öğrenciye tanımlanır. Aynı sipariş başka öğrenciye aktarılamaz. Yeni paket süresi kalan erişimin sonuna eklenir; iade edilen siparişler sayılmaz.</p>
-        <form onSubmit={claim} className="flex flex-wrap gap-3 items-end"><label>Shopier sipariş numarası<input required maxLength={80} autoComplete="off" value={orderId} onChange={e=>setOrderId(e.target.value)} disabled={busy} className="block min-h-11 rounded-lg border p-3"/></label><button type="submit" disabled={busy||!orderId.trim()} className="min-h-11 rounded-lg bg-indigo-700 px-4 text-white">{busy?'Doğrulanıyor…':'Siparişi doğrula ve erişimi aç'}</button></form>
-      </>:<p>Ücretli satış henüz açılmadı. Buradaki fiyatlar planlanan lansman fiyatlarıdır.</p>}
+      {view.ready?<><p className="zp-billing-instructions">Shopier’de veli hesabındaki e-postayla tek paket satın al. Sipariş numaranı aşağıda doğrulayınca erişim bu öğrenciye tanımlanır. Aynı sipariş başka öğrenciye aktarılamaz. Yeni paket süresi kalan erişimin sonuna eklenir; iade edilen siparişler sayılmaz.</p>
+        <ShopierActivationForm orderId={orderId} busy={busy} onChange={setOrderId} onSubmit={claim}/>
+      </>:<p className="zp-sales-notice">Ücretli satış henüz açılmadı. Buradaki fiyatlar planlanan lansman fiyatlarıdır.</p>}
     </>}
     </div></details>;
 }
