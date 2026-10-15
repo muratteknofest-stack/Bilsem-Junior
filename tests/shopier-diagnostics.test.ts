@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { inspectShopierProducts } from '../server/shopier-diagnostics';
+import { inspectShopierProducts, inspectShopierPackageCandidates } from '../server/shopier-diagnostics';
 import { SHOPIER_PLANS, shopierProduct, shopierSettingsSchema } from '../src/lib/shopier-config';
 
 const settings = shopierSettingsSchema.parse({ monthlyProductId:'30', quarterlyProductId:'90', annualProductId:'365',
@@ -39,4 +39,36 @@ test('only fixed network codes are reported; request details and arbitrary excep
   assert.deepEqual(report.products[0],{plan:'monthly',readable:false,networkCode:'ENOTFOUND'});
   assert.deepEqual(report.products[1],{plan:'quarterly',readable:false});
   assert.equal(JSON.stringify(report).includes('private'),false);
+});
+
+test('account package discovery uses a bounded read-only page and emits no arbitrary provider strings', async () => {
+  const secret = 'private-test-token';
+  const fetcher: typeof fetch = async (url, init) => {
+    assert.equal(url, 'https://api.shopier.com/v1/products?limit=50&page=1&customListing=false');
+    assert.equal(init?.redirect, 'error');
+    assert.equal((init?.headers as Record<string,string>).Authorization, 'Bearer ' + secret);
+    return Response.json([
+      {id:'123',url:'https://www.shopier.com/new_store/123',title:'ZekaPark Aylık Paket',type:'digital',stockStatus:'inStock',priceData:{currency:'TRY',price:'299.00',discount:false,shippingPrice:'0.00'},variants:[],options:[],privateData:secret},
+      {id:'124',url:'https://www.shopier.com/124',title:'ZekaPark 3 Aylık Paket',type:'physical',stockStatus:'outOfStock',priceData:{currency:'TRY',price:'699.00'},privateData:secret},
+      {id:'125',url:'https://evil.example/125',title:secret,priceData:{currency:'TRY',price:'1499.00'}},
+      {id:'126',url:'https://www.shopier.com/126?secret='+secret,priceData:{currency:'TRY',price:'1499.00'}},
+      {id:secret,url:'https://www.shopier.com/'+secret,priceData:{currency:'TRY',price:'1499.00'}},
+    ]);
+  };
+  const report = await inspectShopierPackageCandidates(fetcher,secret);
+  assert.equal(report.readable,true); assert.equal(report.scanned,5); assert.equal(report.candidates?.length,2);
+  assert.equal(report.candidates?.[0].titleMatchesPlan,true); assert.equal(report.candidates?.[1].titleMatchesPlan,true);
+  assert.equal(report.candidates?.[1].digital,false); assert.equal(report.candidates?.[1].inStock,false);
+  assert.equal(JSON.stringify(report).includes(secret),false);
+});
+
+test('package discovery classifies status without exposing errors and rejects oversized or invalid payloads', async () => {
+  assert.deepEqual(await inspectShopierPackageCandidates(async()=>new Response('private error',{status:403,headers:{'content-type':'text/html','cf-mitigated':'challenge'}}),'test'),
+    {configured:true,readable:false,httpStatus:403,responseType:'html',challenge:true});
+  const oversized=await inspectShopierPackageCandidates(async()=>Response.json(['x'.repeat(256001)]),'test');
+  assert.equal(oversized.oversized,true);
+  const invalid=await inspectShopierPackageCandidates(async()=>Response.json({privateData:'private error'}),'test');
+  assert.equal(invalid.invalidResponse,true); assert.equal(JSON.stringify(invalid).includes('private'),false);
+  assert.deepEqual(await inspectShopierPackageCandidates(async()=>{throw new Error('private error');},'test'),{configured:true,readable:false});
+  assert.deepEqual(await inspectShopierPackageCandidates(undefined,''),{configured:false});
 });
