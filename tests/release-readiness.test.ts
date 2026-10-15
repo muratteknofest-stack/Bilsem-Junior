@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import {createServer as createHttpServer} from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { defaultPlatformSettings, registrationOpen, releaseBlockers, platformSettingsSchema, configuredExams } from '../src/lib/platform-settings';
 import { exportSafePreferences } from '../src/lib/safe-preferences';
@@ -87,7 +88,7 @@ test('an invalid contact in direct HTML input cannot inject a mail link', () => 
 
 import {commercialReadiness} from '../server/commercial-readiness';
 // @ts-ignore Read-only production verifier is also used by CI.
-import {verifyPublicRelease} from '../scripts/check-live-release.mjs';
+import {verifyPublicRelease,fetchReleaseResource} from '../scripts/check-live-release.mjs';
 
 test('commercial readiness uses the real operator settings and verified Shopier products',()=>{
  const settings=defaultPlatformSettings();settings.business={legalName:'Test Operator',address:'Test postal address',contactEmail:'test@example.invalid',legalBases:'Test purposes',retention:'Test retention',transfers:'Test providers'};
@@ -108,13 +109,13 @@ test('free registration does not imply completed commercial launch checks',()=>{
 });
 
 function releaseFetch(overrides:Record<string,{status?:number;body?:string;headers?:Record<string,string>}>={}){
- return async (input:Parameters<typeof fetch>[0],init?:RequestInit)=>{const url=input instanceof URL?input:new URL(typeof input==='string'?input:input.url);const path=url.pathname;const status=init?.method==='POST'?(new Headers(init.headers).has('Origin')?403:401):path==='/api/release-unknown'?404:path.startsWith('/api/')&&!path.startsWith('/api/public/')?401:200;
- const body=path==='/'?'<html lang="tr"><title>ZekaPark</title></html>':path==='/robots.txt'?'User-agent: *\nDisallow: /admin':path==='/sitemap.xml'?'https://zekapark.vercel.app/':path==='/api/public/platform'?JSON.stringify({registrationOpen:true,policyVersion:'fixture-1'}):path==='/api/public/shopier'?JSON.stringify({ready:false,enforced:false,plans:[{},{},{}]}):path==='/paketler'||path==='/paketler/'?'<html><link href="/sales/sales.css"><h1 id="sales-heading">Keşif</h1><section class="zp-plan-card"></section></html>':path==='/sales/sales.css'?'.zp-plan-mint{color:green}':'fixture';
+ return async (input:Parameters<typeof fetch>[0],init?:RequestInit)=>{const url=input instanceof URL?input:new URL(typeof input==='string'?input:input.url);const path=url.pathname;const crossSite=new Headers(init?.headers).get('Sec-Fetch-Site')==='cross-site';const status=crossSite&&path.startsWith('/api/')?403:init?.method==='POST'?(new Headers(init.headers).has('Origin')?403:401):path==='/api/release-unknown'?404:path.startsWith('/api/')&&!path.startsWith('/api/public/')?401:200;
+ const body=path==='/'?'<html lang="tr"><title>ZekaPark</title></html>':path==='/robots.txt'?'User-agent: *\nDisallow: /admin':path==='/sitemap.xml'?'https://zekapark.vercel.app/':path==='/api/public/platform'?JSON.stringify({registrationOpen:true,policyVersion:'fixture-1'}):path==='/api/public/shopier'?JSON.stringify({ready:false,enforced:false,plans:[{},{},{}]}):path==='/paketler'||path==='/paketler/'?'<html><link href="/sales/sales.css"><h1 id="sales-heading">Keşif</h1><section class="zp-plan-card"></section></html>':path==='/sales/sales.css'?'.zp-plan-mint{color:green}':path.startsWith('/bilgi/')?'<html><h1>Policy</h1></html>':'fixture';
  const override=overrides[path]||{};return new Response(override.body??body,{status:override.status??status,headers:{'x-content-type-options':'nosniff','x-frame-options':'DENY','cache-control':'no-store','content-type':path.endsWith('.css')?'text/css; charset=utf-8':'text/html; charset=utf-8',...override.headers}});
  };
 }
 test('live release checks distinguish free registration and disabled paid sales',async()=>{
- const report=await verifyPublicRelease(new URL('https://zekapark.vercel.app'),releaseFetch());assert.deepEqual(report,{checks:19,registrationOpen:true,paidSalesReady:false});
+ const report=await verifyPublicRelease(new URL('https://zekapark.vercel.app'),releaseFetch());assert.deepEqual(report,{checks:27,registrationOpen:true,paidSalesReady:false});
 });
 test('live release refuses sign-in walls, private exports, missing protection and indexing blocks',async()=>{
  const origin=new URL('https://zekapark.vercel.app');
@@ -139,4 +140,26 @@ test('live release refuses a broken package address or a missing sales styleshee
  }
  await assert.rejects(()=>verifyPublicRelease(origin,releaseFetch({'/sales/sales.css':{headers:{'content-type':'text/html'}}})));
  await assert.rejects(()=>verifyPublicRelease(origin,releaseFetch({'/sales/sales.css':{body:'<html>Missing</html>'}})));
+});
+
+
+test('live release requires external document links to work and cross-site API reads to stay blocked',async()=>{
+ const origin=new URL('https://zekapark.vercel.app'),fixture=releaseFetch();
+ const brokenNavigation:typeof fetch=async(input,init)=>new Headers(init?.headers).get('Sec-Fetch-Site')==='cross-site'&&new URL(String(input)).pathname==='/paketler'?Response.json({error:'Origin blocked'},{status:403}):fixture(input,init);
+ await assert.rejects(()=>verifyPublicRelease(origin,brokenNavigation));
+ const openApi:typeof fetch=async(input,init)=>new Headers(init?.headers).get('Sec-Fetch-Site')==='cross-site'&&new URL(String(input)).pathname==='/api/account/export'?Response.json({data:'private'}):fixture(input,init);
+ await assert.rejects(()=>verifyPublicRelease(origin,openApi));
+});
+
+
+test('release navigation transport preserves the browser fetch metadata instead of rewriting it to cors',async()=>{
+ let received:import('node:http').IncomingHttpHeaders={};
+ const server=createHttpServer((req,res)=>{received=req.headers;res.setHeader('Content-Type','text/html');res.end('<html>Public</html>');});
+ server.listen(0,'127.0.0.1');await new Promise<void>(resolve=>server.once('listening',resolve));
+ const address=server.address();assert.ok(address&&typeof address!=='string');
+ try{
+  const response=await fetchReleaseResource(new URL(`http://127.0.0.1:${address.port}/paketler`),{headers:{'Sec-Fetch-Mode':'navigate','Sec-Fetch-Site':'cross-site','Sec-Fetch-Dest':'document'},signal:AbortSignal.timeout(3000)});
+  assert.equal(response.status,200);assert.equal(await response.text(),'<html>Public</html>');
+  assert.equal(received['sec-fetch-mode'],'navigate');assert.equal(received['sec-fetch-site'],'cross-site');assert.equal(received['sec-fetch-dest'],'document');assert.equal(received.origin,undefined);
+ }finally{await new Promise<void>(resolve=>server.close(()=>resolve()));}
 });

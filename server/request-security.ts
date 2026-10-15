@@ -8,6 +8,12 @@ function canonicalOrigin(value: string): string | null {
   } catch { return null; }
 }
 
+/** Only these public HTML pages may be opened by a cross-site top-level link. */
+function publicDocumentPath(path: string, format: unknown): boolean {
+  return /^\/public\/shopier\/page\/?$/.test(path)
+    || (format === 'html' && /^\/public\/policy\/(?:gizlilik-ve-veriler|kullanim-kosullari|iletisim-ve-destek)\/?$/.test(path));
+}
+
 /** Bearer authentication remains mandatory. Origin checks also protect public JSON forms. */
 export function requestSecurity(configuredOrigins: string): RequestHandler {
   const allowedOrigins = new Set(configuredOrigins.split(',').map(value => canonicalOrigin(value.trim())).filter((value): value is string => !!value));
@@ -16,8 +22,15 @@ export function requestSecurity(configuredOrigins: string): RequestHandler {
     const origin = req.get('Origin');
     const parsed = origin ? canonicalOrigin(origin) : null;
     const sameOrigin = parsed === `${req.protocol}://${req.get('host')}`;
+    // A link from another website is a document navigation, not an API fetch.
+    // Keep this exception read-only and limited to public HTML; JSON, frames,
+    // mutations, private endpoints and explicit Origin validation stay protected.
+    const publicNavigation = ['GET', 'HEAD'].includes(req.method)
+      && req.get('Sec-Fetch-Mode') === 'navigate'
+      && req.get('Sec-Fetch-Dest') === 'document'
+      && publicDocumentPath(req.path, req.query.format);
     if ((origin && (!parsed || (!sameOrigin && !allowedOrigins.has(parsed)))) ||
-        (!origin && req.get('Sec-Fetch-Site') === 'cross-site')) {
+        (!origin && req.get('Sec-Fetch-Site') === 'cross-site' && !publicNavigation)) {
       return res.status(403).json({ error: 'İstek kaynağına izin verilmiyor.' });
     }
     if (origin && parsed) {
@@ -33,3 +46,4 @@ export function requestSecurity(configuredOrigins: string): RequestHandler {
     return next();
   };
 }
+
