@@ -200,9 +200,9 @@ try{
   if(grade===1){
    await fs.mkdir('test-artifacts/student',{recursive:true});
    await page.getByText('Görünüm ve ses',{exact:true}).click();
-   await page.getByRole('slider',{name:'Ses düzeyi',exact:true}).fill('0');
+   await page.getByRole('slider',{name:'Ses düzeyi',exact:true}).press('Home');
    assert.equal(await page.getByRole('button',{name:'Sesi dene',exact:true}).isDisabled(),true);
-   await page.getByRole('slider',{name:'Ses düzeyi',exact:true}).fill('25');
+   for(let step=0;step<5;step++)await page.getByRole('slider',{name:'Ses düzeyi',exact:true}).press('ArrowRight');
    await page.getByRole('button',{name:'Hareketli efektler',exact:false}).click();
    assert.equal(await page.locator('.zp-student-pro').getAttribute('data-reduced-motion'),'true');
    assert.equal(await page.evaluate(()=>localStorage.getItem('zekapark-motion-enabled-v1')),'false');
@@ -213,7 +213,7 @@ try{
    await page.getByText('Görünüm ve ses',{exact:true}).click();
    assert.equal(await page.getByRole('slider',{name:'Ses düzeyi',exact:true}).inputValue(),'25');
    await page.getByRole('button',{name:'Hareketli efektler',exact:false}).click();
-   await page.getByRole('slider',{name:'Ses düzeyi',exact:true}).fill('45');
+   for(let step=0;step<4;step++)await page.getByRole('slider',{name:'Ses düzeyi',exact:true}).press('ArrowRight');
    await page.getByText('Görünüm ve ses',{exact:true}).click();
    const navigation=page.getByRole('navigation',{name:'Öğrenci paneli bölümleri',exact:true});
    for(const name of ['Kişisel planım','Yeteneklerim','Görevlerim','İlerlemem','Çalışma alanım']){
