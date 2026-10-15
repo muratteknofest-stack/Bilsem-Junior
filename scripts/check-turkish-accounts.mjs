@@ -229,7 +229,7 @@ try{
     await page.screenshot({path:`test-artifacts/student/dashboard-${width}.png`});
    }
    await page.evaluate(()=>document.documentElement.classList.add('dark'));
-   await page.screenshot({path:'test-artifacts/student/dashboard-dark.png'});
+   await page.screenshot({path:'test-artifacts/student/dashboard-dark.png',animations:'disabled'});
    await page.evaluate(()=>document.documentElement.classList.remove('dark'));
    await page.setViewportSize({width:390,height:844});
   }
