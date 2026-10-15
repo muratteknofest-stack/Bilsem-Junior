@@ -222,14 +222,30 @@ try{
     assert.equal(await navigation.getByRole('button',{name,exact:true}).getAttribute('aria-pressed'),'true');
    }
    await page.getByRole('heading',{name:'Bugün nasıl çalışmak istersin?',exact:true}).waitFor();
+   // The tactile artwork must resolve in the real bundled app, including on narrow screens.
+   await page.waitForFunction(()=>{
+    const image=document.querySelector('.zp-feature-art img');
+    return image instanceof HTMLImageElement && image.complete && image.naturalWidth>0;
+   });
    await page.waitForFunction(()=>[...document.querySelectorAll('.zp-mode-card')].every(e=>parseFloat(getComputedStyle(e).opacity)>=.99));
    for(const [width,height]of [[320,568],[390,844],[820,1180],[1440,1000]]){
     await page.setViewportSize({width,height});await page.evaluate(()=>scrollTo(0,0));
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
+    assert.equal(await page.locator('.zp-mode-card').count(),4);
     await page.screenshot({path:`test-artifacts/student/dashboard-${width}.png`});
+    await page.locator('.zp-grade-settings>summary').click();
+    assert.equal(await page.getByRole('region',{name:'Profilimdeki sınıf',exact:true}).getByRole('combobox').locator('option').count(),4);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
+    await page.locator('.zp-grade-settings>summary').click();
+    await page.locator('.zp-profile-tools>summary').click();
+    await page.getByTitle('Giriş kodunu kopyala',{exact:true}).waitFor();
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
+    await page.locator('.zp-profile-tools>summary').click();
    }
    await page.evaluate(()=>document.documentElement.classList.add('dark'));
    await page.screenshot({path:'test-artifacts/student/dashboard-dark.png',animations:'disabled'});
+   await page.setViewportSize({width:390,height:844});
+   await page.screenshot({path:'test-artifacts/student/dashboard-dark-mobile.png',animations:'disabled'});
    await page.evaluate(()=>document.documentElement.classList.remove('dark'));
    await page.setViewportSize({width:390,height:844});
   }
