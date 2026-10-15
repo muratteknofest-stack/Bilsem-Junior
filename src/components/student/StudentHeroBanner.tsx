@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import confetti from 'canvas-confetti';
 import {
@@ -37,24 +37,28 @@ export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({
 }) => {
   const [copiedStudentCode, setCopiedStudentCode] = useState(false);
   const studentCodeDisplay = user.studentCode || '';
+  const [copyError, setCopyError] = useState('');
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(copyTimer.current), []);
 
-  const handleCopyStudentCode = () => {
-    if (studentCodeDisplay) {
-      navigator.clipboard.writeText(studentCodeDisplay);
-      setCopiedStudentCode(true);
-      sound.playClick();
-      setTimeout(() => setCopiedStudentCode(false), 2000);
-    }
+  const handleCopyStudentCode = async () => {
+    if (!studentCodeDisplay) return;
+    try {
+      await navigator.clipboard.writeText(studentCodeDisplay);
+      setCopiedStudentCode(true); setCopyError(''); sound.playClick();
+      clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopiedStudentCode(false), 2000);
+    } catch { setCopyError('Kod kopyalanamadı. Giriş kodunu seçerek kopyalayabilirsin.'); }
   };
 
   const handleAvatarClick = () => {
     sound.playLevelUp();
-    confetti({ particleCount: 40, spread: 60, origin: { y: 0.3 } });
+    if (!prefersReducedMotion) confetti({ particleCount: 24, spread: 45, ticks: 100, disableForReducedMotion: true, origin: { y: 0.3 } });
   };
 
   const handleStreakBadgeClick = () => {
     sound.playSuccess();
-    confetti({ particleCount: 50, spread: 70, origin: { y: 0.35 } });
+    if (!prefersReducedMotion) confetti({ particleCount: 26, spread: 45, ticks: 100, disableForReducedMotion: true, origin: { y: 0.35 } });
   };
 
   const nextLvlXp = xpProgress.level * 250;
@@ -64,14 +68,14 @@ export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({
 
   return (
     <motion.section
-      initial={{ opacity: 0, y: 15 }}
+      initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="zp-dashboard-hero relative overflow-hidden rounded-3xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800/80 p-4 sm:p-6 xl:p-8 shadow-sm transition-all"
+      className="zp-dashboard-hero zp-pro-hero relative overflow-hidden rounded-3xl bg-white/80 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800/80 p-4 sm:p-6 xl:p-8 shadow-sm transition-all"
     >
-      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6">
+      <div className="zp-pro-hero-content flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6">
         {/* Student Info & Level Progress */}
-        <div className="flex min-w-0 flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full xl:flex-1">
+        <div className="zp-student-profile flex min-w-0 flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full xl:flex-1">
           {/* Animated 3D-Feel Floating Avatar */}
           <motion.button
             type="button"
@@ -79,11 +83,11 @@ export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({
             whileHover={prefersReducedMotion ? undefined : { scale: 1.08, rotate: [0, -3, 3, 0] }}
             whileTap={prefersReducedMotion ? undefined : { scale: 0.95 }}
             onClick={handleAvatarClick}
-            className="relative w-18 h-18 sm:w-22 sm:h-22 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-50 via-indigo-100/70 to-indigo-200/50 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center text-4xl sm:text-5xl shadow-md border-2 border-indigo-200/60 dark:border-indigo-500/20 shrink-0 cursor-pointer group select-none"
+            className="zp-student-avatar relative w-18 h-18 sm:w-22 sm:h-22 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-50 via-indigo-100/70 to-indigo-200/50 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center text-4xl sm:text-5xl shadow-md border-2 border-indigo-200/60 dark:border-indigo-500/20 shrink-0 cursor-pointer group select-none"
           >
             <motion.span
-              animate={prefersReducedMotion ? undefined : { y: [0, -4, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+              animate={prefersReducedMotion ? undefined : { y: [0, -3, 0] }}
+              transition={{ duration: 1.2, ease: 'easeInOut' }}
             >
               {user.avatar || '🦊'}
             </motion.span>
@@ -95,22 +99,20 @@ export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({
             </div>
           </motion.button>
 
-          <div className="flex-1 min-w-0">
-            <p className="zp-dashboard-kicker">ÖĞRENCİ ALANI / BUGÜN</p>
+          <div className="zp-student-profile-copy flex-1 min-w-0">
+            <p className="zp-dashboard-kicker">HER GÜN BİR ADIM İLERİ</p>
             <div className="flex items-center gap-2.5 flex-wrap">
               <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight font-['Outfit',sans-serif]">
                 {greeting.text}, {user.name?.split(' ')[0] || 'Zeka Şampiyonu'} {greeting.emoji}
               </h1>
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-800/50">
-                <Sparkles className="w-3 h-3" /> Seviye {xpProgress.level}
-              </span>
+
             </div>
 
             <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400 mt-1">
-              Bilişsel hedeflerine bugün de bir adım daha yaklaşmaya hazır mısın?
+              Yeni sorular, küçük keşifler. Bugünkü yolculuğun burada başlıyor.
             </p>
 
-            <StudentGradeSelector key={user.id} user={user} onSaved={onUserUpdate} />
+            <details className="zp-grade-settings"><summary>{user.grade || 1}. sınıf <span>Sınıfımı düzenle</span></summary><StudentGradeSelector key={user.id} user={user} onSaved={onUserUpdate} /></details>
 
             {/* XP & Next Level Bar */}
             <div className="mt-3 sm:mt-4 max-w-md w-full">
@@ -124,11 +126,11 @@ export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({
                 </span>
               </div>
 
-              <div className="h-2.5 w-full bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden p-0.5 relative">
+              <div role="progressbar" aria-label="Sonraki seviyeye ilerleme" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progressPct)} className="h-2.5 w-full bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden p-0.5 relative">
                 <motion.div
-                  initial={{ width: 0 }}
+                  initial={prefersReducedMotion ? false : { width: 0 }}
                   animate={{ width: `${progressPct}%` }}
-                  transition={{ duration: 1, ease: 'easeOut' }}
+                  transition={{ duration: prefersReducedMotion ? 0 : .7, ease: 'easeOut' }}
                   className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full relative"
                 >
                   <div className="absolute inset-0 bg-white/20 animate-pulse rounded-full" />
@@ -136,7 +138,8 @@ export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({
               </div>
             </div>
 
-            {/* Student Code Badge */}
+            {copyError && <p role="status" className="mt-2 text-xs">{copyError}</p>}
+            <details className="zp-profile-tools"><summary>Hesap ve giriş bilgileri</summary>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {studentCodeDisplay && (
                 <motion.button
@@ -182,6 +185,7 @@ export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({
                 </span>
               )}
             </div>
+            </details>
           </div>
         </div>
 

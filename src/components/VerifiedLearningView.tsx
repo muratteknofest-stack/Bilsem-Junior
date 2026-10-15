@@ -1,4 +1,4 @@
-import { useReducedMotion } from 'motion/react';
+import { useStudentReducedMotion } from '../features/student/experience-preferences';
 import { sound } from '../lib/sound';
 import { AnswerFeedbackLedger, feedbackDuration, type AnswerFeedback } from '../features/student/answer-feedback';
 import { FocusedQuestionScreen } from './FocusedQuestionScreen';
@@ -27,7 +27,7 @@ import { isSchoolGrade } from '../features/questions/quality-policy';
 const button = 'min-h-11 rounded-xl bg-indigo-700 px-5 py-3 font-bold text-white disabled:opacity-50 focus-visible:outline-4 focus-visible:outline-indigo-300';
 interface Props { mode: LearningMode; initialCategory?: LearningCategory; initialTopic?: LearningTopic; reviewMistakeId?: string; onNavigateHome: () => void; }
 export function VerifiedLearningView({ mode, initialCategory = 'mixed', initialTopic = 'mixed', reviewMistakeId, onNavigateHome }: Props) {
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = useStudentReducedMotion();
   const feedbackLedger = useRef(new AnswerFeedbackLedger());
   const [feedback, setFeedback] = useState<AnswerFeedback | null>(null);
   const celebratedResult = useRef('');

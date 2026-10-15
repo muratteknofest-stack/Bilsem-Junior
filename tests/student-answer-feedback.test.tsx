@@ -63,3 +63,29 @@ test('sound activation precedes async feedback; mute stops new tones and unavail
     const unavailable = new SoundEngine(); assert.doesNotThrow(() => { unavailable.unlock(); unavailable.playSuccess(); });
   } finally { if (prior === undefined) delete (globalThis as any).window; else (globalThis as any).window = prior; }
 });
+
+test('saved volume is bounded, notifies controls, and zero volume produces no audio', () => {
+  const prior = (globalThis as any).window;
+  const storage = new Map([['zekapark-sound-volume-v1', '0.25']]);
+  let oscillators = 0, stopped = 0;
+  const master: number[] = [];
+  class Context {
+    state = 'running'; currentTime = 0; destination = {};
+    createGain() { return { gain: { setValueAtTime(value: number) { master.push(value); }, exponentialRampToValueAtTime() {} }, connect() {}, disconnect() {} }; }
+    createOscillator() { oscillators++; return { frequency: { setValueAtTime() {} }, connect() {}, disconnect() {}, start() {}, stop() { stopped++; } }; }
+  }
+  try {
+    (globalThis as any).window = { AudioContext: Context, localStorage: { getItem: (key: string) => storage.get(key) ?? null, setItem: (key: string, value: string) => storage.set(key, value) } };
+    const engine = new SoundEngine(); assert.equal(engine.volume, .25);
+    let updates = 0; const unsubscribe = engine.subscribe(() => updates++);
+    engine.volume = 4; assert.equal(engine.volume, 1);
+    engine.volume = NaN; assert.equal(engine.volume, 1); assert.equal(updates, 1);
+    engine.volume = -2; engine.playSuccess(); assert.equal(engine.volume, 0); assert.equal(oscillators, 0);
+    engine.volume = .5; engine.playSuccess(); assert.equal(oscillators, 3);
+    const beforeMute = stopped; engine.enabled = false;
+    assert.equal(master.at(-1), 0); assert.equal(stopped, beforeMute + 3);
+    engine.enabled = true; assert.equal(master.at(-1), .5); assert.equal(oscillators, 3, 'unmuting cannot restart an old cue');
+    assert.equal(new SoundEngine().volume, .5); assert.equal(updates, 5); unsubscribe();
+    storage.set('zekapark-sound-volume-v1', 'broken'); assert.equal(new SoundEngine().volume, .45);
+  } finally { if (prior === undefined) delete (globalThis as any).window; else (globalThis as any).window = prior; }
+});

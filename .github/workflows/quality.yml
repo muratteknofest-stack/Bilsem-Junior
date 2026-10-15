@@ -77,6 +77,15 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:turkish-accounts
 
+      - name: Save student workspace previews for design review
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: zekapark-student-design-previews
+          path: test-artifacts/student/
+          if-no-files-found: ignore
+          retention-days: 7
+
   live-release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [quality, english-accounts, turkish-accounts]
