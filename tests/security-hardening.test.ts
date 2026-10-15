@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import express from 'express';
+import { request as httpRequest } from 'node:http';
 import { contentSecurityPolicy, browserDirectives, securityHeaders } from '../server/browser-security';
 import { requestSecurity } from '../server/request-security';
 import { publicBuildSettings } from '../scripts/public-build-settings';
@@ -112,4 +113,40 @@ test('policyHtml uses PUBLIC_SITE_URL when configured and defaults cleanly to ze
     if (prev !== undefined) process.env.PUBLIC_SITE_URL = prev;
     else delete process.env.PUBLIC_SITE_URL;
   }
+});
+
+test('external links may navigate only to allowlisted public HTML without granting cross-origin API access',async()=>{
+  const app=express();app.use('/api',requestSecurity(''));
+  app.use('/api',(_req,res)=>res.type('html').send('<html><h1>Public document</h1></html>'));
+  const server=app.listen(0,'127.0.0.1');await new Promise<void>(resolve=>server.once('listening',resolve));
+  const address=server.address();assert.ok(address&&typeof address!=='string');const base=`http://127.0.0.1:${address.port}`;
+  // Node fetch overwrites Sec-Fetch-Mode with "cors"; preserve actual browser
+  // metadata with the HTTP transport so the navigation regression is exercised.
+  const send=async(path:string,init:{method?:string;headers:Record<string,string>;body?:string})=>{
+    const incoming=await new Promise<import('node:http').IncomingMessage>((resolve,reject)=>{
+      const req=httpRequest(base+'/api'+path,{method:init.method||'GET',agent:false,headers:{...init.headers,...(init.body?{'Content-Length':String(Buffer.byteLength(init.body))}:{})}},resolve);req.on('error',reject);req.end(init.body);
+    });
+    const chunks:Buffer[]=[];for await(const chunk of incoming)chunks.push(Buffer.from(chunk));
+    const headers=new Headers();for(const [name,value]of Object.entries(incoming.headers))if(value!==undefined)headers.set(name,Array.isArray(value)?value.join(', '):value);
+    return new Response(Buffer.concat(chunks),{status:incoming.statusCode,headers});
+  };
+  const navigation={'Sec-Fetch-Site':'cross-site','Sec-Fetch-Mode':'navigate','Sec-Fetch-Dest':'document','Sec-Fetch-User':'?1',Referer:'https://chatgpt.com/'};
+  const publicPaths=['/public/shopier/page','/public/shopier/page/','/public/policy/gizlilik-ve-veriler?format=html','/public/policy/kullanim-kosullari?format=html','/public/policy/iletisim-ve-destek?format=html'];
+  try{
+    for(const path of publicPaths)for(const method of ['GET','HEAD']){
+      const r=await send(path,{method,headers:navigation});assert.equal(r.status,200,`${method} ${path}`);
+      assert.equal(r.headers.get('access-control-allow-origin'),null);assert.equal(r.headers.get('cache-control'),'no-store');await r.arrayBuffer();
+    }
+    const blocked=[
+      ...['cors','no-cors','same-origin'].map(mode=>({path:'/public/shopier/page',headers:{...navigation,'Sec-Fetch-Mode':mode,'Sec-Fetch-Dest':'empty'}})),
+      ...['iframe','frame','object','embed','script','image'].map(dest=>({path:'/public/shopier/page',headers:{...navigation,'Sec-Fetch-Dest':dest}})),
+      ...['/public/shopier','/public/platform','/public/policy/gizlilik-ve-veriler','/public/policy/unknown?format=html','/public/shopier/page/extra','/account/export','/admin/platform-settings','/parent/shopier/access'].map(path=>({path,headers:navigation})),
+      {path:'/public/shopier/page',headers:{...navigation,Origin:'https://attacker.example'}},
+      {path:'/public/shopier/page',headers:{...navigation,Origin:'null'}},
+    ];
+    for(const {path,headers} of blocked){const r=await send(path,{headers});assert.equal(r.status,403,path);assert.equal(r.headers.get('access-control-allow-origin'),null);await r.arrayBuffer();}
+    for(const path of [...publicPaths,'/parent/shopier/claim'])for(const method of ['POST','PUT','DELETE','OPTIONS']){
+      const r=await send(path,{method,headers:{...navigation,'Content-Type':'application/json'},...(method==='OPTIONS'?{}:{body:'{}'})});assert.equal(r.status,403,`${method} ${path}`);await r.arrayBuffer();
+    }
+  }finally{await new Promise<void>(resolve=>server.close(()=>resolve()));}
 });

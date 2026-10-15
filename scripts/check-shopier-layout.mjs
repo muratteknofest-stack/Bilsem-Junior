@@ -3,13 +3,25 @@ import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
 import {createServer} from 'vite';
 import {chromium} from 'playwright';
+import express from 'express';
+import {requestSecurity} from '../server/request-security.ts';
 import {SHOPIER_PLANS} from '../src/lib/shopier-config.ts';
 import {shopierPageHtml} from '../server/routes/shopier-routes.ts';
-const server=await createServer({server:{host:'127.0.0.1',port:5183,strictPort:true},plugins:[{name:'sales-page-fixture',configureServer(server){server.middlewares.use('/sales-preview',(req,res)=>{
-  const ready=new URL(req.url,'http://localhost').searchParams.has('ready');
-  res.setHeader('Content-Type','text/html; charset=utf-8');
-  res.end(shopierPageHtml({ready,enforced:false,brand:'ZekaPark',plans:SHOPIER_PLANS.map((plan,index)=>({...plan,url:ready?`https://www.shopier.com/${index+1}`:null}))}));
-});}}]});
+const publicPage=express();let lastNavigation;
+publicPage.use('/api',(req,_res,next)=>{lastNavigation={site:req.get('Sec-Fetch-Site'),mode:req.get('Sec-Fetch-Mode'),dest:req.get('Sec-Fetch-Dest')};next();},requestSecurity(''));
+publicPage.get('/api/public/shopier/page',(req,res)=>{
+ const ready=Object.hasOwn(req.query,'ready');
+ res.type('html').send(shopierPageHtml({ready,enforced:false,brand:'ZekaPark',plans:SHOPIER_PLANS.map((plan,index)=>({...plan,url:ready?`https://www.shopier.com/${index+1}`:null}))}));
+});
+publicPage.get('/sales-entry',(_req,res)=>res.type('html').send('<html lang="tr"><body><a href="http://127.0.0.1:5183/paketler">/paketler</a><a href="http://127.0.0.1:5183/paketler/">/paketler/</a></body></html>'));
+const server=await createServer({server:{host:'127.0.0.1',port:5183,strictPort:true},plugins:[{name:'sales-page-fixture',configureServer(server){
+ server.middlewares.use((req,res,next)=>{
+  const url=new URL(req.url,'http://localhost');
+  // Reproduce the Vercel public-page rewrite before the actual API guard.
+  if(['/sales-preview','/paketler','/paketler/'].includes(url.pathname))req.url='/api/public/shopier/page'+url.search;
+  publicPage(req,res,next);
+ });
+}}]});
 await server.listen();
 let browser;
 try {
@@ -40,6 +52,18 @@ try {
     }
     count++;
   }
+  for(const path of ['/paketler','/paketler/'])for(const width of [390,1440]){
+    await page.setViewportSize({width,height:900});
+    // localhost and 127.0.0.1 are separate sites: exercise a real link click,
+    // not page.goto(), which supplies Sec-Fetch-Site: none.
+    await page.goto('http://localhost:5183/sales-entry');
+    const responsePromise=page.waitForResponse(response=>response.request().isNavigationRequest()&&new URL(response.url()).pathname===path);
+    await page.getByRole('link',{name:path,exact:true}).click();
+    assert.equal((await responsePromise).status(),200,`external link ${path}`);
+    await page.locator('#sales-heading').waitFor();assert.equal(await page.locator('.zp-plan-card').count(),3);
+    assert.deepEqual(lastNavigation,{site:'cross-site',mode:'navigate',dest:'document'});
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  }
   await page.emulateMedia({reducedMotion:'reduce'});await page.goto('http://127.0.0.1:5183/sales-preview');
   assert.equal(await page.locator('.zp-art-star').evaluate(el=>getComputedStyle(el).animationName),'none');
   if(process.env.SALES_SCREENSHOTS){
@@ -47,5 +71,5 @@ try {
     for(const width of [390,1440]){await page.setViewportSize({width,height:1000});await page.goto('http://127.0.0.1:5183/sales-preview');await page.screenshot({path:`${process.env.SALES_SCREENSHOTS}/sales-${width}.png`,fullPage:true});}
     await page.setViewportSize({width:390,height:1000});await page.goto('http://127.0.0.1:5183/tests/browser/shopier-screen.html?billing&ready');await page.screenshot({path:`${process.env.SALES_SCREENSHOTS}/billing-390.png`,fullPage:true});
   }
-  assert.deepEqual(errors,[]);console.log(`Shopier sales layouts: ${count} viewport/state checks, FAQ keyboard, activation form and reduced motion passed.`);
+  assert.deepEqual(errors,[]);console.log(`Shopier sales layouts: ${count} viewport/state checks, 4 real cross-site link clicks, FAQ keyboard, activation form and reduced motion passed.`);
 } finally {await browser?.close();await server.close();}
