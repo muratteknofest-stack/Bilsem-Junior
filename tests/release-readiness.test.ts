@@ -109,12 +109,12 @@ test('free registration does not imply completed commercial launch checks',()=>{
 
 function releaseFetch(overrides:Record<string,{status?:number;body?:string;headers?:Record<string,string>}>={}){
  return async (input:Parameters<typeof fetch>[0],init?:RequestInit)=>{const url=input instanceof URL?input:new URL(typeof input==='string'?input:input.url);const path=url.pathname;const status=init?.method==='POST'?(new Headers(init.headers).has('Origin')?403:401):path==='/api/release-unknown'?404:path.startsWith('/api/')&&!path.startsWith('/api/public/')?401:200;
- const body=path==='/'?'<html lang="tr"><title>ZekaPark</title></html>':path==='/robots.txt'?'User-agent: *\nDisallow: /admin':path==='/sitemap.xml'?'https://zekapark.vercel.app/':path==='/api/public/platform'?JSON.stringify({registrationOpen:true,policyVersion:'fixture-1'}):path==='/api/public/shopier'?JSON.stringify({ready:false,enforced:false,plans:[{},{},{}]}):'fixture';
- const override=overrides[path]||{};return new Response(override.body??body,{status:override.status??status,headers:{'x-content-type-options':'nosniff','x-frame-options':'DENY','cache-control':'no-store',...override.headers}});
+ const body=path==='/'?'<html lang="tr"><title>ZekaPark</title></html>':path==='/robots.txt'?'User-agent: *\nDisallow: /admin':path==='/sitemap.xml'?'https://zekapark.vercel.app/':path==='/api/public/platform'?JSON.stringify({registrationOpen:true,policyVersion:'fixture-1'}):path==='/api/public/shopier'?JSON.stringify({ready:false,enforced:false,plans:[{},{},{}]}):path==='/paketler'||path==='/paketler/'?'<html><link href="/sales/sales.css"><h1 id="sales-heading">Keşif</h1><section class="zp-plan-card"></section></html>':path==='/sales/sales.css'?'.zp-plan-mint{color:green}':'fixture';
+ const override=overrides[path]||{};return new Response(override.body??body,{status:override.status??status,headers:{'x-content-type-options':'nosniff','x-frame-options':'DENY','cache-control':'no-store','content-type':path.endsWith('.css')?'text/css; charset=utf-8':'text/html; charset=utf-8',...override.headers}});
  };
 }
 test('live release checks distinguish free registration and disabled paid sales',async()=>{
- const report=await verifyPublicRelease(new URL('https://zekapark.vercel.app'),releaseFetch());assert.deepEqual(report,{checks:17,registrationOpen:true,paidSalesReady:false});
+ const report=await verifyPublicRelease(new URL('https://zekapark.vercel.app'),releaseFetch());assert.deepEqual(report,{checks:19,registrationOpen:true,paidSalesReady:false});
 });
 test('live release refuses sign-in walls, private exports, missing protection and indexing blocks',async()=>{
  const origin=new URL('https://zekapark.vercel.app');
@@ -122,4 +122,21 @@ test('live release refuses sign-in walls, private exports, missing protection an
  await assert.rejects(()=>verifyPublicRelease(origin,releaseFetch({'/':{status:302}})));
  await assert.rejects(()=>verifyPublicRelease(origin,releaseFetch({'/':{headers:{'x-frame-options':'SAMEORIGIN'}}})));
  await assert.rejects(()=>verifyPublicRelease(origin,releaseFetch({'/robots.txt':{body:'User-agent: *\nDisallow: /'}})));
+});
+
+
+test('package addresses with and without a trailing slash use the same public server page',()=>{
+ const config=JSON.parse(fs.readFileSync('vercel.json','utf8'));
+ for(const path of ['/paketler','/paketler/']){
+  assert.equal(config.rewrites.find((route:{source:string})=>route.source===path)?.destination,'/api/index?__path=public/shopier/page');
+ }
+});
+test('live release refuses a broken package address or a missing sales stylesheet',async()=>{
+ const origin=new URL('https://zekapark.vercel.app');
+ for(const path of ['/paketler','/paketler/']){
+  await assert.rejects(()=>verifyPublicRelease(origin,releaseFetch({[path]:{status:404}})));
+  await assert.rejects(()=>verifyPublicRelease(origin,releaseFetch({[path]:{body:'<h1>Sayfa bulunamadı</h1>'}})));
+ }
+ await assert.rejects(()=>verifyPublicRelease(origin,releaseFetch({'/sales/sales.css':{headers:{'content-type':'text/html'}}})));
+ await assert.rejects(()=>verifyPublicRelease(origin,releaseFetch({'/sales/sales.css':{body:'<html>Missing</html>'}})));
 });
