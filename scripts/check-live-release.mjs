@@ -4,7 +4,7 @@ import {pathToFileURL} from 'node:url';
 import {verifyHealthResponse} from './verify-live-release.mjs';
 
 export async function verifyPublicRelease(origin,fetcher=fetch){
- const checks=[['/',200],['/blog',200],['/reset-password',200],['/bilgi/gizlilik-ve-veriler',200],['/paketler',200],['/robots.txt',200],['/sitemap.xml',200],['/api/public/platform',200],['/api/public/shopier',200],['/api/account/export',401],['/api/learning/history',401],['/api/admin/platform-settings',401],['/api/admin/question-review-summary',401],['/api/admin/support-requests/55555555-5555-4555-8555-555555555555/deletion',401],['/api/release-unknown',404]];
+ const checks=[['/',200],['/blog',200],['/reset-password',200],['/bilgi/gizlilik-ve-veriler',200],['/paketler',200],['/paketler/',200],['/sales/sales.css',200],['/robots.txt',200],['/sitemap.xml',200],['/api/public/platform',200],['/api/public/shopier',200],['/api/account/export',401],['/api/learning/history',401],['/api/admin/platform-settings',401],['/api/admin/question-review-summary',401],['/api/admin/support-requests/55555555-5555-4555-8555-555555555555/deletion',401],['/api/release-unknown',404]];
  let registrationOpen=false,paidSalesReady=false;
  for(const [path,status] of checks){
   const response=await fetcher(new URL(path,origin),{redirect:'manual',signal:AbortSignal.timeout(10_000)});
@@ -18,6 +18,8 @@ export async function verifyPublicRelease(origin,fetcher=fetch){
    const data=await response.json();assert.equal(typeof data.ready,'boolean');assert.equal(typeof data.enforced,'boolean');assert.ok(Array.isArray(data.plans)&&data.plans.length===3);paidSalesReady=data.ready;
   }else{
    const body=await response.text();if(path==='/')assert.match(body,/<html[^>]*lang="tr"/i);
+   if(path==='/paketler'||path==='/paketler/'){assert.match(body,/<h1[^>]*id="sales-heading"/);assert.ok(body.includes('/sales/sales.css'));assert.ok(body.includes('zp-plan-card'));}
+   if(path==='/sales/sales.css'){assert.match(response.headers.get('content-type')||'',/^text\/css/);assert.ok(body.includes('.zp-plan-mint'));}
    if(path==='/robots.txt')assert.ok(!/^Disallow:\s*\/\s*$/mi.test(body));
    if(path==='/sitemap.xml')assert.ok(body.includes(new URL('/',origin).href));
   }
