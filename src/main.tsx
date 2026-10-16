@@ -15,11 +15,11 @@ if (isAndroidApp) {
   document.documentElement.dataset.nativeApp = 'android';
   // Preserve the test screen's existing popstate flow on Android's Back gesture.
   if (Capacitor.isNativePlatform()) void import('@capacitor/app').then(({ App: NativeApp }) =>
-    NativeApp.addListener('backButton', ({ canGoBack }) => {
-      if (canGoBack || window.history.state?.zekaparkTestPage) window.history.back();
-      else void NativeApp.minimizeApp();
+    NativeApp.addListener('backButton', () => {
+      // React routes need to consume Back before the native activity minimizes.
+      if (window.dispatchEvent(new Event('zekapark:native-back', { cancelable: true }))) void NativeApp.minimizeApp();
     }),
-  );
+  ).catch(() => {});
 }
 
 const AdminPortal = lazy(() => import('./components/AdminPortal').then(module => ({ default: module.AdminPortal })));

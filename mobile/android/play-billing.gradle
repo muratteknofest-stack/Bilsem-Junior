@@ -2,3 +2,10 @@
 dependencies {
     implementation 'com.android.billingclient:billing:9.1.0'
 }
+
+android {
+    defaultConfig {
+        versionCode 2
+        versionName "1.0.1"
+    }
+}

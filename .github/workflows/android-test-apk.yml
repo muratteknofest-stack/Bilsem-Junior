@@ -7,6 +7,7 @@ on:
       - 'mobile/**'
       - 'src/**'
       - 'scripts/prepare-android.mjs'
+      - 'tests/android*'
       - 'capacitor.config.ts'
       - 'package*.json'
   workflow_dispatch:
@@ -45,15 +46,49 @@ jobs:
       - run: npm run android:sync
       - name: Compile debug APK without a production signing key
         working-directory: android
-        run: ./gradlew --no-daemon assembleDebug
+        run: ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest
+      - name: Start an Android 15 test device
+        run: |
+          sudo chmod a+rw /dev/kvm
+          sdkmanager 'system-images;android-35;google_apis;x86_64'
+          printf 'no\n' | avdmanager create avd --name zekapark-test --package 'system-images;android-35;google_apis;x86_64' --device pixel_6 --force
+          "$ANDROID_HOME/emulator/emulator" -avd zekapark-test -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > /tmp/zekapark-emulator.log 2>&1 &
+          timeout 180 adb wait-for-device
+          for attempt in $(seq 1 90); do
+            if adb shell getprop sys.boot_completed | tr -d '\r' | grep -q '^1$'; then break; fi
+            sleep 2
+          done
+          test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+          adb shell input keyevent 82
+      - name: Verify installed app, native API, registration form and Android Back
+        working-directory: android
+        run: ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.zekapark.app.NativeAppSmokeTest
+      - name: Save device diagnostics
+        if: always()
+        run: |
+          mkdir -p test-artifacts/android-device
+          cp /tmp/zekapark-emulator.log test-artifacts/android-device/ 2>/dev/null || true
+          adb logcat -d -t 1500 > test-artifacts/android-device/logcat.txt 2>/dev/null || true
+          cp -R android/app/build/reports/androidTests test-artifacts/android-device/ 2>/dev/null || true
+          cp -R android/app/build/outputs/androidTest-results test-artifacts/android-device/ 2>/dev/null || true
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: ZekaPark-android-device-checks
+          path: test-artifacts/android-device/
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Verify and collect installable package
         run: |
           mkdir -p test-artifacts/android
-          cp android/app/build/outputs/apk/debug/app-debug.apk test-artifacts/android/ZekaPark-test.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs test-artifacts/android/ZekaPark-test.apk > test-artifacts/android/signature.txt
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging test-artifacts/android/ZekaPark-test.apk > test-artifacts/android/package.txt
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree test-artifacts/android/ZekaPark-test.apk AndroidManifest.xml > test-artifacts/android/manifest.txt
-          sha256sum test-artifacts/android/ZekaPark-test.apk > test-artifacts/android/SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk test-artifacts/android/ZekaPark-test-v2.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs test-artifacts/android/ZekaPark-test-v2.apk > test-artifacts/android/signature.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging test-artifacts/android/ZekaPark-test-v2.apk > test-artifacts/android/package.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree test-artifacts/android/ZekaPark-test-v2.apk AndroidManifest.xml > test-artifacts/android/manifest.txt
+          sha256sum test-artifacts/android/ZekaPark-test-v2.apk > test-artifacts/android/SHA256SUMS
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: ZekaPark-test-apk

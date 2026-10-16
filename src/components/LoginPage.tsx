@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { isAndroidApp } from '../lib/native-app';
 import { UserRole, UserProfile } from '../types';
 import { sound } from '../lib/sound';
 import { Logo } from './Logo';
@@ -44,6 +45,24 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [loginIdentifier, setLoginIdentifier] = useState('');
 
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  useEffect(() => {
+    if (!isAndroidApp) return;
+    const onNativeBack = (event: Event) => {
+      if (registrationBusy) { event.preventDefault(); event.stopImmediatePropagation(); return; }
+      if (showForgotPasswordModal || activeTab === 'register') {
+        event.preventDefault(); event.stopImmediatePropagation();
+        if (showForgotPasswordModal) setShowForgotPasswordModal(false);
+        else { setActiveTab('login'); onModeChange?.('login', selectedRole); }
+      }
+    };
+    window.addEventListener('zekapark:native-back', onNativeBack, true);
+    return () => window.removeEventListener('zekapark:native-back', onNativeBack, true);
+  }, [activeTab, registrationBusy, showForgotPasswordModal, onModeChange, selectedRole]);
+  const returnToEntry = () => {
+    if (!isAndroidApp) { onNavigateHome(); return; }
+    setActiveTab('login'); setRegistrationResult(null); setErrorMessage(null); setSuccessToast(null);
+    onModeChange?.('login', selectedRole);
+  };
 
   const openParentLogin = (email: string) => {
     setSelectedRole('parent');
@@ -65,12 +84,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       <div className="zp-auth-top max-w-6xl mx-auto w-full mb-4 flex items-center justify-between">
         <button
           type="button"
-          onClick={onNavigateHome}
+          onClick={returnToEntry}
           disabled={registrationBusy}
           className="zp-auth-back inline-flex items-center gap-2 text-sm font-semibold px-3.5 py-2 rounded-xl border transition-all cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Ana Sayfaya Dön</span>
+          <span>{isAndroidApp ? 'Giriş Ekranı' : 'Ana Sayfaya Dön'}</span>
         </button>
 
         <div className="zp-auth-top-note hidden sm:flex items-center gap-2 text-xs font-semibold px-3.5 py-2 rounded-xl border">
@@ -87,7 +106,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 size="md"
                 showText={true}
                 showTagline={false}
-                onClick={registrationBusy ? undefined : onNavigateHome}
+                onClick={registrationBusy ? undefined : returnToEntry}
               />
               <span className="zp-auth-brand-mark" aria-hidden="true"><Sparkles size={18} /></span>
             </div>

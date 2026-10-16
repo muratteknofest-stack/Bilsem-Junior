@@ -20,7 +20,7 @@ let topicRequests=[],topicSessions=new Map(),failNextLearningAnswer=false;
 let activeRole='parent',requests=[],resends=0,registrationCount=0,historyFails=true,deleteAttempts=0,unconfirmed=true,previewFault='',summaryAttempts=0,successfulCompletion=false;
 function session(role){const id=role==='student'?studentId:parentId,encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url'),metadata={provider:'email',role};return {access_token:`${encode({alg:'HS256',typ:'JWT'})}.${encode({sub:id,role:'authenticated',aal:role==='admin'?adminAal:'aal1',exp:Math.floor(Date.now()/1000)+3600,iat:Math.floor(Date.now()/1000),session_id:'99999999-9999-4999-8999-999999999999',app_metadata:metadata})}.dGVzdC1zaWduYXR1cmU`,refresh_token:'fixture-refresh',token_type:'bearer',expires_in:3600,user:{id,aud:'authenticated',email:role==='parent'?'parent@example.invalid':role==='admin'?'admin@example.invalid':'explorer1234@zekapark.com',email_confirmed_at:new Date().toISOString(),app_metadata:metadata,user_metadata:{},factors:role==='admin'?[{id:'88888888-8888-4888-8888-888888888888',factor_type:'totp',status:'verified',friendly_name:'Isolated fixture'}]:[],created_at:new Date().toISOString()}};}
 try{
- browser=await chromium.launch({headless:true});page=await browser.newPage({viewport:{width:390,height:844}});
+ browser=await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE,args:['--no-sandbox','--disable-dev-shm-usage']}: {})});page=await browser.newPage({viewport:{width:390,height:844}});
  await page.addInitScript(()=>{
   window.__audioTones=[];
   class FixtureAudioContext{

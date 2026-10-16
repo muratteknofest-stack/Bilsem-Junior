@@ -1,3 +1,4 @@
+import { isAndroidApp } from '../lib/native-app';
 import React, { useState, useEffect, useSyncExternalStore } from 'react';
 import { UserProfile, UserRole } from '../types';
 import {
@@ -84,7 +85,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
 
-        <a href="/en/" lang="en" hrefLang="en" aria-label="English version" className="hidden xl:inline-flex min-h-11 items-center px-2 text-sm font-bold">English</a>
+        {!isAndroidApp && <a href="/en/" lang="en" hrefLang="en" aria-label="English version" className="hidden xl:inline-flex min-h-11 items-center px-2 text-sm font-bold">English</a>}
 
         {/* Family Two-Way Role Switcher (Öğrenci <-> Veli) */}
         {!isLanding && role !== 'admin' && (
@@ -235,7 +236,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             exit={{ opacity: 0, y: -20 }}
             className="absolute top-full left-0 w-full bg-white dark:bg-slate-900 border-b border-zinc-200 dark:border-slate-800 p-4 flex flex-col gap-3 lg:hidden z-50 shadow-lg"
           >
-            <a href="/en/" lang="en" hrefLang="en" className="inline-flex min-h-11 items-center rounded-xl bg-indigo-50 px-3 text-sm font-bold text-indigo-800">English · Thinking games</a>
+            {!isAndroidApp && <a href="/en/" lang="en" hrefLang="en" className="inline-flex min-h-11 items-center rounded-xl bg-indigo-50 px-3 text-sm font-bold text-indigo-800">English · Thinking games</a>}
             <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-slate-800">
                <button onClick={toggleSound} aria-label={soundOn ? 'Sesi kapat' : 'Sesi aç'} className="flex items-center gap-2 text-slate-600 dark:text-slate-400 font-medium text-xs">
                  {soundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}

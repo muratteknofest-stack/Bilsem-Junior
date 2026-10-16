@@ -77,6 +77,20 @@ export default function App() {
   const previousRouteRef = useRef(currentRoute);
   const testReturnRouteRef = useRef('dashboard');
   const hasTestHistoryEntryRef = useRef(false);
+  useEffect(() => {
+    if (!isAndroidApp) return;
+    const onNativeBack = (event: Event) => {
+      if (showParentAccess) { event.preventDefault(); setShowParentAccess(false); return; }
+      const root = !isAuth ? 'login' : currentUser.role === 'parent' ? 'parent' : 'dashboard';
+      if (isTestPage(currentRoute) && hasTestHistoryEntryRef.current) {
+        event.preventDefault(); window.history.back();
+      } else if (currentRoute !== root) {
+        event.preventDefault(); setCurrentRoute(root); window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+    };
+    window.addEventListener('zekapark:native-back', onNativeBack);
+    return () => window.removeEventListener('zekapark:native-back', onNativeBack);
+  }, [currentRoute, currentUser.role, isAuth, showParentAccess]);
   const [masteries, setMasteries] = useState<SkillMastery[]>(() => dataService.getSkillMasteries());
   const [mistakes, setMistakes] = useState<MistakeItem[]>(() => dataService.getMistakes());
   const [dailyPlan, setDailyPlan] = useState<DailyStudyPlan>(() => dataService.getDailyPlan());

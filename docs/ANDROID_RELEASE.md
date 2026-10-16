@@ -14,10 +14,16 @@ Bu dal, mevcut React/Vite uygulamasının Capacitor 8.5.3 ile Android projesini 
 
 1. Node 22 veya üstü ve `npm ci` kullanın.
 2. `android-env.example` dosyasını `.env.android` olarak kopyalayın. API ve site için mevcut HTTPS alan adını; Supabase için yalnızca aktif publishable/anon açık anahtarını girin. Parola, Shopier anahtarı ve `service_role` anahtarını eklemeyin.
-3. Mevcut sunucunun `CORS_ALLOWED_ORIGINS` listesine yalnızca `https://localhost` kaynağını ekleyin. Mevcut kaynakları koruyun, `*` kullanmayın. Bu dal üretim ayarlarını otomatik değiştirmez. Bearer doğrulaması ve üyelik kontrolü korunmalıdır.
+3. Android API istekleri `apiFetch` üzerinden resmi `CapacitorHttp.request` servisine gider. Native istekler tarayıcı Origin bilgisi taklit etmez; sunucu Bearer doğrulaması ve üyelik kontrolü geçerlidir. Yalnızca açık yapılandırmadaki HTTPS sunucusunun `/api/` adresleri kabul edilir, yönlendirmeler ve otomatik tekrarlar kapalıdır. Web istekleri mevcut `fetch`/CORS yolunu kullanır. Tarayıcıdan `https://localhost` ile ayrıca test yapılacaksa bu kaynak sunucunun `CORS_ALLOWED_ORIGINS` listesine açıkça eklenmelidir; `*` kullanmayın.
 4. `npm run test:android`, `npm run lint`, `npm run android:sync` çalıştırın. Bu aşama APK/AAB üretmez.
 5. Android Studio ile JDK 21, Android SDK 36 ve gerekli derleme araçlarını kurup lisansları kendiniz inceleyip kabul edin. `npm run android:open` ile projeyi açın.
 6. Cihaz testi için `npm run android:apk` kullanın. Debug APK mağaza sürümü değildir. Google Play için Android Studio'daki **Generate Signed App Bundle** akışında kendi yükleme anahtarınızı oluşturun ve güvenli tutun. Anahtar/parola depoya veya sohbet mesajına eklenmemelidir. `android:bundle` yalnızca Gradle release derlemesini başlatır; imza yapılandırılmadıysa çıktısı yayınlanabilir değildir.
+
+## Otomatik Android testi
+
+`Android test APK` iş akışı derleme ve imza kontrolüne ek olarak Android 15 emülatörüne uygulamayı kurar. Giriş ekranı, gerçek API sağlık yanıtı, oturumsuz özel isteğin 401 alması, kayıt formunun gerçek sunucu ayarlarını yüklemesi ve Android geri tuşu doğrulanır. Hesap açılmaz, e-posta gönderilmez, ödeme yapılmaz. Bu kontrol gerçek telefondaki tüm öğrenci akışlarının ve Google Play ödeme testinin yerini tutmaz.
+
+Test 1.0.1 (`versionCode=2`) yerel HTTP bağlantısını, e-posta yeniden gönderme adresini, boş etkinleştirme isteğini ve React sayfalarında Android geri hareketini düzeltir. CI her geçici çalıştırıcıda farklı debug sertifikası oluşturabilir. Eski test APK'sı üzerine imza uyuşmazlığı nedeniyle yüklenemezse önce eski test uygulamasını kaldırın; bu işlem cihazda saklanan oturumu ve henüz buluta gönderilmemiş verileri siler. Üretim sürümünde kalıcı Play imzalama/yükleme anahtarı kullanılmalıdır.
 
 ## Yayından önce tamamlanacaklar
 

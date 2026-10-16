@@ -1,3 +1,4 @@
+import { apiFetch } from './api-fetch';
 import { createClient, type User as SupabaseUser } from '@supabase/supabase-js';
 import { hasRecoveryClaims, isPasswordRecoveryLocation, passwordRecoveryRedirect } from './password-recovery';
 
@@ -67,7 +68,7 @@ export async function updateRecoveredPassword(password: string) {
   const { data, error } = await supabase.auth.getSession();
   if (error || !data.session) throw new Error('Sıfırlama oturumu doğrulanamadı. Yeni bağlantı isteyin.');
   const base = String(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-  const response = await fetch(`${base}/api/auth/change-password`, {
+  const response = await apiFetch(`${base}/api/auth/change-password`, {
     method: 'POST', credentials: base ? 'omit' : 'same-origin',
     headers: { Authorization: `Bearer ${data.session.access_token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ password }),

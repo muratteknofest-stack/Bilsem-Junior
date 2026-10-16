@@ -21,6 +21,10 @@ for (const [source, target] of [
   mkdirSync(dirname(destination), { recursive: true });
   copyFileSync(resolve(root, 'mobile/android', source), destination);
 }
+const smokeSource = resolve(root, 'mobile/android/NativeAppSmokeTest.java');
+const smokeTarget = resolve(root, 'android/app/src/androidTest/java/com/zekapark/app/NativeAppSmokeTest.java');
+mkdirSync(dirname(smokeTarget), { recursive: true });
+copyFileSync(smokeSource, smokeTarget);
 console.log('Android projesi hazırlandı. Üretim anahtarı veya imzalama parolası oluşturulmadı.');
 
 const gradlePath = resolve(root, 'android/app/build.gradle');

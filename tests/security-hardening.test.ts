@@ -39,7 +39,8 @@ test('public settings export exact names and reject service-role, secret keys an
   assert.throws(() => publicBuildSettings({ ...publicEnv, VITE_API_BASE_URL: 'http://localhost:3000' }, true, false, ''));
   const vite = fs.readFileSync('vite.config.ts', 'utf8');
   assert.match(vite, /envPrefix: \[\]/);
-  assert.match(vite, /publicBuildSettings\(loadEnv/);
+  assert.match(vite, /const env = loadEnv\(mode, process.cwd\(\), 'VITE_'\)/);
+  assert.match(vite, /publicBuildSettings\(env,/);
 });
 
 test('static and API policies agree; only style attributes permit inline content and network access is project-specific', () => {
