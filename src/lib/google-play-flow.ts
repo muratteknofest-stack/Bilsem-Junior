@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PLAY_PLANS, type PlayOffer, type PlayPlanId } from './google-play-contract';
+import { safePlayStoreUrl } from './play-listing';
 import { withRequestDeadline } from './request-deadline';
 
 export const playAccessSchema = z.object({ active: z.boolean(), expiresAt: z.iso.datetime({ offset: true }).nullable(), state: z.string().optional(), autoRenewing: z.boolean().optional() })
@@ -7,7 +8,7 @@ export const playAccessSchema = z.object({ active: z.boolean(), expiresAt: z.iso
 const bindingSchema = z.object({ accountId: z.string().regex(/^[a-f0-9]{64}$/), profileId: z.string().regex(/^[a-f0-9]{64}$/) });
 const productId = z.string().regex(/^[a-z0-9][a-z0-9_.]{0,39}$/);
 export const playConfigSchema = z.object({ ready: z.boolean(), enforced: z.boolean(), productId,
-  binding: bindingSchema.nullable(), access: playAccessSchema }).refine(v => !v.ready || v.binding !== null);
+  binding: bindingSchema.nullable(), storeUrl: z.string().refine(safePlayStoreUrl).nullable().optional(), access: playAccessSchema }).refine(v => !v.ready || v.binding !== null);
 const preparedSchema = bindingSchema.extend({ productId });
 const purchaseSchema = z.object({ purchases: z.array(z.object({ token: z.string().min(8).max(4096), state: z.enum(['purchased','pending']),
   accountId: z.string().nullable(), profileId: z.string().nullable(), productIds: z.array(productId).min(1).max(20) })).max(50), cancelled: z.boolean().optional() });
@@ -92,7 +93,7 @@ export class PlayBillingFlow {
       this.patch({ offers: [], storeChecked: false });
       const config = await this.load(); if (!this.current()) return;
       this.notice(config.access.active ? 'success' : 'info', config.access.active ? 'Aboneliğiniz doğrulandı.' : config.ready ? 'Döneminizi seçip Google Play ile devam edin.' : 'Google Play abonelikleri henüz satışa açılmadı.');
-      if (!this.deps.native) { this.notice('info', 'Satın alma için Google Play’den yüklenen Android uygulamasını kullanın.'); return; }
+      if (!this.deps.native) { if (!config.access.active) this.notice('info', 'Satın alma Android uygulamasındaki veli panelinde Google Play ile tamamlanır.'); return; }
       // Product availability and owned purchases are independent. A catalog outage
       // must never prevent an already-paid purchase from being restored.
       const results = await Promise.allSettled([

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { playMembershipPageHtml, publicPlayMembership } from '../play-membership-page';
 import { ShopierSalesPage } from '../../src/components/ShopierSalesPage';
 import { z } from 'zod';
 import { SHOPIER_PLANS, shopierProduct } from '../../src/lib/shopier-config';
@@ -25,7 +26,7 @@ routes.get('/public/shopier',async(_req,res)=>res.json(await publicShopierView()
 export function shopierPageHtml(config:ReturnType<typeof shopierView>) {
   return `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f8f7f2"><meta name="description" content="ZekaPark ile 1–4. sınıflar için 44 konuda renkli testler, adaptif çalışma ve veli takibi. Aylık, 3 aylık ve yıllık paketleri keşfedin."><title>ZekaPark · Renkli keşif paketleri</title><link rel="icon" href="/logo.svg"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/sales/sales.css"></head><body>${renderToStaticMarkup(React.createElement(ShopierSalesPage,config))}</body></html>`;
 }
-routes.get('/public/shopier/page',async(_req,res)=>{res.type('html').send(shopierPageHtml(await publicShopierView()));});
+routes.get('/public/shopier/page',async(_req,res)=>{res.set('Cache-Control','no-store').type('html').send(playMembershipPageHtml(await publicPlayMembership()));});
 routes.use('/parent/shopier',requireSupabaseAuth,requireVerifiedEmail,requireProfileRole('parent'),accountSecurityLimiter);
 const studentSchema=z.uuid();
 routes.get('/parent/shopier/access',sharedRateLimit('shopier-access',60,600),async(req:AuthenticatedRequest,res)=>{

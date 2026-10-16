@@ -48,17 +48,22 @@ jobs:
       - run: npm run lint
       - run: npm run test:android && npm run test:google-play
       - run: npm run android:sync
+      # Debug only. Keep test updates installable without committing a signing key.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: zekapark-debug-signing-v1-${{ github.repository_id }}
       - name: Compile debug APK without a production signing key
         working-directory: android
         run: ./gradlew --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest
       - name: Verify and collect installable package
         run: |
           mkdir -p test-artifacts/android
-          cp android/app/build/outputs/apk/debug/app-debug.apk test-artifacts/android/ZekaPark-test-v2.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs test-artifacts/android/ZekaPark-test-v2.apk > test-artifacts/android/signature.txt
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging test-artifacts/android/ZekaPark-test-v2.apk > test-artifacts/android/package.txt
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree test-artifacts/android/ZekaPark-test-v2.apk AndroidManifest.xml > test-artifacts/android/manifest.txt
-          sha256sum test-artifacts/android/ZekaPark-test-v2.apk > test-artifacts/android/SHA256SUMS
+          cp android/app/build/outputs/apk/debug/app-debug.apk test-artifacts/android/ZekaPark-test-v3.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs test-artifacts/android/ZekaPark-test-v3.apk > test-artifacts/android/signature.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging test-artifacts/android/ZekaPark-test-v3.apk > test-artifacts/android/package.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree test-artifacts/android/ZekaPark-test-v3.apk AndroidManifest.xml > test-artifacts/android/manifest.txt
+          sha256sum test-artifacts/android/ZekaPark-test-v3.apk > test-artifacts/android/SHA256SUMS
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: ZekaPark-test-apk

@@ -66,7 +66,7 @@ export default function App() {
   const [loginRole, setLoginRole] = useState<UserRole>(initialAccountEntry.current?.role || 'student');
   const [loginMode, setLoginMode] = useState<'login' | 'register'>(initialAccountEntry.current?.mode || 'login');
   const [currentRoute, setCurrentRoute] = useState<string>(() => {
-    if (!dataService.isAuthenticated()) return initialAccountEntry.current || isAndroidApp ? 'login' : 'landing';
+    if (!dataService.isAuthenticated()) return initialAccountEntry.current ? 'login' : 'landing';
     const u = dataService.getCurrentUser();
     if (isDemoUser(u.id) && u.role !== 'student') return 'demo-limit';
     if (u?.role === 'parent') return 'parent';
@@ -81,11 +81,11 @@ export default function App() {
     if (!isAndroidApp) return;
     const onNativeBack = (event: Event) => {
       if (showParentAccess) { event.preventDefault(); setShowParentAccess(false); return; }
-      const root = !isAuth ? 'login' : currentUser.role === 'parent' ? 'parent' : 'dashboard';
+      const root = !isAuth ? 'landing' : currentUser.role === 'parent' ? 'parent' : 'dashboard';
       if (isTestPage(currentRoute) && hasTestHistoryEntryRef.current) {
         event.preventDefault(); window.history.back();
       } else if (currentRoute !== root) {
-        event.preventDefault(); setCurrentRoute(root); window.scrollTo({ top: 0, behavior: 'instant' });
+        event.preventDefault(); if (root === 'landing') window.history.replaceState(window.history.state, '', '/'); setCurrentRoute(root); window.scrollTo({ top: 0, behavior: 'instant' });
       }
     };
     window.addEventListener('zekapark:native-back', onNativeBack);
@@ -105,7 +105,7 @@ export default function App() {
     const handlePopState = () => {
       if (!hasTestHistoryEntryRef.current || !isTestPage(previousRouteRef.current)) return;
       hasTestHistoryEntryRef.current = false;
-      setCurrentRoute(dataService.isAuthenticated() ? testReturnRouteRef.current : isAndroidApp ? 'login' : 'landing');
+      setCurrentRoute(dataService.isAuthenticated() ? testReturnRouteRef.current : 'landing');
       window.scrollTo({ top: 0, behavior: 'instant' });
     };
     window.addEventListener('popstate', handlePopState);
@@ -267,7 +267,6 @@ export default function App() {
   };
 
   const navigateTo = (targetRoute: string, practiceTopic: LearningTopic = 'mixed') => {
-    if (isAndroidApp && targetRoute === 'landing') targetRoute = 'login';
     if (targetRoute === 'practice') setSelectedPracticeTopic(practiceTopic);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 

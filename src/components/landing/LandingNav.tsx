@@ -1,5 +1,6 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { ArrowRight, ArrowUpRight, Brain, Check, ChevronDown, CircleHelp, GraduationCap, Menu, Pause, Play, ScanEye, Settings2, Shapes, Users, Volume2, VolumeX, X } from 'lucide-react';
+import { isAndroidApp, publicPageUrl } from '../../lib/native-app';
 import type { QuestionType, UserRole } from '../../types';
 import { Logo } from '../Logo';
 import { PremiumButton } from './PremiumUI';
@@ -54,6 +55,13 @@ export function LandingNav({ onLogin, onRegister, onHome, onDemo, moving, reduce
     return () => { media.removeEventListener('change', onResize); document.body.style.overflow = previousOverflow; el.close(); };
   }, [mobileOpen]);
 
+  useEffect(() => {
+    if (!isAndroidApp || (!mobileOpen && !panel)) return;
+    const onBack = (event: Event) => { event.preventDefault(); event.stopImmediatePropagation(); setMobileOpen(false); setPanel(null); };
+    window.addEventListener('zekapark:native-back', onBack, true);
+    return () => window.removeEventListener('zekapark:native-back', onBack, true);
+  }, [mobileOpen, panel]);
+
   const toggle = (next: typeof panel, event: React.MouseEvent<HTMLButtonElement>) => {
     restoreTrigger.current = event.currentTarget;
     setPanel(panel === next ? null : next);
@@ -83,7 +91,8 @@ export function LandingNav({ onLogin, onRegister, onHome, onDemo, moving, reduce
         </div>
         <a className="zp-nav-link" href="#siniflar" onClick={e => { e.preventDefault(); section('siniflar'); }}>Sınıflar</a>
         <a className="zp-nav-link" href="#aile" onClick={e => { e.preventDefault(); section('aile'); }}>Aileler için</a>
-        <a className="zp-nav-link" href="/blog">Blog</a>
+        <a className="zp-nav-link" href={publicPageUrl('/blog')}>Blog</a>
+        <a className="zp-nav-link" href="#uyelik" onClick={e => { e.preventDefault(); section('uyelik'); }}>Üyelik</a>
         <a className="zp-nav-link" href="#yardim" onClick={e => { e.preventDefault(); section('yardim'); }}>Yardım</a>
       </nav>
       <div className="zp-public-actions">
@@ -105,7 +114,7 @@ export function LandingNav({ onLogin, onRegister, onHome, onDemo, moving, reduce
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
     }} onCancel={e => { e.preventDefault(); closeMobile(); }} onClose={() => setMobileOpen(false)} onClick={e => { if (e.target === e.currentTarget) closeMobile(); }}>
       <div className="zp-mobile-sheet"><div className="zp-mobile-sheet-top"><div><strong id={`${id}-mobile-title`}>ZekaPark menüsü</strong><span>Yeni bir keşfe hazır mısın?</span></div><button type="button" autoFocus className="zp-public-icon" aria-label="Menüyü kapat" onClick={closeMobile}><X size={21} /></button></div>
-        <nav aria-label="Mobil ana menü"><p className="zp-popover-label">KEŞİF ALANLARI</p>{areas.map(a => <button type="button" className="zp-nav-area" key={a.type} onClick={() => demo(a.type)}><span className={`zp-nav-area-icon zp-nav-area-${a.color}`}><a.icon size={21} /></span><span><strong>{a.name}</strong><small>{a.text}</small></span><ArrowUpRight size={16} /></button>)}<div className="zp-mobile-section-links"><a href="/blog">Blog ve öğrenme rehberleri <ArrowUpRight size={15} /></a><a href="#siniflar" onClick={e => { e.preventDefault(); section('siniflar'); }}>Sınıfına göre keşfet <ArrowUpRight size={15} /></a><a href="#nasil" onClick={e => { e.preventDefault(); section('nasil'); }}>Nasıl çalışır? <ArrowUpRight size={15} /></a><a href="#aile" onClick={e => { e.preventDefault(); section('aile'); }}>Aileler için <ArrowUpRight size={15} /></a><a href="#yardim" onClick={e => { e.preventDefault(); section('yardim'); }}><span><CircleHelp size={16} /> Yardım ve sık sorulanlar</span><ArrowUpRight size={15} /></a></div></nav>
+        <nav aria-label="Mobil ana menü"><p className="zp-popover-label">KEŞİF ALANLARI</p>{areas.map(a => <button type="button" className="zp-nav-area" key={a.type} onClick={() => demo(a.type)}><span className={`zp-nav-area-icon zp-nav-area-${a.color}`}><a.icon size={21} /></span><span><strong>{a.name}</strong><small>{a.text}</small></span><ArrowUpRight size={16} /></button>)}<div className="zp-mobile-section-links"><a href={publicPageUrl('/blog')}>Blog ve öğrenme rehberleri <ArrowUpRight size={15} /></a><a href="#siniflar" onClick={e => { e.preventDefault(); section('siniflar'); }}>Sınıfına göre keşfet <ArrowUpRight size={15} /></a><a href="#nasil" onClick={e => { e.preventDefault(); section('nasil'); }}>Nasıl çalışır? <ArrowUpRight size={15} /></a><a href="#aile" onClick={e => { e.preventDefault(); section('aile'); }}>Aileler için <ArrowUpRight size={15} /></a><a href="#uyelik" onClick={e => { e.preventDefault(); section('uyelik'); }}>Google Play üyeliği <ArrowUpRight size={15} /></a><a href="#yardim" onClick={e => { e.preventDefault(); section('yardim'); }}><span><CircleHelp size={16} /> Yardım ve sık sorulanlar</span><ArrowUpRight size={15} /></a></div></nav>
         <div className="zp-mobile-account"><p className="zp-popover-label">HESABIN</p><div><button type="button" onClick={() => act(() => onLogin('student'))}><GraduationCap size={19} /> Öğrenci girişi</button><button type="button" onClick={() => act(() => onLogin('parent'))}><Users size={19} /> Veli girişi</button></div><PremiumButton className="zp-nav-signup" onClick={() => act(onRegister)}>Hesap oluştur <ArrowRight size={16} /></PremiumButton><button type="button" className="zp-mobile-demo-link" onClick={() => demo()}>Önce hesap açmadan dene</button></div>
         <div className="zp-mobile-preferences"><button type="button" disabled={reducedMotion} aria-pressed={!moving} onClick={onToggleMotion}>{moving ? <Pause size={16} /> : <Play size={16} />}{moving ? 'Hareketi durdur' : 'Hareketi başlat'}</button><button type="button" aria-pressed={soundActive} onClick={onToggleSound}>{soundActive ? <Volume2 size={16} /> : <VolumeX size={16} />}{soundActive ? 'Sesi kapat' : 'Sesi aç'}</button></div>{reducedMotion && <p className="zp-settings-note">Cihazının hareketi azalt tercihi etkin.</p>}
       </div>

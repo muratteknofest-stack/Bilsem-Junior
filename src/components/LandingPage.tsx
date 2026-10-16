@@ -15,6 +15,7 @@ import { LandingNav } from './landing/LandingNav';
 import { PremiumButton } from './landing/PremiumUI';
 import { GradeExplorer } from './landing/GradeExplorer';
 import { createGradePreview, type PreviewGrade } from './landing/grade-preview';
+import { isAndroidApp } from '../lib/native-app';
 import { Footer } from './Footer';
 import './landing/landing.css';
 import './landing/design-system.css';
@@ -165,6 +166,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
         <div className="zp-rewards-grid">{rewards.map(r => <motion.article {...reveal} key={r.title} className={`zp-reward zp-reward-${r.theme}`}><span className="zp-reward-icon" aria-hidden="true"><r.icon size={34} /></span><h3>{r.title}</h3><p>{r.text}</p></motion.article>)}</div>
         <div className="zp-rewards-action"><PremiumButton onClick={() => onNavigate('register')}>Kendi keşif yolumu aç <ArrowRight size={18} /></PremiumButton><p>Kazanımlar öğrenci hesabında takip edilir.</p></div>
       </div></section>
+      <section id="uyelik" className="zp-container zp-section zp-home-membership" aria-labelledby="membership-title"><div><p className="zp-kicker"><ShieldCheck size={16} /> GOOGLE PLAY ÜYELİĞİ</p><h2 id="membership-title">Birlikte keşfedin.<br/><span>Her yerde devam edin.</span></h2><p>Aylık, 3 aylık veya yıllık üyelik. Android uygulamasında Google Play ile alınan aboneliği aynı öğrenci hesabıyla webde de kullanın.</p><p className="zp-membership-note">Fiyatlar ve yenileme koşulları satın alma öncesinde Google Play’de gösterilir.</p></div><div className="zp-membership-action">{isAndroidApp ? <PremiumButton onClick={() => onNavigateToLogin('parent')}>Üyelik için veli girişi <ArrowRight size={18}/></PremiumButton> : <a className="zp-ui-button zp-ui-button-primary" href="/paketler">Üyelik seçeneklerini incele <ArrowUpRight size={18}/></a>}<span>Satın alma ve yönetim veli hesabından yapılır.</span></div></section>
       <section id="nasil" className="zp-container zp-section zp-journey" aria-labelledby="journey-title"><motion.div {...reveal} className="zp-centered-heading"><p className="zp-kicker">BÜYÜK KEŞİFLERİN KÜÇÜK RUTİNİ</p><h2 id="journey-title">Her gün, bir adım daha.</h2><p>Başkasının hızına yetişmek için değil, kendi yolunu keşfetmek için.</p></motion.div>
         <div className="zp-journey-grid">{[{ n: '01', title: 'Rotanı seç', text: 'Merak ettiğin bir alandan başla. Örüntü, mantık ya da dikkat… Seçim senin.', icon: Shapes }, { n: '02', title: 'Deneyerek öğren', text: 'Soruyu çöz, açıklamayı incele. Hatalarını bir sonraki keşfin ipucuna dönüştür.', icon: Brain }, { n: '03', title: 'Gelişimini kutla', text: 'Günlük görevlerini tamamla, XP biriktir ve kendi rekorunu geliştirmeye çalış.', icon: Trophy }].map(s => <motion.div {...reveal} key={s.n} className="zp-journey-step"><div className="zp-journey-icon"><s.icon size={28} /><span>{s.n}</span></div><h3>{s.title}</h3><p>{s.text}</p></motion.div>)}</div>
       </section>

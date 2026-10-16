@@ -40,6 +40,15 @@ public class NativeAppSmokeTest {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         activity = (MainActivity) InstrumentationRegistry.getInstrumentation().startActivitySync(intent);
         try {
+            awaitTrue("Boolean(document.querySelector('#hero-title'))");
+            assertEquals("true", evaluate("document.body.innerText.includes('büyük keşiflere') && Boolean(document.querySelector('#membership-title'))"));
+            evaluate("document.querySelector('[aria-label=\"Menüyü aç\"]').click()");
+            awaitTrue("Boolean(document.querySelector('dialog[open]'))");
+            InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
+            awaitTrue("!document.querySelector('dialog[open]')");
+            evaluate("document.querySelector('[aria-label=\"Menüyü aç\"]').click()");
+            awaitTrue("Boolean(document.querySelector('dialog[open]'))");
+            evaluate("[...document.querySelectorAll('dialog button')].find(b=>b.textContent.trim()==='Öğrenci girişi').click()");
             awaitTrue("Boolean(document.querySelector('#zp-auth-heading'))");
             assertEquals("true", evaluate("window.Capacitor.isNativePlatform()"));
             assertEquals("true", evaluate("document.documentElement.dataset.nativeApp === 'android'"));
@@ -54,6 +63,8 @@ public class NativeAppSmokeTest {
             assertEquals("true", evaluate("document.documentElement.scrollWidth <= innerWidth + 1"));
             InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
             awaitTrue("[...document.querySelectorAll('button')].some(b=>b.textContent.trim()==='Giriş Yap' && b.getAttribute('aria-pressed')==='true')");
+            InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
+            awaitTrue("Boolean(document.querySelector('#hero-title'))");
         } finally {
             InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> activity.finish());
         }

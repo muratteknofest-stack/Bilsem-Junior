@@ -66,11 +66,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     window.addEventListener('zekapark:native-back', onNativeBack, true);
     return () => window.removeEventListener('zekapark:native-back', onNativeBack, true);
   }, [activeTab, registrationBusy, showForgotPasswordModal, onModeChange, selectedRole]);
-  const returnToEntry = () => {
-    if (!isAndroidApp) { onNavigateHome(); return; }
-    setActiveTab('login'); setRegistrationResult(null); setErrorMessage(null); setSuccessToast(null);
-    onModeChange?.('login', selectedRole);
-  };
+  const returnToEntry = () => { onNavigateHome(); };
 
   const openParentLogin = (email: string) => {
     setSelectedRole('parent');
@@ -97,7 +93,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           className="zp-auth-back inline-flex items-center gap-2 text-sm font-semibold px-3.5 py-2 rounded-xl border transition-all cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>{isAndroidApp ? 'Giriş Ekranı' : 'Ana Sayfaya Dön'}</span>
+          <span>Ana Sayfaya Dön</span>
         </button>
 
         <div className="zp-auth-top-note hidden sm:flex items-center gap-2 text-xs font-semibold px-3.5 py-2 rounded-xl border">

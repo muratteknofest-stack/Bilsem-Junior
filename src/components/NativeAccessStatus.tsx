@@ -5,6 +5,8 @@ import { authenticatedFetch } from '../lib/api-client';
 import { auth } from '../lib/supabase';
 import { PlayBilling } from '../lib/play-billing';
 import { initialPlayBillingState, PlayBillingFlow } from '../lib/google-play-flow';
+import { isAndroidApp } from '../lib/native-app';
+import { WebPlayMembershipPanel } from './WebPlayMembershipPanel';
 import { PlayBillingPanel } from './PlayBillingPanel';
 
 export function NativeAccessStatus({ studentId, studentName }: { studentId: string; studentName?: string }) {
@@ -37,5 +39,6 @@ function BillingSession({ studentId, studentName, owner }: { studentId: string; 
     }
     return () => { disposed = true; controller.dispose(); for (const listener of listeners) void listener.remove().catch(() => {}); if (flow.current === controller) flow.current = null; };
   }, [studentId, owner]);
+  if (!isAndroidApp) return <WebPlayMembershipPanel studentName={studentName} state={state} onRefresh={() => { void flow.current?.refresh(); }}/>;
   return <PlayBillingPanel studentName={studentName} state={state} onPurchase={plan => { void flow.current?.purchase(plan); }} onRestore={() => { void flow.current?.restore(); }} onRefresh={() => { void flow.current?.refresh(); }}/>;
 }

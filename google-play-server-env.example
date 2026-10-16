@@ -14,3 +14,6 @@ GOOGLE_PLAY_TOKEN_KEY=
 # Pub/Sub authenticated push: exact audience URL and dedicated push service account.
 GOOGLE_PLAY_RTDN_AUDIENCE=https://zekapark.vercel.app/api/google-play/notifications
 GOOGLE_PLAY_RTDN_EMAIL=
+
+# Set true only after the actual com.zekapark.app listing is accessible on Google Play.
+GOOGLE_PLAY_STORE_PUBLISHED=false

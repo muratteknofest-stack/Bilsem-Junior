@@ -1,6 +1,4 @@
-import { ShopierBilling } from './ShopierBilling';
 import { NativeAccessStatus } from './NativeAccessStatus';
-import { isAndroidApp } from '../lib/native-app';
 import { AccountCenter, FamilyActivation } from './AccountCenter';
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
@@ -645,7 +643,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
         </div>
 
         {parentProfile?.role === 'parent' && <FamilyActivation />}
-        {parentProfile?.role === 'parent' && currentStudent.role === 'student' && (isAndroidApp ? <NativeAccessStatus studentId={currentStudent.id} studentName={currentStudent.name}/> : <ShopierBilling studentId={currentStudent.id}/>)}
+        {parentProfile?.role === 'parent' && currentStudent.role === 'student' && <NativeAccessStatus studentId={currentStudent.id} studentName={currentStudent.name}/>}
         <AnimatePresence mode="wait">
           {activeTab === 'overview' && (
             <motion.div 
