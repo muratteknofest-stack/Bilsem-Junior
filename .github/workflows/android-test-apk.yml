@@ -46,7 +46,7 @@ jobs:
       - run: npm run android:sync
       - name: Compile debug APK without a production signing key
         working-directory: android
-        run: ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest
+        run: ./gradlew --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest
       - name: Start an Android 15 test device
         run: |
           sudo chmod a+rw /dev/kvm
@@ -65,7 +65,7 @@ jobs:
           adb shell input keyevent 82
       - name: Verify installed app, native API, registration form and Android Back
         working-directory: android
-        run: ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.zekapark.app.NativeAppSmokeTest
+        run: ./gradlew --no-daemon :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.zekapark.app.NativeAppSmokeTest
       - name: Save device diagnostics
         if: always()
         run: |
