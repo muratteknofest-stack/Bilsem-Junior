@@ -9,6 +9,33 @@ import { publicBuildSettings } from '../scripts/public-build-settings';
 import { createApiApp } from '../server/api-app';
 import { secretKinds } from '../scripts/check-public-assets.mjs';
 import { policyHtml } from '../server/platform-policy';
+import { osvQueries, auditLockfile } from '../scripts/osv-audit.mjs';
+import { mavenQueries } from '../scripts/audit-android-dependencies.mjs';
+
+test('native dependency audit uses selected transitive versions and fails closed on unresolved graphs', () => {
+  const graph = '+--- androidx.core:core:1.15.0 -> 1.17.0\n|    \\--- example.group:child:2.0.0 (*)\n\\--- androidx.core:core:1.17.0';
+  assert.deepEqual(mavenQueries(graph).map(q => [q.package.name, q.version]), [['androidx.core:core', '1.17.0'], ['example.group:child', '2.0.0']]);
+  for (const invalid of ['', '+--- example.group:child:2.0.0 FAILED', '+--- example.group:child:[1,2)']) assert.throws(() => mavenQueries(invalid), /incomplete/);
+});
+
+test('dependency audit queries canonical nested and aliased npm names without duplicate blind spots', () => {
+  const queries = osvQueries({ packages: {
+    '': { version: '1.0.0' },
+    'node_modules/example': { version: '2.0.0' },
+    'node_modules/parent/node_modules/example': { version: '2.0.0' },
+    'node_modules/parent/node_modules/@scope/child': { version: '3.0.0' },
+    'node_modules/alias': { name: 'actual-name', version: '4.0.0' },
+  } });
+  assert.deepEqual(queries.map(q => [q.package.name, q.version]), [['example','2.0.0'],['@scope/child','3.0.0'],['actual-name','4.0.0']]);
+});
+test('dependency audit cannot report clean when OSV results are missing, partial or paginated', async () => {
+  const lock = { packages: { 'node_modules/example': { version: '2.0.0' } } };
+  for (const payload of [{}, { results: [] }, { results: [null] }, { results: [{ next_page_token: 'more' }] }, { results: [{ vulns: 'invalid' }] }]) {
+    await assert.rejects(auditLockfile(lock, async () => Response.json(payload)), /incomplete/);
+  }
+  const result = await auditLockfile(lock, async () => Response.json({ results: [{ vulns: [{ id: 'GHSA-fixture' }] }] }));
+  assert.equal(result.findings[0].advisories[0], 'GHSA-fixture');
+});
 
 const publicEnv = { VITE_SUPABASE_URL: 'https://vehhvsdkifwstbjhnhao.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test-only', VITE_API_BASE_URL: '' };
 const jwt = (role: string) => `header.${Buffer.from(JSON.stringify({ role })).toString('base64url')}.signature`;
