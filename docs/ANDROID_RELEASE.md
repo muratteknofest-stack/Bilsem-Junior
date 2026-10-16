@@ -1,11 +1,11 @@
 # ZekaPark Android hazırlığı
 
-Bu dal, mevcut React/Vite uygulamasının Capacitor 8.5.3 ile Android projesini hazırlar. Google Play'e yüklenmiş, imzalanmış veya gerçek cihazda doğrulanmış bir sürüm değildir.
+Bu dal, mevcut React/Vite uygulamasının Capacitor 8.5.3 ile Android projesini hazırlar. Google Play'e yüklenmiş, üretim anahtarıyla imzalanmış veya gerçek telefonda doğrulanmış bir sürüm değildir; CI debug APK'sı ayrı emülatör kabul kontrolünden geçirilir.
 
 ## Kapsam
 
 - Türkçe öğrenci ve veli akışları, mevcut sunucu/veritabanı ile çalışır. İnternet gerekir; çevrimdışı soru çözme sözü verilmez.
-- Android derlemesi giriş ekranıyla başlar. Veli paneli Google Play aboneliklerini, gerçek mağaza fiyatlarını, erişim durumunu, geri yükleme ve iptal/yönetim bağlantısını sunar. Google Play kurulumu tamamlanmadan satış açılmaz. Web satış ekranı korunur. Ayrıntılar: `GOOGLE_PLAY_BILLING.md`.
+- Android derlemesi web ile aynı ana sayfayla başlar. Menüden öğrenci/veli girişi ve aile kaydı açılır; giriş ekranından ana sayfaya dönülebilir. Veli paneli Google Play aboneliklerini, gerçek mağaza fiyatlarını, erişim durumunu, geri yükleme ve iptal/yönetim bağlantısını sunar. Google Play kurulumu tamamlanmadan satış açılmaz. Web üyelik sayfası ve veli paneli de Google Play akışını açıklar: satın alma Android uygulamasında, kullanım aynı öğrenci hesabıyla webde devam eder. Ayrıntılar: `GOOGLE_PLAY_BILLING.md`.
 - Native dosyalar `npm run android:prepare` ile sabitlenmiş resmi Capacitor şablonundan üretilir; güvenlik ve logo kaynakları `mobile/android/` altındadır. Üretilen `android/` klasörü ve web varlıkları git'e eklenmez.
 - HTTPS zorunludur. Uygulama içinde uzak `server.url`, karışık içerik, açık metin trafik ve üretim WebView hata ayıklaması açılmaz. Android yedekleme/cihaz aktarımından uygulama verileri hariç tutulur.
 - Paket kimliği taslağı: `com.zekapark.app`. İlk Play yüklemesinden önce sahiplik ve kullanılabilirlik doğrulanmalıdır; yayınlandıktan sonra değiştirilemez.
@@ -31,7 +31,7 @@ Test 1.0.1 (`versionCode=2`) yerel HTTP bağlantısını, e-posta yeniden gönde
 - Hesap/veri silme isteğinin uygulama içinde ve web üzerinden çalıştığının doğrulanması; inceleme hesabı ve erişim talimatlarının hazırlanması.
 - Veri Güvenliği formu: hesaplar, öğrenci ilerlemesi, hata kayıtları, üçüncü taraf ağ istekleri ve veri silme/saklama süreleri gerçek uygulamayla eşleşmelidir.
 - Çocuk hedef kitlesi ve Google Play Families kuralları, yaş derecelendirmesi ve ebeveyn akışları. Henüz reklam veya izleme SDK'sı eklenmedi.
-- Tüm ekranların dış bağlantı/ödeme yönlendirmesi denetimi. Android uygulamasındaki dijital üyelik satışı Play Billing kullanır. Shopier satış/aktivasyon ekranı Android veli akışında sunulmaz; diğer ekranların dış ödeme yönlendirmeleri de yayın öncesi denetlenmelidir. Bu hazırlık Google Play kabul garantisi değildir.
+- Tüm ekranların dış bağlantı/ödeme yönlendirmesi denetimi. Android uygulamasındaki dijital üyelik satışı Play Billing kullanır. Shopier satış/aktivasyon ekranı Android veya web veli akışında sunulmaz; diğer ekranların dış ödeme yönlendirmeleri de yayın öncesi denetlenmelidir. Bu hazırlık Google Play kabul garantisi değildir.
 - Play Console geliştirici hesabı, kimlik ve cihaz doğrulaması; yeni bireysel hesaplar için en az 12 testçinin son 14 gün kesintisiz katıldığı kapalı test ve üretim erişim başvurusu.
 - Mağaza açıklamaları, gerçek cihaz ekran görüntüleri, uygulama simgesi/özellik görseli ve imzalı AAB yüklemesi. Kullanıcının hesabı adına sözleşme kabulü veya kayıt ücreti ödemesi yapılmadı.
 
@@ -43,3 +43,7 @@ Test 1.0.1 (`versionCode=2`) yerel HTTP bağlantısını, e-posta yeniden gönde
 - https://support.google.com/googleplay/android-developer/answer/14151465
 - https://support.google.com/googleplay/android-developer/answer/10281818
 - https://support.google.com/googleplay/android-developer/answer/9867159
+
+## Test paketi güncellemeleri
+
+CI yalnızca test APK imzası için `~/.android/debug.keystore` dosyasını Actions cache içinde aynı depo anahtarıyla korur. Anahtar depoya veya APK indirme arşivine eklenmez; üretim imzası olarak kullanılmaz. Cache silinir veya imza değişirse önceki test paketinin üzerine kurulum başarısız olabilir. Eski paketi kaldırmak cihazdaki oturum ve senkronize edilmemiş verileri silebilir. Google Play sürümü ayrı üretim/upload anahtarı ve Play App Signing kullanmalıdır.
