@@ -7,6 +7,20 @@ import { PasswordRecoveryEntry } from './features/auth/components/PasswordRecove
 import { isRecoveryRedirect } from './lib/supabase';
 import './components/wordwall.css';
 import { isAdminLocation } from './lib/admin-access';
+import { isAndroidApp } from './lib/native-app';
+import './native.css';
+import { Capacitor } from '@capacitor/core';
+
+if (isAndroidApp) {
+  document.documentElement.dataset.nativeApp = 'android';
+  // Preserve the test screen's existing popstate flow on Android's Back gesture.
+  if (Capacitor.isNativePlatform()) void import('@capacitor/app').then(({ App: NativeApp }) =>
+    NativeApp.addListener('backButton', ({ canGoBack }) => {
+      if (canGoBack || window.history.state?.zekaparkTestPage) window.history.back();
+      else void NativeApp.minimizeApp();
+    }),
+  );
+}
 
 const AdminPortal = lazy(() => import('./components/AdminPortal').then(module => ({ default: module.AdminPortal })));
 const WordwallPage = lazy(() => import('./components/WordwallLibrary').then(module => ({ default: module.WordwallPage })));

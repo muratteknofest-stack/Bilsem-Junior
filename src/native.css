@@ -1,0 +1,6 @@
+/* Respect display cutouts and Android's gesture navigation area. */
+html[data-native-app] { overscroll-behavior-y: none; }
+html[data-native-app] body {
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  min-height: 100dvh;
+}

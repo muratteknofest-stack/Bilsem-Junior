@@ -24,6 +24,7 @@ import {
 import type { UserRole } from '../types';
 import { FOOTER_GROUPS, SUPPORT_EMAIL } from '../content/platform-info';
 import { Logo } from './Logo';
+import { isAndroidApp } from '../lib/native-app';
 import './footer.css';
 
 interface FooterProps {
@@ -96,8 +97,8 @@ export function Footer({ onNavigate, onNavigateToLogin }: FooterProps) {
             </p>
           </div>
           <div className="platform-footer-actions">
-            <a href="/paketler" className="platform-footer-btn-secondary">Shopier paketleri</a>
-            <a href="/en/" lang="en" hrefLang="en" className="platform-footer-btn-secondary">English · Thinking games</a>
+            {!isAndroidApp && <a href="/paketler" className="platform-footer-btn-secondary">Shopier paketleri</a>}
+            {!isAndroidApp && <a href="/en/" lang="en" hrefLang="en" className="platform-footer-btn-secondary">English · Thinking games</a>}
             <button
               type="button"
               className="platform-footer-btn-primary"

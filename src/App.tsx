@@ -1,4 +1,5 @@
 import { topicCategory, type LearningTopic } from './features/student/learning-topics';
+import { isAndroidApp } from './lib/native-app';
 import { ProgressSyncBanner } from './components/ProgressSyncBanner';
 import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useAuth } from './contexts/AuthContext';
@@ -65,7 +66,7 @@ export default function App() {
   const [loginRole, setLoginRole] = useState<UserRole>(initialAccountEntry.current?.role || 'student');
   const [loginMode, setLoginMode] = useState<'login' | 'register'>(initialAccountEntry.current?.mode || 'login');
   const [currentRoute, setCurrentRoute] = useState<string>(() => {
-    if (!dataService.isAuthenticated()) return initialAccountEntry.current ? 'login' : 'landing';
+    if (!dataService.isAuthenticated()) return initialAccountEntry.current || isAndroidApp ? 'login' : 'landing';
     const u = dataService.getCurrentUser();
     if (isDemoUser(u.id) && u.role !== 'student') return 'demo-limit';
     if (u?.role === 'parent') return 'parent';
@@ -90,7 +91,7 @@ export default function App() {
     const handlePopState = () => {
       if (!hasTestHistoryEntryRef.current || !isTestPage(previousRouteRef.current)) return;
       hasTestHistoryEntryRef.current = false;
-      setCurrentRoute(dataService.isAuthenticated() ? testReturnRouteRef.current : 'landing');
+      setCurrentRoute(dataService.isAuthenticated() ? testReturnRouteRef.current : isAndroidApp ? 'login' : 'landing');
       window.scrollTo({ top: 0, behavior: 'instant' });
     };
     window.addEventListener('popstate', handlePopState);
@@ -252,6 +253,7 @@ export default function App() {
   };
 
   const navigateTo = (targetRoute: string, practiceTopic: LearningTopic = 'mixed') => {
+    if (isAndroidApp && targetRoute === 'landing') targetRoute = 'login';
     if (targetRoute === 'practice') setSelectedPracticeTopic(practiceTopic);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 

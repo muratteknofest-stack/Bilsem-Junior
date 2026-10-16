@@ -17,6 +17,18 @@ node_modules/
 
 # Build outputs
 dist/
+dist-android/
+/android/
+android/.gradle/
+android/.idea/
+android/local.properties
+android/**/build/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+*.jks
+*.keystore
+keystore.properties
 build/
 target/
 .npm-cache/
