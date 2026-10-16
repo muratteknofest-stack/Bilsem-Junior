@@ -4,3 +4,11 @@ html[data-native-app] body {
   padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
   min-height: 100dvh;
 }
+/* Defer the decorative 3D scene below the form until it approaches the viewport. */
+html[data-native-app] .zp-auth-showcase {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 620px;
+}
+html[data-native-app] .zp-auth-showcase:not([data-in-view]) .zp-auth-scene-core {
+  animation-play-state: paused;
+}

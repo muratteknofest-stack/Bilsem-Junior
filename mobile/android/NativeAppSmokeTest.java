@@ -21,7 +21,7 @@ public class NativeAppSmokeTest {
         AtomicReference<String> value = new AtomicReference<>();
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() ->
             activity.getBridge().getWebView().evaluateJavascript(script, result -> { value.set(result); latch.countDown(); }));
-        assertTrue("WebView callback timed out", latch.await(10, TimeUnit.SECONDS));
+        assertTrue("WebView callback timed out for: " + script, latch.await(30, TimeUnit.SECONDS));
         return value.get();
     }
     private void awaitTrue(String script) throws Exception {

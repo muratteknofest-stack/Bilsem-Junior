@@ -73,7 +73,7 @@ jobs:
           mkdir -p "$ANDROID_AVD_HOME"
           timeout 300 sdkmanager 'system-images;android-35;google_apis;x86_64'
           printf 'no\n' | avdmanager create avd --name zekapark-test --package 'system-images;android-35;google_apis;x86_64' --device pixel_6 --force
-          "$ANDROID_HOME/emulator/emulator" -avd zekapark-test -no-window -no-audio -no-boot-anim -no-snapshot -port 5554 -gpu software > /tmp/zekapark-emulator.log 2>&1 &
+          "$ANDROID_HOME/emulator/emulator" -avd zekapark-test -no-window -no-audio -no-boot-anim -no-snapshot -port 5554 -gpu software -cores 2 -memory 2048 > /tmp/zekapark-emulator.log 2>&1 &
           native_emulator_pid=$!
           for attempt in $(seq 1 90); do
             if ! kill -0 "$native_emulator_pid" 2>/dev/null; then cat /tmp/zekapark-emulator.log; exit 1; fi
@@ -84,6 +84,8 @@ jobs:
           adb shell settings put global window_animation_scale 0
           adb shell settings put global transition_animation_scale 0
           adb shell settings put global animator_duration_scale 0
+          adb shell wm size 720x1280
+          adb shell wm density 320
           adb shell input keyevent 82
       - name: Verify installed app, native API, registration form and Android Back
         working-directory: android

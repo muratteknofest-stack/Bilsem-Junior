@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { isAndroidApp } from '../lib/native-app';
 import { UserRole, UserProfile } from '../types';
 import { sound } from '../lib/sound';
@@ -45,6 +45,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [loginIdentifier, setLoginIdentifier] = useState('');
 
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const showcase = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const node = showcase.current;
+    if (!isAndroidApp || !node || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(([entry]) => node.toggleAttribute('data-in-view', entry.isIntersecting), { rootMargin: '80px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
   useEffect(() => {
     if (!isAndroidApp) return;
     const onNativeBack = (event: Event) => {
@@ -204,7 +212,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </div>
         </section>
 
-        <aside className="zp-auth-showcase relative flex flex-col justify-between overflow-hidden" aria-label="ZekaPark keşif alanları">
+        <aside ref={showcase} className="zp-auth-showcase relative flex flex-col justify-between overflow-hidden" aria-label="ZekaPark keşif alanları">
           <div className="zp-auth-showcase-content">
             <span className="zp-auth-showcase-kicker"><Sparkles size={16} aria-hidden="true" /> MERAK EDEN ZİHİNLER İÇİN</span>
             <h2>Her soruda yeni bir dünya.</h2>
