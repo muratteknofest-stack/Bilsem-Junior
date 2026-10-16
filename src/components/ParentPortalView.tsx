@@ -645,7 +645,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
         </div>
 
         {parentProfile?.role === 'parent' && <FamilyActivation />}
-        {parentProfile?.role === 'parent' && currentStudent.role === 'student' && (isAndroidApp ? <NativeAccessStatus studentId={currentStudent.id}/> : <ShopierBilling studentId={currentStudent.id}/>)}
+        {parentProfile?.role === 'parent' && currentStudent.role === 'student' && (isAndroidApp ? <NativeAccessStatus studentId={currentStudent.id} studentName={currentStudent.name}/> : <ShopierBilling studentId={currentStudent.id}/>)}
         <AnimatePresence mode="wait">
           {activeTab === 'overview' && (
             <motion.div 

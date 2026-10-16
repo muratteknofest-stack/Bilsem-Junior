@@ -7,4 +7,4 @@ export const PLAY_PLANS = [
 export type PlayPlanId = typeof PLAY_PLANS[number]['id'];
 export interface PlayAccess { active: boolean; expiresAt: string | null; state?: string; autoRenewing?: boolean; }
 export interface PlayOffer { basePlanId: PlayPlanId; price: string; period: string; }
-export interface PlayPurchase { token: string; state: 'purchased' | 'pending'; accountId: string | null; profileId: string | null; }
+export interface PlayPurchase { token: string; state: 'purchased' | 'pending'; accountId: string | null; profileId: string | null; productIds: string[]; }

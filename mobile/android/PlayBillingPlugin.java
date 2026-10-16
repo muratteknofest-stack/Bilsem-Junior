@@ -109,7 +109,7 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
         JSArray items = new JSArray();
         if (list != null) for (Purchase p : list) {
             if (p.getPurchaseState() != Purchase.PurchaseState.PURCHASED && p.getPurchaseState() != Purchase.PurchaseState.PENDING) continue;
-            JSObject item = new JSObject(); item.put("token", p.getPurchaseToken());
+            JSObject item = new JSObject(); item.put("token", p.getPurchaseToken()); item.put("productIds", new JSArray(p.getProducts()));
             item.put("state", p.getPurchaseState() == Purchase.PurchaseState.PURCHASED ? "purchased" : "pending");
             AccountIdentifiers ids = p.getAccountIdentifiers();
             item.put("accountId", ids == null ? null : ids.getObfuscatedAccountId()); item.put("profileId", ids == null ? null : ids.getObfuscatedProfileId());

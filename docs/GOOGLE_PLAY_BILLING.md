@@ -58,3 +58,11 @@ Bekleyen ödeme erişim açmaz. Aktif ve ek ödeme süresindeki abonelikler eri�
 - https://developer.android.com/google/play/billing/rtdn-reference
 - https://cloud.google.com/pubsub/docs/authenticate-push-subscriptions
 - https://support.google.com/googleplay/android-developer/answer/12154973
+
+## Veli ekranı ve kesinti davranışı
+
+Paket seçmek tek başına satın alım başlatmaz; seçimin ardından ayrı Google Play düğmesi kullanılır. Öğrenci adı, gerçek mağaza fiyatı, dönem, otomatik yenileme ve iptal bilgileri görünür. Bekleyen veya başka öğrenciye bağlı bir satın alım bulunduğunda yeni ödeme başlatılmaz. Fiyat kataloğu ve mevcut satın alımlar birbirinden bağımsız yüklenir; katalog arızası geri yüklemeyi durdurmaz. Güncel erişim doğrulanamazsa eski kayıt yalnızca son doğrulanan bilgi olarak gösterilir. Yenile ve geri yükle işlemleri tekrar denenebilir.
+
+Ön plana gelme olayları, satın alma, doğrulama ve yenileme tek işlem sırasıyla yürür. Aynı anda gelen olaylar bir sonraki tek yenilemede birleştirilir. Öğrenci/veli değişiminde HTTP iptal edilir; eski native sonuçlar yeni hesaba uygulanmaz. Native eklenti satın alımın ürün kimliklerini de döndürür; farklı ürünler bu üyelik için kullanılamaz. Uygulama callback'i güncel sunucu doğrulamasının yerini tutmaz.
+
+Arayüz kontrolleri: `npm run test:google-play` sunucu ve istemci senaryolarını çalıştırır. `npm run test:google-play:browser` kurulu Playwright Chromium ile 320/360/390/768 pikselde yedi ekran durumunu, paket seçiminin ödeme başlatmamasını, ödeme düğmesinin seçilen planı iletmesini, kurtarma düğmelerini ve klavye kullanımını kontrol eder. Bu ikinci kontrol yerel, kurmaca fiyatlı bir bileşen ekranıdır; Google veya gerçek hesaba bağlanmaz ve cihazdaki ödeme testinin yerini tutmaz.
