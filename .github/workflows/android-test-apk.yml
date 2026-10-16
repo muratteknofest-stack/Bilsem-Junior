@@ -14,7 +14,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: android-test-${{ github.ref }}
+  group: android-test-verified-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   apk:
@@ -51,40 +51,6 @@ jobs:
       - name: Compile debug APK without a production signing key
         working-directory: android
         run: ./gradlew --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest
-      - name: Start an Android 15 test device
-        run: |
-          sudo chmod a+rw /dev/kvm
-          sdkmanager 'system-images;android-35;google_apis;x86_64'
-          printf 'no\n' | avdmanager create avd --name zekapark-test --package 'system-images;android-35;google_apis;x86_64' --device pixel_6 --force
-          "$ANDROID_HOME/emulator/emulator" -avd zekapark-test -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > /tmp/zekapark-emulator.log 2>&1 &
-          timeout 180 adb wait-for-device
-          for attempt in $(seq 1 90); do
-            if adb shell getprop sys.boot_completed | tr -d '\r' | grep -q '^1$'; then break; fi
-            sleep 2
-          done
-          test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1
-          adb shell settings put global window_animation_scale 0
-          adb shell settings put global transition_animation_scale 0
-          adb shell settings put global animator_duration_scale 0
-          adb shell input keyevent 82
-      - name: Verify installed app, native API, registration form and Android Back
-        working-directory: android
-        run: ./gradlew --no-daemon :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.zekapark.app.NativeAppSmokeTest
-      - name: Save device diagnostics
-        if: always()
-        run: |
-          mkdir -p test-artifacts/android-device
-          cp /tmp/zekapark-emulator.log test-artifacts/android-device/ 2>/dev/null || true
-          adb logcat -d -t 1500 > test-artifacts/android-device/logcat.txt 2>/dev/null || true
-          cp -R android/app/build/reports/androidTests test-artifacts/android-device/ 2>/dev/null || true
-          cp -R android/app/build/outputs/androidTest-results test-artifacts/android-device/ 2>/dev/null || true
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        if: always()
-        with:
-          name: ZekaPark-android-device-checks
-          path: test-artifacts/android-device/
-          if-no-files-found: ignore
-          retention-days: 7
       - name: Verify and collect installable package
         run: |
           mkdir -p test-artifacts/android
@@ -98,4 +64,42 @@ jobs:
           name: ZekaPark-test-apk
           path: test-artifacts/android/
           if-no-files-found: error
+          retention-days: 7
+      - name: Start an Android 15 test device
+        timeout-minutes: 8
+        run: |
+          sudo chmod a+rw /dev/kvm
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/zekapark-avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          timeout 300 sdkmanager 'system-images;android-35;google_apis;x86_64'
+          printf 'no\n' | avdmanager create avd --name zekapark-test --package 'system-images;android-35;google_apis;x86_64' --device pixel_6 --force
+          "$ANDROID_HOME/emulator/emulator" -avd zekapark-test -no-window -no-audio -no-boot-anim -no-snapshot -port 5554 -gpu software > /tmp/zekapark-emulator.log 2>&1 &
+          native_emulator_pid=$!
+          for attempt in $(seq 1 90); do
+            if ! kill -0 "$native_emulator_pid" 2>/dev/null; then cat /tmp/zekapark-emulator.log; exit 1; fi
+            if timeout 3 adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r' | grep -q '^1$'; then break; fi
+            sleep 2
+          done
+          if ! timeout 3 adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r' | grep -q '^1$'; then cat /tmp/zekapark-emulator.log; exit 1; fi
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+          adb shell input keyevent 82
+      - name: Verify installed app, native API, registration form and Android Back
+        working-directory: android
+        run: ./gradlew --no-daemon :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.zekapark.app.NativeAppSmokeTest
+      - name: Save device diagnostics
+        if: always()
+        run: |
+          mkdir -p test-artifacts/android-device
+          cp /tmp/zekapark-emulator.log test-artifacts/android-device/ 2>/dev/null || true
+          timeout 10 adb logcat -d -t 1500 > test-artifacts/android-device/logcat.txt 2>/dev/null || true
+          cp -R android/app/build/reports/androidTests test-artifacts/android-device/ 2>/dev/null || true
+          cp -R android/app/build/outputs/androidTest-results test-artifacts/android-device/ 2>/dev/null || true
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: ZekaPark-android-device-checks
+          path: test-artifacts/android-device/
+          if-no-files-found: ignore
           retention-days: 7
