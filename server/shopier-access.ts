@@ -4,14 +4,11 @@ import { shopierGet } from './shopier-client';
 import { accessExpiry, verifiedShopierOrder, ShopierError, type AccessReceipt } from './shopier-model';
 import { SHOPIER_PRODUCT_FIELDS, type ShopierSettings, type ShopierPlanId } from '../src/lib/shopier-config';
 import { withRequestDeadline } from '../src/lib/request-deadline';
-export async function assertShopierFamily(parentId:string,studentId:string) {
-  const db=getServiceClient();
-  const [parent,student]=await Promise.all([db.from('profiles').select('id,role,linked_student_ids').eq('id',parentId).single(),
-    db.from('profiles').select('id,role,linked_parent_id').eq('id',studentId).single()]);
-  if(parent.error||student.error)throw new ShopierError('Aile bilgileri doğrulanamadı.',503);
-  if(parent.data.role!=='parent'||student.data.role!=='student'||student.data.linked_parent_id!==parentId
-    ||!parent.data.linked_student_ids?.includes(studentId))throw new ShopierError('Bu öğrenci için yetkiniz bulunmuyor.',403);
-}
+import { assertBillingFamily as assertShopierFamily } from './billing-family';
+export { assertShopierFamily };
+import { googlePlayAccess } from './google-play-access';
+import { playConfig } from './google-play-client';
+import { GooglePlayError } from './google-play-model';
 export async function shopierAccess(parentId:string,studentId:string,settings:ShopierSettings) {
   try { return await withRequestDeadline(async signal=>{
     await assertShopierFamily(parentId,studentId);
@@ -40,10 +37,19 @@ export async function shopierAccess(parentId:string,studentId:string,settings:Sh
 }
 export async function requireLearningAccess(studentId:string) {
   const {settings}=await readPlatformSettings();
-  if(!settings.shopier.enforcePaidAccess)return;
-  if(!process.env.SHOPIER_ACCESS_TOKEN)throw new ShopierError('Ücretli erişim doğrulaması şu anda kullanılamıyor.',503);
+  const playEnforced=playConfig().enforced;
+  if(!settings.shopier.enforcePaidAccess&&!playEnforced)return;
   const student=await getServiceClient().from('profiles').select('linked_parent_id').eq('id',studentId).single();
   if(student.error||!student.data?.linked_parent_id)throw new ShopierError('Veli bağlantısı doğrulanamadı.',403);
-  const access=await shopierAccess(student.data.linked_parent_id,studentId,settings.shopier);
-  if(!access.active)throw new ShopierError('Yeni çalışma için veli panelinden aktif paket tanımlanmalı.',403);
+  const parentId=student.data.linked_parent_id;
+  let unavailable=false;
+  // A valid Play subscription remains usable during a Shopier outage.
+  try { if((playEnforced||playConfig().enabled||process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON)&&(await googlePlayAccess(parentId,studentId)).active)return; }
+  catch(error){if(error instanceof GooglePlayError||error instanceof ShopierError)unavailable=error.status===503;else throw error;}
+  if(settings.shopier.enforcePaidAccess){
+    try { if((await shopierAccess(parentId,studentId,settings.shopier)).active)return; }
+    catch(error){if(error instanceof ShopierError)unavailable=unavailable||error.status===503;else throw error;}
+  }
+  if(unavailable)throw new ShopierError('Ücretli erişim doğrulaması şu anda kullanılamıyor.',503);
+  throw new ShopierError('Yeni çalışma için veli panelinden aktif abonelik tanımlanmalı.',403);
 }

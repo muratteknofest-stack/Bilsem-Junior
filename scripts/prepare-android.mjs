@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, copyFileSync } from 'node:fs';
+import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -14,9 +14,16 @@ for (const [source, target] of [
   ['AndroidManifest.xml', 'AndroidManifest.xml'],
   ['data_extraction_rules.xml', 'res/xml/data_extraction_rules.xml'],
   ['launcher.xml', 'res/drawable/zekapark_launcher.xml'],
+  ['MainActivity.java', 'java/com/zekapark/app/MainActivity.java'],
+  ['PlayBillingPlugin.java', 'java/com/zekapark/app/PlayBillingPlugin.java'],
 ]) {
   const destination = resolve(root, 'android/app/src/main', target);
   mkdirSync(dirname(destination), { recursive: true });
   copyFileSync(resolve(root, 'mobile/android', source), destination);
 }
 console.log('Android projesi hazırlandı. Üretim anahtarı veya imzalama parolası oluşturulmadı.');
+
+const gradlePath = resolve(root, 'android/app/build.gradle');
+const gradle = readFileSync(gradlePath, 'utf8');
+const billing = "apply from: '../../mobile/android/play-billing.gradle'";
+if (!gradle.includes(billing)) writeFileSync(gradlePath, gradle + '\n' + billing + '\n');

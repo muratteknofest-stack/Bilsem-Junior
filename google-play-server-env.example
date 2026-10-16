@@ -1,0 +1,16 @@
+# SERVER ONLY. Never prefix these with VITE_; never put them in the Android bundle.
+# New sales and mandatory paid access stay off until the documented acceptance tests pass.
+GOOGLE_PLAY_BILLING_ENABLED=false
+GOOGLE_PLAY_ENFORCE_PAID_ACCESS=false
+GOOGLE_PLAY_ALLOW_TEST_PURCHASES=false
+GOOGLE_PLAY_PACKAGE_NAME=com.zekapark.app
+GOOGLE_PLAY_PRODUCT_ID=zekapark_uyelik
+# Store the service-account JSON directly as a server secret, with minimal Play permissions.
+GOOGLE_PLAY_SERVICE_ACCOUNT_JSON=
+# Long-lived random secret, at least 32 characters; anchors account/student bindings.
+GOOGLE_PLAY_BINDING_SECRET=
+# Independent random 32-byte key, encoded as 64 hexadecimal characters.
+GOOGLE_PLAY_TOKEN_KEY=
+# Pub/Sub authenticated push: exact audience URL and dedicated push service account.
+GOOGLE_PLAY_RTDN_AUDIENCE=https://zekapark.vercel.app/api/google-play/notifications
+GOOGLE_PLAY_RTDN_EMAIL=

@@ -5,7 +5,7 @@ Bu dal, mevcut React/Vite uygulamasının Capacitor 8.5.3 ile Android projesini 
 ## Kapsam
 
 - Türkçe öğrenci ve veli akışları, mevcut sunucu/veritabanı ile çalışır. İnternet gerekir; çevrimdışı soru çözme sözü verilmez.
-- Android derlemesi giriş ekranıyla başlar. Veli paneli mevcut erişim durumunu gösterir; satın alma, fiyat ve sipariş aktivasyon formu sunmaz. Web derlemesindeki satış ekranı korunur.
+- Android derlemesi giriş ekranıyla başlar. Veli paneli Google Play aboneliklerini, gerçek mağaza fiyatlarını, erişim durumunu, geri yükleme ve iptal/yönetim bağlantısını sunar. Google Play kurulumu tamamlanmadan satış açılmaz. Web satış ekranı korunur. Ayrıntılar: `GOOGLE_PLAY_BILLING.md`.
 - Native dosyalar `npm run android:prepare` ile sabitlenmiş resmi Capacitor şablonundan üretilir; güvenlik ve logo kaynakları `mobile/android/` altındadır. Üretilen `android/` klasörü ve web varlıkları git'e eklenmez.
 - HTTPS zorunludur. Uygulama içinde uzak `server.url`, karışık içerik, açık metin trafik ve üretim WebView hata ayıklaması açılmaz. Android yedekleme/cihaz aktarımından uygulama verileri hariç tutulur.
 - Paket kimliği taslağı: `com.zekapark.app`. İlk Play yüklemesinden önce sahiplik ve kullanılabilirlik doğrulanmalıdır; yayınlandıktan sonra değiştirilemez.
@@ -25,7 +25,7 @@ Bu dal, mevcut React/Vite uygulamasının Capacitor 8.5.3 ile Android projesini 
 - Hesap/veri silme isteğinin uygulama içinde ve web üzerinden çalıştığının doğrulanması; inceleme hesabı ve erişim talimatlarının hazırlanması.
 - Veri Güvenliği formu: hesaplar, öğrenci ilerlemesi, hata kayıtları, üçüncü taraf ağ istekleri ve veri silme/saklama süreleri gerçek uygulamayla eşleşmelidir.
 - Çocuk hedef kitlesi ve Google Play Families kuralları, yaş derecelendirmesi ve ebeveyn akışları. Henüz reklam veya izleme SDK'sı eklenmedi.
-- Tüm ekranların dış bağlantı/ödeme yönlendirmesi denetimi. Consumption-only sürümde uygulama içinden dijital üyelik satın alınamaz; uygulama içi satış eklemek Play Billing veya uygun bölgesel program için ayrı entegrasyon gerektirir. Bu hazırlık Google Play kabul garantisi değildir.
+- Tüm ekranların dış bağlantı/ödeme yönlendirmesi denetimi. Android uygulamasındaki dijital üyelik satışı Play Billing kullanır. Shopier satış/aktivasyon ekranı Android veli akışında sunulmaz; diğer ekranların dış ödeme yönlendirmeleri de yayın öncesi denetlenmelidir. Bu hazırlık Google Play kabul garantisi değildir.
 - Play Console geliştirici hesabı, kimlik ve cihaz doğrulaması; yeni bireysel hesaplar için en az 12 testçinin son 14 gün kesintisiz katıldığı kapalı test ve üretim erişim başvurusu.
 - Mağaza açıklamaları, gerçek cihaz ekran görüntüleri, uygulama simgesi/özellik görseli ve imzalı AAB yüklemesi. Kullanıcının hesabı adına sözleşme kabulü veya kayıt ücreti ödemesi yapılmadı.
 
