@@ -72,3 +72,31 @@ test('package discovery classifies status without exposing errors and rejects ov
   assert.deepEqual(await inspectShopierPackageCandidates(async()=>{throw new Error('private error');},'test'),{configured:true,readable:false});
   assert.deepEqual(await inspectShopierPackageCandidates(undefined,''),{configured:false});
 });
+
+import { inspectShopierTokenMetadata } from '../server/shopier-diagnostics';
+
+test('inspectShopierTokenMetadata extracts non-secret merchant and scope readiness without leaking credentials', () => {
+  assert.deepEqual(inspectShopierTokenMetadata(''), { configured: false });
+  assert.deepEqual(inspectShopierTokenMetadata('not-a-jwt'), { configured: true, validJwtFormat: false });
+
+  const header = Buffer.from(JSON.stringify({ typ: 'JWT', alg: 'RS256' })).toString('base64url');
+  const payload = Buffer.from(
+    JSON.stringify({
+      sub: 3073249,
+      jti: 'sensitive-token-id-must-not-appear',
+      exp: 1950052244,
+      scopes: ['orders:read', 'products:read', 'shop:read']
+    })
+  ).toString('base64url');
+  const syntheticJwt = `${header}.${payload}.signature`;
+  const meta = inspectShopierTokenMetadata(syntheticJwt, 1792267484 * 1000);
+
+  assert.equal(meta.configured, true);
+  assert.equal(meta.validJwtFormat, true);
+  assert.equal(meta.merchantId, '3073249');
+  assert.equal(meta.hasOrdersRead, true);
+  assert.equal(meta.hasProductsRead, true);
+  assert.equal(meta.scopesCount, 3);
+  assert.equal(meta.expired, false);
+  assert.ok(!JSON.stringify(meta).includes('sensitive-token-id-must-not-appear'));
+});

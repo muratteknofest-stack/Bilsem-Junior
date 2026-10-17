@@ -7,7 +7,52 @@ import {
   type PlatformSettings,
 } from "../../lib/platform-settings";
 import { LEARNING_EXAMS } from "../../features/student/learning-contract";
-import { SHOPIER_PLANS, SHOPIER_PRODUCT_FIELDS } from "../../lib/shopier-config";
+import { SHOPIER_PLANS, SHOPIER_PRODUCT_FIELDS, type ShopierPlanId } from "../../lib/shopier-config";
+
+interface ShopierDiagnosticsPayload {
+  tokenMeta?: {
+    configured: boolean;
+    validJwtFormat?: boolean;
+    merchantId?: string | null;
+    hasOrdersRead?: boolean;
+    hasProductsRead?: boolean;
+    scopesCount?: number;
+    expiresAt?: string | null;
+    expired?: boolean;
+  };
+  productsReport?: {
+    configured: boolean;
+    products: Array<{
+      plan: ShopierPlanId;
+      readable: boolean;
+      idMatches?: boolean;
+      priceMatches?: boolean;
+      digital?: boolean;
+      urlMatches?: boolean;
+      inStock?: boolean;
+      httpStatus?: number;
+      networkCode?: string;
+    }>;
+  };
+  candidatesReport?: {
+    configured: boolean;
+    readable?: boolean;
+    httpStatus?: number;
+    scanned?: number;
+    candidates?: Array<{
+      plan: ShopierPlanId;
+      productId: string;
+      url: string;
+      titleMatchesPlan: boolean;
+      digital: boolean;
+      inStock: boolean;
+      noDiscount: boolean;
+      freeShipping: boolean;
+      noVariants: boolean;
+      noOptions: boolean;
+    }>;
+  };
+}
 
 export function AdminSystemSettings({
   onSyncNeeded,
@@ -17,7 +62,10 @@ export function AdminSystemSettings({
   const [record, setRecord] = useState<SettingsRecord | null>(null),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [diagBusy, setDiagBusy] = useState(false),
+    [diagnostics, setDiagnostics] = useState<ShopierDiagnosticsPayload | null>(null);
+
   async function load() {
     setError("");
     try {
@@ -30,9 +78,84 @@ export function AdminSystemSettings({
       setError(cause instanceof Error ? cause.message : "Ayarlar yüklenemedi.");
     }
   }
+
   useEffect(() => {
     void load();
   }, []);
+
+  async function checkShopierConnection() {
+    if (diagBusy) return;
+    setDiagBusy(true);
+    setError("");
+    try {
+      const response = await authenticatedFetch(
+        "/api/admin/platform-settings/shopier-diagnostics"
+      );
+      const value = await response.json();
+      if (!response.ok) {
+        throw new Error(value.error || "Shopier bağlantı durumu okunamadı.");
+      }
+      setDiagnostics(value);
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Shopier bağlantı durumu okunamadı."
+      );
+    } finally {
+      setDiagBusy(false);
+    }
+  }
+
+  function applyDetectedCandidates() {
+    const list = diagnostics?.candidatesReport?.candidates;
+    if (!record || !list?.length) return;
+    setRecord((r) => {
+      if (!r) return r;
+      const nextShopier = { ...r.settings.shopier };
+      for (const plan of SHOPIER_PLANS) {
+        const match =
+          list.find(
+            (c) =>
+              c.plan === plan.id &&
+              c.digital &&
+              c.inStock &&
+              c.noDiscount &&
+              c.freeShipping &&
+              c.noVariants &&
+              c.noOptions &&
+              c.titleMatchesPlan
+          ) ||
+          list.find(
+            (c) =>
+              c.plan === plan.id &&
+              c.digital &&
+              c.inStock &&
+              c.noDiscount &&
+              c.freeShipping &&
+              c.noVariants &&
+              c.noOptions
+          ) ||
+          list.find((c) => c.plan === plan.id);
+        if (match) {
+          const fields = SHOPIER_PRODUCT_FIELDS[plan.id];
+          nextShopier[fields.id] = match.productId;
+          nextShopier[fields.url] = match.url;
+        }
+      }
+      return {
+        ...r,
+        settings: {
+          ...r.settings,
+          shopier: nextShopier,
+        },
+      };
+    });
+    setNotice(
+      "Shopier hesabında bulunan eşleşen paket numaraları ve bağlantıları forma aktarıldı. Kaydet butonuna basarak doğrulayın."
+    );
+  }
+
   async function save(event: React.FormEvent) {
     event.preventDefault();
     if (!record || busy) return;
@@ -66,6 +189,7 @@ export function AdminSystemSettings({
       setBusy(false);
     }
   }
+
   function business(key: keyof PlatformSettings["business"], value: string) {
     setRecord(
       (r) =>
@@ -79,6 +203,7 @@ export function AdminSystemSettings({
     );
     setNotice("");
   }
+
   const labels: Record<keyof PlatformSettings["business"], string> = {
     brandName: "Marka adı (şirket unvanı yerine geçmez)",
     legalName: "Yasal satıcı / veri sorumlusu adı veya unvanı",
@@ -101,6 +226,7 @@ export function AdminSystemSettings({
     monitoringTested:
       "Gerçek mobil cihazlar, eşzamanlı sınav yükü ve hata alarmı teslimatı test edildi.",
   };
+
   return (
     <section className="space-y-5">
       <h2 className="text-2xl font-bold">Sistem ayarları ve yayın hazırlığı</h2>
@@ -131,8 +257,60 @@ export function AdminSystemSettings({
         <form onSubmit={save} className="space-y-6">
           <fieldset disabled={busy} className="space-y-6">
             <section className="rounded-2xl border bg-white p-5 space-y-3">
-              <h3 className="text-lg font-bold">Shopier paketleri</h3>
-              <p>Shopier hesabındaki üç ayrı dijital ürünü bağlayın. Gerçek ürün, fiyat ve bağlantı sunucuda Shopier üzerinden kontrol edilir. Erişim anahtarı bu forma yazılmaz.</p>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-bold">Shopier paketleri</h3>
+                  <p>Shopier hesabındaki üç ayrı dijital ürünü bağlayın. Gerçek ürün, fiyat ve bağlantı sunucuda Shopier üzerinden kontrol edilir. Erişim anahtarı bu forma yazılmaz.</p>
+                </div>
+                <button
+                  type="button"
+                  disabled={diagBusy}
+                  onClick={() => void checkShopierConnection()}
+                  className="min-h-11 rounded-xl border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-900"
+                >
+                  {diagBusy ? "Shopier denetleniyor…" : "Shopier bağlantısını denetle ve ürünleri bul"}
+                </button>
+              </div>
+
+              {diagnostics && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2 text-sm">
+                  <p className="font-bold text-slate-900">
+                    Sunucu Shopier Anahtarı (SHOPIER_ACCESS_TOKEN):{" "}
+                    {!diagnostics.tokenMeta?.configured
+                      ? "Tanımlı değil"
+                      : diagnostics.tokenMeta.validJwtFormat
+                      ? `Tanımlı · Mağaza #${diagnostics.tokenMeta.merchantId || "?"} · ${
+                          diagnostics.tokenMeta.hasOrdersRead && diagnostics.tokenMeta.hasProductsRead
+                            ? "Sipariş & Ürün Okuma Yetkisi Tamam"
+                            : "Eksik Yetki Kapsamı"
+                        }`
+                      : "Geçersiz JWT formatı"}
+                  </p>
+                  {diagnostics.candidatesReport?.httpStatus === 401 && (
+                    <p role="alert" className="rounded-lg bg-amber-100 p-3 text-amber-950 font-semibold">
+                      Shopier API HTTP 401 döndürdü: Sunucudaki SHOPIER_ACCESS_TOKEN anahtarı Shopier tarafından iptal edilmiş (Access token is revoked). Lütfen Shopier panelinden yeni bir Kişisel Erişim Anahtarı (PAT) oluşturup sunucu SHOPIER_ACCESS_TOKEN ortam değişkenini güncelleyin.
+                    </p>
+                  )}
+                  {diagnostics.candidatesReport?.readable && (
+                    <div className="space-y-2">
+                      <p className="text-emerald-900 font-semibold">
+                        Shopier API bağlantısı başarılı ({diagnostics.candidatesReport.scanned || 0} ürün tarandı,{" "}
+                        {diagnostics.candidatesReport.candidates?.length || 0} uyumlu paket adayı bulundu).
+                      </p>
+                      {Boolean(diagnostics.candidatesReport.candidates?.length) && (
+                        <button
+                          type="button"
+                          onClick={applyDetectedCandidates}
+                          className="min-h-10 rounded-lg bg-emerald-700 px-3.5 py-1.5 text-xs font-bold text-white"
+                        >
+                          Bulunan ürünleri forma otomatik doldur
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {SHOPIER_PLANS.map(plan => {const fields=SHOPIER_PRODUCT_FIELDS[plan.id];return <div key={plan.id} className="space-y-2 rounded-xl border p-3">
                 <h4 className="font-bold">{plan.title} · {plan.days} gün · {(plan.amountKurus/100).toLocaleString('tr-TR')} TL</h4>
                 <div className="grid gap-3 sm:grid-cols-2"><label>{plan.title} ürün numarası<input className="block w-full border rounded-lg p-3" value={record.settings.shopier[fields.id]} onChange={e=>setRecord(r=>r&&({...r,settings:{...r.settings,shopier:{...r.settings.shopier,[fields.id]:e.target.value}}}))}/></label>

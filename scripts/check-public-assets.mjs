@@ -11,7 +11,14 @@ export function secretKinds(text) {
   for (const match of text.matchAll(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g)) {
     try {
       const claims = JSON.parse(Buffer.from(match[0].split('.')[1], 'base64url').toString('utf8'));
-      if (['service_role', 'authenticated', 'admin'].includes(claims.role)) { kinds.push('private JWT'); break; }
+      if (['service_role', 'authenticated', 'admin'].includes(claims.role)) {
+        kinds.push('private JWT');
+        break;
+      }
+      if (Array.isArray(claims.scopes) && claims.scopes.includes('orders:read')) {
+        kinds.push('Shopier access token');
+        break;
+      }
     } catch { /* Not a JWT. */ }
   }
   return kinds;

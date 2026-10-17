@@ -91,3 +91,48 @@ export async function inspectShopierPackageCandidates(fetcher: typeof fetch = fe
     return { configured: true, readable: false, ...(httpStatus !== undefined ? { httpStatus } : {}) };
   }
 }
+
+export interface ShopierTokenMetadata {
+  configured: boolean;
+  validJwtFormat?: boolean;
+  merchantId?: string | null;
+  hasOrdersRead?: boolean;
+  hasProductsRead?: boolean;
+  scopesCount?: number;
+  expiresAt?: string | null;
+  expired?: boolean;
+}
+
+export function inspectShopierTokenMetadata(
+  token = process.env.SHOPIER_ACCESS_TOKEN,
+  now = Date.now()
+): ShopierTokenMetadata {
+  if (!token || !token.trim()) return { configured: false };
+  const parts = token.trim().split('.');
+  if (parts.length !== 3) {
+    return { configured: true, validJwtFormat: false };
+  }
+  try {
+    const claims = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+    const scopes: string[] = Array.isArray(claims?.scopes)
+      ? claims.scopes.filter((s: unknown): s is string => typeof s === 'string')
+      : [];
+    const expMs = typeof claims?.exp === 'number' && Number.isFinite(claims.exp) ? claims.exp * 1000 : null;
+    const merchantId =
+      typeof claims?.sub === 'number' || typeof claims?.sub === 'string'
+        ? String(claims.sub).replace(/[^0-9A-Za-z_-]/g, '').slice(0, 40)
+        : null;
+    return {
+      configured: true,
+      validJwtFormat: true,
+      merchantId: merchantId || null,
+      hasOrdersRead: scopes.includes('orders:read'),
+      hasProductsRead: scopes.includes('products:read'),
+      scopesCount: scopes.length,
+      expiresAt: expMs ? new Date(expMs).toISOString() : null,
+      expired: expMs !== null ? now >= expMs : false
+    };
+  } catch {
+    return { configured: true, validJwtFormat: false };
+  }
+}

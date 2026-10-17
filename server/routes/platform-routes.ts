@@ -17,10 +17,16 @@ import {
   type AuthenticatedRequest,
 } from "../security";
 import { accountSecurityLimiter } from "../rate-limiters";
-
 import { verifyShopierProducts } from '../shopier-client';
 import { ShopierError } from '../shopier-model';
+import {
+  inspectShopierProducts,
+  inspectShopierPackageCandidates,
+  inspectShopierTokenMetadata,
+} from '../shopier-diagnostics';
+
 const routes = Router();
+
 routes.get("/public/platform", async (_req, res) => {
   const { settings, revision } = await readPlatformSettings();
   res.json({
@@ -29,6 +35,7 @@ routes.get("/public/platform", async (_req, res) => {
     exams: configuredExams(settings),
   });
 });
+
 routes.get("/public/policy/:slug", async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   // An unavailable database must not silently publish a previously completed policy.
@@ -42,6 +49,7 @@ routes.get("/public/policy/:slug", async (req, res) => {
     return res.type("html").send(policyHtml(info));
   return res.json(info);
 });
+
 routes.use(
   "/admin/platform-settings",
   requireSupabaseAuth,
@@ -49,10 +57,28 @@ routes.use(
   requireProfileRole("admin"),
   accountSecurityLimiter,
 );
+
 routes.get("/admin/platform-settings", async (_req, res) => {
   const record = await readPlatformSettings();
   res.json({ ...record, blockers: releaseBlockers(record.settings) });
 });
+
+routes.get("/admin/platform-settings/shopier-diagnostics", async (_req, res) => {
+  const record = await readPlatformSettings().catch(() => ({
+    settings: defaultPlatformSettings(),
+  }));
+  const tokenMeta = inspectShopierTokenMetadata();
+  const [productsReport, candidatesReport] = await Promise.all([
+    inspectShopierProducts(record.settings.shopier),
+    inspectShopierPackageCandidates(),
+  ]);
+  res.json({
+    tokenMeta,
+    productsReport,
+    candidatesReport,
+  });
+});
+
 routes.put(
   "/admin/platform-settings",
   async (req: AuthenticatedRequest, res) => {
@@ -94,5 +120,5 @@ routes.put(
     return res.json(await readPlatformSettings());
   },
 );
-export default routes;
 
+export default routes;
