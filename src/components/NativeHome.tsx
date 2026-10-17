@@ -22,7 +22,7 @@ export function NativeHome({ screen, onScreen, onLogin, onRegister, soundActive,
   }, [screen]);
   useEffect(() => {
     if (screen === 'home') return;
-    const back = (event: Event) => { event.preventDefault(); event.stopImmediatePropagation(); onScreen('home'); };
+    const back = (event: Event) => { if (document.querySelector('.zp-free-test')) return; event.preventDefault(); event.stopImmediatePropagation(); onScreen('home'); };
     window.addEventListener('zekapark:native-back', back, true);
     return () => window.removeEventListener('zekapark:native-back', back, true);
   }, [screen, onScreen]);

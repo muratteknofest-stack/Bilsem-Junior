@@ -2,6 +2,8 @@
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { createServer } from 'vite';
+import { generateQuestionByType } from '../src/features/questions/generators/index.ts';
+import { publicChallenge, answeredChallenge } from '../server/challenge-validation.ts';
 import { chromium } from 'playwright';
 const native = process.argv.includes('--native');
 process.env.VITE_API_BASE_URL = 'https://app.example.invalid';
@@ -16,7 +18,7 @@ const weekly = JSON.stringify({thisWeekDays:[184,0,0,0,0,0,0],lastWeekDays:[26,0
 const profile = {id:studentId,role:'student',name:'Kaşif',grade:2,linked_parent_id:parentId,student_code:'EXPLORER1234',xp:3066,level:5,total_questions_solved:184};
 const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url');
 const session = {access_token:`${encode({alg:'HS256',typ:'JWT'})}.${encode({sub:studentId,role:'authenticated',aal:'aal1',exp:Math.floor(Date.now()/1000)+3600,session_id:'99999999-9999-4999-8999-999999999999'})}.fixture`,refresh_token:'isolated-refresh',token_type:'bearer',expires_in:3600,user:{id:studentId,aud:'authenticated',email:'student@example.invalid',email_confirmed_at:new Date().toISOString(),created_at:new Date().toISOString(),app_metadata:{role:'student'},user_metadata:{}}};
-let browser; let premium = true, unavailable = false, delayedAccess = false; const pending = []; const calls = [];
+let browser; let premium = true, unavailable = false, delayedAccess = false; let dailyCompleted=3, dailySlot=0, dailyQuestion=null, answerCalls=0, failAnswer=false; const pending = []; const calls = [];
 await mkdir('test-artifacts/student-mobile',{recursive:true});
 try {
  browser = await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE,args:['--no-sandbox','--disable-dev-shm-usage']}: {})});
@@ -35,7 +37,16 @@ try {
    if(delayedAccess)await new Promise(resolve=>pending.push(resolve));
    if(unavailable)return route.fulfill({status:503,contentType:'application/json',body:'{"error":"Doğrulama kullanılamıyor"}'});
    value={active:premium,expiresAt:premium?'2027-01-16T12:00:00Z':null,freeDailyQuestions:3};
-  }else if(url.pathname==='/api/challenges/today')value={day:'2026-10-17',limit:3,completed:3,points:20};
+  }else if(url.pathname==='/api/challenges/today')value={day:'2026-10-17',limit:3,completed:dailyCompleted,points:dailyCompleted*10};
+  else if(url.pathname==='/api/challenges/start'){
+   dailySlot++;dailyQuestion=generateQuestionByType(dailySlot===3?'visual_memory':'visual_sequence',4829+dailySlot,2);
+   value=publicChallenge({id:'free-task-'+dailySlot,slot:dailySlot,day:'2026-10-17',question:dailyQuestion});
+  }else if(url.pathname.endsWith('/answer')){
+   answerCalls++;await new Promise(resolve=>setTimeout(resolve,200));
+   if(failAnswer){failAnswer=false;return route.fulfill({status:503,contentType:'application/json',body:'{"error":"Bağlantı kesildi, yeniden dene."}'});}
+   const selected=route.request().postDataJSON().optionId;dailyCompleted++;
+   value=answeredChallenge({selected_option:selected,correct:selected===dailyQuestion.correctOptionId,points:selected===dailyQuestion.correctOptionId?10:0,question:dailyQuestion});
+  }
   else if(url.pathname==='/api/learning/rewards')value={badges:[],reviewToday:0};
   else if(url.pathname==='/api/learning/history')value={sessions:[]};
   else if(url.pathname==='/api/public/platform')value={registrationOpen:true,policyVersion:'2026-10-11.4'};
@@ -89,6 +100,22 @@ try {
  await page.getByRole('button',{name:'Abone ol',exact:true}).waitFor();
  await page.screenshot({path:'test-artifacts/student-mobile/colorful-membership-320.png',fullPage:true});
  assert.equal(await page.getByRole('button',{name:'Bugünün görevleri tamamlandı',exact:true}).isDisabled(),true);
+ if(native){
+  dailyCompleted=0;await go();await page.getByRole('button',{name:'Günün görevini aç',exact:true}).click();await page.locator('.zp-free-test').waitFor();
+  const choices=page.locator('.zp-free-choices button');
+  // Rapid taps must cause exactly one server mutation. Correctness appears only after the response.
+  await choices.nth(dailyQuestion.options.findIndex(o=>o.id===dailyQuestion.correctOptionId)).evaluate(n=>{n.click();n.click();});
+  assert.equal(await page.locator('.zp-free-result').count(),0);await page.getByText('Harika, doğru cevap!',{exact:true}).waitFor();assert.equal(answerCalls,1);
+  assert.ok(await page.locator('.zp-free-test').evaluate(n=>n.scrollHeight<=n.clientHeight+1));
+  await page.getByRole('button',{name:'Sonraki soru',exact:true}).click();await page.getByText('Cevabına dokun, sonucu keşfet.',{exact:true}).waitFor();
+  failAnswer=true;const incorrect=dailyQuestion.options.findIndex(o=>o.id!==dailyQuestion.correctOptionId);await choices.nth(incorrect).click();await page.getByRole('button',{name:'Yeniden gönder'}).waitFor();assert.equal(await page.locator('.zp-free-result').count(),0);assert.equal(dailyCompleted,1);
+  await page.getByRole('button',{name:'Yeniden gönder'}).click();await page.getByText('Birlikte öğrenelim.',{exact:true}).waitFor();assert.equal(dailyCompleted,2);
+  await page.getByRole('button',{name:'Sonraki soru',exact:true}).click();await page.getByRole('button',{name:'Deseni gizle ve cevapla'}).waitFor();assert.equal(await choices.count(),0);
+  await page.getByRole('button',{name:'Deseni gizle ve cevapla'}).click();assert.equal(await page.locator('.zp-free-fit').count(),0);await choices.first().click();await page.getByRole('button',{name:'Tamamla',exact:true}).waitFor();
+  await page.screenshot({path:'test-artifacts/student-mobile/free-daily-result-320.png'});await page.getByRole('button',{name:'Tamamla',exact:true}).click();await page.locator('.zp-free-test').waitFor({state:'detached'});
+  assert.equal(await page.getByRole('button',{name:'Bugünün görevleri tamamlandı',exact:true}).isDisabled(),true);
+  await page.getByRole('button',{name:'Son soruyu incele'}).click();await page.locator('.zp-free-test').waitFor();await page.evaluate(()=>document.dispatchEvent(new Event('zekapark:native-back',{bubbles:true,cancelable:true})));await page.locator('.zp-free-test').waitFor({state:'detached'});
+ }
  for(const name of ['Görevlerim','Kişisel planım','Yeteneklerim']){
   await page.locator('.zp-study-navigation').getByRole('button',{name:new RegExp(name)}).click();await page.getByRole('region',{name:'Üyelikle devam et'}).waitFor();
   assert.equal(await page.locator('#arena-title').count(),0);assert.equal(await page.locator('iframe').count(),0);await noOverflow('free '+name);

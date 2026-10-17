@@ -8,6 +8,7 @@ export function useNativeScreenBack(root: RefObject<HTMLElement | null>, onBack:
   useEffect(() => {
     if (!isAndroidApp) return;
     const back = (event: Event) => {
+      if (document.querySelector('.zp-free-test')) return;
       if (event.defaultPrevented || document.querySelector('dialog[open],[role="dialog"][aria-modal="true"]') || document.fullscreenElement) return;
       const disclosure = root.current?.querySelector<HTMLDetailsElement>('details[open]');
       if (disclosure) {

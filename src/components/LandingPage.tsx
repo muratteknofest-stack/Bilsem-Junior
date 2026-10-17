@@ -17,6 +17,7 @@ import { GradeExplorer } from './landing/GradeExplorer';
 import { createGradePreview, type PreviewGrade } from './landing/grade-preview';
 import { isAndroidApp } from '../lib/native-app';
 import { Footer } from './Footer';
+import { FreeTestScreen } from './FreeTestScreen';
 import { NativeHome, type NativeHomeScreen } from './NativeHome';
 import './landing/landing.css';
 import './landing/design-system.css';
@@ -65,6 +66,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
   const [pageVisible, setPageVisible] = useState(true);
   const moving = !reducedMotion && !paused && pageVisible;
   const [soundActive, setSoundActive] = useState(sound.enabled);
+  useEffect(() => sound.subscribe(() => setSoundActive(sound.enabled)), []);
   const [category, setCategory] = useState<QuestionType>('visual_sequence');
   const [question, setQuestion] = useState(() => generateQuestionByType('visual_sequence', 4829, 2));
   const [previewGrade, setPreviewGrade] = useState<PreviewGrade | null>(null);
@@ -105,14 +107,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
     } else { setSubmitted(true); }
     goDemo();
   };
-  const submit = () => {
+  const submit = (answer: QuestionResponse | null = response) => {
     if (submitLock.current || submitted) return;
-    const checked = evaluateResponse(question, response);
+    const checked = evaluateResponse(question, answer);
     if (!checked.complete) return;
     if (!useLandingQuestion()) { setSubmitted(true); return; }
     submitLock.current = true; setSubmitted(true); setSolved(n => n + 1);
-    if (checked.correct) { setCorrect(n => n + 1); if (soundActive) sound.playSuccess(); }
-    else if (soundActive) sound.playError();
+    if (checked.correct) { setCorrect(n => n + 1); if (!isAndroidApp && soundActive) sound.playSuccess(); }
+    else if (!isAndroidApp && soundActive) sound.playError();
   };
   const demoPanel = <section id="kesfet" className="zp-demo-section" aria-labelledby="demo-title"><div className="zp-container zp-demo-grid">
         <motion.div {...reveal} className="zp-demo-intro"><p className="zp-kicker">İZLEMEK GÜZEL. DENEMEK DAHA GÜZEL.</p><h2 id="demo-title" tabIndex={-1} ref={demoHeading}>Bir küçük soru.<br /><span>Kocaman bir<br />“buldum!”</span></h2><p>Parçaları incele, kuralı keşfet, cevabını yerleştir. Acele yok; burada öğrenmenin yolu denemekten geçiyor.</p>
@@ -127,11 +129,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
           <h3>{question.prompt}</h3>{question.secondaryPrompt && <p className="zp-question-secondary">{question.secondaryPrompt}</p>}
           <QuestionRenderer question={question} />
           <AnswerWorkspace key={question.id} question={question} response={response} onChange={r => { if (!submitted && !submitLock.current) setResponse(r); }} submitted={submitted} />
-          {!submitted ? <PremiumButton className="zp-full" disabled={!result.complete} onClick={submit}>Cevabımı kontrol et <ArrowRight size={18} /></PremiumButton> : <div className="zp-demo-feedback"><p role="status" className={result.correct ? 'zp-correct' : 'zp-try-again'}>{landingQuestionAnswered() && solved === 0 ? 'Örnek soruyu daha önce tamamladın.' : result.correct ? 'Buldun! Güzel bir keşif yaptın.' : 'Birlikte bakalım. Her deneme yeni bir şey öğretir.'}</p>{solved > 0 && <VisualExplanationOverlay explanation={question.explanation} correctOptionId={question.correctOptionId} />}<PremiumButton className="zp-full" onClick={() => onNavigate('register')}>Hesap oluştur <ArrowRight size={17} /></PremiumButton></div>}
+          {!submitted ? <PremiumButton className="zp-full" disabled={!result.complete} onClick={() => submit()}>Cevabımı kontrol et <ArrowRight size={18} /></PremiumButton> : <div className="zp-demo-feedback"><p role="status" className={result.correct ? 'zp-correct' : 'zp-try-again'}>{landingQuestionAnswered() && solved === 0 ? 'Örnek soruyu daha önce tamamladın.' : result.correct ? 'Buldun! Güzel bir keşif yaptın.' : 'Birlikte bakalım. Her deneme yeni bir şey öğretir.'}</p>{solved > 0 && <VisualExplanationOverlay explanation={question.explanation} correctOptionId={question.correctOptionId} />}<PremiumButton className="zp-full" onClick={() => onNavigate('register')}>Hesap oluştur <ArrowRight size={17} /></PremiumButton></div>}
           </>}
         </motion.div>
       </div></section>;
-  if (isAndroidApp) return <NativeHome screen={nativeScreen} onScreen={setNativeScreen} onLogin={onNavigateToLogin} onRegister={() => onNavigate('register')} soundActive={soundActive} onToggleSound={() => { sound.enabled = !soundActive; setSoundActive(!soundActive); }}>{demoPanel}</NativeHome>;
+  if (isAndroidApp) return <NativeHome screen={nativeScreen} onScreen={setNativeScreen} onLogin={onNavigateToLogin} onRegister={() => onNavigate('register')} soundActive={soundActive} onToggleSound={() => { sound.enabled = !soundActive; setSoundActive(!soundActive); }}>{nativeScreen === 'demo' && <FreeTestScreen key={question.id} questionKey={question.id} title="İlk keşfin" index={1} total={1} prompt={question.prompt} secondaryPrompt={question.secondaryPrompt} type={question.type} options={question.options} visual={<QuestionRenderer question={question}/>} selectedId={response?.mode === 'choice' ? response.optionId ?? '' : ''} error={demoError} completed={submitted && solved === 0} feedback={submitted && solved > 0 ? { correct: result.correct, correctOptionId: question.correctOptionId, summary: question.explanation.summary, steps: question.explanation.steps } : null} onSelect={id => { const answer = { mode: 'choice', optionId: id } as const; setResponse(answer); submit(answer); }} onLeave={() => setNativeScreen('home')} onContinue={() => onNavigate('register')} continueLabel="Ücretsiz hesap aç" picker={!submitted && <label><span>Örnek soru alanı</span><select aria-label="Örnek soru alanı" value={category} onChange={event => nextQuestion(event.target.value as QuestionType)}>{worlds.map(world => <option key={world.type} value={world.type}>{world.short}</option>)}</select></label>}/>}</NativeHome>;
   return <div className="zp-landing zp-colorful-home" data-motion={moving ? 'on' : 'off'}>
     <a className="zp-skip" href="#ana-icerik">İçeriğe geç</a>
     <LandingNav onLogin={onNavigateToLogin} onRegister={() => onNavigate('register')}
