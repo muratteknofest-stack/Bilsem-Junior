@@ -28,3 +28,5 @@ export const AI_GENERATION_CONFIG = {
 
 export type AiModelRole = keyof typeof AI_MODELS;
 
+
+export const AI_PIPELINE_BUDGET_MS = 50000;

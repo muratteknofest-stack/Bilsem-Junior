@@ -73,6 +73,7 @@ import { shareWeeklyReport } from '../services/weekly-report-service';
 import { resetLinkedStudentPassword } from '../services/account-security-service';
 import { strongPasswordSchema } from '../lib/validations';
 import { NewPasswordFields } from '../features/auth/components/NewPasswordFields';
+import { sortSkillMasteriesByScore, buildCognitiveRadarData, buildMomentumSeries, calculateDailyGoalProgressPct } from '../features/parent/parent-portal-helpers';
 import './landing/design-system.css';
 import './dashboard-design-system.css';
 
@@ -217,9 +218,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
   }, [currentStudent, parentOrStudent?.role]);
 
   // Sort masteries
-  const sorted = useMemo(() => {
-    return [...(displayMasteries || [])].sort((a, b) => (b.mastery || 0) - (a.mastery || 0));
-  }, [displayMasteries]);
+  const sorted = useMemo(() => sortSkillMasteriesByScore(displayMasteries || []), [displayMasteries]);
 
   const strengths = useMemo(() => sorted.slice(0, 3), [sorted]);
   const needsAttention = useMemo(() => sorted.slice(-3).reverse(), [sorted]);
@@ -231,23 +230,8 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
   const maxQuestions = Math.max(...activityData, 1);
 
   // Radar Data for 8 Cognitive Dimensions
-  const radarData = useMemo(() => {
-    return (displayMasteries || []).map((m) => ({
-      category: (m.categoryName || '').split(' ')[0], // short label
-      fullName: m.categoryName || '',
-      mastery: m.mastery || 0,
-      accuracy: m.accuracy || 0,
-      fullMark: 100
-    }));
-  }, [displayMasteries]);
-
-  // Only the currently available seven-day history is charted.
-  const monthlyMomentumData = useMemo(() => {
-    return (weeklyData?.dailyStats || []).map((day) => ({
-      date: day.shortDay,
-      score: day.thisWeek,
-    }));
-  }, [weeklyData]);
+  const radarData = useMemo(() => buildCognitiveRadarData(displayMasteries || []), [displayMasteries]);
+  const monthlyMomentumData = useMemo(() => buildMomentumSeries(weeklyData), [weeklyData]);
 
   const handleSendWeeklyReport = async () => {
     if (!weeklyData) return;
@@ -326,7 +310,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
   // Daily goal calculation for circular progress
   const targetMins = currentStudent.dailyGoalMinutes || 15;
   const spentMins = currentStudent.todayMinutesSpent || 0;
-  const goalProgressPct = Math.min(100, Math.round((spentMins / targetMins) * 100));
+  const goalProgressPct = calculateDailyGoalProgressPct(spentMins, targetMins);
 
   const studentSelector = parentOrStudent?.role === 'parent' && linkedStudents.length > 1 ? (
     <label className="mb-4 block text-sm font-semibold">

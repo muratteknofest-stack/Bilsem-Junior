@@ -4,6 +4,7 @@ import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { ADMIN_PANEL_PATH, ADMIN_LOGIN_PATH, hasVerifiedAdminAccess } from './lib/admin-access';
 import { accountEntry, accountEntryPath } from './features/auth/account-entry';
+import { routeFromPathname } from './lib/route-sync';
 
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { UserProfile, UserRole, SkillMastery, MistakeItem, DailyStudyPlan, ReminderAlertEvent, CognitiveCategory } from './types';
@@ -65,7 +66,11 @@ export default function App() {
   const [loginRole, setLoginRole] = useState<UserRole>(initialAccountEntry.current?.role || 'student');
   const [loginMode, setLoginMode] = useState<'login' | 'register'>(initialAccountEntry.current?.mode || 'login');
   const [currentRoute, setCurrentRoute] = useState<string>(() => {
-    if (!dataService.isAuthenticated()) return initialAccountEntry.current ? 'login' : 'landing';
+    if (!dataService.isAuthenticated()) {
+      if (initialAccountEntry.current) return 'login';
+      const initialUrlRoute = routeFromPathname(window.location.pathname, 'landing');
+      return initialUrlRoute === 'wordwall' ? 'wordwall' : 'landing';
+    }
     const u = dataService.getCurrentUser();
     if (isDemoUser(u.id) && u.role !== 'student') return 'demo-limit';
     if (u?.role === 'parent') return 'parent';

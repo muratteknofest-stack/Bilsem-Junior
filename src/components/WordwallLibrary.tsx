@@ -20,10 +20,11 @@ export function WordwallLibrary({ initialGrade, headingLevel = 2 }: { initialGra
   const visible = filtered.slice(currentPage * 12, (currentPage + 1) * 12);
   const reset = () => { setPage(0); setSelected(null); setFullscreenError(''); };
   const open = (item: WordwallActivity, button: HTMLButtonElement) => {
-    gameButton.current = button; setSelected(item); setFullscreenError('');
+    recordWordwallActivityStart(item); gameButton.current = button; setSelected(item); setFullscreenError('');
     requestAnimationFrame(() => { heading.current?.focus(); player.current?.scrollIntoView({ block: 'start', behavior: 'instant' }); });
   };
   const close = () => {
+    if (selected) recordWordwallActivityClose(selected.id);
     setSelected(null); setFullscreenError('');
     requestAnimationFrame(() => gameButton.current?.focus());
   };

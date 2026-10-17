@@ -30,3 +30,30 @@ export const securityHeaders = {
 export const contentSecurityPolicy = Object.entries(browserDirectives).map(([key, values]) =>
   `${key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}${values.length ? ` ${values.join(' ')}` : ''}`,
 ).join('; ');
+
+export function resolveConnectSrcOrigins(customSupabaseUrl?: string): string[] {
+  const base = [...browserDirectives.connectSrc];
+  if (!customSupabaseUrl) return base;
+  try {
+    const parsed = new URL(customSupabaseUrl);
+    if (parsed.protocol === "https:") {
+      const httpsOrigin = parsed.origin;
+      const wssOrigin = `wss://${parsed.host}`;
+      if (!base.includes(httpsOrigin)) base.push(httpsOrigin);
+      if (!base.includes(wssOrigin)) base.push(wssOrigin);
+    }
+  } catch {
+    // Ignore malformed custom URL and preserve strict defaults
+  }
+  return base;
+}
+
+export function buildContentSecurityPolicy(customSupabaseUrl?: string): string {
+  const directives = {
+    ...browserDirectives,
+    connectSrc: resolveConnectSrcOrigins(customSupabaseUrl),
+  };
+  return Object.entries(directives)
+    .map(([key, values]) => `${key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}${values.length ? ` ${values.join(" ")}` : ""}`)
+    .join("; ");
+}
