@@ -63,6 +63,11 @@ try {
    await page.waitForTimeout(240);await noOverflow(`${width}px ${name}`);
   }
   await page.locator('.zp-study-navigation').getByRole('button',{name:'Görevlerim',exact:true}).click();await page.locator('#arena-title').waitFor();
+  if(native){
+   await page.getByRole('button',{name:'Günlük görev',exact:true}).click();await page.getByRole('region',{name:'Günlük görevler',exact:true}).waitFor();assert.equal(await page.locator('#arena-title').count(),0);await noOverflow('native daily tasks');
+   await page.getByRole('button',{name:'Rozet görevi',exact:true}).click();await page.locator('#zp-weekly-missions').waitFor();await noOverflow('native weekly badge tasks');
+   await page.getByRole('button',{name:'Haftalık yarış',exact:true}).click();await page.locator('#arena-title').waitFor();assert.equal(await page.getByRole('region',{name:'Günlük görevler',exact:true}).count(),0);
+  }
   assert.match(await page.locator('#arena-title').innerText(),/Geçen haftaki kendini geç/);assert.equal(await page.locator('.zp-arena-total strong').innerText(),'184');
   const top=await page.locator('.zp-native-topbar').boundingBox();assert.ok(top.y>=29,'status bar safe area');
   if(width===390)await page.screenshot({path:'test-artifacts/student-mobile/paid-tasks-390.png',fullPage:true});

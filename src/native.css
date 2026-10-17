@@ -105,3 +105,5 @@ html[data-native-app] .ww-eyebrow{display:none}
 html[data-native-app] .zp-student-topline{display:flex;justify-content:flex-end;margin-bottom:8px}
 html[data-native-app] .zp-student-topline>span{display:none}
 html[data-native-app] .zp-student-topline .zp-experience-controls>summary{min-height:44px;padding:8px 10px;font-size:10px}
+html[data-native-app] .zp-study-navigation>button{font-size:11px;white-space:nowrap}
+html[data-native-app] .zp-study-navigation>button>span{overflow-wrap:normal}

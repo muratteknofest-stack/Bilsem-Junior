@@ -50,6 +50,7 @@ const SECTIONS = [
   { id: 'progress', label: 'İlerlemem', icon: BarChart3 },
 ] as const;
 type Section = typeof SECTIONS[number]['id'];
+const NATIVE_SECTION_LABELS: Record<Section,string> = {modes:'Çalış',plan:'Planım',skills:'Yetenek',challenges:'Görevler',progress:'İlerleme'};
 const CATEGORY_STYLE_CONFIG: Record<string, {
   color: string;
   bgLight: string;
@@ -141,7 +142,7 @@ export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries
   const switchSection = (section: Section) => { sound.playClick(); setActiveTab(section); setNativeDetailView(0); if (isAndroidApp) window.scrollTo({ top: 0, behavior: 'instant' }); };
   const demo = isDemoUser(activeUser.id);
   const premium = membership?.active === true && !demo;
-  const detailChoices = activeTab === 'plan' ? ['Hedefim','Öneriler','Çalışma planı'] : activeTab === 'challenges' ? ['Haftalık yarış','Görevler'] : activeTab === 'progress' ? ['Grafik','Rozetler','Günlük özet'] : [];
+  const detailChoices = activeTab === 'plan' ? ['Hedefim','Öneriler','Çalışma planı'] : activeTab === 'challenges' ? ['Haftalık yarış','Günlük görev','Rozet görevi'] : activeTab === 'progress' ? ['Grafik','Rozetler','Günlük özet'] : [];
   const lockedSection = !premium && ['plan', 'skills', 'challenges'].includes(activeTab);
   if (isLoading) return <main id="student-dashboard" aria-busy="true" className="zp-dashboard-page zp-student-dashboard zp-student-pro"><div className="zp-student-shell"><ProfileBannerSkeleton /><div className="zp-mode-grid"><ModeCardSkeleton /><ModeCardSkeleton /></div></div></main>;
   return <MotionConfig reducedMotion={reduced ? 'always' : 'user'}>
@@ -150,8 +151,8 @@ export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries
         <div className="zp-student-topline"><span><span className="zp-brand-dot" /> ZekaPark <span className="zp-topline-divider">/</span> Çalışma masam</span><StudentExperienceControls /></div>
         <StudentHeroBanner user={activeUser} greeting={greeting} xpProgress={xpProgress} onUserUpdate={onUserUpdate} onNavigate={onNavigate} prefersReducedMotion={reduced} />
         <nav className="zp-study-navigation" aria-label="Öğrenci paneli bölümleri">{SECTIONS.map(({ id, label, icon: Icon }) =>
-          <button type="button" key={id} aria-pressed={activeTab === id} aria-controls="zp-student-section" onClick={() => switchSection(id)}>
-            <Icon size={18} aria-hidden="true" /><span>{label}</span>{!premium && ['plan','skills','challenges'].includes(id) && <span className="zp-section-lock" aria-label="Üyelik gerekli">✦</span>}{activeTab === id && <span className="zp-nav-indicator" aria-hidden="true" />}
+          <button type="button" key={id} aria-label={label} aria-pressed={activeTab === id} aria-controls="zp-student-section" onClick={() => switchSection(id)}>
+            <Icon size={18} aria-hidden="true" /><span>{isAndroidApp ? NATIVE_SECTION_LABELS[id] : label}</span>{!premium && ['plan','skills','challenges'].includes(id) && <span className="zp-section-lock" aria-label="Üyelik gerekli">✦</span>}{activeTab === id && <span className="zp-nav-indicator" aria-hidden="true" />}
           </button>)}</nav>
         <div className="zp-student-workspace">
           <section id="zp-student-section" className="zp-student-section" aria-label={SECTIONS.find(section => section.id === activeTab)!.label}>
@@ -173,8 +174,8 @@ export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries
                 {activeTab === 'plan' && <>{(!isAndroidApp || nativeDetailView === 0) && <DailyGoalProgressCard user={activeUser} dailyPlan={dailyPlan || undefined} onUserUpdate={onUserUpdate} onStartPractice={() => onStartPractice('mixed')} />}{(!isAndroidApp || nativeDetailView === 1) && <StudentStudyHub masteries={safeMasteries} unresolved={unresolved} savedExam={dataService.getActiveExam()} favorites={favorites} onFavoriteChange={value => setFavorites(saveStudyFavorites(value))} onPractice={onStartPractice} onMistakes={onOpenMistakes} onResumeExam={onStartExam} />}
                   {(!isAndroidApp || nativeDetailView === 2) && <TodayPersonalizedStudyPlanCard user={activeUser} masteries={safeMasteries} mistakes={activeMistakes} onStartPractice={onStartPractice} onStartAdaptive={onStartAdaptive} onOpenMistakes={onOpenMistakes} onUserUpdate={onUserUpdate} />}</>}
                 {activeTab === 'skills' && <StudentSkillsGrid safeMasteries={safeMasteries} visibleMasteries={visibleMasteries} skillSearch={skillSearch} setSkillSearch={setSkillSearch} skillFilter={skillFilter} setSkillFilter={setSkillFilter} categoryStyleConfig={CATEGORY_STYLE_CONFIG} onStartPractice={onStartPractice} />}
-                {activeTab === 'challenges' && <>{(!isAndroidApp || nativeDetailView === 0) && <GamificationArena user={activeUser} thisWeekQuestions={weekly.thisWeekTotal} lastWeekQuestions={weekly.lastWeekTotal} onPractice={() => onStartPractice('mixed')} onOpenChallenges={() => { if(isAndroidApp) setNativeDetailView(1); else document.getElementById('zp-weekly-missions')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); }} />}
-                  {(!isAndroidApp || nativeDetailView === 1) && <div id="zp-weekly-missions"><WeeklyChallengesView user={activeUser} onStartPractice={onStartPractice} onUserUpdate={onUserUpdate} onNavigateToBadges={() => onNavigate('achievements')} /></div>}</>}
+                {activeTab === 'challenges' && <>{(!isAndroidApp || nativeDetailView < 2) && <GamificationArena view={isAndroidApp ? (nativeDetailView === 0 ? 'race' : 'missions') : 'all'} user={activeUser} thisWeekQuestions={weekly.thisWeekTotal} lastWeekQuestions={weekly.lastWeekTotal} onPractice={() => onStartPractice('mixed')} onOpenChallenges={() => { if(isAndroidApp) setNativeDetailView(2); else document.getElementById('zp-weekly-missions')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); }} />}
+                  {(!isAndroidApp || nativeDetailView === 2) && <div id="zp-weekly-missions"><WeeklyChallengesView user={activeUser} onStartPractice={onStartPractice} onUserUpdate={onUserUpdate} onNavigateToBadges={() => onNavigate('achievements')} /></div>}</>}
                 {activeTab === 'progress' && <>{(!isAndroidApp || nativeDetailView === 0) && <WeeklyProgressChartCard user={activeUser} onStartPractice={() => onStartPractice('mixed')} />}{(!isAndroidApp || nativeDetailView === 1) && <BadgesSection user={activeUser} mistakes={activeMistakes} onUserUpdate={onUserUpdate} onOpenMistakes={onOpenMistakes} onStartPractice={() => onStartPractice()} onNavigate={onNavigate} />}</>}
                 </>}
               </motion.div>

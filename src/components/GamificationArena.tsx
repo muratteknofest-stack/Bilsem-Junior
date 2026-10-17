@@ -4,6 +4,7 @@ import type { UserProfile } from '../types';
 import { dailyMissions, weeklyDuel, weeklyLeague } from '../features/student/gamification-model';
 
 interface Props {
+  view?: 'all' | 'race' | 'missions';
   user: UserProfile;
   thisWeekQuestions: number;
   lastWeekQuestions: number;
@@ -11,15 +12,15 @@ interface Props {
   onOpenChallenges: () => void;
 }
 
-export function GamificationArena({ user, thisWeekQuestions, lastWeekQuestions, onPractice, onOpenChallenges }: Props) {
+export function GamificationArena({ user, thisWeekQuestions, lastWeekQuestions, onPractice, onOpenChallenges, view = 'all' }: Props) {
   const missions = dailyMissions(user);
   const completed = missions.filter(mission => mission.completed).length;
   const duel = weeklyDuel(thisWeekQuestions, lastWeekQuestions);
   const league = weeklyLeague(duel.current);
 
   return (
-    <section aria-labelledby="arena-title" className="zp-arena grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-      <div className="zp-arena-duel relative min-w-0 overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-950 via-violet-900 to-fuchsia-900 p-5 text-white shadow-lg shadow-indigo-950/10 sm:p-7">
+    <section aria-labelledby={view === 'missions' ? undefined : 'arena-title'} aria-label={view === 'missions' ? 'Günlük görevler' : undefined} className="zp-arena grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+      {view !== 'missions' && <div className="zp-arena-duel relative min-w-0 overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-950 via-violet-900 to-fuchsia-900 p-5 text-white shadow-lg shadow-indigo-950/10 sm:p-7">
         <div aria-hidden="true" className="absolute -right-16 -top-20 h-64 w-64 rounded-full border-[36px] border-white/10" />
         <div className="relative">
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-violet-200">
@@ -53,9 +54,9 @@ export function GamificationArena({ user, thisWeekQuestions, lastWeekQuestions, 
             Yarışa devam et <ArrowRight size={17} />
           </button>
         </div>
-      </div>
+      </div>}
 
-      <div className="zp-dashboard-surface min-w-0 rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-7">
+      {view !== 'race' && <div className="zp-dashboard-surface min-w-0 rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-7">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-300">
@@ -101,7 +102,7 @@ export function GamificationArena({ user, thisWeekQuestions, lastWeekQuestions, 
             <p>Deneme sonunda doğru cevap başına 15 XP ve tamamlamaya 50 XP eklenir. Rozet ve seri ödülleri ayrıca kazanılır.</p>
           </div>
         </details>
-      </div>
+      </div>}
     </section>
   );
 }
