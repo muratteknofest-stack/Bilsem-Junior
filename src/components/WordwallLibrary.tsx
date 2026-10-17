@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Maximize, Play, Search, Shapes, X } from 'lucide-react';
 import { filterWordwallActivities, WORDWALL_ACTIVITIES, wordwallInitialGrade, type WordwallActivity } from '../features/student/wordwall-model';
+import { recordWordwallActivityStart, recordWordwallActivityClose } from '../features/student/wordwall-telemetry';
 
 export function WordwallLibrary({ initialGrade, headingLevel = 2 }: { initialGrade?: number; headingLevel?: 1 | 2 }) {
   const Title = headingLevel === 1 ? 'h1' : 'h2';

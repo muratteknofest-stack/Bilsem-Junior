@@ -13,22 +13,31 @@ import {
 import type { BaseQuestion } from '../src/types.ts';
 
 test('prepareGeneratedQuestionDraft assigns revision 1 and metadata for atomic save_question RPC', () => {
-  const sample: BaseQuestion = {
+  const sample = {
     id: 'ai-q-101',
+    version: 1,
     type: 'figure_completion',
     category: 'matrix',
     difficulty: 2,
+    ageGroup: '1-2',
     targetGrade: 2,
     prompt: 'Eksik parçayı bulun.',
     options: [
-      { id: 'A', text: 'A' },
-      { id: 'B', text: 'B' },
-      { id: 'C', text: 'C' },
-      { id: 'D', text: 'D' },
+      { id: 'A', label: 'A', visual: { type: 'shape', shape: 'circle', color: '#3B82F6' } },
+      { id: 'B', label: 'B', visual: { type: 'shape', shape: 'square', color: '#EF4444' } },
+      { id: 'C', label: 'C', visual: { type: 'shape', shape: 'triangle', color: '#10B981' } },
+      { id: 'D', label: 'D', visual: { type: 'shape', shape: 'star', color: '#F59E0B' } },
     ],
     correctOptionId: 'A',
-    explanation: 'A seçeneği örüntüyü tamamlar.',
-  };
+    explanation: {
+      summary: 'A seçeneği örüntüyü tamamlar.',
+      steps: ['Satır ve sütun kuralını inceleyin.', 'Eksik şeklin mavi daire olduğunu bulun.'],
+    },
+    estimatedSeconds: 45,
+    skills: ['pattern_recognition'],
+    seed: 101,
+    visualConfig: { type: 'grid', rows: 2, cols: 2, cells: [] },
+  } as unknown as BaseQuestion;
   const draft = prepareGeneratedQuestionDraft(sample, 'draft', 'admin-uid-1', '2026-10-17T18:00:00.000Z');
   assert.equal(draft.status, 'draft');
   assert.equal(draft.revision, 1);
