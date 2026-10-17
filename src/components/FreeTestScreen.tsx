@@ -44,7 +44,9 @@ export function FreeTestScreen(p: Props) {
   const memoryHidden = p.type === 'visual_memory' && memorized && !p.feedback;
   useEffect(() => {
     const previous = document.body.style.overflow; document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = previous; };
+    const app = document.getElementById('root'), wasInert = app?.inert ?? false;
+    if (app) app.inert = true;
+    return () => { document.body.style.overflow = previous; if (app) app.inert = wasInert; };
   }, []);
   useLayoutEffect(() => {
     const viewport = window.visualViewport;

@@ -50,7 +50,7 @@ try{
  assert.equal(await page.locator('.zp-free-test').getAttribute('data-reduced-motion'),'true');
  await page.locator('.zp-free-choices button').first().click();await page.locator('.zp-free-result').waitFor();assert.equal(await page.evaluate(()=>window.__freeTones),0);
  await page.getByRole('button',{name:'Çözümü gör'}).click();await page.getByRole('dialog',{name:'Ücretsiz test çözümü'}).waitFor();await back();
- assert.equal(await page.locator('.zp-free-test').count(),1);await back();await page.getByRole('button',{name:/Önce bir soru dene/}).click();await page.getByRole('heading',{name:'İlk keşfin tamam!'}).waitFor();assert.equal(await page.locator('.zp-free-choices button').count(),0);
+ assert.equal(await page.locator('.zp-free-test').count(),1);await back();await page.reload();await page.getByRole('button',{name:/Önce bir soru dene/}).click();await page.getByRole('heading',{name:'İlk keşfin tamam!'}).waitFor();assert.equal(await page.locator('.zp-free-choices button').count(),0);
  await back();await page.evaluate(()=>localStorage.removeItem('zp:landing:answered:v1'));await page.reload();await page.getByRole('button',{name:/Önce bir soru dene/}).click();await page.getByRole('button',{name:'Test sesini aç'}).click();
  await page.locator('.zp-free-choices button').first().click();await page.locator('.zp-free-result').waitFor();assert.ok(await page.evaluate(()=>window.__freeTones)>=3,'Tap and feedback must synthesize audio');
  assert.ok(await page.locator('.zp-free-test').evaluate(n=>n.scrollHeight<=n.clientHeight+1),'Answered screen fits');
