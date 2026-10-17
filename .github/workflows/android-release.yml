@@ -8,6 +8,7 @@ on:
       - 'src/**'
       - 'scripts/prepare-android.mjs'
       - 'scripts/verify-android-release.mjs'
+      - 'scripts/check-native-home.mjs'
       - 'capacitor.config.ts'
       - 'package*.json'
   workflow_dispatch:

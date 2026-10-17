@@ -12,6 +12,14 @@ let browser;
 try {
   browser = await chromium.launch({ headless: true, ...(process.env.BROWSER_EXECUTABLE ? { executablePath: process.env.BROWSER_EXECUTABLE, args: ['--no-sandbox','--disable-dev-shm-usage'] } : {}) });
   const page = await browser.newPage();
+  await page.addInitScript(() => {
+    window.__nativeNavigationTrace = [];
+    const replace = history.replaceState;
+    history.replaceState = function(...args) {
+      window.__nativeNavigationTrace.push({ path: String(args[2]), source: new Error().stack });
+      return replace.apply(this, args);
+    };
+  });
   const errors = []; page.on('pageerror', e => { errors.push(e.message); console.error('PAGE ERROR:', e.message); });
   page.on('console', message => { if (message.type() === 'error') console.error('BROWSER:', message.text()); });
   for (const width of [320, 360, 390, 768]) {
@@ -43,6 +51,10 @@ try {
     assert.equal(await page.locator('#hero-title').count(), 0, 'Registration Back must stop at login');
     await page.evaluate(() => window.dispatchEvent(new Event('zekapark:native-back', { cancelable: true })));
     await page.locator('#hero-title').waitFor();
+    await page.waitForURL(url => url.pathname === '/', { timeout: 10000 }).catch(async error => {
+      console.error('Native Back navigation trace:', await page.evaluate(() => window.__nativeNavigationTrace));
+      throw error;
+    });
     assert.equal(new URL(page.url()).pathname, '/');
     console.log('Native home / menu Back / parent membership / login home: ' + width + 'px passed');
   }
