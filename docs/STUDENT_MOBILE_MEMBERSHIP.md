@@ -1,7 +1,8 @@
 # Öğrenci mobil görünümü ve ücretsiz erişim
 
-Android 1.0.4 / versionCode 5 adayı. Üretim dağıtımı ve Play satışı bu değişiklikle açılmaz.
+Android 1.0.5 / versionCode 6 adayı. Üretim dağıtımı ve Play satışı bu değişiklikle açılmaz.
 
+- Üyelik kartı renkli Keşif Kulübü görseli, roket/taç ikonları, özellik etiketleri ve dokunmaya uygun kabartmalı düğmeler kullanır. Oturumsuz/deneme kullanıcıya Üye ol (ücretsiz kayıt), abonelik için Abone ol sunulur. Kayıtlı öğrenciye yeniden hesap açtırılmaz; abonelik veli doğrulamasına gider.
 - 600px ve altında çalışma sekmeleri üç sütunda iki satırdır. Grid hücreleri `minmax(0,1fr)` ile sınırlandırılır; görev başlığı, sayaç, lig ve düğmeler dar ekranda satıra geçer.
 - Capacitor SystemBars tarafından sağlanan `--safe-area-inset-*` değerleri üst çubuk, içerik ve sabit alt menüye uygulanır.
 - Ücretsiz kayıtlı öğrenci: Türkiye saatine göre günlük üç sunucu kontrollü temel soru, kendi profil/sınıfı ve kendi geçmiş/ilerlemesi. Günlük soru limiti mevcut veritabanı prosedürü tarafından kilit ve benzersiz kayıtla korunur.

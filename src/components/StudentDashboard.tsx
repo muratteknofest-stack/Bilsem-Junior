@@ -153,10 +153,10 @@ export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries
           <section id="zp-student-section" className="zp-student-section" aria-label={SECTIONS.find(section => section.id === activeTab)!.label}>
             <AnimatePresence mode="wait" initial={false}>
               <motion.div key={activeTab} initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: reduced ? 0 : .18 }} className="zp-student-section-stack">
-                {lockedSection ? <MembershipPrompt onUpgrade={() => onNavigate('parent')} loading={membership?.loading} error={membership?.error} onRetry={membership?.refresh} /> : <>
+                {lockedSection ? <MembershipPrompt onUpgrade={() => onNavigate('parent')} onRegister={demo ? () => onNavigate('register') : undefined} loading={membership?.loading} error={membership?.error} onRetry={membership?.refresh} /> : <>
                 {activeTab === 'modes' && <>
                   {!premium && !demo && <DailyChallenge />}
-                  {!premium && <MembershipPrompt onUpgrade={() => onNavigate('parent')} loading={membership?.loading} error={membership?.error} onRetry={membership?.refresh} />}
+                  {!premium && <MembershipPrompt onUpgrade={() => onNavigate('parent')} onRegister={demo ? () => onNavigate('register') : undefined} loading={membership?.loading} error={membership?.error} onRetry={membership?.refresh} />}
                   <StudentModesGrid unresolvedMistakesCount={unresolved} onStartAdaptive={onStartAdaptive} onStartExam={onStartExam} onStartPractice={onStartPractice} onOpenMistakes={onOpenMistakes} onNavigate={onNavigate} onOpenChallenges={() => switchSection('challenges')} />
                   {premium && onStartTopicPractice && isSchoolGrade(activeUser.grade) && <StudentTopicPractice grade={activeUser.grade} onStart={onStartTopicPractice} />}
                   {premium && <WordwallLibrary key={`wordwall-${activeUser.id}-${activeUser.grade}`} initialGrade={activeUser.grade} />}

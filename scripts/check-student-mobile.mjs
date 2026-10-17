@@ -60,6 +60,8 @@ try {
  // A larger reading size must not crop the card, counters or navigation labels.
  await page.setViewportSize({width:320,height:740});await page.evaluate(()=>document.documentElement.style.fontSize='125%');await noOverflow('320px larger text');
  premium=false;await go();await page.getByRole('heading',{name:'Üç soru, yeni bir adım.'}).waitFor();await noOverflow('free dashboard');
+ await page.getByRole('button',{name:'Abone ol',exact:true}).waitFor();
+ await page.screenshot({path:'test-artifacts/student-mobile/colorful-membership-320.png',fullPage:true});
  assert.equal(await page.getByRole('button',{name:'Bugünün görevleri tamamlandı',exact:true}).isDisabled(),true);
  for(const name of ['Görevlerim','Kişisel planım','Yeteneklerim']){
   await page.locator('.zp-study-navigation').getByRole('button',{name:new RegExp(name)}).click();await page.getByRole('region',{name:'Üyelikle devam et'}).waitFor();
@@ -68,10 +70,23 @@ try {
  const before=calls.filter(path=>path==='/api/learning/start').length;
  await page.locator('[aria-label="Öğrenci alt menüsü"]').getByRole('tab',{name:'Adaptif',exact:true}).click();
  await page.getByRole('button',{name:'Ücretsiz sorulara dön',exact:true}).waitFor();assert.equal(calls.filter(path=>path==='/api/learning/start').length,before);
- await page.getByRole('button',{name:'Üyelik seçeneklerini gör',exact:true}).click();await page.getByRole('dialog').waitFor();
+ await page.getByRole('button',{name:'Abone ol',exact:true}).click();await page.getByRole('dialog').waitFor();
  await page.getByRole('dialog').getByLabel('Veli şifresi',{exact:false}).waitFor();
  await page.screenshot({path:'test-artifacts/student-mobile/parent-upgrade-320.png',fullPage:true});
  await go();unavailable=true;await page.evaluate(()=>window.dispatchEvent(new Event('focus')));await page.getByRole('heading',{name:'Üyelik bilgisine ulaşılamadı'}).waitFor();
  await page.getByRole('heading',{name:'Üç soru, yeni bir adım.'}).waitFor();await noOverflow('billing unavailable keeps free section');
- assert.deepEqual(errors,[]);console.log('Student mobile: 8 widths, all 5 tabs, native safe areas, enlarged text, free quota UI, premium locks, parent authentication and billing outage passed.');
+ // The public library offers distinct registration and subscription actions.
+ const guest=await browser.newPage({viewport:{width:320,height:740}});
+ guest.on('pageerror',e=>errors.push(e.message));
+ await guest.route('https://student-mobile-fixture.invalid/**',route=>route.fulfill({status:200,contentType:'application/json',body:'[]'}));
+ await guest.route('**/api/public/platform',route=>route.fulfill({status:200,contentType:'application/json',body:'{"registrationOpen":true,"policyVersion":"2026-10-11.4"}'}));
+ await guest.goto('http://127.0.0.1:5189/wordwall');
+ await guest.getByRole('button',{name:'Üye ol',exact:true}).waitFor();
+ await guest.getByRole('button',{name:'Abone ol',exact:true}).waitFor();
+ assert.equal(await guest.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+ await guest.screenshot({path:'test-artifacts/student-mobile/colorful-register-320.png',fullPage:true});
+ await guest.getByRole('button',{name:'Üye ol',exact:true}).click();await guest.waitForURL(url=>url.pathname==='/register');
+ await guest.locator('#parent-email').waitFor();
+ await guest.close();
+ assert.deepEqual(errors,[]);console.log('Student mobile: 8 widths, all 5 tabs, native safe areas, enlarged text, colorful subscribe/register buttons, registration route, free quota UI, premium locks, parent authentication and billing outage passed.');
 }finally{for(const release of pending)release();await browser?.close();await server.close();}
