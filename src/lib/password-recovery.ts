@@ -1,9 +1,11 @@
+import { normalizeAppPathname } from './route-sync';
+
 type RecoveryLocation = Pick<Location, 'pathname' | 'search' | 'hash'>;
 
 export function isPasswordRecoveryLocation(location: RecoveryLocation): boolean {
   const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
   const query = new URLSearchParams(location.search);
-  return location.pathname === '/reset-password' ||
+  return normalizeAppPathname(location.pathname) === '/reset-password' ||
     hash.get('type') === 'recovery' || query.get('type') === 'recovery' ||
     hash.get('error_code') === 'otp_expired' || query.get('error_code') === 'otp_expired';
 }

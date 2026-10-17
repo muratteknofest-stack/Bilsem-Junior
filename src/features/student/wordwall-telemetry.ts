@@ -33,9 +33,10 @@ export function recordWordwallActivityClose(activityId: string, now = Date.now()
     durationSeconds,
   };
   completedSessions.push(entry);
+  if (completedSessions.length > 100) completedSessions.splice(0, completedSessions.length - 100);
   return entry;
 }
 
 export function getWordwallTelemetryHistory(): readonly WordwallTelemetryEntry[] {
-  return completedSessions;
+  return completedSessions.map(entry => ({ ...entry }));
 }

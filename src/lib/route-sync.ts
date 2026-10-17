@@ -21,8 +21,12 @@ export const PATH_TO_ROUTE: Record<string, string> = {
   "/wordwall": "wordwall",
 };
 
+export function normalizeAppPathname(pathname: string): string {
+  return (pathname || "/").replace(/\/+$/, "") || "/";
+}
+
 export function routeFromPathname(pathname: string, fallbackRoute = "landing"): string {
-  const normalized = (pathname || "/").replace(/\/+$/, "") || "/";
+  const normalized = normalizeAppPathname(pathname);
   return PATH_TO_ROUTE[normalized] || fallbackRoute;
 }
 
