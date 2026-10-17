@@ -50,7 +50,7 @@ export function FocusedQuestionScreen(p:Props) {
     if(lastTransition.current!==p.sessionKey){lastTransition.current=p.sessionKey;sound.playTransition();}
   },[p.sessionKey]);
   const content=<main ref={screen} className="zp-focus" data-reduced-motion={reducedMotion} data-answer-feedback={p.feedback?.kind} aria-label="Soru çözme ekranı">
-    <header className="zp-focus-header"><button onClick={p.onLeave} disabled={p.busy} aria-label="Çalışmadan çık">‹ Çık</button><span><b>ZekaPark</b><small>{p.question.targetGrade || ''}. sınıf · Zorluk {p.question.difficulty}</small></span><span role="timer" aria-label="Kalan süre">{Math.floor(p.remaining/60)}:{String(p.remaining%60).padStart(2,'0')}</span><button onClick={()=>tools.current?.showModal()} aria-label="Sorular ve çalışma araçları">☰</button></header>
+    <header className="zp-focus-header"><button onClick={p.onLeave} disabled={p.busy} aria-label="Çalışmadan çık">‹ Çık</button><span><b>BİLSEM Junior</b><small>{p.question.targetGrade || ''}. sınıf · Zorluk {p.question.difficulty}</small></span><span role="timer" aria-label="Kalan süre">{Math.floor(p.remaining/60)}:{String(p.remaining%60).padStart(2,'0')}</span><button onClick={()=>tools.current?.showModal()} aria-label="Sorular ve çalışma araçları">☰</button></header>
     {p.error&&<div role="alert" className="zp-focus-error">{p.error}{p.onRetry&&!p.expired&&<button onClick={p.onRetry} disabled={p.busy}>{p.onRetryLabel||'Yeniden gönder'}</button>}</div>}
     {p.expired&&<LearningExpiryNotice busy={p.busy} onReload={p.onReloadResults}/>}
     <h2 key={`prompt-${p.sessionKey}`} className="zp-focus-prompt" tabIndex={-1} ref={heading}>{p.question.prompt}{p.question.secondaryPrompt&&<small>{p.question.secondaryPrompt}</small>}</h2>

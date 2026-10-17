@@ -38,7 +38,7 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
           
           <div className="max-w-xl border border-zinc-200/60 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm mx-auto sm:mx-0">
             <div className="bg-zinc-900 dark:bg-zinc-950 p-8 text-center border-b border-zinc-800">
-              <h3 className="text-white text-xl font-bold m-0 tracking-tight">ZekaPark Haftalık Gelişim Özeti</h3>
+              <h3 className="text-white text-xl font-bold m-0 tracking-tight">BİLSEM Junior Haftalık Gelişim Özeti</h3>
             </div>
             <div className="p-6 sm:p-8 bg-white dark:bg-zinc-900">
               <p className="text-zinc-900 dark:text-zinc-100 mb-4 font-bold text-lg">Merhaba,</p>

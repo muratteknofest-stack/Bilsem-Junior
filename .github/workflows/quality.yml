@@ -29,6 +29,16 @@ jobs:
       - run: npm run test:load
       - name: Install Chromium for mobile and tablet layout checks
         run: npx playwright install --with-deps chromium
+      - name: Verify BİLSEM Junior branding on web
+        run: node scripts/check-branding.mjs
+      - name: Save BİLSEM Junior previews
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: bilsem-junior-brand-previews
+          path: test-artifacts/brand/*.png
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Check question layouts on mobile and tablet viewports
         run: npm run test:layout
 
