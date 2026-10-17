@@ -7,6 +7,7 @@ import { PasswordRecoveryEntry } from './features/auth/components/PasswordRecove
 import { isRecoveryRedirect } from './lib/supabase';
 import './components/wordwall.css';
 import { isAdminLocation } from './lib/admin-access';
+import { normalizeAppPathname } from './lib/route-sync';
 
 const AdminPortal = lazy(() => import('./components/AdminPortal').then(module => ({ default: module.AdminPortal })));
 const WordwallPage = lazy(() => import('./components/WordwallLibrary').then(module => ({ default: module.WordwallPage })));
@@ -27,15 +28,17 @@ if (typeof window !== 'undefined') {
   });
 }
 
+const pathname = normalizeAppPathname(window.location.pathname);
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {window.location.pathname === '/reset-password' || isRecoveryRedirect ? (
+    {pathname === '/reset-password' || isRecoveryRedirect ? (
       <PasswordRecoveryEntry />
-    ) : window.location.pathname === '/wordwall' ? (
+    ) : pathname === '/wordwall' ? (
       <Suspense fallback={<p role="status" className="p-8 text-center">Testler yükleniyor…</p>}><WordwallPage /></Suspense>
     ) : (
       <AuthProvider>
-        {isAdminLocation(window.location.pathname) ? (
+        {isAdminLocation(pathname) ? (
           <Suspense fallback={<p role="status" className="p-8 text-center">Yönetici alanı yükleniyor…</p>}><AdminPortal /></Suspense>
         ) : <App />}
       </AuthProvider>

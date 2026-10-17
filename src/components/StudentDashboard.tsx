@@ -150,7 +150,7 @@ export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries
                 {activeTab === 'modes' && <>
                   <StudentModesGrid unresolvedMistakesCount={unresolved} onStartAdaptive={onStartAdaptive} onStartExam={onStartExam} onStartPractice={onStartPractice} onOpenMistakes={onOpenMistakes} onNavigate={onNavigate} onOpenChallenges={() => switchSection('challenges')} />
                   {onStartTopicPractice && isSchoolGrade(activeUser.grade) && !isDemoUser(activeUser.id) && <StudentTopicPractice grade={activeUser.grade} onStart={onStartTopicPractice} />}
-                  <WordwallLibrary key={`wordwall-${activeUser.id}-${activeUser.grade}`} initialGrade={activeUser.grade} />
+                  <WordwallLibrary key={`wordwall-${activeUser.id}-${activeUser.grade}`} initialGrade={activeUser.grade} progressOwnerId={activeUser.id} />
                 </>}
                 {activeTab === 'plan' && <><DailyGoalProgressCard user={activeUser} dailyPlan={dailyPlan || undefined} onUserUpdate={onUserUpdate} onStartPractice={() => onStartPractice('mixed')} /><StudentStudyHub masteries={safeMasteries} unresolved={unresolved} savedExam={dataService.getActiveExam()} favorites={favorites} onFavoriteChange={value => setFavorites(saveStudyFavorites(value))} onPractice={onStartPractice} onMistakes={onOpenMistakes} onResumeExam={onStartExam} />
                   <TodayPersonalizedStudyPlanCard user={activeUser} masteries={safeMasteries} mistakes={activeMistakes} onStartPractice={onStartPractice} onStartAdaptive={onStartAdaptive} onOpenMistakes={onOpenMistakes} onUserUpdate={onUserUpdate} /></>}

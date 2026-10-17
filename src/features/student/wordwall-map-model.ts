@@ -204,10 +204,15 @@ export function buildMapStops(
   });
 }
 
-export function loadCompletedWordwallIds(): string[] {
+// The old v1 key had no owner. Never attribute its progress to a signed-in child.
+function completionStorageKey(ownerId?: string): string {
+  return `zekapark-wordwall-completed-v2:${ownerId ? `user:${encodeURIComponent(ownerId)}` : 'guest'}`;
+}
+
+export function loadCompletedWordwallIds(ownerId?: string): string[] {
   try {
     if (typeof window === 'undefined') return [];
-    const raw = window.localStorage.getItem('zekapark-wordwall-completed-v1');
+    const raw = window.localStorage.getItem(completionStorageKey(ownerId));
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -217,10 +222,10 @@ export function loadCompletedWordwallIds(): string[] {
   }
 }
 
-export function saveCompletedWordwallIds(ids: string[]): void {
+export function saveCompletedWordwallIds(ids: string[], ownerId?: string): void {
   try {
     if (typeof window === 'undefined') return;
-    window.localStorage.setItem('zekapark-wordwall-completed-v1', JSON.stringify(Array.from(new Set(ids))));
+    window.localStorage.setItem(completionStorageKey(ownerId), JSON.stringify(Array.from(new Set(ids))));
   } catch {}
 }
 

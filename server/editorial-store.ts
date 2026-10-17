@@ -36,6 +36,17 @@ export async function saveGeneratedQuestionDraft(
   return saveQuestionRevision(draft, 0);
 }
 
+/** Review requests must use the persisted revision, including newly generated drafts. */
+export async function persistGeneratedQuestionResult<T extends { success: boolean; question?: BaseQuestion }>(
+  result: T,
+  adminId: string,
+  saveDraft: typeof saveGeneratedQuestionDraft = saveGeneratedQuestionDraft,
+): Promise<T> {
+  if (!result.question) return result;
+  const question = await saveDraft(result.question, result.success ? 'draft' : 'review', adminId);
+  return { ...result, question };
+}
+
 /** Archival is allowed even when damaged content cannot pass a publication audit. */
 export function archiveQuestionRevision(question: BaseQuestion, adminId: string, now = new Date().toISOString()): BaseQuestion {
   const next = { ...question, status: 'archived' as const, revision: (question.revision || 0) + 1,

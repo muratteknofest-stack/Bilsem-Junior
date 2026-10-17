@@ -35,13 +35,21 @@ import {
 } from '../features/student/wordwall-telemetry';
 import { sound } from '../lib/sound';
 
-export function WordwallLibrary({
-  initialGrade,
-  headingLevel = 2
-}: {
+interface WordwallLibraryProps {
   initialGrade?: number;
   headingLevel?: 1 | 2;
-}) {
+  progressOwnerId?: string;
+}
+
+export function WordwallLibrary(props: WordwallLibraryProps) {
+  return <WordwallLibraryContent key={props.progressOwnerId ? `user:${props.progressOwnerId}` : 'guest'} {...props} />;
+}
+
+function WordwallLibraryContent({
+  initialGrade,
+  headingLevel = 2,
+  progressOwnerId,
+}: WordwallLibraryProps) {
   const Title = headingLevel === 1 ? 'h1' : 'h2';
   const [grade, setGrade] = useState<number | 'all'>(() => wordwallInitialGrade(initialGrade));
   const [category, setCategory] = useState('');
@@ -53,7 +61,7 @@ export function WordwallLibrary({
   const [soundOn, setSoundOn] = useState<boolean>(() => sound.enabled);
   const [tipIndex, setTipIndex] = useState(0);
   const [customMascotLine, setCustomMascotLine] = useState<string | null>(null);
-  const [completedIds, setCompletedIds] = useState<string[]>(() => loadCompletedWordwallIds());
+  const [completedIds, setCompletedIds] = useState<string[]>(() => loadCompletedWordwallIds(progressOwnerId));
 
   const player = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -64,11 +72,20 @@ export function WordwallLibrary({
       setGrade(wordwallInitialGrade(initialGrade));
       setCategory('');
       setPage(0);
+      setSelected(null);
+      setFullscreenError('');
       setCustomMascotLine(null);
     }
   }, [initialGrade]);
 
   useEffect(() => sound.subscribe(() => setSoundOn(sound.enabled)), []);
+
+  useEffect(() => {
+    if (!selected) return;
+    recordWordwallActivityStart(selected);
+    // Filters, another game, account switches and page exit also end the session.
+    return () => { recordWordwallActivityClose(selected.id); };
+  }, [selected]);
 
   const gradePool = useMemo(
     () => WORDWALL_ACTIVITIES.filter(item => grade === 'all' || item.grade === grade),
@@ -116,7 +133,6 @@ export function WordwallLibrary({
   const open = (item: WordwallActivity, button: HTMLButtonElement, stepIdx = 0) => {
     sound.unlock();
     sound.playMapStep(stepIdx);
-    recordWordwallActivityStart(item);
     gameButton.current = button;
     setSelected(item);
     setFullscreenError('');
@@ -131,7 +147,6 @@ export function WordwallLibrary({
 
   const close = () => {
     sound.playClick();
-    if (selected) recordWordwallActivityClose(selected.id);
     setSelected(null);
     setFullscreenError('');
     requestAnimationFrame(() => gameButton.current?.focus());
@@ -153,7 +168,7 @@ export function WordwallLibrary({
     sound.unlock();
     const { nextIds, completed } = toggleWordwallCompleted(completedIds, activity.id);
     setCompletedIds(nextIds);
-    saveCompletedWordwallIds(nextIds);
+    saveCompletedWordwallIds(nextIds, progressOwnerId);
     if (completed) {
       sound.playSuccess();
       setCustomMascotLine(

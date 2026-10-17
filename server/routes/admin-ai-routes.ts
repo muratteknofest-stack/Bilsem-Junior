@@ -14,7 +14,7 @@ import { adminAiLimiter } from '../rate-limiters';
 import { getGeminiClient } from '../gemini-client';
 import type { BaseQuestion, QuestionType } from '../../src/types';
 import { EditorialValidationError, prepareEditorialQuestion } from '../editorial-validation';
-import { archiveQuestionRevision, assertQuestionRevision, EditorialConflictError, saveGeneratedQuestionDraft, saveQuestionRevision } from '../editorial-store';
+import { archiveQuestionRevision, assertQuestionRevision, EditorialConflictError, persistGeneratedQuestionResult, saveQuestionRevision } from '../editorial-store';
 
 const adminAiRoutes = Router();
 
@@ -48,7 +48,7 @@ adminAiRoutes.post('/admin/ai-generate-question', requireSupabaseAuth, adminAiLi
     }
 
     const { runQuestionPipeline } = await import('../ai-question-pipeline');
-    const result = await runQuestionPipeline(ai, {
+    let result = await runQuestionPipeline(ai, {
       category: parsed.data.category,
       questionType: parsed.data.questionType,
       targetGrade: parsed.data.targetGrade as 1 | 2 | 3 | 4,
@@ -77,11 +77,7 @@ adminAiRoutes.post('/admin/ai-generate-question', requireSupabaseAuth, adminAiLi
 
     if (result.question) {
       try {
-        await saveGeneratedQuestionDraft(
-          result.question,
-          result.success ? 'draft' : 'review',
-          req.authUser.uid,
-        );
+        result = await persistGeneratedQuestionResult(result, req.authUser.uid);
       } catch (saveErr) {
         logServerFailure('AI question save failed', saveErr);
         return res.status(503).json({ error: 'Denetim sonucu kaydedilemedi. Soru yayımlanmadı.' });
@@ -156,7 +152,7 @@ adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, adminAiLimi
       if (!ai) return res.status(503).json({ error: 'AI servisi kullanılamıyor.' });
 
       const { runQuestionPipeline } = await import('../ai-question-pipeline');
-      const result = await runQuestionPipeline(ai, {
+      let result = await runQuestionPipeline(ai, {
         category: currentData.category,
         questionType: currentData.type,
         targetGrade: currentData.targetGrade || 3,
@@ -165,11 +161,7 @@ adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, adminAiLimi
       }, { existingQuestions: await loadQualityComparisonPool(currentData.type) });
 
       if (result.question) {
-        await saveGeneratedQuestionDraft(
-          result.question,
-          result.success ? 'draft' : 'review',
-          req.authUser.uid,
-        );
+        result = await persistGeneratedQuestionResult(result, req.authUser.uid);
       }
 
       if (result.success) await saveQuestionRevision(archiveQuestionRevision(currentData, req.authUser.uid), revision);
