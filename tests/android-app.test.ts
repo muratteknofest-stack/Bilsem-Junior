@@ -3,6 +3,19 @@ import assert from 'node:assert/strict';
 import express from 'express';
 import { androidBuildSettings } from '../scripts/android-build-settings';
 import { requestSecurity } from '../server/request-security';
+import { verifyAndroidRelease } from '../scripts/verify-android-release.mjs';
+
+test('compiled release rejects debug, test-only, cleartext, backups and unexpected identity', () => {
+  const manifest = ['usesCleartextTraffic','allowBackup','fullBackupContent'].map(name => `A: android:${name}=(type 0x12)0x0`).join('\n');
+  const badging = "package: name='com.zekapark.app' versionCode='4' versionName='1.0.3'\nsdkVersion:'24'\ntargetSdkVersion:'36'\n";
+  assert.equal(verifyAndroidRelease(manifest, badging).debuggable, false);
+  for (const attribute of ['debuggable','testOnly']) for (const value of ['ffffffff','1']) assert.throws(() => verifyAndroidRelease(manifest+`\nA: android:${attribute}=(type 0x12)0x${value}`, badging));
+  for (const attribute of ['usesCleartextTraffic','allowBackup','fullBackupContent']) {
+    assert.throws(() => verifyAndroidRelease(manifest.replace(`android:${attribute}=(type 0x12)0x0`, `android:${attribute}=(type 0x12)0xffffffff`), badging));
+    assert.throws(() => verifyAndroidRelease(manifest.replace(`A: android:${attribute}=(type 0x12)0x0`, ''), badging));
+  }
+  for (const [before,after] of [['com.zekapark.app','com.other.app'],["versionCode='4'","versionCode='3'"],["versionName='1.0.3'","versionName='1.0.2'"],["targetSdkVersion:'36'","targetSdkVersion:'33'"]]) assert.throws(() => verifyAndroidRelease(manifest,badging.replace(before,after)));
+});
 
 const publicEnv = {
   VITE_API_BASE_URL: 'https://api.example.test',

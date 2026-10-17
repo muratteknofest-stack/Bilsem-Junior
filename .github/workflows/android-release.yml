@@ -1,0 +1,65 @@
+name: Android release candidate
+on:
+  push:
+    branches: [codex/android-capacitor-preparation]
+    paths:
+      - '.github/workflows/android-release.yml'
+      - 'mobile/android/release.gradle'
+      - 'mobile/android/play-billing.gradle'
+      - 'scripts/verify-android-release.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      VITE_API_BASE_URL: https://zekapark.vercel.app
+      VITE_PUBLIC_SITE_URL: https://zekapark.vercel.app
+      VITE_SUPABASE_URL: https://vehhvsdkifwstbjhnhao.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ijE2Jbn1oGn9Elz03fiYrA_FUBnEWXI
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+      - name: Use installed JDK 21 and Android SDK
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_21_X64" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME_21_X64/bin" >> "$GITHUB_PATH"
+          test -d "$ANDROID_HOME/platforms/android-36"
+          test -d "$ANDROID_HOME/build-tools/35.0.0"
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test:android && npm run test:google-play
+      - run: npm run android:sync
+      - name: Build release without uploading private signing keys
+        working-directory: android
+        run: |
+          ./gradlew --no-daemon :app:bundleRelease :app:assembleRelease :app:dependencies --configuration releaseRuntimeClasspath --console=plain > ../android-release-build.log
+      - name: Verify compiled release and audit runtime dependencies
+        run: |
+          mkdir -p release-candidate
+          cp android/app/build/outputs/bundle/release/app-release.aab release-candidate/ZekaPark-1.0.3-unsigned.aab
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -P 16 -f 4 android/app/build/outputs/apk/release/app-release-unsigned.apk release-candidate/ZekaPark-1.0.3-aligned-unsigned.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging release-candidate/ZekaPark-1.0.3-aligned-unsigned.apk > release-candidate/package.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree release-candidate/ZekaPark-1.0.3-aligned-unsigned.apk AndroidManifest.xml > release-candidate/manifest.txt
+          node scripts/verify-android-release.mjs release-candidate/manifest.txt release-candidate/package.txt > release-candidate/release-check.json
+          node scripts/audit-android-dependencies.mjs android-release-build.log > release-candidate/release-maven-osv.json
+          cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" release-candidate/apksigner.jar
+          cp android-release-build.log release-candidate/build-and-dependencies.txt
+          cd release-candidate
+          sha256sum *.aab *.apk apksigner.jar > SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ZekaPark-release-candidate
+          path: release-candidate/
+          if-no-files-found: error
+          retention-days: 7

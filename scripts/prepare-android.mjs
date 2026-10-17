@@ -28,6 +28,9 @@ copyFileSync(smokeSource, smokeTarget);
 console.log('Android projesi hazırlandı. Üretim anahtarı veya imzalama parolası oluşturulmadı.');
 
 const gradlePath = resolve(root, 'android/app/build.gradle');
-const gradle = readFileSync(gradlePath, 'utf8');
-const billing = "apply from: '../../mobile/android/play-billing.gradle'";
-if (!gradle.includes(billing)) writeFileSync(gradlePath, gradle + '\n' + billing + '\n');
+let gradle = readFileSync(gradlePath, 'utf8');
+for (const overlay of ['play-billing.gradle', 'release.gradle']) {
+  const statement = `apply from: '../../mobile/android/${overlay}'`;
+  if (!gradle.includes(statement)) gradle += '\n' + statement + '\n';
+}
+writeFileSync(gradlePath, gradle);
