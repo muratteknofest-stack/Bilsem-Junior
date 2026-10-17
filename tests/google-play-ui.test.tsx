@@ -83,7 +83,7 @@ test('duplicate callbacks re-read owned purchases instead of trusting callback a
  f.store.restore=async()=>({purchases:[]});f.flow.purchasesUpdated({paid:true,access:{active:true}});await new Promise(resolve=>setImmediate(resolve));assert.equal(verified,1);
 });
 test('initial loading, unavailable plans and non-native previews never enable checkout',async()=>{
- const html=render(initialPlayBillingState());assert.match(html,/aria-busy="true"/);assert.match(html,/<fieldset disabled=""/);assert.ok(!html.includes('₺299'));
+ const html=render(initialPlayBillingState());assert.match(html,/aria-busy="true"/);assert.match(html,/<fieldset\b[^>]*\bdisabled=""/);assert.ok(!html.includes('₺299'));
  const f=fixture({native:false});await f.flow.refresh();assert.equal(f.catalogs,0);assert.equal(f.restores,0);assert.equal(canBuyPlay(f.flow.snapshot(),'monthly'),false);assert.match(f.flow.snapshot().notice.text,/Android/);
 });
 

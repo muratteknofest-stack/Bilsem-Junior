@@ -9,6 +9,8 @@ on:
       - 'scripts/prepare-android.mjs'
       - 'scripts/verify-android-release.mjs'
       - 'scripts/check-native-home.mjs'
+      - 'scripts/check-google-play-ui.tsx'
+      - 'tests/google-play*'
       - 'capacitor.config.ts'
       - 'package*.json'
   workflow_dispatch:
