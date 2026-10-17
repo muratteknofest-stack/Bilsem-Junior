@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="512" android:viewportHeight="512">
+  <path android:fillColor="#5850c5" android:pathData="M108 0H404Q512 0 512 108V404Q512 512 404 512H108Q0 512 0 404V108Q0 0 108 0Z"/>
+  <path android:fillColor="#7167dd" android:pathData="M0 320Q150 410 280 300T512 305V404Q512 512 404 512H108Q0 512 0 404Z"/>
+  <path android:fillColor="#2c3264" android:pathData="M142 112L213 155Q256 139 299 155L370 112L357 222Q388 263 365 334Q343 396 256 405Q169 396 147 334Q124 263 155 222Z"/>
+  <path android:fillColor="#20bba4" android:pathData="M157 243Q112 278 142 340Q158 372 205 381L206 278Z"/>
+  <path android:fillColor="#fc8c80" android:pathData="M355 243Q400 278 370 340Q354 372 307 381L306 278Z"/>
+  <path android:fillColor="#ffca57" android:pathData="M148 127L210 174L168 214Z"/>
+  <path android:fillColor="#ffca57" android:pathData="M364 127L302 174L344 214Z"/>
+  <path android:fillColor="#fffaf0" android:pathData="M256 219C210 176 161 193 168 250C170 281 210 309 256 343C302 309 342 281 344 250C351 193 302 176 256 219Z"/>
+  <path android:fillColor="#e4ddff" android:pathData="M256 219C238 202 213 196 194 203C227 219 247 259 256 299Z"/>
+  <path android:fillColor="#2c3264" android:pathData="M212 228a15 15 0 1 0 0 30a15 15 0 1 0 0 -30Z"/>
+  <path android:fillColor="#2c3264" android:pathData="M300 228a15 15 0 1 0 0 30a15 15 0 1 0 0 -30Z"/>
+  <path android:fillColor="#ffffff" android:pathData="M216 230a5 5 0 1 0 0 10a5 5 0 1 0 0 -10Z"/>
+  <path android:fillColor="#ffffff" android:pathData="M304 230a5 5 0 1 0 0 10a5 5 0 1 0 0 -10Z"/>
+  <path android:fillColor="#ffb33f" android:pathData="M244 265Q256 258 268 265L256 284Z"/>
+  <path android:fillColor="#ffca57" android:pathData="M403 69L412 93L436 102L412 111L403 135L394 111L370 102L394 93Z"/>
+  <path android:fillColor="#fff5bc" android:pathData="M104 365L110 380L125 386L110 392L104 407L98 392L83 386L98 380Z"/>
+</vector>

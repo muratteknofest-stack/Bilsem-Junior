@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api-fetch';
 import { useStudentReducedMotion } from '../features/student/experience-preferences';
 import { sound } from '../lib/sound';
 import { AnswerFeedbackLedger, feedbackDuration, type AnswerFeedback } from '../features/student/answer-feedback';
@@ -42,7 +43,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', initialT
   const [exams, setExams] = useState<Array<{id: string; title: string; count: number; seconds: number}>>([...LEARNING_EXAMS]);
   useEffect(() => {
     const controller = new AbortController();
-    fetch(apiUrl('/api/public/platform'), { signal: controller.signal, cache: 'no-store' }).then(async res => { if (!res.ok) throw new Error(); return res.json(); }).then(value => { if (Array.isArray(value.exams)) setExams(value.exams); }).catch(() => { if (!controller.signal.aborted) setError('Deneme ayarları yüklenemedi. Başlatıldığında sunucunun güncel ayarları kullanılacak.'); });
+    apiFetch(apiUrl('/api/public/platform'), { signal: controller.signal, cache: 'no-store' }).then(async res => { if (!res.ok) throw new Error(); return res.json(); }).then(value => { if (Array.isArray(value.exams)) setExams(value.exams); }).catch(() => { if (!controller.signal.aborted) setError('Deneme ayarları yüklenemedi. Başlatıldığında sunucunun güncel ayarları kullanılacak.'); });
     return () => controller.abort();
   }, []);
   const [session, setSession] = useState<LearningSessionView | null>(null);
@@ -179,14 +180,14 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', initialT
   }
   return <main className={`zp-learning ${isExam ? 'zp-exam' : 'zp-game'} mx-auto w-full max-w-6xl space-y-5 px-3 py-6 sm:px-6`}>
     <header className="zp-page-header flex flex-wrap items-center justify-between gap-3">
-      <div><p className="zp-eyebrow">ZekaPark · {isExam ? 'Sınav merkezi' : 'Oyun alanı'}</p><h1 className="text-2xl font-extrabold">{session?.title || title}</h1></div>
+      <div><p className="zp-eyebrow">BİLSEM Junior · {isExam ? 'Sınav merkezi' : 'Oyun alanı'}</p><h1 className="text-2xl font-extrabold">{session?.title || title}</h1></div>
       <button type="button" disabled={busy} onClick={() => void leave()} className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 py-2 font-semibold">Ana sayfaya dön</button>
     </header>
     <div className={isExam ? 'zp-tablet' : 'zp-game-shell'}>
     {isExam && <div className="zp-tablet-camera" aria-hidden="true"><span /></div>}
     <div className="zp-screen">
     <LearningRefreshNotice/>
-    <div className="zp-screen-bar"><span>{isExam ? <Tablet size={17} aria-hidden="true" /> : <Gamepad2 size={19} aria-hidden="true" />} {isExam ? 'ZEKA PARK / DENEME' : 'KEŞFET · DÜŞÜN · ÇÖZ'}</span><span>{grade}. SINIF</span></div>
+    <div className="zp-screen-bar"><span>{isExam ? <Tablet size={17} aria-hidden="true" /> : <Gamepad2 size={19} aria-hidden="true" />} {isExam ? 'BİLSEM JUNIOR / DENEME' : 'KEŞFET · DÜŞÜN · ÇÖZ'}</span><span>{grade}. SINIF</span></div>
     {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{error}</div>}
     <AnswerHistory items={history} />
     {!session ? <section className="zp-setup space-y-5 p-5 sm:p-8">

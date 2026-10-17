@@ -6,12 +6,12 @@ import {chromium} from 'playwright';
 import express from 'express';
 import {requestSecurity} from '../server/request-security.ts';
 import {SHOPIER_PLANS} from '../src/lib/shopier-config.ts';
-import {shopierPageHtml} from '../server/routes/shopier-routes.ts';
+import {playMembershipPageHtml} from '../server/play-membership-page.ts';
 const publicPage=express();let lastNavigation;
 publicPage.use('/api',(req,_res,next)=>{lastNavigation={site:req.get('Sec-Fetch-Site'),mode:req.get('Sec-Fetch-Mode'),dest:req.get('Sec-Fetch-Dest')};next();},requestSecurity(''));
 publicPage.get('/api/public/shopier/page',(req,res)=>{
  const ready=Object.hasOwn(req.query,'ready');
- res.type('html').send(shopierPageHtml({ready,enforced:false,brand:'ZekaPark',plans:SHOPIER_PLANS.map((plan,index)=>({...plan,url:ready?`https://www.shopier.com/${index+1}`:null}))}));
+ res.type('html').send(playMembershipPageHtml({ready,brand:'ZekaPark',storeUrl:ready?'https://play.google.com/store/apps/details?id=com.zekapark.app':null}));
 });
 publicPage.get('/sales-entry',(_req,res)=>res.type('html').send('<html lang="tr"><body><a href="http://127.0.0.1:5183/paketler">/paketler</a><a href="http://127.0.0.1:5183/paketler/">/paketler/</a></body></html>'));
 const server=await createServer({server:{host:'127.0.0.1',port:5183,strictPort:true},plugins:[{name:'sales-page-fixture',configureServer(server){
@@ -36,13 +36,15 @@ try {
     assert.equal(await page.locator('.zp-plan-card').count(),SHOPIER_PLANS.length);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`${surface}: overflow at ${width}`);
     const cards=page.locator('.zp-plan-grid');
-    if(ready){assert.equal(await cards.getByRole('link',{name:surface==='page'?'Veli panelinden satın al':'Shopier’den satın al',exact:true}).count(),SHOPIER_PLANS.length);}
+    if(surface==='page'){assert.equal(await cards.getByRole('link',{name:/Veli hesabına devam et/}).count(),3);assert.equal(await page.locator('a[href*=\"shopier.com\"]').count(),0);assert.equal(await page.locator('a[href^=\"https://play.google.com/store/apps/details\"]').count(),ready?1:0);}
+    else if(ready){assert.equal(await cards.getByRole('link',{name:'Shopier’den satın al',exact:true}).count(),SHOPIER_PLANS.length);}
     else {assert.equal(await cards.getByRole('link').count(),0);assert.equal(await cards.locator('button:disabled').count(),SHOPIER_PLANS.length);}
     assert.equal(await cards.evaluate(el=>[...el.querySelectorAll('a,button')].every(e=>e.getBoundingClientRect().height>=44)),true);
-    for(const plan of SHOPIER_PLANS)assert.ok((await cards.innerText()).includes((plan.amountKurus/100).toLocaleString('tr-TR')+' TL'));
+    if(surface!=='page')for(const plan of SHOPIER_PLANS)assert.ok((await cards.innerText()).includes((plan.amountKurus/100).toLocaleString('tr-TR')+' TL'));
+    else {assert.ok((await cards.innerText()).includes('Fiyat Google Play’de gösterilir'));assert.ok(!(await cards.innerText()).includes(' TL'));}
     if(surface==='page'){
-      await page.getByRole('link',{name:'Bize uygun paketi bul'}).click();assert.ok(page.url().endsWith('#paketler'));
-      const faq=page.getByText('Her ay otomatik ücret alınır mı?',{exact:true});await faq.focus();await page.keyboard.press('Enter');assert.equal(await faq.locator('..').getAttribute('open'),'');
+      await page.getByRole('link',{name:'Bize uygun dönemi bul'}).click();assert.ok(page.url().endsWith('#paketler'));
+      const faq=page.getByText('Abonelik otomatik yenilenir mi?',{exact:true});await faq.focus();await page.keyboard.press('Enter');assert.equal(await faq.locator('..').getAttribute('open'),'');
       if(ready)assert.equal(await cards.locator('a').first().getAttribute('href'),'/login?role=parent');
     }
     if(surface==='billing'&&ready){

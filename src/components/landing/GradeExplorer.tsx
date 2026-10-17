@@ -7,7 +7,7 @@ export function GradeExplorer({ onTry, completed }: { onTry: (grade: PreviewGrad
   const [grade, setGrade] = useState<PreviewGrade>(1);
   const profile = GRADE_PREVIEWS.find(item => item.grade === grade)!;
   return <section id="siniflar" className="zp-container zp-grade-section" aria-labelledby="grade-title">
-    <div className="zp-grade-heading"><div><p className="zp-kicker"><Compass size={17} /> HER KAŞİFİN YOLU FARKLI</p><h2 id="grade-title">Senin sınıfın.<br /><span>Senin keşif rotan.</span></h2></div><p>Sınıfını seç, seni bekleyen dünyaya göz at.<br />İlk sorunu birlikte keşfedelim.</p></div>
+    <div className="zp-grade-heading"><div><p className="zp-kicker"><Compass size={17} /> SINIFINA UYGUN BİLSEM HAZIRLIĞI</p><h2 id="grade-title">Senin sınıfın.<br /><span>Senin hazırlık rotan.</span></h2></div><p>Sınıfını seç, seni bekleyen dünyaya göz at.<br />İlk sorunu birlikte keşfedelim.</p></div>
     <div className="zp-grade-switch" role="group" aria-label="Keşif rotası için sınıf seç">
       {GRADE_PREVIEWS.map(item => <button key={item.grade} type="button" aria-pressed={grade === item.grade} aria-controls="grade-preview" onClick={() => setGrade(item.grade)} className={`zp-grade-choice zp-grade-${item.color}`}><span aria-hidden="true">{item.symbol}</span><strong>{item.grade}. sınıf</strong><small>{item.title}</small><Check size={16} aria-hidden="true" /></button>)}
     </div>

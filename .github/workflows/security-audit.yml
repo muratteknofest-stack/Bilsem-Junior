@@ -1,0 +1,53 @@
+name: Dependency security audit
+on:
+  push:
+    branches: [codex/android-capacitor-preparation]
+    paths:
+      - '.github/workflows/security-audit.yml'
+      - 'scripts/osv-audit.mjs'
+      - 'scripts/audit-android-dependencies.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  dependencies:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      VITE_API_BASE_URL: https://zekapark.vercel.app
+      VITE_PUBLIC_SITE_URL: https://zekapark.vercel.app
+      VITE_SUPABASE_URL: https://vehhvsdkifwstbjhnhao.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ijE2Jbn1oGn9Elz03fiYrA_FUBnEWXI
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Audit npm dependencies
+        run: |
+          mkdir -p security-evidence
+          npm audit --json > security-evidence/npm-audit.json
+          node scripts/osv-audit.mjs | tee security-evidence/npm-osv.txt
+      - name: Prepare native dependency graph
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_21_X64" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME_21_X64/bin" >> "$GITHUB_PATH"
+          test -d "$ANDROID_HOME/platforms/android-36"
+          npm run android:sync
+      - name: Resolve and audit native runtime dependencies
+        run: |
+          cd android
+          ./gradlew --no-daemon :app:dependencies --configuration debugRuntimeClasspath --console=plain > ../security-evidence/android-runtime-deps.txt
+          cd ..
+          node scripts/audit-android-dependencies.mjs security-evidence/android-runtime-deps.txt > security-evidence/maven-osv.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: ZekaPark-dependency-security
+          path: security-evidence/
+          if-no-files-found: error
+          retention-days: 7

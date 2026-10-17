@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api-fetch';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Compass,
@@ -83,7 +84,7 @@ export function FooterInfoModal({ topic, onClose, onSelectTopic }: FooterInfoMod
     if (!slug || !['gizlilik-ve-veriler', 'kullanim-kosullari', 'iletisim-ve-destek'].includes(slug)) return;
 
     const controller = new AbortController();
-    fetch(apiUrl('/api/public/policy/' + slug), { signal: controller.signal, cache: 'no-store' })
+    apiFetch(apiUrl('/api/public/policy/' + slug), { signal: controller.signal, cache: 'no-store' })
       .then(async res => {
         if (!res.ok) throw new Error();
         return res.json();
@@ -211,7 +212,7 @@ export function FooterInfoModal({ topic, onClose, onSelectTopic }: FooterInfoMod
           <div className="platform-info-dialog-fallback">
             <p>
               Güncel kaynak bağlantıları ve eğitim içerikleri için{' '}
-              <a href="/blog">ZekaPark blogunu</a> inceleyebilirsiniz. Resmî sınav koşulları için MEB duyurularını kontrol edin.
+              <a href="/blog">BİLSEM Junior blogunu</a> inceleyebilirsiniz. Resmî sınav koşulları için MEB duyurularını kontrol edin.
             </p>
           </div>
         )}

@@ -24,6 +24,7 @@ import {
 import type { UserRole } from '../types';
 import { FOOTER_GROUPS, SUPPORT_EMAIL } from '../content/platform-info';
 import { Logo } from './Logo';
+import { isAndroidApp, publicPageUrl } from '../lib/native-app';
 import './footer.css';
 
 interface FooterProps {
@@ -96,8 +97,8 @@ export function Footer({ onNavigate, onNavigateToLogin }: FooterProps) {
             </p>
           </div>
           <div className="platform-footer-actions">
-            <a href="/paketler" className="platform-footer-btn-secondary">Shopier paketleri</a>
-            <a href="/en/" lang="en" hrefLang="en" className="platform-footer-btn-secondary">English · Thinking games</a>
+            {isAndroidApp ? <button type="button" className="platform-footer-btn-secondary" onClick={() => onNavigateToLogin('parent')}>Google Play üyeliği</button> : <a href="/paketler" className="platform-footer-btn-secondary">Google Play üyeliği</a>}
+            {!isAndroidApp && <a href="/en/" lang="en" hrefLang="en" className="platform-footer-btn-secondary">English · Thinking games</a>}
             <button
               type="button"
               className="platform-footer-btn-primary"
@@ -192,7 +193,7 @@ export function Footer({ onNavigate, onNavigateToLogin }: FooterProps) {
                   {group.links.map(link => {
                     const LinkIcon = (link.icon && ICON_MAP[link.icon]) || ArrowUpRight;
                     return (
-                      <a key={link.href} href={link.href} className="platform-footer-link-card">
+                      <a key={link.href} href={publicPageUrl(link.href)} className="platform-footer-link-card">
                         <span className="platform-footer-link-card-icon" aria-hidden="true">
                           <LinkIcon size={15} />
                         </span>
@@ -218,7 +219,7 @@ export function Footer({ onNavigate, onNavigateToLogin }: FooterProps) {
             <ShieldCheck size={20} />
           </div>
           <p>
-            <strong>ZekaPark bağımsız bir eğitim platformudur.</strong> MEB veya BİLSEM ile kurumsal bağlantısı yoktur.
+            <strong>BİLSEM Junior bağımsız bir eğitim platformudur.</strong> MEB veya BİLSEM ile kurumsal bağlantısı yoktur.
             Alıştırmalar tanılama aracı değildir ve sınav başarısı garantisi sunmaz.
           </p>
         </div>
@@ -226,10 +227,10 @@ export function Footer({ onNavigate, onNavigateToLogin }: FooterProps) {
         {/* Bottom Bar */}
         <div className="platform-footer-bottom">
           <div className="platform-footer-bottom-copy">
-            <span>© {new Date().getFullYear()} ZekaPark · Merakla büyüyen zihinler için.</span>
+            <span>© {new Date().getFullYear()} BİLSEM Junior · Merakla büyüyen zihinler için.</span>
           </div>
           <div className="platform-footer-bottom-links">
-            <a href="/blog/feed.xml" className="platform-footer-rss-link">
+            <a href={publicPageUrl('/blog/feed.xml')} className="platform-footer-rss-link">
               <Rss size={13} aria-hidden="true" />
               <span>Blog RSS</span>
             </a>

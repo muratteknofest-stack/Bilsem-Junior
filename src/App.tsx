@@ -1,9 +1,12 @@
 import { topicCategory, type LearningTopic } from './features/student/learning-topics';
+import { isAndroidApp } from './lib/native-app';
 import { ProgressSyncBanner } from './components/ProgressSyncBanner';
-import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { ADMIN_PANEL_PATH, ADMIN_LOGIN_PATH, hasVerifiedAdminAccess } from './lib/admin-access';
 import { accountEntry, accountEntryPath } from './features/auth/account-entry';
+import { useLearningAccess } from './features/student/use-learning-access';
+import { MembershipPrompt } from './components/MembershipPrompt';
 
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { UserProfile, UserRole, SkillMastery, MistakeItem, DailyStudyPlan, ReminderAlertEvent, CognitiveCategory } from './types';
@@ -14,6 +17,7 @@ import { sound } from './lib/sound';
 import { reminderService } from './services/reminder-service';
 import { demoQuestionsRemaining, isDemoUser } from './lib/demo-access';
 import { Navbar } from './components/Navbar';
+import { NativeConnectionNotice } from './components/NativeConnectionNotice';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { StudyReminderInAppAlert } from './components/StudyReminderInAppAlert';
 import { StudyReminderSettingsModal } from './components/StudyReminderSettingsModal';
@@ -61,6 +65,7 @@ export default function App() {
   const switchAttemptRef = useRef(0);
   const previousAccountIdRef = useRef(userProfile?.id);
   const [isAuth, setIsAuth] = useState<boolean>(() => dataService.isAuthenticated());
+  const membership = useLearningAccess(isAuth && userProfile?.role === 'student' ? userProfile.id : undefined);
   const initialAccountEntry = useRef(accountEntry(new URL(window.location.href)));
   const [loginRole, setLoginRole] = useState<UserRole>(initialAccountEntry.current?.role || 'student');
   const [loginMode, setLoginMode] = useState<'login' | 'register'>(initialAccountEntry.current?.mode || 'login');
@@ -76,6 +81,21 @@ export default function App() {
   const previousRouteRef = useRef(currentRoute);
   const testReturnRouteRef = useRef('dashboard');
   const hasTestHistoryEntryRef = useRef(false);
+  useLayoutEffect(() => {
+    if (!isAndroidApp) return;
+    const onNativeBack = (event: Event) => {
+      if (event.defaultPrevented) return;
+      if (showParentAccess) { event.preventDefault(); setShowParentAccess(false); return; }
+      const root = !isAuth ? 'landing' : currentUser.role === 'parent' ? 'parent' : 'dashboard';
+      if (isTestPage(currentRoute) && hasTestHistoryEntryRef.current) {
+        event.preventDefault(); window.history.back();
+      } else if (currentRoute !== root) {
+        event.preventDefault(); if (root === 'landing') window.history.replaceState(window.history.state, '', '/'); setCurrentRoute(root); window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+    };
+    window.addEventListener('zekapark:native-back', onNativeBack);
+    return () => window.removeEventListener('zekapark:native-back', onNativeBack);
+  }, [currentRoute, currentUser.role, isAuth, showParentAccess]);
   const [masteries, setMasteries] = useState<SkillMastery[]>(() => dataService.getSkillMasteries());
   const [mistakes, setMistakes] = useState<MistakeItem[]>(() => dataService.getMistakes());
   const [dailyPlan, setDailyPlan] = useState<DailyStudyPlan>(() => dataService.getDailyPlan());
@@ -313,6 +333,11 @@ export default function App() {
       }
     }
 
+    if (u.role === 'student' && !isDemoUser(u.id) && !membership.active && ['practice', 'adaptive', 'exams', 'mistakes', 'leaderboard'].includes(targetRoute)) {
+      setCurrentRoute('membership');
+      return;
+    }
+
     // Bidirectional switching between student and parent:
     if (targetRoute === 'parent') {
       if (userProfile?.role !== 'parent' && !u.id.startsWith('demo_')) {
@@ -403,6 +428,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
+      {isAndroidApp && !isTestRoute && <NativeConnectionNotice />}
       {/* Workspace navigation; public pages own their header. Tests stay distraction-free. */}
       {!isTestRoute && currentRoute !== 'landing' && currentRoute !== 'login' && (
         <Navbar
@@ -447,6 +473,7 @@ export default function App() {
                 dailyPlan={dailyPlan}
                 masteries={masteries}
                 mistakes={mistakes}
+                membership={membership}
                 onUserUpdate={(u) => setCurrentUser(u)}
                 onStartPractice={(category) => {
                   setSelectedPracticeTopic('mixed');
@@ -460,6 +487,11 @@ export default function App() {
                 onNavigate={navigateTo}
               />
             )}
+
+            {currentRoute === 'membership' && <div className="zp-dashboard-page zp-student-pro"><div className="zp-student-shell">
+              {membership.active ? <p role="status" className="p-5">Üyeliğin doğrulandı. Tüm çalışma bölümleri açık.</p> : <MembershipPrompt onUpgrade={requestParentPanel} loading={membership.loading} error={membership.error} onRetry={membership.refresh} />}
+              <button type="button" className="zp-membership-retry mt-5" onClick={() => navigateTo('dashboard')}>{membership.active ? 'Çalışma alanına dön' : 'Ücretsiz sorulara dön'}</button>
+            </div></div>}
 
             {currentRoute === 'demo-limit' && (
               <div className="mx-auto w-full max-w-2xl px-5 py-20 text-center" role="status">

@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api-fetch';
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Download, 
@@ -39,7 +40,7 @@ export function FamilyActivation() {
     setResendNotice('');
     try {
       await supabase.auth.refreshSession().catch(() => undefined);
-      const res = await request('/api/parent/activate-students', { method: 'POST' });
+      const res = await request('/api/parent/activate-students', { method: 'POST', body: '{}' });
       if (res && typeof res.activated === 'number') {
         setActivatedSuccess(true);
       }
@@ -56,7 +57,7 @@ export function FamilyActivation() {
     setResendNotice('');
     setErrorNotice('');
     try {
-      const res = await fetch('/api/auth/resend-confirmation', {
+      const res = await apiFetch('/api/auth/resend-confirmation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: parentEmail }),

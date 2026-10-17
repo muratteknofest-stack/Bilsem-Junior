@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./components/play-billing.css";
 @import "./features/questions/renderers/question-studio.css";
 
 @theme {

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { isAndroidApp } from '../lib/native-app';
 import { UserRole, UserProfile } from '../types';
 import { sound } from '../lib/sound';
 import { Logo } from './Logo';
@@ -44,6 +45,28 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [loginIdentifier, setLoginIdentifier] = useState('');
 
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const showcase = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const node = showcase.current;
+    if (!isAndroidApp || !node || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(([entry]) => node.toggleAttribute('data-in-view', entry.isIntersecting), { rootMargin: '80px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  useLayoutEffect(() => {
+    if (!isAndroidApp) return;
+    const onNativeBack = (event: Event) => {
+      if (registrationBusy) { event.preventDefault(); event.stopImmediatePropagation(); return; }
+      if (showForgotPasswordModal || activeTab === 'register') {
+        event.preventDefault(); event.stopImmediatePropagation();
+        if (showForgotPasswordModal) setShowForgotPasswordModal(false);
+        else { setActiveTab('login'); onModeChange?.('login', selectedRole); }
+      }
+    };
+    window.addEventListener('zekapark:native-back', onNativeBack, true);
+    return () => window.removeEventListener('zekapark:native-back', onNativeBack, true);
+  }, [activeTab, registrationBusy, showForgotPasswordModal, onModeChange, selectedRole]);
+  const returnToEntry = () => { onNavigateHome(); };
 
   const openParentLogin = (email: string) => {
     setSelectedRole('parent');
@@ -65,7 +88,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       <div className="zp-auth-top max-w-6xl mx-auto w-full mb-4 flex items-center justify-between">
         <button
           type="button"
-          onClick={onNavigateHome}
+          onClick={returnToEntry}
           disabled={registrationBusy}
           className="zp-auth-back inline-flex items-center gap-2 text-sm font-semibold px-3.5 py-2 rounded-xl border transition-all cursor-pointer"
         >
@@ -87,15 +110,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 size="md"
                 showText={true}
                 showTagline={false}
-                onClick={registrationBusy ? undefined : onNavigateHome}
+                onClick={registrationBusy ? undefined : returnToEntry}
               />
               <span className="zp-auth-brand-mark" aria-hidden="true"><Sparkles size={18} /></span>
             </div>
 
             <div className="zp-auth-intro">
-              <p className="zp-auth-kicker">ZEKA PARKI / HESAP ALANI</p>
-              <h1 id="zp-auth-heading">{activeTab === 'login' ? 'Keşfe kaldığın yerden devam et.' : 'Yeni bir keşif başlasın.'}</h1>
-              <p>{activeTab === 'login' ? 'Hesabına gir, yeni sorular ve küçük zaferler seni bekliyor.' : 'Veli bilgilerini gir, öğrenci hesabını ekle ve e-postanı doğrula.'}</p>
+              <p className="zp-auth-kicker">BİLSEM JUNIOR / HAZIRLIK ALANI</p>
+              <h1 id="zp-auth-heading">{activeTab === 'login' ? 'Hazırlığına kaldığın yerden devam et.' : 'Yeni bir keşif başlasın.'}</h1>
+              <p>{activeTab === 'login' ? 'BİLSEM hazırlık çalışmaların, denemelerin ve ilerleme yolun seni bekliyor.' : 'Veli bilgilerini gir, öğrenci hesabını ekle ve e-postanı doğrula.'}</p>
             </div>
 
             <div className="zp-auth-mode" role="group" aria-label="Hesap işlemi">
@@ -185,7 +208,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </div>
         </section>
 
-        <aside className="zp-auth-showcase relative flex flex-col justify-between overflow-hidden" aria-label="ZekaPark keşif alanları">
+        <aside ref={showcase} className="zp-auth-showcase relative flex flex-col justify-between overflow-hidden" aria-label="BİLSEM Junior keşif alanları">
           <div className="zp-auth-showcase-content">
             <span className="zp-auth-showcase-kicker"><Sparkles size={16} aria-hidden="true" /> MERAK EDEN ZİHİNLER İÇİN</span>
             <h2>Her soruda yeni bir dünya.</h2>

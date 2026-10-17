@@ -4,14 +4,10 @@ import { shopierGet } from './shopier-client';
 import { accessExpiry, verifiedShopierOrder, ShopierError, type AccessReceipt } from './shopier-model';
 import { SHOPIER_PRODUCT_FIELDS, type ShopierSettings, type ShopierPlanId } from '../src/lib/shopier-config';
 import { withRequestDeadline } from '../src/lib/request-deadline';
-export async function assertShopierFamily(parentId:string,studentId:string) {
-  const db=getServiceClient();
-  const [parent,student]=await Promise.all([db.from('profiles').select('id,role,linked_student_ids').eq('id',parentId).single(),
-    db.from('profiles').select('id,role,linked_parent_id').eq('id',studentId).single()]);
-  if(parent.error||student.error)throw new ShopierError('Aile bilgileri doğrulanamadı.',503);
-  if(parent.data.role!=='parent'||student.data.role!=='student'||student.data.linked_parent_id!==parentId
-    ||!parent.data.linked_student_ids?.includes(studentId))throw new ShopierError('Bu öğrenci için yetkiniz bulunmuyor.',403);
-}
+import { assertBillingFamily as assertShopierFamily } from './billing-family';
+export { assertShopierFamily };
+import { googlePlayAccess } from './google-play-access';
+import { GooglePlayError } from './google-play-model';
 export async function shopierAccess(parentId:string,studentId:string,settings:ShopierSettings) {
   try { return await withRequestDeadline(async signal=>{
     await assertShopierFamily(parentId,studentId);
@@ -38,12 +34,26 @@ export async function shopierAccess(parentId:string,studentId:string,settings:Sh
     const expiresAt=accessExpiry(valid);return {active:!!expiresAt&&Date.parse(expiresAt)>Date.now(),expiresAt};
   },15_000); } catch(error){if(error instanceof ShopierError)throw error;throw new ShopierError('Ödeme erişimi şu anda doğrulanamıyor. Yeniden dene.',503);}
 }
-export async function requireLearningAccess(studentId:string) {
+export class MembershipRequiredError extends ShopierError {
+  readonly code = 'MEMBERSHIP_REQUIRED';
+  constructor() { super('Bu bölüm için aktif üyelik gerekli. Günlük üç ücretsiz soruyla çalışmaya devam edebilirsin.', 403); }
+}
+export async function learningAccess(studentId:string) {
   const {settings}=await readPlatformSettings();
-  if(!settings.shopier.enforcePaidAccess)return;
-  if(!process.env.SHOPIER_ACCESS_TOKEN)throw new ShopierError('Ücretli erişim doğrulaması şu anda kullanılamıyor.',503);
   const student=await getServiceClient().from('profiles').select('linked_parent_id').eq('id',studentId).single();
-  if(student.error||!student.data?.linked_parent_id)throw new ShopierError('Veli bağlantısı doğrulanamadı.',403);
-  const access=await shopierAccess(student.data.linked_parent_id,studentId,settings.shopier);
-  if(!access.active)throw new ShopierError('Yeni çalışma için veli panelinden aktif paket tanımlanmalı.',403);
+  if(student.error)throw new ShopierError('Üyelik durumu doğrulanamadı.',503);
+  if(!student.data?.linked_parent_id)return {active:false,expiresAt:null};
+  const parentId=student.data.linked_parent_id;
+  // Sales switches do not grant access or revoke an existing verified purchase.
+  // One available provider can confirm access while the other is unavailable.
+  const results=await Promise.allSettled([googlePlayAccess(parentId,studentId),shopierAccess(parentId,studentId,settings.shopier)]);
+  for(const result of results){
+    if(result.status==='fulfilled'&&result.value.active)return result.value;
+  }
+  if(results.some(result=>result.status==='rejected'&&(!(result.reason instanceof GooglePlayError||result.reason instanceof ShopierError)||result.reason.status===503)))
+    throw new ShopierError('Üyelik durumu şu anda doğrulanamıyor. Yeniden dene; günlük ücretsiz soruların açık.',503);
+  return {active:false,expiresAt:null};
+}
+export async function requireLearningAccess(studentId:string) {
+  if(!(await learningAccess(studentId)).active)throw new MembershipRequiredError();
 }

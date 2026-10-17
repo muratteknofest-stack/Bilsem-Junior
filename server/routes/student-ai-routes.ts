@@ -9,6 +9,18 @@ import {
 } from '../security';
 import { aiLimiter } from '../rate-limiters';
 import { getGeminiClient } from '../gemini-client';
+import { getServiceClient } from '../supabase-admin';
+import { requireStudentMembership } from '../membership-middleware';
+import type { AuthenticatedRequest } from '../security';
+import type { Response, NextFunction } from 'express';
+
+// Runs after the database role/MFA guard, outside handlers' AI fallback catches.
+async function paidStudentAi(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  const profile = await getServiceClient().from('profiles').select('role').eq('id', req.authUser!.uid).single();
+  if (profile.error) return res.status(503).json({ error: 'Hesap yetkisi doğrulanamadı.' });
+  if (profile.data.role === 'admin') return next();
+  return requireStudentMembership(req, res, next);
+}
 
 const studentAiRoutes = Router();
 
@@ -67,7 +79,7 @@ const dailyPlanRequestSchema = z.object({
   }).passthrough()).max(20).default([]),
 });
 
-studentAiRoutes.post('/ai-hint', requireSupabaseAuth, aiLimiter, requireProfileRole('student', 'admin'), sharedRateLimit('student-ai', 30, 600), async (req, res) => {
+studentAiRoutes.post('/ai-hint', requireSupabaseAuth, aiLimiter, requireProfileRole('student', 'admin'), sharedRateLimit('student-ai', 30, 600), paidStudentAi, async (req, res) => {
   try {
     const validation = hintRequestSchema.safeParse(req.body);
     if (!validation.success) {
@@ -187,7 +199,7 @@ Soru Bilgileri:
   }
 });
 
-studentAiRoutes.post('/ai-explain-mistake', requireSupabaseAuth, aiLimiter, requireProfileRole('student', 'admin'), sharedRateLimit('student-ai', 30, 600), async (req, res) => {
+studentAiRoutes.post('/ai-explain-mistake', requireSupabaseAuth, aiLimiter, requireProfileRole('student', 'admin'), sharedRateLimit('student-ai', 30, 600), paidStudentAi, async (req, res) => {
   try {
     const validation = mistakeRequestSchema.safeParse(req.body);
     if (!validation.success) {
@@ -316,7 +328,7 @@ Soru Bilgileri:
   }
 });
 
-studentAiRoutes.post('/ai-step-explanation', requireSupabaseAuth, aiLimiter, requireProfileRole('student', 'admin'), sharedRateLimit('student-ai', 30, 600), async (req, res) => {
+studentAiRoutes.post('/ai-step-explanation', requireSupabaseAuth, aiLimiter, requireProfileRole('student', 'admin'), sharedRateLimit('student-ai', 30, 600), paidStudentAi, async (req, res) => {
   try {
     const validation = stepExplanationRequestSchema.safeParse(req.body);
     if (!validation.success) {
@@ -450,7 +462,7 @@ GÖREVİN: Çocuğun zihninde soru çözümünü netleştirecek 4 KADEMELİ ADIM
   }
 });
 
-studentAiRoutes.post('/ai-daily-plan', requireSupabaseAuth, aiLimiter, requireProfileRole('student', 'admin'), sharedRateLimit('student-ai', 30, 600), async (req, res) => {
+studentAiRoutes.post('/ai-daily-plan', requireSupabaseAuth, aiLimiter, requireProfileRole('student', 'admin'), sharedRateLimit('student-ai', 30, 600), paidStudentAi, async (req, res) => {
   try {
     const validation = dailyPlanRequestSchema.safeParse(req.body);
     if (!validation.success) {

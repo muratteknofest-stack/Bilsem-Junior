@@ -4,6 +4,7 @@ import React from 'react';
 import express from 'express';
 import { renderToStaticMarkup } from 'react-dom/server';
 import learningRoutes from '../server/routes/learning-routes';
+import { emailHash } from '../server/shopier-model';
 import { defaultPlatformSettings } from '../src/lib/platform-settings';
 import { generateQuestion } from '../src/features/questions/generators';
 import { ALL_QUESTION_TYPES } from '../src/features/questions/generators';
@@ -68,19 +69,25 @@ test('real authenticated learning API isolates published topics in all grades, c
   const priorUrl = process.env.SUPABASE_URL, priorKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   process.env.SUPABASE_URL = 'https://topic-api-fixture.invalid';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'isolated-fixture-key';
+  process.env.SHOPIER_ACCESS_TOKEN = 'isolated-shopier-test';
+  const parentId = '88888888-8888-4888-8888-888888888888';
+  const activated = new Date().toISOString();
   let grade: 1|2|3|4 = 1, bank: BaseQuestion[] = [], rows: any[] = [], reads = 0;
   const userId = () => `11111111-1111-4111-8111-11111111111${grade}`;
   const token = () => ['fixture', Buffer.from(JSON.stringify({ session_id: '99999999-9999-4999-8999-999999999999', aal: 'aal1' })).toString('base64url'), 'fixture'].join('.');
   globalThis.fetch = (async (input, init) => {
     const request = new Request(input as RequestInfo, init), u = new URL(request.url);
+    if (u.hostname === 'api.shopier.com') return Response.json({id:'topic-order',status:'unfulfilled',paymentStatus:'paid',dateCreated:activated,currency:'TRY',shippingInfo:{email:'parent@example.invalid'},totals:{subtotal:'299.00',shipping:'0.00',discount:'0.00',total:'299.00'},lineItems:[{productId:'30',type:'digital',quantity:1,price:'299.00',total:'299.00'}],refunds:[]});
     if (u.hostname !== 'topic-api-fixture.invalid') return originalFetch(input, init);
     let value: unknown;
     if (u.pathname === '/auth/v1/user') value = { id: userId(), email: 'student@example.invalid', email_confirmed_at: new Date().toISOString(), app_metadata: { role: 'student' } };
     else if (u.pathname === '/rest/v1/rpc/is_user_session_active' || u.pathname === '/rest/v1/rpc/consume_api_limit') value = true;
     else if (u.pathname === '/rest/v1/profiles') {
-      const profile = { id: userId(), role: 'student', grade };
+      const profile = u.searchParams.get('id') === 'eq.'+parentId ? {id:parentId,role:'parent',linked_student_ids:[userId()]} : { id: userId(), role: 'student', grade, linked_parent_id:parentId };
       value = request.headers.get('accept')?.includes('vnd.pgrst.object') ? profile : [profile];
     } else if (u.pathname === '/rest/v1/platform_settings') value = { settings: defaultPlatformSettings(), revision: 1, updated_at: new Date().toISOString() };
+    else if (u.pathname === '/rest/v1/google_play_subscriptions') value = [];
+    else if (u.pathname === '/rest/v1/shopier_access_orders') value = [{order_id:'topic-order',activated_at:activated,duration_days:30,amount_kurus:29900,buyer_email_sha256:emailHash('parent@example.invalid'),product_id:'30',plan_id:'monthly'}];
     else if (u.pathname === '/rest/v1/questions') {
       reads++;
       assert.equal(u.searchParams.get('status'), 'eq.published');

@@ -1,6 +1,7 @@
 import { englishBankForGrade, ENGLISH_BANK_VERSION } from '../english-learning-bank';
 import { ENGLISH_AREAS } from '../../src/features/international/english-content';
-import { requireLearningAccess } from '../shopier-access';
+import { learningAccess, requireLearningAccess } from '../shopier-access';
+import { membershipError, requireStudentMembership } from '../membership-middleware';
 import { ShopierError } from '../shopier-model';
 import { sharedRateLimit } from '../shared-rate-limit';
 import { Router } from 'express';
@@ -59,9 +60,15 @@ async function commit(student: string, id: string, change: (s: LearningSession) 
   throw new LearningError('Başka cihazdaki değişiklik kaydediliyor. Yeniden dene.', 409);
 }
 function handleError(error: unknown, res: import('express').Response) {
+  if (membershipError(error, res)) return;
   if (error instanceof LearningError || error instanceof ShopierError) return res.status(error.status).json({ error: error.message });
   throw error;
 }
+routes.get('/learning/access', async (req: AuthenticatedRequest, res) => {
+  res.set('Cache-Control', 'no-store');
+  try { return res.json({ ...await learningAccess(req.authUser!.uid), freeDailyQuestions: 3 }); }
+  catch (error) { return handleError(error, res); }
+});
 routes.patch('/learning/grade', async (req: AuthenticatedRequest, res) => {
   const parsed = z.object({ grade: z.number().int().min(1).max(4) }).strict().safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: '1–4 arasında bir sınıf seçmelisin.' });
@@ -154,7 +161,11 @@ routes.get('/learning/history', async (req: AuthenticatedRequest, res) => {
   return res.json({sessions:data});
 });
 routes.get('/learning/:id' , async (req: AuthenticatedRequest, res) => {
-  try { return res.json(learningView(await readSession(req.authUser!.uid, String(req.params.id)))); } catch (error) { return handleError(error, res); }
+  try {
+    const session = await readSession(req.authUser!.uid, String(req.params.id));
+    if (!session.finished_at) await requireLearningAccess(req.authUser!.uid);
+    return res.json(learningView(session));
+  } catch (error) { return handleError(error, res); }
 });
 routes.post('/learning/review', async (req: AuthenticatedRequest, res) => {
   try {
@@ -184,6 +195,7 @@ routes.post('/learning/rewards/claim', async (req: AuthenticatedRequest, res) =>
   try {
     const parsed = z.object({ kind: z.enum(['badge', 'streak', 'mission', 'weekly', 'grand']), id: z.string().min(1).max(80) }).strict().safeParse(req.body);
     if (!parsed.success) throw new LearningError('Ödül isteği geçersiz.', 400);
+    if (parsed.data.kind === 'weekly' || parsed.data.kind === 'grand') await requireLearningAccess(req.authUser!.uid);
     const client = getServiceClient(), student = req.authUser!.uid;
     for (let retry = 0; retry < 5; retry++) {
       const [profile, privateState, facts] = await Promise.all([
@@ -204,7 +216,7 @@ routes.post('/learning/rewards/claim', async (req: AuthenticatedRequest, res) =>
     throw new LearningError('Başka cihazdaki ödül kaydediliyor. Yeniden dene.', 409);
   } catch (error) { return handleError(error, res); }
 });
-routes.post('/learning/:id/answer', async (req: AuthenticatedRequest, res) => {
+routes.post('/learning/:id/answer', requireStudentMembership, async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = answerSchema.safeParse(req.body);
     if (!parsed.success) throw new LearningError('Yanıt geçersiz.', 400);
@@ -215,6 +227,8 @@ routes.post('/learning/:id/answer', async (req: AuthenticatedRequest, res) => {
 routes.post('/learning/:id/finish', async (req: AuthenticatedRequest, res) => {
   try {
     if (!z.object({}).strict().safeParse(req.body || {}).success) throw new LearningError('Sonuçlar sunucu tarafından hesaplanır.', 400);
+    const current = await readSession(req.authUser!.uid, String(req.params.id));
+    if (!current.finished_at) await requireLearningAccess(req.authUser!.uid);
     const saved = await commit(req.authUser!.uid, String(req.params.id), finishLearningSession);
     return res.json(req.query.view === 'update' ? learningUpdateView(saved) : learningView(saved));
   } catch (error) { return handleError(error, res); }

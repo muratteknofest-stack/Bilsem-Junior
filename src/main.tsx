@@ -7,9 +7,25 @@ import { PasswordRecoveryEntry } from './features/auth/components/PasswordRecove
 import { isRecoveryRedirect } from './lib/supabase';
 import './components/wordwall.css';
 import { isAdminLocation } from './lib/admin-access';
+import { isAndroidApp } from './lib/native-app';
+import './native.css';
+import { Capacitor } from '@capacitor/core';
+
+if (isAndroidApp) {
+  document.documentElement.dataset.nativeApp = 'android';
+  // Preserve the test screen's existing popstate flow on Android's Back gesture.
+  if (Capacitor.isNativePlatform()) void import('@capacitor/app').then(({ App: NativeApp }) =>
+    NativeApp.addListener('backButton', () => {
+      // React routes need to consume Back before the native activity minimizes.
+      // Window is an ancestor here: capture handlers for forms/dialogs always run
+      // before the window's bubbling route handler, regardless of registration order.
+      if (document.dispatchEvent(new Event('zekapark:native-back', { bubbles: true, cancelable: true }))) void NativeApp.minimizeApp();
+    }),
+  ).catch(() => {});
+}
 
 const AdminPortal = lazy(() => import('./components/AdminPortal').then(module => ({ default: module.AdminPortal })));
-const WordwallPage = lazy(() => import('./components/WordwallLibrary').then(module => ({ default: module.WordwallPage })));
+const WordwallPage = lazy(() => import('./components/WordwallPage').then(module => ({ default: module.WordwallPage })));
 
 // Safely handle unhandled background Supabase Auth network rejections
 if (typeof window !== 'undefined') {
@@ -32,7 +48,7 @@ createRoot(document.getElementById('root')!).render(
     {window.location.pathname === '/reset-password' || isRecoveryRedirect ? (
       <PasswordRecoveryEntry />
     ) : window.location.pathname === '/wordwall' ? (
-      <Suspense fallback={<p role="status" className="p-8 text-center">Testler yükleniyor…</p>}><WordwallPage /></Suspense>
+      <AuthProvider><Suspense fallback={<p role="status" className="p-8 text-center">Testler yükleniyor…</p>}><WordwallPage /></Suspense></AuthProvider>
     ) : (
       <AuthProvider>
         {isAdminLocation(window.location.pathname) ? (
