@@ -1,7 +1,8 @@
 # Öğrenci mobil görünümü ve ücretsiz erişim
 
-Android 1.0.5 / versionCode 6 adayı. Üretim dağıtımı ve Play satışı bu değişiklikle açılmaz.
+Android 1.0.6 / versionCode 7 adayı. Üretim dağıtımı ve Play satışı bu değişiklikle açılmaz.
 
+- Google Play dönem seçimi: Aylık yeşil, 3 aylık mor, Yıllık altın tonlarında ikonlu kartlar; seçili çerçeve, belirgin mor ödeme düğmesi ve yeşil Yenile düğmesi. Mağaza/erişim doğrulanmadığında pastel kartlar görünür fakat seçim ve satın alma kapalı kalır. Teknik API bulunamadı mesajı kullanıcıya anlaşılır yeniden deneme metniyle gösterilir; bu, sunucu hatasının giderildiği anlamına gelmez.
 - Üyelik kartı renkli Keşif Kulübü görseli, roket/taç ikonları, özellik etiketleri ve dokunmaya uygun kabartmalı düğmeler kullanır. Oturumsuz/deneme kullanıcıya Üye ol (ücretsiz kayıt), abonelik için Abone ol sunulur. Kayıtlı öğrenciye yeniden hesap açtırılmaz; abonelik veli doğrulamasına gider.
 - 600px ve altında çalışma sekmeleri üç sütunda iki satırdır. Grid hücreleri `minmax(0,1fr)` ile sınırlandırılır; görev başlığı, sayaç, lig ve düğmeler dar ekranda satıra geçer.
 - Capacitor SystemBars tarafından sağlanan `--safe-area-inset-*` değerleri üst çubuk, içerik ve sabit alt menüye uygulanır.

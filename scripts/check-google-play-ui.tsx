@@ -23,6 +23,7 @@ function Fixture(){const[state,setState]=useState(ready);window.__billingShow=ki
  if(kind==='pending'){s.pending=true;s.notice={kind:'warning',text:'Ödemeniz Google Play’de beklemede.'};}
  if(kind==='active'){s.config.access={active:true,expiresAt:'2027-01-16T12:00:00Z',autoRenewing:false};s.notice={kind:'success',text:'Aboneliğiniz doğrulandı.'};}
  if(kind==='error'){s.fresh=false;s.notice={kind:'error',text:'Bağlantı kesildi. Yeniden deneyin.'};}
+ if(kind==='api-error'){s.config=null;s.fresh=false;s.offers=[];s.notice={kind:'error',text:'API uç noktası bulunamadı.'};}
  if(kind==='stale'){s.config.access={active:true,expiresAt:'2027-01-16T12:00:00Z'};s.fresh=false;s.notice={kind:'error',text:'Güncel durum doğrulanamadı.'};}
  if(kind==='closed'){s.config.ready=false;s.offers=[];s.notice={kind:'info',text:'Google Play abonelikleri henüz satışa açılmadı.'};}
  if(kind==='loading')return setState(initialPlayBillingState());
@@ -45,21 +46,27 @@ try{
  await page.getByRole('button',{name:'Yenile',exact:true}).click();await page.getByRole('button',{name:'Satın alımları geri yükle',exact:true}).click();
  if(JSON.stringify(await page.evaluate(()=>(window as any).__billingActions))!==JSON.stringify(['annual','refresh','restore']))throw Error('Recovery actions did not reach handlers');
  let cases=0;
- for(const width of [320,360,390,768]){
+ for(const width of [320,360,390,430,768]){
   await page.setViewportSize({width,height:width<700?800:1024});
-  for(const state of ['ready','pending','active','error','stale','closed','loading']){
+  for(const state of ['ready','pending','active','error','api-error','stale','closed','loading']){
    await page.evaluate(state=>(window as any).__billingShow(state),state);
    await page.evaluate(()=>new Promise<void>(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>r()))));
    const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);if(overflow)throw Error('Horizontal overflow '+width+' '+state);
-   if(['pending','active','stale','closed','loading','error'].includes(state)){
+   if(['pending','active','stale','closed','loading','error','api-error'].includes(state)){
     const checkout=page.getByRole('button',{name:'Google Play ile devam et',exact:true});
     if(await checkout.count()&&await checkout.isEnabled())throw Error('Unsafe checkout '+state);
    }
    if(state==='stale'&&await page.getByText('Aboneliğiniz aktif',{exact:true}).count())throw Error('Stale entitlement shown as current');
    if(state==='error'&&!(await page.getByRole('alert').count()))throw Error('Missing accessible error');
-   if(state==='ready'){
+   if(state==='api-error'){
+    const message=await page.getByRole('alert').innerText();
+    if(message.includes('API uç noktası')||!message.includes('Yenile'))throw Error('Technical API error leaked instead of actionable recovery');
+    if(await page.getByRole('radio').evaluateAll(nodes=>nodes.some(n=>!(n as HTMLInputElement).disabled)))throw Error('Unavailable plans remain selectable');
+    if(await page.getByRole('button',{name:'Yenile',exact:true}).isDisabled())throw Error('Connection error prevents refresh');
+   }
+   if(['ready','closed','api-error'].includes(state)){
     const small=await page.getByRole('button').evaluateAll(nodes=>nodes.some(n=>n.getBoundingClientRect().height<44));if(small)throw Error('Touch target below 44px');
-    await page.screenshot({path:resolve(output,`ready-${width}.png`),fullPage:true});
+    await page.screenshot({path:resolve(output,`${state}-${width}.png`),fullPage:true});
    }
    cases++;
   }
