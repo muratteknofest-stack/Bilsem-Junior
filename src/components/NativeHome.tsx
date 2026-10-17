@@ -36,7 +36,7 @@ export function NativeHome({ screen, onScreen, onLogin, onRegister, soundActive,
       {screen === 'home' && <>
         <section className="zp-native-welcome" aria-labelledby="native-home-title">
           <img src="/images/membership/monthly-robot.webp" alt="Tabletindeki şekillerle keşfe hazır Zeki robot" width={1536} height={1024}/>
-          <div><p><Sparkles size={14} aria-hidden="true"/>BİLSEM hazırlık · 1–4. sınıf</p><h1 id="native-home-title">BİLSEM’e<br/>bir adım daha!</h1><span>Dikkat, mantık ve bolca keşif.</span></div>
+          <div><p><Sparkles size={14} aria-hidden="true"/>BİLSEM hazırlık · 1–4. sınıf</p><h1 id="native-home-title">BİLSEM’e<br/>ilk adım!</h1><span>Dikkat, mantık ve bolca keşif.</span></div>
         </section>
         <button type="button" className="zp-native-demo-shortcut" onClick={() => onScreen('demo')}><Puzzle size={20} aria-hidden="true"/><span>Önce bir soru dene<small>Ücretsiz hazırlık sorusu</small></span><ArrowRight size={18} aria-hidden="true"/></button>
         <div className="zp-native-home-actions">
