@@ -62,3 +62,42 @@ test('static CSP permits the Wordwall frame and thumbnails while retaining scrip
   assert.match(csp, /script-src 'self';/);
   assert.doesNotMatch(csp, /unsafe-eval/);
 });
+
+import {
+  buildMapStops,
+  buildMapSvgPath,
+  getGradeWorld,
+  getMapNodeCoordinates,
+  toggleWordwallCompleted
+} from '../src/features/student/wordwall-map-model';
+
+test('3D adventure map builds grade-progressive worlds, winding SVG trail and star milestones', () => {
+  const world1 = getGradeWorld(1);
+  const world4 = getGradeWorld(4);
+  assert.match(world1.worldName, /1\. Sınıf · Merak Adası/);
+  assert.match(world4.worldName, /4\. Sınıf · BİLSEM Zirvesi/);
+
+  const coords = getMapNodeCoordinates(12, 4);
+  assert.equal(coords.length, 12);
+  // Row 0 goes left-to-right, Row 1 snakes right-to-left
+  assert.ok(coords[0].xPercent < coords[3].xPercent);
+  assert.ok(coords[4].xPercent > coords[7].xPercent);
+
+  const pathD = buildMapSvgPath(coords);
+  assert.match(pathD, /^M /);
+  assert.match(pathD, / Q /);
+
+  const sampleActivities = WORDWALL_ACTIVITIES.slice(0, 4);
+  const { nextIds, completed } = toggleWordwallCompleted([], sampleActivities[0].id);
+  assert.equal(completed, true);
+  const stops = buildMapStops(sampleActivities, new Set(nextIds), 0);
+  assert.equal(stops[0].status, 'completed');
+  assert.equal(stops[0].stars, 3);
+  assert.equal(stops[1].status, 'current');
+  assert.equal(stops[2].status, 'unlocked');
+
+  const markup = renderToStaticMarkup(<WordwallLibrary initialGrade={2} />);
+  assert.match(markup, /Bilge Baykuş Zeki/);
+  assert.match(markup, /2\. Sınıf · Örüntü Krallığı/);
+  assert.match(markup, /Durak 1/);
+});

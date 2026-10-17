@@ -7,6 +7,7 @@ export class SoundEngine {
   private listeners = new Set<() => void>();
   private voices = new Set<OscillatorNode>();
   private lastClick = -Infinity;
+
   constructor() {
     try {
       if (typeof window !== 'undefined') {
@@ -16,10 +17,12 @@ export class SoundEngine {
       }
     } catch {}
   }
+
   private persist(key: string, value: string) { try { window.localStorage.setItem(key, value); } catch {} }
   private notify() { for (const listener of this.listeners) listener(); }
   private applyOutput() { try { this.output?.gain.setValueAtTime(this.active ? this.level : 0, this.ctx?.currentTime || 0); } catch {} }
   private stopVoices() { for (const voice of this.voices) { try { voice.stop(); voice.disconnect?.(); } catch {} } this.voices.clear(); }
+
   get enabled() { return this.active; }
   set enabled(value: boolean) {
     this.active = Boolean(value); if (!this.active) this.stopVoices();
@@ -31,11 +34,13 @@ export class SoundEngine {
     this.level = Math.min(1, Math.max(0, value)); if (this.level === 0) this.stopVoices();
     this.persist('zekapark-sound-volume-v1', String(this.level)); this.applyOutput(); this.notify();
   }
+
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   getSnapshot = () => this.enabled;
   getServerSnapshot = () => true;
   getVolumeSnapshot = () => this.volume;
   getServerVolumeSnapshot = () => .45;
+
   /** Invoke during a tap, before awaiting the answer save on mobile. */
   unlock() { this.getContext(); }
   private getContext(): AudioContext | null {
@@ -65,6 +70,7 @@ export class SoundEngine {
       });
     } catch {}
   }
+
   playSuccess() { this.melody([523.25, 659.25, 783.99], .07, .24, .09); }
   playError() { this.melody([261.63, 220], .085, .2, .065); }
   playClick() {
@@ -80,5 +86,14 @@ export class SoundEngine {
   }
   playComboMilestone(_comboCount: number) { this.melody([523.25, 659.25, 783.99, 1046.5], .075, .3, .09); }
   playReminderChime() { this.melody([659.25, 880, 1108.73], .16, .5, .065); }
+  playMapStep(stepIndex = 0) {
+    const scale = [523.25, 587.33, 659.25, 698.46, 783.99, 880, 987.77, 1046.5];
+    const base = scale[Math.abs(stepIndex) % scale.length];
+    this.melody([base, base * 1.25], .045, .16, .085);
+  }
+  playMascotCheer() {
+    this.melody([587.33, 739.99, 880, 1174.66], .065, .22, .09);
+  }
 }
+
 export const sound = new SoundEngine();
