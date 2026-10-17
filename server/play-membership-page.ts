@@ -8,7 +8,7 @@ import { playStoreListing } from './play-listing';
 
 export async function publicPlayMembership() {
   const { settings } = await readPlatformSettings();
-  return { brand: 'BİLSEM Junior', storeUrl: playStoreListing(),
+  return { brand: settings.business.brandName === 'ZekaPark' ? 'BİLSEM Junior' : settings.business.brandName || 'BİLSEM Junior', storeUrl: playStoreListing(),
     ready: playConfig().enabled && playSetupReady() && releaseBlockers(settings).length === 0 };
 }
 export function playMembershipPageHtml(config: PlayMembershipPageProps) {

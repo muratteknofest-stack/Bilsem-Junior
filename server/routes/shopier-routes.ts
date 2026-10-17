@@ -19,7 +19,7 @@ export async function publicShopierView() {
 }
 export function shopierView(settings:import('../../src/lib/platform-settings').PlatformSettings) {
   const ready=shopierReady(settings.shopier);
-  return {ready,enforced:true,brand:'BİLSEM Junior',
+  return {ready,enforced:true,brand:settings.business.brandName==='ZekaPark'?'BİLSEM Junior':settings.business.brandName||settings.business.legalName||'BİLSEM Junior',
     plans:SHOPIER_PLANS.map(p=>({...p,url:ready?shopierProduct(settings.shopier,p.id).url:null}))};
 }
 routes.get('/public/shopier',async(_req,res)=>res.json(await publicShopierView()));
