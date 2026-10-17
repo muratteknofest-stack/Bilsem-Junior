@@ -1,5 +1,10 @@
 // Real Turkish components with isolated Auth/API fixtures. No live account or email is created.
 import assert from 'node:assert/strict';
+async function chooseLearningTopic(page, topic) {
+ await page.getByRole('button',{name:'Konu seç',exact:true}).click();
+ await page.locator(`dialog[open] [data-topic="${topic}"]`).click();
+}
+
 import fs from 'node:fs/promises';
 import {createServer} from 'vite';
 import {chromium} from 'playwright';
@@ -256,10 +261,10 @@ try{
   const chosen=await topics.getByLabel('Test konusu',{exact:true}).inputValue();
   await topics.getByRole('button',{name:'Konu testini aç',exact:true}).click();
   await page.getByRole('heading',{name:'Bugün hangi alanda çalışalım?',exact:true}).waitFor();
-  assert.equal(await page.getByLabel('Soru konusu',{exact:true}).inputValue(),chosen);
-  assert.equal(await page.getByLabel('Soru konusu',{exact:true}).locator('option').count(),45);
+  assert.equal(await page.getByRole('button',{name:'Konu seç',exact:true}).getAttribute('data-current-topic'),chosen);
+  await page.getByRole('button',{name:'Konu seç',exact:true}).click();assert.equal(await page.locator('dialog[open] [data-topic]').count(),45);await page.getByRole('button',{name:'Konu seçimini kapat',exact:true}).click();
   for(const [width,height]of [[320,480],[390,844],[820,1180]]){await page.setViewportSize({width,height});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);}
-  await page.getByLabel('Zorluk düzeyi',{exact:false}).selectOption('1');
+  await page.getByRole('button',{name:'1. seviye · Kolay',exact:true}).click();
   await page.getByRole('button',{name:'Yeni testi başlat',exact:true}).click();
   await page.getByRole('main',{name:'Soru çözme ekranı',exact:true}).waitFor();
   assert.equal(topicRequests.at(-1).topic,chosen);assert.equal(topicRequests.at(-1).expectedGrade,grade);assert.equal(topicRequests.at(-1).difficulty,1);
@@ -267,8 +272,8 @@ try{
   await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
   await page.getByRole('button').filter({hasText:'Karışık Pratik'}).first().click();
   await page.getByRole('heading',{name:'Bugün hangi alanda çalışalım?',exact:true}).waitFor();
-  assert.equal(await page.getByLabel('Soru konusu',{exact:true}).inputValue(),'mixed');
-  await page.getByLabel('Soru konusu',{exact:true}).selectOption('punch_folding');
+  assert.equal(await page.getByRole('button',{name:'Konu seç',exact:true}).getAttribute('data-current-topic'),'mixed');
+  await chooseLearningTopic(page,'punch_folding');
   await page.getByRole('button',{name:'Yeni testi başlat',exact:true}).click();
   await page.getByRole('main',{name:'Soru çözme ekranı',exact:true}).waitFor();assert.equal(topicRequests.at(-1).topic,'punch_folding');
  }
@@ -314,7 +319,7 @@ try{
  await page.locator('.zp-focus-footer').getByText('2 / 2',{exact:true}).waitFor();await page.getByRole('button',{name:'Çalışmadan çık',exact:true}).click();
  await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
  await page.getByRole('button').filter({hasText:'Deneme Sınavı'}).first().click();await page.getByRole('heading',{name:'Denemeni seç',exact:true}).waitFor();
- await page.getByLabel('Soru konusu',{exact:true}).selectOption('paper_folding');await page.getByRole('button',{name:'Yeni testi başlat',exact:true}).click();
+ await chooseLearningTopic(page,'paper_folding');await page.getByRole('button',{name:'Yeni testi başlat',exact:true}).click();
  await page.getByRole('main',{name:'Soru çözme ekranı',exact:true}).waitFor();
  const examSession=[...topicSessions.values()].at(-1);assert.equal(examSession.mode,'exam');
  await page.locator('#option-card-'+examSession.questions[0].correctOptionId).click();await page.locator('.zp-feedback[data-kind=saved]').waitFor();
@@ -329,7 +334,7 @@ try{
   assert.equal(await count.inputValue(),'10');
   for(const invalid of ['', '0','51','2.5']){await count.fill(invalid);assert.equal(await begin.isDisabled(),true);}
   await count.fill('3');assert.equal(await begin.isEnabled(),true);
-  await page.getByLabel('Soru konusu',{exact:true}).selectOption('matrix_3x3');
+  await chooseLearningTopic(page,'matrix_3x3');
   for(const [width,height]of [[320,480],[390,844],[820,1180]]){await page.setViewportSize({width,height});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);}
   await begin.click();await page.getByRole('main',{name:'Soru çözme ekranı',exact:true}).waitFor();
   const adaptive=[...topicSessions.values()].at(-1),starts=topicRequests.length;

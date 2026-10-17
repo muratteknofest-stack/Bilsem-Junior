@@ -76,6 +76,7 @@ routes.get("/admin/platform-settings/shopier-diagnostics", async (_req, res) => 
     tokenMeta,
     productsReport,
     candidatesReport,
+    blockers: releaseBlockers(record.settings),
   });
 });
 
