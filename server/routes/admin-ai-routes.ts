@@ -14,7 +14,7 @@ import { adminAiLimiter } from '../rate-limiters';
 import { getGeminiClient } from '../gemini-client';
 import type { BaseQuestion, QuestionType } from '../../src/types';
 import { EditorialValidationError, prepareEditorialQuestion } from '../editorial-validation';
-import { archiveQuestionRevision, assertQuestionRevision, EditorialConflictError, saveQuestionRevision } from '../editorial-store';
+import { archiveQuestionRevision, assertQuestionRevision, EditorialConflictError, saveGeneratedQuestionDraft, saveQuestionRevision } from '../editorial-store';
 
 const adminAiRoutes = Router();
 
@@ -77,16 +77,11 @@ adminAiRoutes.post('/admin/ai-generate-question', requireSupabaseAuth, adminAiLi
 
     if (result.question) {
       try {
-        const adminDb = getAdminDb();
-        const qRef = adminDb.collection('questions').doc(result.question.id);
-        await qRef.set({
-          ...result.question,
-          status: result.success ? 'draft' : 'review',
-          revision: 0,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          updatedBy: req.authUser.uid,
-        });
+        await saveGeneratedQuestionDraft(
+          result.question,
+          result.success ? 'draft' : 'review',
+          req.authUser.uid,
+        );
       } catch (saveErr) {
         logServerFailure('AI question save failed', saveErr);
         return res.status(503).json({ error: 'Denetim sonucu kaydedilemedi. Soru yayımlanmadı.' });
@@ -170,14 +165,11 @@ adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, adminAiLimi
       }, { existingQuestions: await loadQualityComparisonPool(currentData.type) });
 
       if (result.question) {
-        await adminDb.collection('questions').doc(result.question.id).set({
-          ...result.question,
-          status: result.success ? 'draft' : 'review',
-          revision: 0,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          updatedBy: req.authUser.uid,
-        });
+        await saveGeneratedQuestionDraft(
+          result.question,
+          result.success ? 'draft' : 'review',
+          req.authUser.uid,
+        );
       }
 
       if (result.success) await saveQuestionRevision(archiveQuestionRevision(currentData, req.authUser.uid), revision);

@@ -19,6 +19,8 @@ import { accountSecurityLimiter, panelSwitchLimiter, reportLimiter } from '../ra
 import { createStudentSessionHandler } from '../student-session';
 import { createParentSessionHandler, ParentSignInError, ParentEmailUnconfirmedError } from '../parent-session';
 import { createStudentPasswordHandler } from '../student-password';
+import { activateUnconfirmedStudents } from '../student-activation';
+
 
 const parentRoutes = Router();
 
@@ -84,16 +86,7 @@ parentRoutes.post('/parent/activate-students', requireSupabaseAuth, requireVerif
   if (!ids.length) return res.json({ activated: 0 });
   const children = await client.from('profiles').select('id').in('id', ids).eq('linked_parent_id', req.authUser!.uid).eq('role', 'student');
   if (children.error) throw children.error;
-  let activated = 0;
-  for (const child of children.data || []) {
-    const user = await client.auth.admin.getUserById(child.id);
-    if (user.error) throw user.error;
-    if (!user.data.user.email_confirmed_at) {
-      const result = await client.auth.admin.updateUserById(child.id, { email_confirm: true });
-      if (result.error) throw result.error;
-      activated++;
-    }
-  }
+  const activated = await activateUnconfirmedStudents(children.data || [], client.auth.admin);
   return res.json({ activated });
 });
 

@@ -25,6 +25,7 @@ import { AiHintModal } from './AiHintModal';
 import { AiMistakeModal } from './AiMistakeModal';
 import { ComboStreakIndicator } from './animations/ComboStreakIndicator';
 import { answerXp } from '../features/student/gamification-model';
+import { PRACTICE_CATEGORY_OPTIONS, resolveTimerPresetSeconds, type TimerPreset } from '../features/student/session-helpers';
 import { ComboBurstOverlay } from './animations/ComboBurstOverlay';
 import { StreakFloatingFloater } from './animations/StreakFloatingFloater';
 import { dataService } from '../services/data-service';
@@ -62,19 +63,7 @@ interface PracticeSessionViewProps {
   onOpenMistakes: () => void;
 }
 
-const CATEGORY_OPTIONS: { id: CognitiveCategory | 'mixed'; label: string }[] = [
-  { id: 'mixed', label: '🎲 Karışık (Tüm Konular)' },
-  { id: 'pattern', label: '🔄 Görsel Örüntü' },
-  { id: 'matrix', label: '▦ Matris Tamamlama' },
-  { id: 'spatial', label: '🧭 Uzamsal Zeka' },
-  { id: 'logic', label: '💡 Mantık & Analoji' },
-  { id: 'attention', label: '🎯 Görsel Dikkat' },
-  { id: 'visual_perception', label: '👁️ Görsel Algı' },
-  { id: 'numerical', label: '🔢 Sayısal Muhakeme' },
-  { id: 'memory', label: '🧠 Görsel Bellek' },
-];
-
-type TimerPreset = '5m' | '10m' | '15m' | 'untimed';
+const CATEGORY_OPTIONS = PRACTICE_CATEGORY_OPTIONS;
 
 const STREAK_BADGES: Record<number, { icon: React.ReactNode, title: string, color: string, border: string }> = {
   3: { icon: <Flame className="w-8 h-8 text-white" />, title: '3 Seri! Alev Aldın!', color: 'bg-gradient-to-r from-orange-400 to-orange-600', border: 'border-orange-200' },
@@ -237,14 +226,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
     }
   };
 
-  const getPresetSeconds = (preset: TimerPreset): number => {
-    switch (preset) {
-      case '5m': return 5 * 60;
-      case '10m': return 10 * 60;
-      case '15m': return 15 * 60;
-      case 'untimed': return 0;
-    }
-  };
+  const getPresetSeconds = resolveTimerPresetSeconds;
 
   const studentGrade = dataService.getCurrentUser().grade;
   const maxGradeDifficulty = isSchoolGrade(studentGrade) ? gradeDifficulty(studentGrade, 6) : 6;

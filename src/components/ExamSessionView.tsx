@@ -1,5 +1,6 @@
 import { QuestionIssueButton } from './QuestionIssueButton';
 import { isSchoolGrade } from '../features/questions/quality-policy';
+import { matchesExamModeFilter } from '../features/student/session-helpers';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BaseQuestion, ExamResult, CognitiveCategory, DifficultyLevel } from '../types';
@@ -482,15 +483,7 @@ export const ExamSessionView: React.FC<ExamSessionViewProps> = ({ onNavigateHome
           {/* Exam Mode Selection Grid */}
           {startError && <p role="alert" className="text-sm text-rose-200">{startError}</p>}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {EXAM_MODES.filter(mode => !mode.category || STUDENT_CATEGORY_TYPES[mode.category]).filter((mode) => {
-              if (activeFilter === 'all') return true;
-              if (activeFilter === 'focus') return !!mode.category;
-              if (activeFilter === 'grade1') return mode.grade === 1 || mode.id === 'warmup';
-              if (activeFilter === 'grade2') return mode.grade === 2 || mode.id === 'warmup';
-              if (activeFilter === 'grade3') return mode.grade === 3 || mode.id === 'warmup';
-              if (activeFilter === 'grade4') return mode.grade === 4 || mode.id === 'warmup';
-              return true;
-            }).map((mode) => {
+            {EXAM_MODES.filter(mode => !mode.category || STUDENT_CATEGORY_TYPES[mode.category]).filter((mode) => matchesExamModeFilter(mode, activeFilter)).map((mode) => {
               const IconComponent = mode.icon;
               return (
                 <button

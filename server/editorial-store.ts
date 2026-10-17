@@ -1,9 +1,13 @@
 import type { BaseQuestion } from '../src/types';
 import { getServiceClient } from './supabase-admin';
+import { prepareGeneratedQuestionDraft } from './editorial-validation';
+
+export { prepareGeneratedQuestionDraft };
 
 export class EditorialConflictError extends Error {
   constructor() { super('Soru başka bir oturumda değişti. Yeniden yükleyip inceleyin.'); }
 }
+
 export function assertQuestionRevision(question: BaseQuestion, expectedRevision: number) {
   if ((question.revision ?? 0) !== expectedRevision) throw new EditorialConflictError();
 }
@@ -19,6 +23,17 @@ export async function saveQuestionRevision(question: BaseQuestion, expectedRevis
     throw new Error('Soru kayıt sonucu doğrulanamadı.');
   }
   return data as BaseQuestion;
+}
+
+/** Saves a newly generated AI question through the atomic public.save_question RPC lock. */
+export async function saveGeneratedQuestionDraft(
+  question: BaseQuestion,
+  status: 'draft' | 'review',
+  adminId: string,
+  now = new Date().toISOString(),
+): Promise<BaseQuestion> {
+  const draft = prepareGeneratedQuestionDraft(question, status, adminId, now);
+  return saveQuestionRevision(draft, 0);
 }
 
 /** Archival is allowed even when damaged content cannot pass a publication audit. */

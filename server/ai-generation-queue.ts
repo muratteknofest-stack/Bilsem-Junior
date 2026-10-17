@@ -1,3 +1,4 @@
+import { hydrateStatelessJobRecord } from './ai-queue-state';
 import { logServerFailure } from './safe-log';
 import { EDUCATION_PROFILES } from '../src/features/questions/quality-policy';
 import { loadQualityComparisonPool } from './question-quality-store';
@@ -122,7 +123,49 @@ export class AiGenerationQueue {
     return jobId;
   }
 
+
   public getJob(jobId: string): GenerationJob | undefined {
+    return this.jobs.get(jobId);
+  }
+
+  /**
+   * Stateless Serverless helper: loads a job from persistent Supabase storage
+   * if the current serverless container does not have it in memory.
+   */
+  public async loadJobFromStore(jobId: string): Promise<GenerationJob | undefined> {
+    const cached = this.jobs.get(jobId);
+    if (cached) return cached;
+    try {
+      const doc = await this.store.collection('ai_generation_jobs').doc(jobId).get();
+      if (!doc || !doc.exists) return undefined;
+      const hydrated = hydrateStatelessJobRecord<GenerationJobConfig, PipelineResult>(doc.id || jobId, doc.data());
+      if (!hydrated) return undefined;
+      this.jobs.set(jobId, hydrated);
+      return hydrated;
+    } catch (error) {
+      logServerFailure('AI job stateless load failed', error);
+      return undefined;
+    }
+  }
+
+  /**
+   * Executes a single deterministic generation step for a job and awaits persistence
+   * before returning, preventing Vercel Serverless freeze mid-queue.
+   */
+  public async stepJob(jobId: string): Promise<GenerationJob | undefined> {
+    const job = await this.loadJobFromStore(jobId);
+    if (!job) return undefined;
+    if (job.status === 'completed' || job.status === 'failed') return job;
+    if (job.progress.completed >= job.progress.total) {
+      job.status = 'completed';
+      job.completedAt = Date.now();
+      await this.saveJobToSupabase(job);
+      return job;
+    }
+    if (!this.processingQueue.includes(jobId)) {
+      this.processingQueue.unshift(jobId);
+    }
+    await this.processNext();
     return this.jobs.get(jobId);
   }
 

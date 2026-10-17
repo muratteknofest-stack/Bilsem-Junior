@@ -67,6 +67,7 @@ create table public.questions (
   data jsonb not null
 );
 create index questions_status_idx on public.questions (status);
+create index questions_published_lookup_idx on public.questions (status, target_grade, category, difficulty);
 
 create table public.practice_sessions (
   id text primary key,

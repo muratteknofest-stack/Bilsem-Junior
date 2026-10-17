@@ -55,3 +55,20 @@ export function prepareEditorialQuestion(
   return stored;
 }
 
+
+/** Formats a newly generated AI question for initial revision-locked storage (expectedRevision = 0 -> revision = 1). */
+export function prepareGeneratedQuestionDraft(
+  question: BaseQuestion,
+  status: 'draft' | 'review',
+  adminId: string,
+  now = new Date().toISOString(),
+): BaseQuestion {
+  return {
+    ...question,
+    status,
+    revision: 1,
+    createdAt: question.createdAt || now,
+    updatedAt: now,
+    updatedBy: adminId,
+  };
+}
