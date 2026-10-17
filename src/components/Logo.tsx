@@ -18,13 +18,12 @@ export const Logo: React.FC<LogoProps> = ({
   className = '',
   onClick,
 }) => {
-  // Dimension tokens
   const iconDimensions = {
-    xs: 'w-7 h-7 rounded-lg',
-    sm: 'w-8 h-8 rounded-xl',
-    md: 'w-10 h-10 rounded-xl',
-    lg: 'w-13 h-13 rounded-xl',
-    xl: 'w-18 h-18 rounded-xl',
+    xs: 'w-8 h-8 rounded-xl',
+    sm: 'w-9 h-9 rounded-xl',
+    md: 'w-11 h-11 rounded-2xl',
+    lg: 'w-14 h-14 rounded-2xl',
+    xl: 'w-20 h-20 rounded-3xl',
   }[size];
 
   const titleSizes = {
@@ -67,20 +66,18 @@ export const Logo: React.FC<LogoProps> = ({
       }}
       className={`flex items-center gap-2.5 sm:gap-3 select-none ${onClick ? 'cursor-pointer group' : ''} ${className}`}
     >
-      {/* Brand Icon Vector Image with Playful Hover Physics */}
+      {/* Cute Wise Owl "Zeki" Mascot Emblem */}
       <div
-        className={`${iconDimensions} relative shrink-0 overflow-hidden   ring-1 ring-white/30 flex items-center justify-center transition-all duration-300 transform ${
-          onClick ? 'group-hover:scale-108 group-hover:-rotate-2 group-active:scale-95 ' : ''
+        className={`${iconDimensions} relative shrink-0 overflow-hidden shadow-md ring-2 ring-indigo-500/20 flex items-center justify-center transition-transform duration-300 ${
+          onClick ? 'group-hover:scale-105 group-hover:-rotate-3 group-active:scale-95' : ''
         }`}
       >
         <img
           src="/logo.svg"
-          alt="ZekaPark Logo"
-          className="w-full h-full object-contain filter drop-"
+          alt="ZekaPark Bilge Baykuş Zeki Maskotu"
+          className="w-full h-full object-contain"
           referrerPolicy="no-referrer"
         />
-        {/* Subtle glass reflection overlay */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/30 pointer-events-none rounded-inherit" />
       </div>
 
       {/* Logotype Typography */}
@@ -101,7 +98,7 @@ export const Logo: React.FC<LogoProps> = ({
               className={`inline-flex items-center gap-1 font-extrabold rounded-full border shrink-0 transition-transform ${badgeSizes} ${
                 isDark
                   ? 'bg-indigo-500/20 text-indigo-200 border-indigo-400/30'
-                  : 'bg-gradient-to-r from-amber-50 to-indigo-50 text-indigo-800 border-indigo-200/80 '
+                  : 'bg-gradient-to-r from-amber-50 to-indigo-50 text-indigo-800 border-indigo-200/80'
               } ${onClick ? 'group-hover:scale-105' : ''}`}
             >
               <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-500 shrink-0" />
@@ -115,7 +112,7 @@ export const Logo: React.FC<LogoProps> = ({
                 isDark ? 'text-slate-400' : 'text-slate-500'
               }`}
             >
-              Bilişsel Zeka & Akıl Oyunları
+              Bilge Baykuş Zeki ile Keşfet
             </p>
           )}
         </div>
