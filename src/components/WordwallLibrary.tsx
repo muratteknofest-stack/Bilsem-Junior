@@ -1,4 +1,5 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { isAndroidApp } from '../lib/native-app';
 import { ArrowLeft, ArrowRight, Maximize, Play, Search, Shapes, X } from 'lucide-react';
 import { filterWordwallActivities, WORDWALL_ACTIVITIES, wordwallInitialGrade, type WordwallActivity } from '../features/student/wordwall-model';
 
@@ -15,9 +16,10 @@ export function WordwallLibrary({ initialGrade, headingLevel = 2 }: { initialGra
   const gameButton = useRef<HTMLButtonElement | null>(null);
   const categories = [...new Set(WORDWALL_ACTIVITIES.filter(item => grade === 'all' || item.grade === grade).map(item => item.category))].sort((a, b) => a.localeCompare(b, 'tr'));
   const filtered = filterWordwallActivities(WORDWALL_ACTIVITIES, grade, category, query);
-  const pages = Math.max(1, Math.ceil(filtered.length / 12));
+  const pageSize = isAndroidApp ? 4 : 12;
+  const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, pages - 1);
-  const visible = filtered.slice(currentPage * 12, (currentPage + 1) * 12);
+  const visible = filtered.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
   const reset = () => { setPage(0); setSelected(null); setFullscreenError(''); };
   const open = (item: WordwallActivity, button: HTMLButtonElement) => {
     gameButton.current = button; setSelected(item); setFullscreenError('');
@@ -27,6 +29,12 @@ export function WordwallLibrary({ initialGrade, headingLevel = 2 }: { initialGra
     setSelected(null); setFullscreenError('');
     requestAnimationFrame(() => gameButton.current?.focus());
   };
+  useEffect(() => {
+    if (!isAndroidApp || !selected) return;
+    const back = (event: Event) => { event.preventDefault(); event.stopImmediatePropagation(); close(); };
+    window.addEventListener('zekapark:native-back', back, true);
+    return () => window.removeEventListener('zekapark:native-back', back, true);
+  }, [selected]);
   const fullscreen = async () => {
     try { if (!player.current?.requestFullscreen) throw Error(); await player.current.requestFullscreen(); }
     catch { setFullscreenError('Bu tarayıcı tam ekranı desteklemiyor. Oyunu aşağıdaki ekranda oynamaya devam edebilirsin.'); }

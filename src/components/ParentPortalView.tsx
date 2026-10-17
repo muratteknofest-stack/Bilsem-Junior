@@ -1,3 +1,4 @@
+import { isAndroidApp } from '../lib/native-app';
 import { NativeAccessStatus } from './NativeAccessStatus';
 import { AccountCenter, FamilyActivation } from './AccountCenter';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -114,7 +115,8 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
   const [studentLoadError, setStudentLoadError] = useState('');
   const [studentReload, setStudentReload] = useState(0);
   const [passwordResetNotice, setPasswordResetNotice] = useState('');
-  const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'preferences'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'preferences' | 'membership'>('overview');
+  const [nativeReportOpen, setNativeReportOpen] = useState(false);
   const [chartViewMode, setChartViewMode] = useState<'radar' | 'momentum'>('radar');
   const [skillFilter, setSkillFilter] = useState<'all' | 'strengths' | 'weaknesses'>('all');
   const [showReminderModal, setShowReminderModal] = useState(false);
@@ -640,10 +642,11 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               <Bell className="w-4 h-4" /> Bildirim & E-posta
             </span>
           </button>
+          {isAndroidApp && <button type="button" aria-pressed={activeTab === 'membership'} onClick={() => setActiveTab('membership')} className="zp-native-parent-membership">Üyelik</button>}
         </div>
 
-        {parentProfile?.role === 'parent' && <FamilyActivation />}
-        {parentProfile?.role === 'parent' && currentStudent.role === 'student' && <NativeAccessStatus studentId={currentStudent.id} studentName={currentStudent.name}/>}
+        {(!isAndroidApp || activeTab === 'membership') && parentProfile?.role === 'parent' && <FamilyActivation />}
+        {(!isAndroidApp || activeTab === 'membership') && parentProfile?.role === 'parent' && currentStudent.role === 'student' && <NativeAccessStatus studentId={currentStudent.id} studentName={currentStudent.name}/>}
         <AnimatePresence mode="wait">
           {activeTab === 'overview' && (
             <motion.div 
@@ -768,6 +771,8 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
 
               </div>
 
+              {isAndroidApp && <button type="button" className="zp-native-report-toggle" aria-expanded={nativeReportOpen} aria-controls="zp-parent-report" onClick={() => setNativeReportOpen(value => !value)}>{nativeReportOpen ? 'Raporu kapat' : 'Ayrıntılı gelişim raporunu aç'}</button>}
+              {(!isAndroidApp || nativeReportOpen) && <div id="zp-parent-report">
               {/* Main Visuals Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
@@ -1131,6 +1136,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
 
               </div>
 
+              </div>}
             </motion.div>
           )}
 

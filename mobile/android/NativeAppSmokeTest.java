@@ -41,17 +41,14 @@ public class NativeAppSmokeTest {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         activity = (MainActivity) InstrumentationRegistry.getInstrumentation().startActivitySync(intent);
         try {
-            awaitTrue("Boolean(document.querySelector('#hero-title'))");
-            Log.i("ZekaParkSmoke", "Shared home rendered");
-            assertEquals("true", evaluate("document.body.innerText.includes('büyük keşiflere') && Boolean(document.querySelector('#membership-title'))"));
-            evaluate("document.querySelector('[aria-label=\"Menüyü aç\"]').click()");
-            awaitTrue("Boolean(document.querySelector('dialog[open]'))");
+            awaitTrue("Boolean(document.querySelector('#native-home-title'))");
+            Log.i("ZekaParkSmoke", "Compact mobile home rendered");
+            assertEquals("true", evaluate("Boolean(document.querySelector('.zp-native-home-nav')) && !document.querySelector('#membership-title')"));
+            evaluate("[...document.querySelectorAll('.zp-native-home-nav button')].find(b=>b.textContent.trim()==='Yardım').click()");
+            awaitTrue("Boolean(document.querySelector('.zp-native-help'))");
             InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
-            awaitTrue("!document.querySelector('dialog[open]')");
-            Log.i("ZekaParkSmoke", "Menu and native Back passed");
-            evaluate("document.querySelector('[aria-label=\"Menüyü aç\"]').click()");
-            awaitTrue("Boolean(document.querySelector('dialog[open]'))");
-            evaluate("[...document.querySelectorAll('dialog button')].find(b=>b.textContent.trim()==='Öğrenci girişi').click()");
+            awaitTrue("Boolean(document.querySelector('#native-home-title'))");
+            evaluate("document.querySelector('.zp-native-primary').click()");
             awaitTrue("Boolean(document.querySelector('#zp-auth-heading'))");
             Log.i("ZekaParkSmoke", "Login reached from shared home");
             assertEquals("true", evaluate("window.Capacitor.isNativePlatform()"));
@@ -69,7 +66,7 @@ public class NativeAppSmokeTest {
             InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
             awaitTrue("[...document.querySelectorAll('button')].some(b=>b.textContent.trim()==='Giriş Yap' && b.getAttribute('aria-pressed')==='true')");
             InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> activity.getOnBackPressedDispatcher().onBackPressed());
-            awaitTrue("Boolean(document.querySelector('#hero-title'))");
+            awaitTrue("Boolean(document.querySelector('#native-home-title'))");
         } finally {
             Log.i("ZekaParkSmoke", "Smoke finished; releasing activity");
             InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> activity.finish());

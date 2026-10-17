@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 /** Verify the compiled package, rather than inferring security from source XML. */
 export function verifyAndroidRelease(manifest, badging) {
   const pkg = badging.match(/^package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'/m);
-  if (!pkg || pkg[1] !== 'com.zekapark.app' || pkg[2] !== '8' || pkg[3] !== '1.0.7') throw Error('Unexpected release identity or version');
+  if (!pkg || pkg[1] !== 'com.zekapark.app' || pkg[2] !== '9' || pkg[3] !== '1.0.8') throw Error('Unexpected release identity or version');
   if (!/^sdkVersion:'24'$/m.test(badging) || !/^targetSdkVersion:'36'$/m.test(badging)) throw Error('Unexpected SDK requirements');
   // AAPT encodes boolean true as either 0xffffffff or 0x1. Missing means Android's default false.
   if (/android:(?:debuggable|testOnly)[^\n]*\)0x(?:ffffffff|1)\b/i.test(manifest)) throw Error('Debug or test-only release rejected');

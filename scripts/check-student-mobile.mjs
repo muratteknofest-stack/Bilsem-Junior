@@ -3,9 +3,12 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { createServer } from 'vite';
 import { chromium } from 'playwright';
+const native = process.argv.includes('--native');
+process.env.VITE_API_BASE_URL = 'https://app.example.invalid';
+process.env.VITE_PUBLIC_SITE_URL = 'https://app.example.invalid';
 process.env.VITE_SUPABASE_URL = 'https://student-mobile-fixture.invalid';
 process.env.VITE_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_isolated_fixture';
-const server = await createServer({server:{host:'127.0.0.1',port:5189,strictPort:true}}); await server.listen();
+const server = await createServer({mode:native?'android':'development',server:{host:'127.0.0.1',port:5189,strictPort:true}}); await server.listen();
 const studentId = '22222222-2222-4222-8222-222222222222', parentId = '11111111-1111-4111-8111-111111111111';
 const monday = new Date(); monday.setDate(monday.getDate() - (monday.getDay()+6)%7);
 const weekStart = `${monday.getFullYear()}-${String(monday.getMonth()+1).padStart(2,'0')}-${String(monday.getDate()).padStart(2,'0')}`;
@@ -47,7 +50,14 @@ try {
  };
  // Verify the paid task card that overflowed in the report, plus every dashboard tab.
  for(const width of [320,360,390,430,600,768,1024,1440]){
-  await page.setViewportSize({width,height:900});await go();await page.locator('[aria-label="Konuya göre test"]').waitFor();
+  await page.setViewportSize({width,height:900});await go();
+  if(native){
+   await page.getByRole('button',{name:'Konu testleri',exact:true}).click();await page.locator('[aria-label="Konuya göre test"]').waitFor();
+   assert.equal(await page.locator('.zp-modes-section').count(),0);
+   await page.getByRole('button',{name:'Oyunlar',exact:true}).click();await page.getByRole('button',{name:'Hızlı başla',exact:true}).click();
+   await page.locator('.zp-modes-section').waitFor();assert.equal(await page.locator('[aria-label="Konuya göre test"]').count(),0);assert.equal(await page.locator('.zp-student-aside').count(),0);
+   const layout=await page.evaluate(()=>({height:document.documentElement.scrollHeight,viewport:innerHeight}));assert.ok(layout.height<layout.viewport*1.6,'Quick screen should stay compact '+JSON.stringify(layout));
+  }else await page.locator('[aria-label="Konuya göre test"]').waitFor();
   for(const name of ['Görevlerim','Kişisel planım','Yeteneklerim','İlerlemem','Çalışma alanım']){
    await page.locator('.zp-study-navigation').getByRole('button',{name,exact:true}).click();
    await page.waitForTimeout(240);await noOverflow(`${width}px ${name}`);

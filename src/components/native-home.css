@@ -1,0 +1,47 @@
+.zp-native-home{min-height:calc(100dvh - var(--zp-safe-top,0px) - var(--zp-safe-bottom,0px));background:#f7f8fc;color:#252b49;padding-bottom:calc(74px + var(--zp-safe-bottom,0px));font-family:'Plus Jakarta Sans',sans-serif}
+.zp-native-home button,.zp-native-home a{touch-action:manipulation;cursor:pointer}
+.zp-native-home button:focus-visible,.zp-native-home a:focus-visible,.zp-native-home summary:focus-visible{outline:3px solid #7954dc;outline-offset:3px}
+.zp-native-home-header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;padding:8px 20px;max-width:640px;margin:auto}
+.zp-native-home-header h1{font-size:18px;font-weight:750;flex:1;outline:none}
+.zp-native-icon{display:grid;place-items:center;width:44px;height:44px;border:1px solid #e7e4ef;border-radius:14px;background:#fff;color:#655b79;flex-shrink:0}
+.zp-native-home-content{width:min(100%,640px);padding:8px 20px 12px;margin:auto}
+.zp-native-welcome{position:relative;border-radius:24px;overflow:hidden;background:#e5f5ed;padding:22px 18px;min-height:178px;isolation:isolate}
+.zp-native-welcome img{position:absolute;right:-18%;top:0;height:100%;width:85%;object-fit:cover;object-position:left center;z-index:-1}
+.zp-native-welcome:after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,#e5f5ed 31%,#e5f5eddd 42%,transparent 67%);z-index:-1}
+.zp-native-welcome p{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:#386955;margin:0 0 9px}
+.zp-native-welcome h1{font-family:Outfit,sans-serif;font-size:31px;line-height:1.08;font-weight:750;letter-spacing:-.025em;margin:0 0 10px}
+.zp-native-welcome span{font-size:10px;color:#4c6c60}
+.zp-native-home-actions{display:grid;gap:12px;margin-top:18px}
+.zp-native-primary,.zp-native-register{display:flex;align-items:center;gap:13px;border-radius:17px;min-height:76px;padding:13px 17px;text-align:left;box-shadow:0 3px 0 #5133ae}
+.zp-native-primary{color:white;background:#7050d7;border:1px solid #5b3cbf}
+.zp-native-register{color:#265f50;background:#dff4e9;border:1px solid #b5dfca;box-shadow:0 3px 0 #b3d6c6}
+.zp-native-home-actions button>span{flex:1;min-width:0;font-size:16px;font-weight:750}
+.zp-native-home-actions small{display:block;font-size:11px;font-weight:450;margin-top:3px;opacity:.9}
+.zp-native-home-shortcuts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:2px}
+.zp-native-home-shortcuts button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:64px;padding:10px;border-radius:16px;background:#fff;border:1px solid #e6e4ee;color:#625b7d}
+.zp-native-home-shortcuts button:last-child{background:#fff4d9;border-color:#f2dfac;color:#8c6721}
+.zp-native-home-shortcuts button>span{font-size:12px;flex:initial}
+.zp-native-home-note{display:flex;align-items:center;justify-content:center;gap:6px;font-size:10px;line-height:1.5;color:#797a8b;margin:16px 0 0}
+.zp-native-home-nav{position:fixed;bottom:0;left:var(--zp-safe-left,0px);right:var(--zp-safe-right,0px);z-index:60;display:flex;justify-content:center;background:#fffffffa;border-top:1px solid #e8e7ef;padding:6px 12px calc(6px + var(--zp-safe-bottom,0px));backdrop-filter:blur(16px)}
+.zp-native-home-nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:54px;width:min(33.333%,200px);border-radius:14px;color:#797789;font-size:10px;font-weight:600}
+.zp-native-home-nav button[aria-current=page]{color:#6c4acb;background:#f2edfc}
+.zp-native-help{display:grid;gap:10px;font-size:13px;line-height:1.7;padding-bottom:10px}
+.zp-native-help>p{color:#777486;font-size:12px;margin:0 0 8px}
+.zp-native-help details{background:#fff;border:1px solid #e6e4ee;border-radius:15px;padding:0 14px}
+.zp-native-help summary{cursor:pointer;min-height:56px;align-content:center;font-weight:650}
+.zp-native-help details p{font-size:12px;color:#6c687d;padding-bottom:14px}
+.zp-native-help a,.zp-native-help details button{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;color:#6c4acb}
+.zp-native-help details button{width:100%;padding-bottom:12px}
+.zp-native-home .zp-demo-section{padding:0;background:none}
+.zp-native-home .zp-demo-grid{display:block;width:100%;padding:0}
+.zp-native-home .zp-demo-intro{display:none}
+.zp-native-home .zp-demo-card{padding:16px;border-radius:18px}
+.zp-native-home .zp-demo-level{flex-wrap:wrap;gap:6px}
+.zp-native-home .zp-demo-tabs{margin:12px 0;gap:5px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.zp-native-home .zp-demo-tabs button{padding:8px 4px;min-height:44px;font-size:10px;justify-content:center;min-width:0}
+.zp-native-home .zp-demo-card h3{font-size:17px;margin:12px 0}
+.zp-native-home .zp-demo-complete{padding:16px 0}
+@media(max-height:700px){.zp-native-home-header{min-height:58px}.zp-native-welcome{min-height:150px;padding:17px}.zp-native-welcome h1{font-size:28px}.zp-native-home-actions{gap:10px;margin-top:12px}.zp-native-primary,.zp-native-register{min-height:66px}.zp-native-home-shortcuts button{min-height:54px}.zp-native-home-note{margin-top:12px}}
+@media(orientation:landscape) and (max-height:550px){.zp-native-home-content:has(.zp-native-welcome){display:grid;grid-template-columns:1fr 1fr;gap:15px}.zp-native-home-actions{margin:0}.zp-native-home-note{grid-column:1/-1}.zp-native-welcome{height:100%}}
+@media(max-height:800px){.zp-native-home-header{min-height:58px}.zp-native-welcome{min-height:144px;padding:17px}.zp-native-welcome h1{font-size:28px}.zp-native-home-actions{gap:10px;margin-top:12px}.zp-native-primary,.zp-native-register{min-height:62px;padding-block:10px}.zp-native-home-shortcuts button{min-height:52px}.zp-native-home-note{margin-top:12px}}
+@media(max-height:680px){.zp-native-home-header{min-height:54px;padding-block:5px}.zp-native-welcome{min-height:128px;padding:14px}.zp-native-welcome h1{font-size:26px;margin-bottom:7px}.zp-native-welcome p{margin-bottom:6px}.zp-native-home-actions{gap:8px;margin-top:10px}.zp-native-primary,.zp-native-register{min-height:56px;padding-block:8px}.zp-native-home-shortcuts button{min-height:48px}.zp-native-home-note{font-size:9px;margin-top:10px}}
