@@ -51,8 +51,8 @@ const faqs = [
   ['Hesap açmadan deneyebilir miyim?', 'Evet. Bu sayfada bir örnek soru çözebilirsin. Buradaki deneme puanları ve cevaplar hesabına kaydedilmez.'],
   ['Sorular nasıl çözülüyor?', 'Sorunun türüne göre sürükle-bırak, sıralama, eşleştirme veya sayısal cevap kullanabilirsin. İstersen klasik şık seçimine dönebilirsin. Kartları sürüklemek yerine önce karta, sonra hedefe dokunmak da mümkün.'],
   ['Veli olarak neler yapabilirim?', 'Veli girişi üzerinden çocuğunun çalışma ve gelişim bilgilerine ulaşabilirsin. Öğrenci ve veli için ayrı girişler bulunur.'],
-  ['Hangi sınıflar için kullanabilirim?', 'ZekaPark’ta 1, 2, 3 ve 4. sınıflara göre keşif rotaları bulunur. Ana sayfada sınıf seçerek örnek soruyu inceleyebilirsin. Bu seçim, hesabındaki sınıf bilgisini değiştirmez.'],
-  ['BİLSEM sınavının resmî uygulaması mı?', 'Hayır. ZekaPark bağımsız bir alıştırma platformudur; MEB veya BİLSEM ile kurumsal bağlantısı yoktur. Etkinlikler bir tanı ya da sınav başarısı garantisi sunmaz.'],
+  ['Hangi sınıflar için kullanabilirim?', 'BİLSEM Junior’da 1, 2, 3 ve 4. sınıflara göre keşif rotaları bulunur. Ana sayfada sınıf seçerek örnek soruyu inceleyebilirsin. Bu seçim, hesabındaki sınıf bilgisini değiştirmez.'],
+  ['BİLSEM sınavının resmî uygulaması mı?', 'Hayır. BİLSEM Junior bağımsız bir alıştırma platformudur; MEB veya BİLSEM ile kurumsal bağlantısı yoktur. Etkinlikler bir tanı ya da sınav başarısı garantisi sunmaz.'],
   ['Animasyonları kapatabilir miyim?', 'Evet. Üst menüdeki hareket düğmesiyle animasyonları durdurabilirsin. Cihazındaki hareketi azalt tercihi de otomatik olarak dikkate alınır.'],
 ];
 
@@ -118,15 +118,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
       onDemo={goDemo} moving={moving} reducedMotion={!!reducedMotion} onToggleMotion={() => setPaused(!paused)}
       soundActive={soundActive} onToggleSound={() => { sound.enabled = !soundActive; setSoundActive(!soundActive); }} />
     <main id="ana-icerik">
-      <div className="zp-welcome-strip"><Sparkles size={14} aria-hidden="true" /><span>Merakını getir, maceraya birlikte çıkalım.</span><a href="#kesfet" onClick={e => { e.preventDefault(); goDemo(); }}>Bir soru dene <ArrowRight size={14} /></a></div>
+      <div className="zp-welcome-strip"><Sparkles size={14} aria-hidden="true" /><span>BİLSEM yolculuğuna merakla başla.</span><a href="#kesfet" onClick={e => { e.preventDefault(); goDemo(); }}>Bir soru dene <ArrowRight size={14} /></a></div>
       <section className="zp-hero-section" aria-labelledby="hero-title">
         <div className="zp-sky-decor" aria-hidden="true"><span className="zp-cloud zp-cloud-one" /><span className="zp-cloud zp-cloud-two" /><span className="zp-sky-sun" /><span className="zp-sky-spark">✦</span></div>
         <div className="zp-container zp-hero">
         <motion.div {...reveal} className="zp-hero-copy">
-          <div className="zp-eyebrow"><Sparkles size={16} /> 1–4. SINIFLAR İÇİN KEŞİF VE DÜŞÜNME OYUNLARI</div>
-          <h1 id="hero-title">Küçük kaşifler,<br /><span>büyük keşiflere</span><br />hazır mısınız?</h1>
-          <p className="zp-hero-description">Oyna, düşün, “buldum!” de. Zeki ile şekillerin sırrını çöz, ipuçlarının peşine düş. Her soruda yeni bir şey keşfet!</p>
-          <div className="zp-hero-buttons"><PremiumButton onClick={() => goDemo()}>Keşfe başla <ArrowRight size={19} /></PremiumButton><PremiumButton tone="quiet" onClick={() => onNavigate('register')}>Ailece katıl <ArrowUpRight size={17} /></PremiumButton></div>
+          <div className="zp-eyebrow"><Sparkles size={16} /> BİLSEM HAZIRLIK · 1–4. SINIF</div>
+          <h1 id="hero-title">BİLSEM yolculuğu,<br /><span>her soruda</span><br />yeni bir keşif!</h1>
+          <p className="zp-hero-description">BİLSEM hazırlığını renkli bir alışkanlığa dönüştür. Görsel dikkat, mantık, örüntü ve uzamsal düşünme sorularıyla çalış; denemelerle kendini tanı.</p>
+          <div className="zp-hero-buttons"><PremiumButton onClick={() => goDemo()}>Ücretsiz soruyu dene <ArrowRight size={19} /></PremiumButton><PremiumButton tone="quiet" onClick={() => onNavigate('register')}>Ailece katıl <ArrowUpRight size={17} /></PremiumButton></div>
           <div className="zp-hero-reassurance"><span><Check size={14} /> Hesap açmadan dene</span><span><Check size={14} /> Kendi hızında ilerle</span></div>
           <div className="zp-hero-footnote"><span className="zp-hero-mini-medal"><Trophy size={23} /></span><p>Her çaba bir adım.<br /><strong>Her keşif bir “başardım!”</strong></p></div>
         </motion.div>
@@ -136,7 +136,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
       <div className="zp-skill-ribbon" aria-label="Çalışma becerileri"><div className="zp-container"><span><Shapes size={18} /> Örüntüleri keşfet</span><i>✦</i><span><Brain size={18} /> Bağlantı kur</span><i>✦</i><span><ScanEye size={18} /> Ayrıntıları yakala</span><i>✦</i><span><Trophy size={18} /> Kendini geliştir</span></div></div>
       <GradeExplorer onTry={tryGrade} completed={submitted} />
       <section id="dunyalar" className="zp-container zp-section" aria-labelledby="worlds-title">
-        <motion.div {...reveal} className="zp-section-heading"><div><p className="zp-kicker"><Shapes size={16} /> KEŞİF HARİTAN</p><h2 id="worlds-title">Bir dünya seç.<br /><span>Macerana başla.</span></h2></div><p>Birbirinden farklı düşünme oyunları.<br />Bir alan seç, düşünmenin farklı yollarıyla tanış.</p></motion.div>
+        <motion.div {...reveal} className="zp-section-heading"><div><p className="zp-kicker"><Shapes size={16} /> BİLSEM HAZIRLIK ALANLARIN</p><h2 id="worlds-title">Dikkatini topla.<br /><span>Düşünmenin yollarını keşfet.</span></h2></div><p>Örüntü, mantık ve görsel algı alıştırmaları.<br />Bir alan seç, hazırlığı keyifli adımlarla sürdür.</p></motion.div>
         <div className="zp-world-grid">{worlds.map(w => <motion.button {...reveal} type="button" key={w.type} className={`zp-world-card zp-ui-card zp-world-${w.theme}`} onClick={() => goDemo(w.type)}>
           <div className="zp-world-top"><span>KEŞİF / {w.number}</span><ArrowUpRight size={22} /></div>
           <WorldArtwork theme={w.theme} />
@@ -170,8 +170,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
       </section>
       <section id="aile" className="zp-container zp-family-section" aria-labelledby="family-title"><motion.div {...reveal} className="zp-family-panel zp-ui-card"><div className="zp-parent-preview"><div className="zp-parent-preview-top"><span><Heart size={20} /> Veli alanı</span><span>Örnek görünüm</span></div><div className="zp-parent-preview-main"><span className="zp-parent-avatar"><GraduationCap size={30} /></span><div><strong>Her küçük adımı fark edin.</strong><p>Birlikte bakın, birlikte kutlayın.</p></div></div><div className="zp-parent-preview-rows"><div><span className="zp-parent-dot zp-path-purple"><Shapes size={20} /></span><span><strong>Çalışma alanları</strong><small>Hangi beceriler üzerinde çalışıyor?</small></span><Check size={17} /></div><div><span className="zp-parent-dot zp-path-mint"><Target size={20} /></span><span><strong>Günlük alışkanlıklar</strong><small>Çalışma düzeni nasıl ilerliyor?</small></span><Check size={17} /></div><div><span className="zp-parent-dot zp-path-yellow"><Trophy size={20} /></span><span><strong>Gelişim yolculuğu</strong><small>Hangi adımları birlikte kutlayabilirsiniz?</small></span><Check size={17} /></div></div><p className="zp-parent-preview-note"><ShieldCheck size={16} /> Gerçek bilgiler, bağlı öğrenci hesabından gelir.</p></div><div className="zp-family-copy"><p className="zp-kicker">BİRLİKTE DAHA GÜZEL</p><h2 id="family-title">Onun keşif dünyası.<br />Sizin destek alanınız.</h2><p>Çocuğunuzun çabasını fark edin, ilerleyişine eşlik edin. Veli alanından çalışma ve gelişim bilgilerini takip edin.</p><PremiumButton tone="dark" onClick={() => onNavigateToLogin('parent')}>Veli alanına geç <ArrowUpRight size={18} /></PremiumButton></div></motion.div></section>
       <section id="yardim" className="zp-container zp-section zp-faq" aria-labelledby="faq-title"><div><p className="zp-kicker">AKLINDA BİR SORU MU VAR?</p><h2 id="faq-title">Merak etmek<br />işin başlangıcı.</h2></div><div>{faqs.map(([q, a]) => <details key={q}><summary>{q}<ChevronDown size={19} /></summary><p>{a}</p></details>)}</div></section>
-      <section className="zp-container zp-final-section"><div className="zp-final-cta"><span aria-hidden="true" className="zp-cta-star">✦</span><p className="zp-kicker">HADİ, BİR ADIM ATALIM.</p><h2>Bir sonraki keşif senin.</h2><PremiumButton tone="lime" onClick={() => onNavigate('register')}>ZekaPark’a katıl <ArrowRight size={19} /></PremiumButton><p className="zp-final-note">Merakını getir. Gerisini birlikte keşfedelim.</p></div></section>
+      <section className="zp-container zp-final-section"><div className="zp-final-cta"><span aria-hidden="true" className="zp-cta-star">✦</span><p className="zp-kicker">HADİ, BİR ADIM ATALIM.</p><h2>Bir sonraki keşif senin.</h2><PremiumButton tone="lime" onClick={() => onNavigate('register')}>BİLSEM Junior’a katıl <ArrowRight size={19} /></PremiumButton><p className="zp-final-note">Merakını getir. Gerisini birlikte keşfedelim.</p></div></section>
     </main>
     <Footer onNavigate={onNavigate} onNavigateToLogin={onNavigateToLogin} />
   </div>;
 };
+

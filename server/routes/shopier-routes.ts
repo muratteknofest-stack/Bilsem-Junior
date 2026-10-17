@@ -18,12 +18,12 @@ export async function publicShopierView() {
 }
 export function shopierView(settings:import('../../src/lib/platform-settings').PlatformSettings) {
   const ready=shopierReady(settings.shopier);
-  return {ready,enforced:settings.shopier.enforcePaidAccess,brand:settings.business.brandName||settings.business.legalName||'ZekaPark',
+  return {ready,enforced:settings.shopier.enforcePaidAccess,brand:settings.business.brandName==='ZekaPark'?'BİLSEM Junior':settings.business.brandName||settings.business.legalName||'BİLSEM Junior',
     plans:SHOPIER_PLANS.map(p=>({...p,url:ready?shopierProduct(settings.shopier,p.id).url:null}))};
 }
 routes.get('/public/shopier',async(_req,res)=>res.json(await publicShopierView()));
 export function shopierPageHtml(config:ReturnType<typeof shopierView>) {
-  return `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f8f7f2"><meta name="description" content="ZekaPark ile 1–4. sınıflar için 44 konuda renkli testler, adaptif çalışma ve veli takibi. Aylık, 3 aylık ve yıllık paketleri keşfedin."><title>ZekaPark · Renkli keşif paketleri</title><link rel="icon" href="/logo.svg"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/sales/sales.css"></head><body>${renderToStaticMarkup(React.createElement(ShopierSalesPage,config))}</body></html>`;
+  return `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f8f7f2"><meta name="description" content="BİLSEM Junior ile 1–4. sınıflar için 44 konuda renkli testler, adaptif çalışma ve veli takibi. Aylık, 3 aylık ve yıllık paketleri keşfedin."><title>BİLSEM Junior · Renkli keşif paketleri</title><link rel="icon" href="/logo.svg"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/sales/sales.css"></head><body>${renderToStaticMarkup(React.createElement(ShopierSalesPage,config))}</body></html>`;
 }
 routes.get('/public/shopier/page',async(_req,res)=>{res.type('html').send(shopierPageHtml(await publicShopierView()));});
 routes.use('/parent/shopier',requireSupabaseAuth,requireVerifiedEmail,requireProfileRole('parent'),accountSecurityLimiter);
@@ -53,3 +53,4 @@ routes.post('/parent/shopier/claim',sharedRateLimit('shopier-claim',12,3600),asy
   } catch(error){if(error instanceof z.ZodError)return res.status(400).json({error:'Sipariş veya öğrenci bilgileri geçersiz.'});if(error instanceof ShopierError)return res.status(error.status).json({error:error.message});throw error;}
 });
 export default routes;
+

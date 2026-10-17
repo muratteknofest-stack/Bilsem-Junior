@@ -16,7 +16,7 @@ function buildWeeklyReport(
     : 0;
 
   return [
-    `ZekaPark Haftalık İlerleme Raporu — ${student.name}`,
+    `BİLSEM Junior Haftalık İlerleme Raporu — ${student.name}`,
     '',
     `Bu hafta çözülen soru: ${weekly.summary.thisWeekTotal}`,
     `Haftalık hedef: ${weekly.summary.weeklyTarget} (%${weekly.summary.targetCompletionRate})`,
@@ -30,7 +30,7 @@ function buildWeeklyReport(
     `Güçlü alanlar: ${strongest}`,
     `Odaklanılması önerilen alanlar: ${focus}`,
     '',
-    'Bu rapor öğrencinin ZekaPark üzerindeki gerçek çalışma verilerinden oluşturulmuştur.',
+    'Bu rapor öğrencinin BİLSEM Junior üzerindeki gerçek çalışma verilerinden oluşturulmuştur.',
   ].join('\n');
 }
 
@@ -40,7 +40,7 @@ export async function shareWeeklyReport(
   weekly: WeeklyQuestionProgressData,
   masteries: SkillMastery[],
 ): Promise<WeeklyReportShareResult> {
-  const subject = `ZekaPark Haftalık İlerleme Raporu - ${student.name}`;
+  const subject = `BİLSEM Junior Haftalık İlerleme Raporu - ${student.name}`;
   const text = buildWeeklyReport(student, weekly, masteries);
 
   if (navigator.share) {
