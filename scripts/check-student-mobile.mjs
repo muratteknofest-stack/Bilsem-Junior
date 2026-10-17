@@ -41,7 +41,7 @@ try {
   else if(url.pathname==='/api/public/platform')value={registrationOpen:true,policyVersion:'2026-10-11.4'};
   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(value)});
  });
- const go=async()=>{await page.goto('http://127.0.0.1:5189/tests/browser/student-membership.html');await page.locator('#student-dashboard').waitFor();};
+ const go=async()=>{await page.goto('http://127.0.0.1:5189/tests/browser/student-membership.html');await page.locator('#student-dashboard').waitFor().catch(async error=>{console.error('Isolated dashboard errors:',errors);console.error('Isolated dashboard content:',(await page.locator('body').innerText()).slice(0,1200));throw error;});};
  const noOverflow=async(label)=>{
   const measurements=await page.evaluate(()=>({viewport:innerWidth,document:document.documentElement.scrollWidth,
    clipped:[...document.querySelectorAll('.zp-arena,.zp-arena-duel,.zp-arena h2,.zp-study-navigation,.zp-study-navigation button,.zp-membership-prompt')].filter(node=>{const r=node.getBoundingClientRect();return r.left< -1||r.right>innerWidth+1||(!node.matches('.zp-arena,.zp-arena-duel')&&node.scrollWidth>node.clientWidth+1);}).map(n=>n.className)}));

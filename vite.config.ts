@@ -79,7 +79,7 @@ export default defineConfig(({ mode }) => {
   return {
     // Empty prefix list disables automatic exports, including similarly named secrets.
     envPrefix: [],
-    plugins: [react(), tailwindcss(), aistudioMediaPlugin(), ...(native ? [{ name: 'android-content-policy', transformIndexHtml: () => [{ tag: 'meta', attrs: { 'http-equiv': 'Content-Security-Policy', content: nativePolicy }, injectTo: 'head-prepend' as const }] }] : [blogPlugin()])],
+    plugins: [react(), tailwindcss(), aistudioMediaPlugin(), ...(native ? [{ name: 'android-content-policy', apply: 'build' as const, transformIndexHtml: () => [{ tag: 'meta', attrs: { 'http-equiv': 'Content-Security-Policy', content: nativePolicy }, injectTo: 'head-prepend' as const }] }] : [blogPlugin()])],
     // Vercel serves /api in this project. Ignore stale external API settings there.
     define: {
       ...Object.fromEntries(Object.entries(publicSettings).map(([key, value]) => [`import.meta.env.${key}`, JSON.stringify(value)])),
