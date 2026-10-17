@@ -25,7 +25,7 @@ if (isAndroidApp) {
 }
 
 const AdminPortal = lazy(() => import('./components/AdminPortal').then(module => ({ default: module.AdminPortal })));
-const WordwallPage = lazy(() => import('./components/WordwallLibrary').then(module => ({ default: module.WordwallPage })));
+const WordwallPage = lazy(() => import('./components/WordwallPage').then(module => ({ default: module.WordwallPage })));
 
 // Safely handle unhandled background Supabase Auth network rejections
 if (typeof window !== 'undefined') {
@@ -48,7 +48,7 @@ createRoot(document.getElementById('root')!).render(
     {window.location.pathname === '/reset-password' || isRecoveryRedirect ? (
       <PasswordRecoveryEntry />
     ) : window.location.pathname === '/wordwall' ? (
-      <Suspense fallback={<p role="status" className="p-8 text-center">Testler yükleniyor…</p>}><WordwallPage /></Suspense>
+      <AuthProvider><Suspense fallback={<p role="status" className="p-8 text-center">Testler yükleniyor…</p>}><WordwallPage /></Suspense></AuthProvider>
     ) : (
       <AuthProvider>
         {isAdminLocation(window.location.pathname) ? (

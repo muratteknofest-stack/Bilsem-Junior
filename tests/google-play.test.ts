@@ -112,7 +112,8 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
       events.push('save');if(failSave)return Response.json({code:'XX000',message:'private-db-failure'},{status:503});
       const body=await req.json();assert.equal(body.p_expiry,expiry);assert.equal(body.p_student,student);assert.ok(!body.p_token.includes(purchaseToken));
       ledger=[{token_hash:body.p_hash,token_ciphertext:body.p_token,package_name:body.p_package,product_id:body.p_product,parent_id:parent,student_id:student}];value=body.p_hash;
-    }else if(u.pathname==='/rest/v1/google_play_purchase_bindings')value=preparedBinding?{parent_id:parent,student_id:student}:null;
+    }else if(u.pathname==='/rest/v1/shopier_access_orders')value=[];
+    else if(u.pathname==='/rest/v1/google_play_purchase_bindings')value=preparedBinding?{parent_id:parent,student_id:student}:null;
     else if(u.pathname==='/rest/v1/google_play_subscriptions')value=req.headers.get('accept')?.includes('vnd.pgrst.object')?ledger[0]||null:ledger;
     else throw Error('Unexpected fixture endpoint '+u.pathname);
     return Response.json(value);
@@ -139,6 +140,8 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     events=[];const restored=await verify();assert.equal(restored.status,200);assert.equal(restored.body.access.active,true);assert.equal(restored.body.access.expiresAt,expiry);assert.equal(ledger.length,1);assert.deepEqual(events,['google','save','ack']);
     // A valid Play purchase does not depend on a Shopier token; each new test is freshly checked.
     delete process.env.SHOPIER_ACCESS_TOKEN;await requireLearningAccess(student);
+    process.env.GOOGLE_PLAY_ENFORCE_PAID_ACCESS='false';process.env.GOOGLE_PLAY_BILLING_ENABLED='false';
+    await requireLearningAccess(student); // disabling new sales never grants free premium access or revokes a verified purchase
     payload=subscription({subscriptionState:'SUBSCRIPTION_STATE_ON_HOLD'});await assert.rejects(requireLearningAccess(student),e=>(e as any).status===403);
     payload=subscription({subscriptionState:'SUBSCRIPTION_STATE_CANCELED'});await requireLearningAccess(student);
     payload=subscription({subscriptionState:'SUBSCRIPTION_STATE_EXPIRED'});await assert.rejects(requireLearningAccess(student),e=>(e as any).status===403);

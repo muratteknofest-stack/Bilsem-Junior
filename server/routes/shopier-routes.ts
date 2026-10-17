@@ -19,7 +19,7 @@ export async function publicShopierView() {
 }
 export function shopierView(settings:import('../../src/lib/platform-settings').PlatformSettings) {
   const ready=shopierReady(settings.shopier);
-  return {ready,enforced:settings.shopier.enforcePaidAccess,brand:settings.business.brandName||settings.business.legalName||'ZekaPark',
+  return {ready,enforced:true,brand:settings.business.brandName||settings.business.legalName||'ZekaPark',
     plans:SHOPIER_PLANS.map(p=>({...p,url:ready?shopierProduct(settings.shopier,p.id).url:null}))};
 }
 routes.get('/public/shopier',async(_req,res)=>res.json(await publicShopierView()));

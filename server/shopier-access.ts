@@ -7,7 +7,6 @@ import { withRequestDeadline } from '../src/lib/request-deadline';
 import { assertBillingFamily as assertShopierFamily } from './billing-family';
 export { assertShopierFamily };
 import { googlePlayAccess } from './google-play-access';
-import { playConfig } from './google-play-client';
 import { GooglePlayError } from './google-play-model';
 export async function shopierAccess(parentId:string,studentId:string,settings:ShopierSettings) {
   try { return await withRequestDeadline(async signal=>{
@@ -35,21 +34,26 @@ export async function shopierAccess(parentId:string,studentId:string,settings:Sh
     const expiresAt=accessExpiry(valid);return {active:!!expiresAt&&Date.parse(expiresAt)>Date.now(),expiresAt};
   },15_000); } catch(error){if(error instanceof ShopierError)throw error;throw new ShopierError('Ödeme erişimi şu anda doğrulanamıyor. Yeniden dene.',503);}
 }
-export async function requireLearningAccess(studentId:string) {
+export class MembershipRequiredError extends ShopierError {
+  readonly code = 'MEMBERSHIP_REQUIRED';
+  constructor() { super('Bu bölüm için aktif üyelik gerekli. Günlük üç ücretsiz soruyla çalışmaya devam edebilirsin.', 403); }
+}
+export async function learningAccess(studentId:string) {
   const {settings}=await readPlatformSettings();
-  const playEnforced=playConfig().enforced;
-  if(!settings.shopier.enforcePaidAccess&&!playEnforced)return;
   const student=await getServiceClient().from('profiles').select('linked_parent_id').eq('id',studentId).single();
-  if(student.error||!student.data?.linked_parent_id)throw new ShopierError('Veli bağlantısı doğrulanamadı.',403);
+  if(student.error)throw new ShopierError('Üyelik durumu doğrulanamadı.',503);
+  if(!student.data?.linked_parent_id)return {active:false,expiresAt:null};
   const parentId=student.data.linked_parent_id;
-  let unavailable=false;
-  // A valid Play subscription remains usable during a Shopier outage.
-  try { if((playEnforced||playConfig().enabled||process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON)&&(await googlePlayAccess(parentId,studentId)).active)return; }
-  catch(error){if(error instanceof GooglePlayError||error instanceof ShopierError)unavailable=error.status===503;else throw error;}
-  if(settings.shopier.enforcePaidAccess){
-    try { if((await shopierAccess(parentId,studentId,settings.shopier)).active)return; }
-    catch(error){if(error instanceof ShopierError)unavailable=unavailable||error.status===503;else throw error;}
+  // Sales switches do not grant access or revoke an existing verified purchase.
+  // One available provider can confirm access while the other is unavailable.
+  const results=await Promise.allSettled([googlePlayAccess(parentId,studentId),shopierAccess(parentId,studentId,settings.shopier)]);
+  for(const result of results){
+    if(result.status==='fulfilled'&&result.value.active)return result.value;
   }
-  if(unavailable)throw new ShopierError('Ücretli erişim doğrulaması şu anda kullanılamıyor.',503);
-  throw new ShopierError('Yeni çalışma için veli panelinden aktif abonelik tanımlanmalı.',403);
+  if(results.some(result=>result.status==='rejected'&&(!(result.reason instanceof GooglePlayError||result.reason instanceof ShopierError)||result.reason.status===503)))
+    throw new ShopierError('Üyelik durumu şu anda doğrulanamıyor. Yeniden dene; günlük ücretsiz soruların açık.',503);
+  return {active:false,expiresAt:null};
+}
+export async function requireLearningAccess(studentId:string) {
+  if(!(await learningAccess(studentId)).active)throw new MembershipRequiredError();
 }

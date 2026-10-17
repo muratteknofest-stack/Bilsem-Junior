@@ -25,6 +25,8 @@ import { WeeklyChallengesView } from './WeeklyChallengesView';
 import { BadgesSection } from './BadgesSection';
 import { GamificationArena } from './GamificationArena';
 import { WordwallLibrary } from './WordwallLibrary';
+import { DailyChallenge } from './DailyChallenge';
+import { MembershipPrompt } from './MembershipPrompt';
 import { ProfileBannerSkeleton, ModeCardSkeleton } from './Skeletons';
 import './landing/design-system.css';
 import './dashboard-design-system.css';
@@ -36,6 +38,7 @@ interface StudentDashboardProps {
   onStartPractice: (category?: string) => void;
   onStartTopicPractice?: (topic: QuestionType) => void;
   onStartAdaptive: () => void; onStartExam: () => void; onOpenMistakes: () => void; onNavigate: (view: string) => void;
+  membership?: { active: boolean; loading: boolean; error: string; refresh: () => void };
 }
 const EMPTY_MASTERIES: SkillMastery[] = [];
 const SECTIONS = [
@@ -112,7 +115,7 @@ const CATEGORY_STYLE_CONFIG: Record<string, {
 };
 
 export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries = EMPTY_MASTERIES, mistakes,
-  onUserUpdate, onStartPractice, onStartTopicPractice, onStartAdaptive, onStartExam, onOpenMistakes, onNavigate }: StudentDashboardProps) {
+  onUserUpdate, onStartPractice, onStartTopicPractice, onStartAdaptive, onStartExam, onOpenMistakes, onNavigate, membership }: StudentDashboardProps) {
   const activeUser = user || dataService.getCurrentUser();
   const activeMistakes = mistakes ?? dataService.getMistakes();
   const [activeTab, setActiveTab] = useState<Section>('modes');
@@ -133,6 +136,9 @@ export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries
   const greeting = hour >= 5 && hour < 12 ? { text: 'Günaydın', emoji: '☀️' }
     : hour < 18 ? { text: 'Merhaba', emoji: '✦' } : { text: 'İyi akşamlar', emoji: '🌙' };
   const switchSection = (section: Section) => { sound.playClick(); setActiveTab(section); };
+  const demo = isDemoUser(activeUser.id);
+  const premium = membership?.active === true && !demo;
+  const lockedSection = !premium && ['plan', 'skills', 'challenges'].includes(activeTab);
   if (isLoading) return <main id="student-dashboard" aria-busy="true" className="zp-dashboard-page zp-student-dashboard zp-student-pro"><div className="zp-student-shell"><ProfileBannerSkeleton /><div className="zp-mode-grid"><ModeCardSkeleton /><ModeCardSkeleton /></div></div></main>;
   return <MotionConfig reducedMotion={reduced ? 'always' : 'user'}>
     <div className="zp-dashboard-page zp-student-dashboard zp-student-pro" data-reduced-motion={reduced}>
@@ -141,16 +147,19 @@ export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries
         <StudentHeroBanner user={activeUser} greeting={greeting} xpProgress={xpProgress} onUserUpdate={onUserUpdate} onNavigate={onNavigate} prefersReducedMotion={reduced} />
         <nav className="zp-study-navigation" aria-label="Öğrenci paneli bölümleri">{SECTIONS.map(({ id, label, icon: Icon }) =>
           <button type="button" key={id} aria-pressed={activeTab === id} aria-controls="zp-student-section" onClick={() => switchSection(id)}>
-            <Icon size={18} aria-hidden="true" /><span>{label}</span>{activeTab === id && <span className="zp-nav-indicator" aria-hidden="true" />}
+            <Icon size={18} aria-hidden="true" /><span>{label}</span>{!premium && ['plan','skills','challenges'].includes(id) && <span className="zp-section-lock" aria-label="Üyelik gerekli">✦</span>}{activeTab === id && <span className="zp-nav-indicator" aria-hidden="true" />}
           </button>)}</nav>
         <div className="zp-student-workspace">
           <section id="zp-student-section" className="zp-student-section" aria-label={SECTIONS.find(section => section.id === activeTab)!.label}>
             <AnimatePresence mode="wait" initial={false}>
               <motion.div key={activeTab} initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: reduced ? 0 : .18 }} className="zp-student-section-stack">
+                {lockedSection ? <MembershipPrompt onUpgrade={() => onNavigate('parent')} loading={membership?.loading} error={membership?.error} onRetry={membership?.refresh} /> : <>
                 {activeTab === 'modes' && <>
+                  {!premium && !demo && <DailyChallenge />}
+                  {!premium && <MembershipPrompt onUpgrade={() => onNavigate('parent')} loading={membership?.loading} error={membership?.error} onRetry={membership?.refresh} />}
                   <StudentModesGrid unresolvedMistakesCount={unresolved} onStartAdaptive={onStartAdaptive} onStartExam={onStartExam} onStartPractice={onStartPractice} onOpenMistakes={onOpenMistakes} onNavigate={onNavigate} onOpenChallenges={() => switchSection('challenges')} />
-                  {onStartTopicPractice && isSchoolGrade(activeUser.grade) && !isDemoUser(activeUser.id) && <StudentTopicPractice grade={activeUser.grade} onStart={onStartTopicPractice} />}
-                  <WordwallLibrary key={`wordwall-${activeUser.id}-${activeUser.grade}`} initialGrade={activeUser.grade} />
+                  {premium && onStartTopicPractice && isSchoolGrade(activeUser.grade) && <StudentTopicPractice grade={activeUser.grade} onStart={onStartTopicPractice} />}
+                  {premium && <WordwallLibrary key={`wordwall-${activeUser.id}-${activeUser.grade}`} initialGrade={activeUser.grade} />}
                 </>}
                 {activeTab === 'plan' && <><DailyGoalProgressCard user={activeUser} dailyPlan={dailyPlan || undefined} onUserUpdate={onUserUpdate} onStartPractice={() => onStartPractice('mixed')} /><StudentStudyHub masteries={safeMasteries} unresolved={unresolved} savedExam={dataService.getActiveExam()} favorites={favorites} onFavoriteChange={value => setFavorites(saveStudyFavorites(value))} onPractice={onStartPractice} onMistakes={onOpenMistakes} onResumeExam={onStartExam} />
                   <TodayPersonalizedStudyPlanCard user={activeUser} masteries={safeMasteries} mistakes={activeMistakes} onStartPractice={onStartPractice} onStartAdaptive={onStartAdaptive} onOpenMistakes={onOpenMistakes} onUserUpdate={onUserUpdate} /></>}
@@ -158,6 +167,7 @@ export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries
                 {activeTab === 'challenges' && <><GamificationArena user={activeUser} thisWeekQuestions={weekly.thisWeekTotal} lastWeekQuestions={weekly.lastWeekTotal} onPractice={() => onStartPractice('mixed')} onOpenChallenges={() => document.getElementById('zp-weekly-missions')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })} />
                   <div id="zp-weekly-missions"><WeeklyChallengesView user={activeUser} onStartPractice={onStartPractice} onUserUpdate={onUserUpdate} onNavigateToBadges={() => onNavigate('achievements')} /></div></>}
                 {activeTab === 'progress' && <><WeeklyProgressChartCard user={activeUser} onStartPractice={() => onStartPractice('mixed')} /><BadgesSection user={activeUser} mistakes={activeMistakes} onUserUpdate={onUserUpdate} onOpenMistakes={onOpenMistakes} onStartPractice={() => onStartPractice()} onNavigate={onNavigate} /></>}
+                </>}
               </motion.div>
             </AnimatePresence>
           </section>

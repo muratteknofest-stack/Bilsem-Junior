@@ -51,7 +51,8 @@ try{
  });
  await page.route('**/api/**',async route=>{
   const u=new URL(route.request().url()),body=route.request().postDataJSON();let value={};
-  if(u.pathname==='/api/public/platform')value={registrationOpen:true,policyVersion:'2026-10-11.4'};
+  if(u.pathname==='/api/learning/access')value={active:true,expiresAt:'2027-01-16T12:00:00Z',freeDailyQuestions:3};
+  else if(u.pathname==='/api/public/platform')value={registrationOpen:true,policyVersion:'2026-10-11.4'};
   else if(u.pathname==='/api/register-family'){registrationCount++;assert.equal(body.grade,2);assert.equal(body.guardianConfirmed,true);assert.equal(body.parentEmail,'parent@example.invalid');value={success:true,parentProfile:{id:parentId,role:'parent'},student:{id:studentId,code:'EXPLORER1234',email:'explorer1234@zekapark.com'},verificationSent:false};}
   else if(u.pathname==='/api/auth/resend-confirmation'){resends++;value={success:true,message:'Uygun bir hesap varsa doğrulama bağlantısı gönderilecektir.'};}
   else if(u.pathname==='/api/account/requests'){if(historyFails){historyFails=false;await route.fulfill({status:503,contentType:'application/json',body:'{"error":"Fixture unavailable"}'});return;}value={requests};}

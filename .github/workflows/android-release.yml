@@ -43,6 +43,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run test:android && npm run test:google-play
+      - run: node --import tsx --test tests/membership-access.test.ts
       - run: npm run android:sync
       - name: Verify native layouts and Back navigation
         run: |
@@ -55,10 +56,10 @@ jobs:
       - name: Verify compiled release and audit runtime dependencies
         run: |
           mkdir -p release-candidate
-          cp android/app/build/outputs/bundle/release/app-release.aab release-candidate/ZekaPark-1.0.3-unsigned.aab
-          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -P 16 -f 4 android/app/build/outputs/apk/release/app-release-unsigned.apk release-candidate/ZekaPark-1.0.3-aligned-unsigned.apk
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging release-candidate/ZekaPark-1.0.3-aligned-unsigned.apk > release-candidate/package.txt
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree release-candidate/ZekaPark-1.0.3-aligned-unsigned.apk AndroidManifest.xml > release-candidate/manifest.txt
+          cp android/app/build/outputs/bundle/release/app-release.aab release-candidate/ZekaPark-1.0.4-unsigned.aab
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -P 16 -f 4 android/app/build/outputs/apk/release/app-release-unsigned.apk release-candidate/ZekaPark-1.0.4-aligned-unsigned.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging release-candidate/ZekaPark-1.0.4-aligned-unsigned.apk > release-candidate/package.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree release-candidate/ZekaPark-1.0.4-aligned-unsigned.apk AndroidManifest.xml > release-candidate/manifest.txt
           node scripts/verify-android-release.mjs release-candidate/manifest.txt release-candidate/package.txt > release-candidate/release-check.json
           node scripts/audit-android-dependencies.mjs android-release-build.log > release-candidate/release-maven-osv.json
           cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" release-candidate/apksigner.jar

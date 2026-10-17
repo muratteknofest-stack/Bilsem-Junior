@@ -5,6 +5,8 @@ import React, { lazy, Suspense, useState, useEffect, useLayoutEffect, useRef } f
 import { useAuth } from './contexts/AuthContext';
 import { ADMIN_PANEL_PATH, ADMIN_LOGIN_PATH, hasVerifiedAdminAccess } from './lib/admin-access';
 import { accountEntry, accountEntryPath } from './features/auth/account-entry';
+import { useLearningAccess } from './features/student/use-learning-access';
+import { MembershipPrompt } from './components/MembershipPrompt';
 
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { UserProfile, UserRole, SkillMastery, MistakeItem, DailyStudyPlan, ReminderAlertEvent, CognitiveCategory } from './types';
@@ -62,6 +64,7 @@ export default function App() {
   const switchAttemptRef = useRef(0);
   const previousAccountIdRef = useRef(userProfile?.id);
   const [isAuth, setIsAuth] = useState<boolean>(() => dataService.isAuthenticated());
+  const membership = useLearningAccess(isAuth && userProfile?.role === 'student' ? userProfile.id : undefined);
   const initialAccountEntry = useRef(accountEntry(new URL(window.location.href)));
   const [loginRole, setLoginRole] = useState<UserRole>(initialAccountEntry.current?.role || 'student');
   const [loginMode, setLoginMode] = useState<'login' | 'register'>(initialAccountEntry.current?.mode || 'login');
@@ -329,6 +332,11 @@ export default function App() {
       }
     }
 
+    if (u.role === 'student' && !isDemoUser(u.id) && !membership.active && ['practice', 'adaptive', 'exams', 'mistakes', 'leaderboard'].includes(targetRoute)) {
+      setCurrentRoute('membership');
+      return;
+    }
+
     // Bidirectional switching between student and parent:
     if (targetRoute === 'parent') {
       if (userProfile?.role !== 'parent' && !u.id.startsWith('demo_')) {
@@ -463,6 +471,7 @@ export default function App() {
                 dailyPlan={dailyPlan}
                 masteries={masteries}
                 mistakes={mistakes}
+                membership={membership}
                 onUserUpdate={(u) => setCurrentUser(u)}
                 onStartPractice={(category) => {
                   setSelectedPracticeTopic('mixed');
@@ -476,6 +485,11 @@ export default function App() {
                 onNavigate={navigateTo}
               />
             )}
+
+            {currentRoute === 'membership' && <div className="zp-dashboard-page zp-student-pro"><div className="zp-student-shell">
+              {membership.active ? <p role="status" className="p-5">Üyeliğin doğrulandı. Tüm çalışma bölümleri açık.</p> : <MembershipPrompt onUpgrade={requestParentPanel} loading={membership.loading} error={membership.error} onRetry={membership.refresh} />}
+              <button type="button" className="zp-membership-retry mt-5" onClick={() => navigateTo('dashboard')}>{membership.active ? 'Çalışma alanına dön' : 'Ücretsiz sorulara dön'}</button>
+            </div></div>}
 
             {currentRoute === 'demo-limit' && (
               <div className="mx-auto w-full max-w-2xl px-5 py-20 text-center" role="status">

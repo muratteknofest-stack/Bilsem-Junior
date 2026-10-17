@@ -49,7 +49,3 @@ export function WordwallLibrary({ initialGrade, headingLevel = 2 }: { initialGra
     <p className="ww-note">Bu testlerin puanları ZekaPark çalışma raporlarına otomatik aktarılmaz.</p>
   </section>;
 }
-
-export function WordwallPage() {
-  return <div className="min-h-screen bg-slate-50 text-slate-900"><header className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-6"><a href="/" className="text-2xl font-extrabold text-violet-700">ZekaPark</a><a href="/" className="inline-flex min-h-11 items-center gap-2 text-sm font-bold"><ArrowLeft size={17} aria-hidden="true" /> Öğrenci alanına dön</a></header><main className="mx-auto max-w-7xl px-4 pb-16 sm:px-6"><WordwallLibrary headingLevel={1} /></main></div>;
-}

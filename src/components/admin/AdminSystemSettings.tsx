@@ -139,7 +139,7 @@ export function AdminSystemSettings({
                 <label>{plan.title} ürün bağlantısı<input type="url" className="block w-full border rounded-lg p-3" value={record.settings.shopier[fields.url]} onChange={e=>setRecord(r=>r&&({...r,settings:{...r.settings,shopier:{...r.settings.shopier,[fields.url]:e.target.value}}}))}/></label></div>
               </div>;})}
               <label className="block"><input type="checkbox" checked={record.settings.shopier.enabled} onChange={e=>setRecord(r=>r&&({...r,settings:{...r.settings,shopier:{...r.settings.shopier,enabled:e.target.checked}}}))}/> Shopier satış bağlantılarını aç</label>
-              <label className="block"><input type="checkbox" checked={record.settings.shopier.enforcePaidAccess} onChange={e=>setRecord(r=>r&&({...r,settings:{...r.settings,shopier:{...r.settings.shopier,enforcePaidAccess:e.target.checked}}}))}/> Yeni çalışmalar için doğrulanmış paket erişimi iste</label>
+              <p className="text-sm text-slate-600">Tam çalışma bölümleri doğrulanmış aktif üyelik gerektirir. Günlük 3 temel soru ücretsizdir. Satışları kapatmak bu erişim kuralını değiştirmez.</p>
               <p className="text-sm">Ücretli erişim başlangıçta kapalıdır. Satışı veya ücretli erişimi açmak için gerçek hesap bağlantısı, işletmeci bilgileri ve kabul kontrolleri tamamlanmalıdır. Mevcut oturumların sonuçları erişilebilir kalır.</p>
             </section>
             <section className="rounded-2xl border bg-white p-5">

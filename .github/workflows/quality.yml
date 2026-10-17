@@ -76,13 +76,17 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run test:turkish-accounts
+      - name: Verify student mobile layout and membership boundaries
+        run: npm run test:student-mobile
 
       - name: Save student workspace previews for design review
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: zekapark-student-design-previews
-          path: test-artifacts/student/
+          path: |
+            test-artifacts/student/
+            test-artifacts/student-mobile/
           if-no-files-found: ignore
           retention-days: 7
 

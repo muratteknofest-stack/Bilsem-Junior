@@ -24,7 +24,7 @@ routes.get('/parent/google-play/access', sharedRateLimit('play-access', 60, 600)
     const id = student.parse(req.query.studentId), config = playConfig();
     const { settings } = await readPlatformSettings();
     const ready = config.enabled && playSetupReady() && releaseBlockers(settings).length === 0;
-    res.json({ ready, storeUrl: playStoreListing(), enforced: config.enforced || settings.shopier.enforcePaidAccess, productId: config.productId, plans: PLAY_PLANS, binding: process.env.GOOGLE_PLAY_BINDING_SECRET ? playBindings(req.authUser!.uid, id) : null, access: await googlePlayAccess(req.authUser!.uid, id) });
+    res.json({ ready, storeUrl: playStoreListing(), enforced: true, productId: config.productId, plans: PLAY_PLANS, binding: process.env.GOOGLE_PLAY_BINDING_SECRET ? playBindings(req.authUser!.uid, id) : null, access: await googlePlayAccess(req.authUser!.uid, id) });
   } catch (error) { failure(error, res); }
 });
 routes.post('/parent/google-play/prepare', sharedRateLimit('play-prepare', 12, 3600), async (req: AuthenticatedRequest, res) => {

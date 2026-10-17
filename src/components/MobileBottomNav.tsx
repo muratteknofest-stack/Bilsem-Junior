@@ -80,7 +80,7 @@ export function MobileBottomNav({
           ? 'Veli alt menüsü'
           : 'Yönetici alt menüsü'
       }
-      className="md:hidden fixed bottom-0 left-0 w-full z-50 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border-t border-slate-200/80 dark:border-zinc-800/80 shadow-[0_-4px_24px_-4px_rgba(15,23,42,0.08)]"
+      className="zp-native-bottom-nav md:hidden fixed bottom-0 left-0 w-full z-50 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border-t border-slate-200/80 dark:border-zinc-800/80 shadow-[0_-4px_24px_-4px_rgba(15,23,42,0.08)]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div role="tablist" aria-label="Alt gezinme sekmeleri" className="flex items-center justify-around px-2 h-16 max-w-lg mx-auto">
