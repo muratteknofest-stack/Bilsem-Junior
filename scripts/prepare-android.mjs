@@ -12,6 +12,7 @@ if (!existsSync(resolve(root, 'android/app/build.gradle'))) {
 // These versioned overlays are authoritative; edit mobile/android, not generated files.
 for (const [source, target] of [
   ['AndroidManifest.xml', 'AndroidManifest.xml'],
+  ['strings.xml', 'res/values/strings.xml'],
   ['data_extraction_rules.xml', 'res/xml/data_extraction_rules.xml'],
   ['launcher.xml', 'res/drawable/zekapark_launcher.xml'],
   ['MainActivity.java', 'java/com/zekapark/app/MainActivity.java'],

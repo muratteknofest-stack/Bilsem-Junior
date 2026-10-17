@@ -1,0 +1,13 @@
+{
+  "name": "BİLSEM Junior",
+  "short_name": "BİLSEM Junior",
+  "description": "BİLSEM hazırlık, dikkat ve düşünme oyunları",
+  "lang": "tr",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f8fc",
+  "theme_color": "#5850c5",
+  "icons": [{"src": "/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]
+}

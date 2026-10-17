@@ -219,7 +219,7 @@ export function Footer({ onNavigate, onNavigateToLogin }: FooterProps) {
             <ShieldCheck size={20} />
           </div>
           <p>
-            <strong>ZekaPark bağımsız bir eğitim platformudur.</strong> MEB veya BİLSEM ile kurumsal bağlantısı yoktur.
+            <strong>BİLSEM Junior bağımsız bir eğitim platformudur.</strong> MEB veya BİLSEM ile kurumsal bağlantısı yoktur.
             Alıştırmalar tanılama aracı değildir ve sınav başarısı garantisi sunmaz.
           </p>
         </div>
@@ -227,7 +227,7 @@ export function Footer({ onNavigate, onNavigateToLogin }: FooterProps) {
         {/* Bottom Bar */}
         <div className="platform-footer-bottom">
           <div className="platform-footer-bottom-copy">
-            <span>© {new Date().getFullYear()} ZekaPark · Merakla büyüyen zihinler için.</span>
+            <span>© {new Date().getFullYear()} BİLSEM Junior · Merakla büyüyen zihinler için.</span>
           </div>
           <div className="platform-footer-bottom-links">
             <a href={publicPageUrl('/blog/feed.xml')} className="platform-footer-rss-link">

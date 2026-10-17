@@ -57,7 +57,7 @@ export function AdminMfaGate({ children }: { children: React.ReactNode }) {
         (f) =>
           f.factor_type === "totp" &&
           f.status === "unverified" &&
-          f.friendly_name === "ZekaPark Yönetim",
+          f.friendly_name === "BİLSEM Junior Yönetim",
       )) {
         const removed = await supabase.auth.mfa.unenroll({
           factorId: pending.id,
@@ -66,8 +66,8 @@ export function AdminMfaGate({ children }: { children: React.ReactNode }) {
       }
       const result = await supabase.auth.mfa.enroll({
         factorType: "totp",
-        friendlyName: "ZekaPark Yönetim",
-        issuer: "ZekaPark",
+        friendlyName: "BİLSEM Junior Yönetim",
+        issuer: "BİLSEM Junior",
       });
       if (result.error) throw result.error;
       setFactor(result.data.id);

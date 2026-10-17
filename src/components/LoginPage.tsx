@@ -116,9 +116,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </div>
 
             <div className="zp-auth-intro">
-              <p className="zp-auth-kicker">ZEKA PARKI / HESAP ALANI</p>
-              <h1 id="zp-auth-heading">{activeTab === 'login' ? 'Keşfe kaldığın yerden devam et.' : 'Yeni bir keşif başlasın.'}</h1>
-              <p>{activeTab === 'login' ? 'Hesabına gir, yeni sorular ve küçük zaferler seni bekliyor.' : 'Veli bilgilerini gir, öğrenci hesabını ekle ve e-postanı doğrula.'}</p>
+              <p className="zp-auth-kicker">BİLSEM JUNIOR / HAZIRLIK ALANI</p>
+              <h1 id="zp-auth-heading">{activeTab === 'login' ? 'Hazırlığına kaldığın yerden devam et.' : 'Yeni bir keşif başlasın.'}</h1>
+              <p>{activeTab === 'login' ? 'BİLSEM hazırlık çalışmaların, denemelerin ve ilerleme yolun seni bekliyor.' : 'Veli bilgilerini gir, öğrenci hesabını ekle ve e-postanı doğrula.'}</p>
             </div>
 
             <div className="zp-auth-mode" role="group" aria-label="Hesap işlemi">
@@ -208,7 +208,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </div>
         </section>
 
-        <aside ref={showcase} className="zp-auth-showcase relative flex flex-col justify-between overflow-hidden" aria-label="ZekaPark keşif alanları">
+        <aside ref={showcase} className="zp-auth-showcase relative flex flex-col justify-between overflow-hidden" aria-label="BİLSEM Junior keşif alanları">
           <div className="zp-auth-showcase-content">
             <span className="zp-auth-showcase-kicker"><Sparkles size={16} aria-hidden="true" /> MERAK EDEN ZİHİNLER İÇİN</span>
             <h2>Her soruda yeni bir dünya.</h2>

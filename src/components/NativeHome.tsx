@@ -36,9 +36,9 @@ export function NativeHome({ screen, onScreen, onLogin, onRegister, soundActive,
       {screen === 'home' && <>
         <section className="zp-native-welcome" aria-labelledby="native-home-title">
           <img src="/images/membership/monthly-robot.webp" alt="Tabletindeki şekillerle keşfe hazır Zeki robot" width={1536} height={1024}/>
-          <div><p><Sparkles size={14} aria-hidden="true"/>1–4. sınıflar için</p><h1 id="native-home-title">Bugün ne<br/>keşfedelim?</h1><span>Oyna, düşün, kendini geliştir.</span></div>
+          <div><p><Sparkles size={14} aria-hidden="true"/>BİLSEM hazırlık · 1–4. sınıf</p><h1 id="native-home-title">BİLSEM’e<br/>bir adım daha!</h1><span>Dikkat, mantık ve bolca keşif.</span></div>
         </section>
-        <button type="button" className="zp-native-demo-shortcut" onClick={() => onScreen('demo')}><Puzzle size={20} aria-hidden="true"/><span>Önce bir soru dene<small>Hesap açmadan keşfet</small></span><ArrowRight size={18} aria-hidden="true"/></button>
+        <button type="button" className="zp-native-demo-shortcut" onClick={() => onScreen('demo')}><Puzzle size={20} aria-hidden="true"/><span>Önce bir soru dene<small>Ücretsiz hazırlık sorusu</small></span><ArrowRight size={18} aria-hidden="true"/></button>
         <div className="zp-native-home-actions">
           <button type="button" className="zp-native-primary" onClick={() => onLogin('student')}><GraduationCap size={23}/><span>Öğrenci girişi<small>Kaldığın yerden devam et</small></span><ArrowRight size={20}/></button>
           <button type="button" className="zp-native-register" onClick={onRegister}><UserPlus size={23}/><span>Üye ol<small>Ücretsiz keşfe başla</small></span><ArrowRight size={20}/></button>
@@ -58,7 +58,7 @@ export function NativeHome({ screen, onScreen, onLogin, onRegister, soundActive,
         <details><summary>Nasıl cevap veririm?</summary><p>Kartı seçip hedefe dokunabilir, sürükleyebilir veya şıklardan birini seçebilirsin. Cevabından sonra çözüm açıklamasını incele.</p></details>
         <a href={publicPageUrl('/bilgi/hesap-ve-veli-rehberi')}>Hesap ve veli rehberi <ArrowRight size={17}/></a>
         <a href={publicPageUrl('/bilgi/gizlilik-ve-veriler')}>Gizlilik bilgileri <ArrowRight size={17}/></a>
-        <p>ZekaPark bağımsız bir alıştırma platformudur. MEB veya BİLSEM ile kurumsal bağlantısı yoktur.</p>
+        <p>BİLSEM Junior bağımsız bir alıştırma platformudur. MEB veya BİLSEM ile kurumsal bağlantısı yoktur.</p>
       </section>}
     </main>
     <nav className="zp-native-home-nav" aria-label="Başlangıç menüsü">
