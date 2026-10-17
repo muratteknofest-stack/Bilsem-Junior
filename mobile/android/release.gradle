@@ -1,9 +1,0 @@
-// Signing is performed outside CI. Private upload keys never enter this repository.
-android {
-    buildTypes {
-        release {
-            debuggable false
-            signingConfig null
-        }
-    }
-}

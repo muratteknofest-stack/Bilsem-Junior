@@ -1,12 +1,12 @@
 import React, { useId, useState } from 'react';
-import { AlertCircle, ArrowRight, Check, CheckCircle2, Clock3, Crown, ExternalLink, Gift, LoaderCircle, LockKeyhole, RefreshCw, Rocket, RotateCcw, ShieldCheck, Sparkles, type LucideIcon } from 'lucide-react';
+import { AlertCircle, ArrowRight, Check, CheckCircle2, Clock3, Crown, ExternalLink, Gift, LoaderCircle, LockKeyhole, RefreshCw, Rocket, RotateCcw, ShieldCheck, Sparkles } from 'lucide-react';
 import { PLAY_PLANS, type PlayPlanId } from '../lib/google-play-contract';
 import { canBuyPlay, type PlayBillingState } from '../lib/google-play-flow';
 interface Props { studentName?: string; state: PlayBillingState; onPurchase(plan: PlayPlanId): void; onRestore(): void; onRefresh(): void; }
-const PLAN_ART: Record<PlayPlanId, { icon: LucideIcon; caption: string }> = {
-  monthly: { icon: Sparkles, caption: 'Küçük adımlar, yeni keşifler' },
-  quarterly: { icon: Rocket, caption: 'Keşif yolculuğuna devam' },
-  annual: { icon: Crown, caption: 'Bir yıl boyunca keşif' },
+const PLAN_ART: Record<PlayPlanId, { image: string; caption: string }> = {
+  monthly: { image: '/images/membership/monthly-robot.webp', caption: 'Küçük adımlar, yeni keşifler' },
+  quarterly: { image: '/images/membership/quarterly-robot.webp', caption: 'Keşif yolculuğuna devam' },
+  annual: { image: '/images/membership/annual-robot.webp', caption: 'Bir yıl boyunca keşif' },
 };
 export function PlayBillingPanel({ state, studentName, onPurchase, onRestore, onRefresh }: Props) {
   const [selected, setSelected] = useState<PlayPlanId>('monthly'), radioName = useId();
@@ -40,12 +40,14 @@ export function PlayBillingPanel({ state, studentName, onPurchase, onRestore, on
           <legend><Crown size={19} aria-hidden="true"/>Abonelik döneminizi seçin</legend>
           <div className="zp-play-plan-list">{PLAY_PLANS.map(plan => {
             const offer = state.offers.find(o => o.basePlanId === plan.id), checked = plan.id === selected;
-            const { icon: PlanIcon, caption } = PLAN_ART[plan.id];
+            const { image, caption } = PLAN_ART[plan.id];
             return <label key={plan.id} className="zp-play-plan" data-plan={plan.id} data-selected={checked && !!offer} data-unavailable={!offer}>
+              <img className="zp-play-plan-art" src={image} alt="" width={1536} height={1024} decoding="async"/>
+              <span className="zp-play-plan-details">
               <input type="radio" name={radioName} value={plan.id} checked={checked} disabled={!offer} onChange={() => setSelected(plan.id)}/>
-              <span className="zp-play-plan-icon" aria-hidden="true"><PlanIcon size={25}/></span>
               <span className="zp-play-plan-copy"><strong>{plan.title}</strong><span className="zp-play-plan-caption">{caption}</span><span className="zp-play-plan-renewal">{plan.renewal} yenilenir</span></span>
               <span className="zp-play-plan-price">{offer ? <>{offer.price}<span>{checked ? 'Seçili dönem' : 'Dönemi seç'}</span></> : <><LockKeyhole size={13} aria-hidden="true"/>{busy ? 'Yükleniyor…' : 'Şu anda sunulmuyor'}</>}</span>
+              </span>
               {checked && offer && <CheckCircle2 className="zp-play-plan-check" size={20} aria-hidden="true"/>}
             </label>;
           })}</div>

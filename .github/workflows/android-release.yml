@@ -67,10 +67,10 @@ jobs:
       - name: Verify compiled release and audit runtime dependencies
         run: |
           mkdir -p release-candidate
-          cp android/app/build/outputs/bundle/release/app-release.aab release-candidate/ZekaPark-1.0.6-unsigned.aab
-          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -P 16 -f 4 android/app/build/outputs/apk/release/app-release-unsigned.apk release-candidate/ZekaPark-1.0.6-aligned-unsigned.apk
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging release-candidate/ZekaPark-1.0.6-aligned-unsigned.apk > release-candidate/package.txt
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree release-candidate/ZekaPark-1.0.6-aligned-unsigned.apk AndroidManifest.xml > release-candidate/manifest.txt
+          cp android/app/build/outputs/bundle/release/app-release.aab release-candidate/ZekaPark-1.0.7-unsigned.aab
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -P 16 -f 4 android/app/build/outputs/apk/release/app-release-unsigned.apk release-candidate/ZekaPark-1.0.7-aligned-unsigned.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging release-candidate/ZekaPark-1.0.7-aligned-unsigned.apk > release-candidate/package.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree release-candidate/ZekaPark-1.0.7-aligned-unsigned.apk AndroidManifest.xml > release-candidate/manifest.txt
           node scripts/verify-android-release.mjs release-candidate/manifest.txt release-candidate/package.txt > release-candidate/release-check.json
           node scripts/audit-android-dependencies.mjs android-release-build.log > release-candidate/release-maven-osv.json
           cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" release-candidate/apksigner.jar

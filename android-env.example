@@ -1,7 +1,0 @@
-# Copy to .env.android. Only public browser settings belong here.
-VITE_API_BASE_URL=https://zekapark.vercel.app
-VITE_PUBLIC_SITE_URL=https://zekapark.vercel.app
-VITE_SUPABASE_URL=https://vehhvsdkifwstbjhnhao.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLIC_PUBLISHABLE_KEY
-# Android API calls use native CapacitorHttp; browser fetch retains normal CORS.
-# Do not put a Shopier token, service_role key, signing key or password here.

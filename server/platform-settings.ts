@@ -1,9 +1,0 @@
-import { getServiceClient } from './supabase-admin';
-import { platformSettingsSchema, type SettingsRecord } from '../src/lib/platform-settings';
-
-// Server-only table: failures are never interpreted as permission to register.
-export async function readPlatformSettings(): Promise<SettingsRecord> {
-  const { data, error } = await getServiceClient().from('platform_settings').select('settings,revision,updated_at').eq('id', true).single();
-  if (error || !data) throw error || new Error('Platform ayarları okunamadı.');
-  return { settings: platformSettingsSchema.parse(data.settings), revision: data.revision, updatedAt: data.updated_at };
-}

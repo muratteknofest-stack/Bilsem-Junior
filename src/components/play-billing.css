@@ -21,19 +21,20 @@
 .zp-play-plans legend { display:flex; align-items:center; gap:8px; padding:0; margin-bottom:15px; max-width:100%; color:#4a3762; font-size:16px; line-height:1.45; font-weight:800; }
 .zp-play-plans legend svg { color:#9666d5; }
 .zp-play-plan-list { display:grid; grid-template-columns:minmax(0,1fr); gap:14px; }
-.zp-play-plan { --plan-bg:#effbf5; --plan-line:#b9e4d1; --plan-accent:#23735a; --plan-icon:#c9f2dd; position:relative; display:grid; grid-template-columns:18px 42px minmax(0,1fr); column-gap:10px; row-gap:9px; align-items:center; min-width:0; padding:17px 14px; border:2px solid var(--plan-line); border-radius:18px; background:var(--plan-bg); color:var(--plan-accent); cursor:pointer; box-shadow:0 3px 0 color-mix(in srgb,var(--plan-line) 50%,white); transition:transform .15s,border-color .15s,box-shadow .15s; }
+.zp-play-plan { --plan-bg:#effbf5; --plan-line:#b9e4d1; --plan-accent:#23735a; --plan-icon:#c9f2dd; position:relative; display:block; min-width:0; overflow:hidden; border:2px solid var(--plan-line); border-radius:18px; background:var(--plan-bg); color:var(--plan-accent); cursor:pointer; box-shadow:0 3px 0 color-mix(in srgb,var(--plan-line) 50%,white); transition:transform .15s,border-color .15s,box-shadow .15s; }
 .zp-play-plan[data-plan=quarterly] { --plan-bg:#f5f0ff; --plan-line:#d9c9f4; --plan-accent:#7245b4; --plan-icon:#e5d6ff; }
 .zp-play-plan[data-plan=annual] { --plan-bg:#fff8e7; --plan-line:#efd69e; --plan-accent:#8e6017; --plan-icon:#ffebaf; }
+.zp-play-plan-art { display:block; width:100%; height:auto; aspect-ratio:3/2; border-bottom:1px solid var(--plan-line); }
+.zp-play-plan-details { display:grid; grid-template-columns:18px minmax(0,1fr); column-gap:11px; row-gap:10px; align-items:center; min-width:0; padding:16px; }
 .zp-play-plan input { grid-column:1; grid-row:1/3; width:18px; height:18px; margin:0; accent-color:var(--plan-accent); cursor:inherit; }
-.zp-play-plan-icon { grid-column:2; grid-row:1/3; display:grid; place-items:center; width:42px; height:48px; align-self:start; margin-top:3px; border-radius:14px; background:var(--plan-icon); color:var(--plan-accent); border:1px solid #ffffffb0; box-shadow:0 3px 0 var(--plan-line),inset 1px 1px 0 #ffffffb0; transform:rotate(-5deg); }
-.zp-play-plan-copy { grid-column:3; min-width:0; padding-right:8px; }
+.zp-play-plan-copy { grid-column:2; min-width:0; padding-right:8px; }
 .zp-play-plan-copy strong { display:block; color:var(--plan-accent); font-size:20px; font-weight:850; line-height:1.25; }
 .zp-play-plan-caption { display:block; margin-top:5px; color:var(--plan-accent); font-size:11px; line-height:1.5; }
 .zp-play-plan-renewal { display:block; margin-top:4px; color:#686173; font-size:11px; line-height:1.5; }
-.zp-play-plan-price { grid-column:3; display:flex; align-items:center; flex-wrap:wrap; gap:5px; width:fit-content; min-width:0; max-width:100%; padding:6px 9px; border:1px solid var(--plan-line); border-radius:9px; background:#ffffffb5; color:var(--plan-accent); font-size:14px; font-weight:800; line-height:1.5; overflow-wrap:anywhere; }
+.zp-play-plan-price { grid-column:2; display:flex; align-items:center; flex-wrap:wrap; gap:5px; width:fit-content; min-width:0; max-width:100%; padding:6px 9px; border:1px solid var(--plan-line); border-radius:9px; background:#ffffffb5; color:var(--plan-accent); font-size:14px; font-weight:800; line-height:1.5; overflow-wrap:anywhere; }
 .zp-play-plan-price>span { flex-basis:100%; font-size:10px; font-weight:650; }
 .zp-play-plan[data-unavailable=true] .zp-play-plan-price { font-size:10px; font-weight:650; color:#6c6176; }
-.zp-play-plan-check { position:absolute; right:10px; top:11px; color:var(--plan-accent); }
+.zp-play-plan-check { position:absolute; right:10px; top:11px; color:var(--plan-accent); background:var(--plan-bg); border-radius:50%; box-shadow:0 0 0 5px var(--plan-bg); }
 .zp-play-plan[data-selected=true] { border-color:var(--plan-accent); box-shadow:0 4px 0 var(--plan-line),0 0 0 2px #ffffff inset; }
 .zp-play-plans:not(:disabled) .zp-play-plan:not([data-unavailable=true]):hover { transform:translateY(-2px); border-color:var(--plan-accent); }
 .zp-play-plans:disabled .zp-play-plan,.zp-play-plan[data-unavailable=true] { cursor:not-allowed; }
@@ -59,13 +60,12 @@
 .zp-play-recovery button:disabled { opacity:.55; cursor:not-allowed; box-shadow:none; }
 .zp-play-terms { color:#7a6e84; font-size:11px; line-height:1.8; overflow-wrap:anywhere; }
 @container play-billing (min-width:500px) {
- .zp-play-plan { grid-template-columns:18px 46px minmax(0,1fr) minmax(100px,145px); padding:18px; column-gap:14px; }
- .zp-play-plan input,.zp-play-plan-icon { grid-row:1; }
- .zp-play-plan-price { grid-column:4; text-align:right; justify-content:flex-end; justify-self:end; }
- .zp-play-plan-copy { grid-row:1; }
+ .zp-play-plan { display:grid; grid-template-columns:42% minmax(0,1fr); align-items:stretch; }
+ .zp-play-plan-art { height:100%; object-fit:contain; border-bottom:0; border-right:1px solid var(--plan-line); }
+ .zp-play-plan-details { padding:20px; align-content:center; }
  .zp-play-hero-copy { padding-right:70px; }.zp-play-hero-sticker { right:28px; width:65px; height:65px; }.zp-play-hero-sticker>svg:first-child { width:38px; }
 }
-@media(max-width:380px) { .zp-play-body { padding:16px; gap:18px; }.zp-play-hero { padding:23px 17px; }.zp-play-plan { padding:14px 11px; grid-template-columns:18px 34px minmax(0,1fr); gap:8px; }.zp-play-plan-icon { width:34px; height:41px; border-radius:11px; }.zp-play-plan-icon svg { width:22px; }.zp-play-plan-copy strong { font-size:18px; }.zp-play-buy { font-size:13px; gap:7px; } }
+@media(max-width:380px) { .zp-play-body { padding:16px; gap:18px; }.zp-play-hero { padding:23px 17px; }.zp-play-plan-details { padding:14px 12px; gap:9px; }.zp-play-plan-copy strong { font-size:18px; }.zp-play-buy { font-size:13px; gap:7px; } }
 @media(prefers-reduced-motion:reduce) { .zp-play-billing * { transition:none!important; animation:none!important; }.zp-play-billing label:hover,.zp-play-billing button:hover,.zp-play-billing button:active { transform:none!important; } }
 .dark .zp-play-billing { border-color:#615071; background:#282134; color:#f3eafc; box-shadow:0 5px 0 #1b1524; }
 .dark .zp-play-plans legend { color:#eddef9; }

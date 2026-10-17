@@ -5,7 +5,9 @@ import { build } from 'esbuild';
 import { chromium } from 'playwright';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import express from 'express';
+import { once } from 'node:events';
+import type { AddressInfo } from 'node:net';
 const output=resolve('test-artifacts/google-play-ui');await mkdir(output,{recursive:true});
 const cssNames=(await readdir('dist-android/assets')).filter(name=>/^main-.*\.css$/.test(name));
 if(cssNames.length!==1)throw Error('Run npm run android:build:web before this layout check.');
@@ -33,10 +35,15 @@ createRoot(document.getElementById('root')).render(<Fixture/>);`;
 await build({stdin:{contents:fixture,resolveDir:process.cwd(),loader:'tsx'},bundle:true,platform:'browser',format:'iife',outfile:resolve(output,'fixture.js'),logLevel:'silent'});
 const html='<!doctype html>'+renderToStaticMarkup(<html lang="tr"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>ZekaPark yerel abonelik testi</title><style>{css}</style></head><body style={{background:'#f1f5f9'}}><main style={{maxWidth:760,margin:'0 auto',padding:12}}><p style={{fontSize:12,padding:4}}>Yerel arayüz testi · Örnek fiyatlar · Gerçek ödeme alınmaz</p><div id="root"/></main><script src="./fixture.js"/></body></html>);
 await writeFile(resolve(output,'index.html'),html);
-const browser=await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE,args:['--no-sandbox','--disable-dev-shm-usage']}: {})});
+const app=express();app.use(express.static(output));app.use(express.static(resolve('public')));
+const server=app.listen(0,'127.0.0.1');await once(server,'listening');
+let browser:Awaited<ReturnType<typeof chromium.launch>>|undefined;
 try{
+ browser=await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE,args:['--no-sandbox','--disable-dev-shm-usage']}: {})});
  const page=await browser.newPage({viewport:{width:360,height:800},deviceScaleFactor:1});const pageErrors:string[]=[];page.on('pageerror',e=>pageErrors.push(e.message));
- await page.goto(pathToFileURL(resolve(output,'index.html')).href);await page.getByRole('radio',{name:/Aylık/}).waitFor();
+ await page.goto(`http://127.0.0.1:${(server.address() as AddressInfo).port}/`);await page.getByRole('radio',{name:/Aylık/}).waitFor();
+ await page.locator('.zp-play-plan-art').evaluateAll(async nodes=>{await Promise.all(nodes.map(node=>(node as HTMLImageElement).decode()));});
+ if(await page.locator('.zp-play-plan-art').evaluateAll(nodes=>nodes.length!==3||nodes.some(node=>(node as HTMLImageElement).naturalWidth!==1536)))throw Error('Plan artwork did not load');
  const glyphWidth=await page.evaluate(()=>{const ctx=document.createElement('canvas').getContext('2d')!;ctx.font='16px sans-serif';return ctx.measureText('ZekaPark').width;});
  if(glyphWidth<10)throw Error('QA browser has no usable fonts; layout results would be invalid.');
  await page.getByRole('radio',{name:/Yıllık/}).check();
@@ -77,4 +84,4 @@ try{
  if(await page.getByRole('radio',{name:/3 aylık/}).isChecked()!==true)throw Error('Radio keyboard navigation failed');
  if(pageErrors.length)throw Error(pageErrors.join('; '));
  console.log(JSON.stringify({layoutCases:cases,interactions:5,pageErrors:pageErrors.length,screenshots:output}));
-}finally{await browser.close();}
+}finally{await browser?.close();await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()));}
