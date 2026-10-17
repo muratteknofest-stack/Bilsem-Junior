@@ -1,4 +1,4 @@
-.zp-native-home{min-height:calc(100dvh - var(--zp-safe-top,0px) - var(--zp-safe-bottom,0px));background:#f7f8fc;color:#252b49;padding-bottom:calc(74px + var(--zp-safe-bottom,0px));font-family:'Plus Jakarta Sans',sans-serif}
+.zp-native-home{min-height:calc(100dvh - var(--zp-safe-top,0px) - var(--zp-safe-bottom,0px));background:#f7f8fc;color:#252b49;padding-bottom:74px;font-family:'Plus Jakarta Sans',sans-serif}
 .zp-native-home button,.zp-native-home a{touch-action:manipulation;cursor:pointer}
 .zp-native-home button:focus-visible,.zp-native-home a:focus-visible,.zp-native-home summary:focus-visible{outline:3px solid #7954dc;outline-offset:3px}
 .zp-native-home-header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;padding:8px 20px;max-width:640px;margin:auto}
@@ -41,7 +41,6 @@
 .zp-native-home .zp-demo-tabs button{padding:8px 4px;min-height:44px;font-size:10px;justify-content:center;min-width:0}
 .zp-native-home .zp-demo-card h3{font-size:17px;margin:12px 0}
 .zp-native-home .zp-demo-complete{padding:16px 0}
-@media(max-height:700px){.zp-native-home-header{min-height:58px}.zp-native-welcome{min-height:150px;padding:17px}.zp-native-welcome h1{font-size:28px}.zp-native-home-actions{gap:10px;margin-top:12px}.zp-native-primary,.zp-native-register{min-height:66px}.zp-native-home-shortcuts button{min-height:54px}.zp-native-home-note{margin-top:12px}}
 @media(orientation:landscape) and (max-height:550px){.zp-native-home-content:has(.zp-native-welcome){display:grid;grid-template-columns:1fr 1fr;gap:15px}.zp-native-home-actions{margin:0}.zp-native-home-note{grid-column:1/-1}.zp-native-welcome{height:100%}}
 @media(max-height:800px){.zp-native-home-header{min-height:58px}.zp-native-welcome{min-height:144px;padding:17px}.zp-native-welcome h1{font-size:28px}.zp-native-home-actions{gap:10px;margin-top:12px}.zp-native-primary,.zp-native-register{min-height:62px;padding-block:10px}.zp-native-home-shortcuts button{min-height:52px}.zp-native-home-note{margin-top:12px}}
 @media(max-height:680px){.zp-native-home-header{min-height:54px;padding-block:5px}.zp-native-welcome{min-height:128px;padding:14px}.zp-native-welcome h1{font-size:26px;margin-bottom:7px}.zp-native-welcome p{margin-bottom:6px}.zp-native-home-actions{gap:8px;margin-top:10px}.zp-native-primary,.zp-native-register{min-height:56px;padding-block:8px}.zp-native-home-shortcuts button{min-height:48px}.zp-native-home-note{font-size:9px;margin-top:10px}}

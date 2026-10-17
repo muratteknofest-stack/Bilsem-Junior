@@ -10,10 +10,9 @@ await once(server,'listening');await mkdir('test-artifacts/native-home',{recursi
 try{
  browser=await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE,args:['--no-sandbox','--disable-dev-shm-usage']}: {})});
  const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.addInitScript(()=>{document.documentElement.style.setProperty('--safe-area-inset-top','30px');document.documentElement.style.setProperty('--safe-area-inset-bottom','24px');});
  const back=()=>page.evaluate(()=>document.dispatchEvent(new Event('zekapark:native-back',{bubbles:true,cancelable:true})));
  for(const [width,height] of [[320,640],[360,740],[390,844],[430,932],[768,1024],[844,390]]){
-  await page.setViewportSize({width,height});await page.goto('http://127.0.0.1:5198/');await page.locator('#native-home-title').waitFor();
+  await page.setViewportSize({width,height});await page.goto('http://127.0.0.1:5198/');await page.evaluate(()=>{document.documentElement.style.setProperty('--safe-area-inset-top','30px');document.documentElement.style.setProperty('--safe-area-inset-bottom','24px');});await page.locator('#native-home-title').waitFor();
   assert.equal(await page.locator('html').getAttribute('data-native-app'),'android');
   const layout=await page.evaluate(()=>({height:document.documentElement.scrollHeight,viewport:innerHeight,width:document.documentElement.scrollWidth,actionsBottom:document.querySelector('.zp-native-home-shortcuts').getBoundingClientRect().bottom,navTop:document.querySelector('.zp-native-home-nav').getBoundingClientRect().top}));
   assert.ok(layout.width<=width+1,'Horizontal overflow '+JSON.stringify(layout));

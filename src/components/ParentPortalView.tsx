@@ -645,7 +645,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
           {isAndroidApp && <button type="button" aria-pressed={activeTab === 'membership'} onClick={() => setActiveTab('membership')} className="zp-native-parent-membership">Üyelik</button>}
         </div>
 
-        {(!isAndroidApp || activeTab === 'membership') && parentProfile?.role === 'parent' && <FamilyActivation />}
+        {parentProfile?.role === 'parent' && <FamilyActivation />}
         {(!isAndroidApp || activeTab === 'membership') && parentProfile?.role === 'parent' && currentStudent.role === 'student' && <NativeAccessStatus studentId={currentStudent.id} studentName={currentStudent.name}/>}
         <AnimatePresence mode="wait">
           {activeTab === 'overview' && (

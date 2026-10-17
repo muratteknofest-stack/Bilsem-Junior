@@ -89,7 +89,6 @@ html[data-native-app] .zp-parent-dashboard .zp-dashboard-tabs button{min-height:
 .zp-native-parent-membership{border-radius:12px;font-weight:700;color:#8059c9}
 .zp-native-parent-membership[aria-pressed=true]{background:#fff;box-shadow:0 2px 4px #0000000a}
 html[data-native-app] #root>.min-h-screen{min-height:calc(100dvh - var(--zp-safe-top) - var(--zp-safe-bottom))}
-html[data-native-app] .zp-native-home{padding-bottom:74px}
 html[data-native-app] .zp-student-pro{min-height:calc(100dvh - var(--zp-safe-top) - var(--zp-safe-bottom) - 64px);padding-bottom:76px}
 html[data-native-app] .zp-parent-dashboard .zp-dashboard-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 html[data-native-app] .zp-parent-dashboard .zp-dashboard-kpis>div{padding:13px}
@@ -103,3 +102,6 @@ html[data-native-app] .ww-card p{font-size:10px}
 html[data-native-app] .ww-header{margin-bottom:14px}
 html[data-native-app] .ww-header h2{font-size:23px}
 html[data-native-app] .ww-eyebrow{display:none}
+html[data-native-app] .zp-student-topline{display:flex;justify-content:flex-end;margin-bottom:8px}
+html[data-native-app] .zp-student-topline>span{display:none}
+html[data-native-app] .zp-student-topline .zp-experience-controls>summary{min-height:44px;padding:8px 10px;font-size:10px}

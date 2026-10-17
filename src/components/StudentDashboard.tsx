@@ -164,7 +164,7 @@ export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries
                   {(!isAndroidApp || nativeStudyView === 'quick') && <>
                   {!premium && !demo && <DailyChallenge />}
                   {!premium && <MembershipPrompt onUpgrade={() => onNavigate('parent')} onRegister={demo ? () => onNavigate('register') : undefined} loading={membership?.loading} error={membership?.error} onRetry={membership?.refresh} />}
-                  <StudentModesGrid unresolvedMistakesCount={unresolved} onStartAdaptive={onStartAdaptive} onStartExam={onStartExam} onStartPractice={onStartPractice} onOpenMistakes={onOpenMistakes} onNavigate={onNavigate} onOpenChallenges={() => switchSection('challenges')} />
+                  {(!isAndroidApp || premium || demo) && <StudentModesGrid unresolvedMistakesCount={unresolved} onStartAdaptive={onStartAdaptive} onStartExam={onStartExam} onStartPractice={onStartPractice} onOpenMistakes={onOpenMistakes} onNavigate={onNavigate} onOpenChallenges={() => switchSection('challenges')} />}
                   </>}
                   {isAndroidApp && nativeStudyView !== 'quick' && !premium && <MembershipPrompt onUpgrade={() => onNavigate('parent')} onRegister={demo ? () => onNavigate('register') : undefined} loading={membership?.loading} error={membership?.error} onRetry={membership?.refresh} />}
                   {(!isAndroidApp || nativeStudyView === 'topics') && premium && onStartTopicPractice && isSchoolGrade(activeUser.grade) && <StudentTopicPractice grade={activeUser.grade} onStart={onStartTopicPractice} />}
