@@ -1,3 +1,4 @@
+import { selectShopierPackageCandidates, shopierConnectionMessage } from '../../lib/shopier-connection';
 import React, { useEffect, useState } from "react";
 import { authenticatedFetch } from "../../lib/api-client";
 import { downloadSafePreferences } from "../../lib/safe-preferences";
@@ -10,6 +11,7 @@ import { LEARNING_EXAMS } from "../../features/student/learning-contract";
 import { SHOPIER_PLANS, SHOPIER_PRODUCT_FIELDS, type ShopierPlanId } from "../../lib/shopier-config";
 
 interface ShopierDiagnosticsPayload {
+  blockers?: string[];
   tokenMeta?: {
     configured: boolean;
     validJwtFormat?: boolean;
@@ -38,6 +40,7 @@ interface ShopierDiagnosticsPayload {
     configured: boolean;
     readable?: boolean;
     httpStatus?: number;
+    challenge?: boolean;
     scanned?: number;
     candidates?: Array<{
       plan: ShopierPlanId;
@@ -96,6 +99,7 @@ export function AdminSystemSettings({
         throw new Error(value.error || "Shopier bağlantı durumu okunamadı.");
       }
       setDiagnostics(value);
+      setNotice("");
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -113,35 +117,10 @@ export function AdminSystemSettings({
     setRecord((r) => {
       if (!r) return r;
       const nextShopier = { ...r.settings.shopier };
-      for (const plan of SHOPIER_PLANS) {
-        const match =
-          list.find(
-            (c) =>
-              c.plan === plan.id &&
-              c.digital &&
-              c.inStock &&
-              c.noDiscount &&
-              c.freeShipping &&
-              c.noVariants &&
-              c.noOptions &&
-              c.titleMatchesPlan
-          ) ||
-          list.find(
-            (c) =>
-              c.plan === plan.id &&
-              c.digital &&
-              c.inStock &&
-              c.noDiscount &&
-              c.freeShipping &&
-              c.noVariants &&
-              c.noOptions
-          ) ||
-          list.find((c) => c.plan === plan.id);
-        if (match) {
-          const fields = SHOPIER_PRODUCT_FIELDS[plan.id];
-          nextShopier[fields.id] = match.productId;
-          nextShopier[fields.url] = match.url;
-        }
+      for (const match of selectShopierPackageCandidates(list).selected) {
+        const fields = SHOPIER_PRODUCT_FIELDS[match.plan];
+        nextShopier[fields.id] = match.productId;
+        nextShopier[fields.url] = match.url;
       }
       return {
         ...r,
@@ -152,7 +131,9 @@ export function AdminSystemSettings({
       };
     });
     setNotice(
-      "Shopier hesabında bulunan eşleşen paket numaraları ve bağlantıları forma aktarıldı. Kaydet butonuna basarak doğrulayın."
+      selectShopierPackageCandidates(list).unresolved.length
+        ? 'Yalnızca tek ve uygun eşleşmesi bulunan paketler forma aktarıldı. Eksik veya birden fazla eşleşen paketleri kontrol edin; sonra Kaydet ile doğrulayın.'
+        : 'Üç paketin tek ve uygun eşleşmeleri forma aktarıldı. Kaydet butonuna basarak sunucuda doğrulayın.'
     );
   }
 
@@ -177,6 +158,7 @@ export function AdminSystemSettings({
       if (!response.ok)
         throw new Error(value.error || "Ayarlar kaydedilemedi.");
       setRecord(value);
+      setDiagnostics(null);
       setNotice(
         "Ayarlar Supabase’e kaydedildi. Yeni çalışmalar güncel sınav ayarlarını kullanır.",
       );
@@ -264,7 +246,7 @@ export function AdminSystemSettings({
                 </div>
                 <button
                   type="button"
-                  disabled={diagBusy}
+                  disabled={diagBusy || busy}
                   onClick={() => void checkShopierConnection()}
                   className="min-h-11 rounded-xl border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-900"
                 >
@@ -286,11 +268,11 @@ export function AdminSystemSettings({
                         }`
                       : "Geçersiz JWT formatı"}
                   </p>
-                  {diagnostics.candidatesReport?.httpStatus === 401 && (
-                    <p role="alert" className="rounded-lg bg-amber-100 p-3 text-amber-950 font-semibold">
-                      Shopier API HTTP 401 döndürdü: Sunucudaki SHOPIER_ACCESS_TOKEN anahtarı Shopier tarafından iptal edilmiş (Access token is revoked). Lütfen Shopier panelinden yeni bir Kişisel Erişim Anahtarı (PAT) oluşturup sunucu SHOPIER_ACCESS_TOKEN ortam değişkenini güncelleyin.
-                    </p>
-                  )}
+                  <p role="status" className="rounded-lg border border-indigo-100 bg-white p-3">{shopierConnectionMessage(diagnostics.candidatesReport || {})}</p>
+                  {diagnostics.tokenMeta?.expired && <p role="alert" className="rounded-lg bg-amber-100 p-3 text-amber-950">Tanımlı anahtarın süresi dolmuş görünüyor. Vercel’de güncel anahtarı tanımlayın ve yeniden dağıtın.</p>}
+                  {!!diagnostics.productsReport?.products.length && <ul className="space-y-2" aria-label="Shopier paket bağlantıları">{diagnostics.productsReport.products.map(product => <li key={product.plan} className="rounded-lg border bg-white p-3"><strong>{SHOPIER_PLANS.find(plan => plan.id === product.plan)?.title}</strong> · {product.readable && product.idMatches && product.priceMatches && product.digital && product.urlMatches && product.inStock ? 'Ürün, fiyat ve bağlantı doğrulandı' : product.httpStatus ? `Doğrulanamadı (HTTP ${product.httpStatus})` : 'Ürün, fiyat, dijital tür, stok ve bağlantı eşleşmesini kontrol edin'}</li>)}</ul>}
+                  {!!diagnostics.blockers?.length && <details className="rounded-lg border border-amber-200 bg-amber-50 p-3"><summary className="cursor-pointer font-bold">Satışı açmak için {diagnostics.blockers.length} eksik alan/kontrol</summary><ul className="list-disc space-y-1 pl-5 pt-2">{diagnostics.blockers.map(item => <li key={item}>{item}</li>)}</ul></details>}
+                  <div className="flex flex-wrap gap-3 text-xs underline"><a href="https://www.shopier.com/" target="_blank" rel="noopener noreferrer">Shopier hesabını aç</a><a href="https://help.shopier.com/help/kisisel-erisim-anahtari-nedir" target="_blank" rel="noopener noreferrer">Erişim anahtarı rehberi</a></div>
                   {diagnostics.candidatesReport?.readable && (
                     <div className="space-y-2">
                       <p className="text-emerald-900 font-semibold">
