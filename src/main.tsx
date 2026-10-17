@@ -17,7 +17,9 @@ if (isAndroidApp) {
   if (Capacitor.isNativePlatform()) void import('@capacitor/app').then(({ App: NativeApp }) =>
     NativeApp.addListener('backButton', () => {
       // React routes need to consume Back before the native activity minimizes.
-      if (window.dispatchEvent(new Event('zekapark:native-back', { cancelable: true }))) void NativeApp.minimizeApp();
+      // Window is an ancestor here: capture handlers for forms/dialogs always run
+      // before the window's bubbling route handler, regardless of registration order.
+      if (document.dispatchEvent(new Event('zekapark:native-back', { bubbles: true, cancelable: true }))) void NativeApp.minimizeApp();
     }),
   ).catch(() => {});
 }

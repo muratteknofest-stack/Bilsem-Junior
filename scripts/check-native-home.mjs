@@ -31,7 +31,7 @@ try {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, 'Home overflow at ' + width);
     await page.getByRole('button', { name: 'Menüyü aç', exact: true }).click();
     await page.locator('dialog[open]').waitFor();
-    await page.evaluate(() => window.dispatchEvent(new Event('zekapark:native-back', { cancelable: true })));
+    await page.evaluate(() => document.dispatchEvent(new Event('zekapark:native-back', { bubbles: true, cancelable: true })));
     await page.locator('dialog[open]').waitFor({ state: 'hidden' });
     await page.getByRole('button', { name: 'Menüyü aç', exact: true }).click();
     await page.locator('dialog[open]').getByRole('link', { name: /Google Play üyeliği/ }).click();
@@ -46,10 +46,10 @@ try {
     await page.locator('#zp-auth-heading').waitFor();
     await page.getByRole('button', { name: 'Yeni Kayıt', exact: true }).click();
     await page.locator('#parent-email').waitFor();
-    await page.evaluate(() => window.dispatchEvent(new Event('zekapark:native-back', { cancelable: true })));
+    await page.evaluate(() => document.dispatchEvent(new Event('zekapark:native-back', { bubbles: true, cancelable: true })));
     await page.waitForFunction(() => document.querySelector('button.zp-auth-mode-button[aria-pressed="true"]')?.textContent.trim() === 'Giriş Yap');
     assert.equal(await page.locator('#hero-title').count(), 0, 'Registration Back must stop at login');
-    await page.evaluate(() => window.dispatchEvent(new Event('zekapark:native-back', { cancelable: true })));
+    await page.evaluate(() => document.dispatchEvent(new Event('zekapark:native-back', { bubbles: true, cancelable: true })));
     await page.locator('#hero-title').waitFor();
     await page.waitForURL(url => url.pathname === '/', { timeout: 10000 }).catch(async error => {
       console.error('Native Back navigation trace:', await page.evaluate(() => window.__nativeNavigationTrace));
