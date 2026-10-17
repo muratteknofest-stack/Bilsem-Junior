@@ -9,6 +9,8 @@ on:
       - 'scripts/prepare-android.mjs'
       - 'tests/android*'
       - 'tests/google-play*'
+      - 'vite.config.ts'
+      - 'scripts/check-student-mobile.mjs'
       - 'capacitor.config.ts'
       - 'package*.json'
   workflow_dispatch:
