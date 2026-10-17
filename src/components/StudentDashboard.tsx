@@ -1,10 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'motion/react';
 import { Activity, BarChart3, Brain, Compass, Layers, Lightbulb, Sparkles, Target, Trophy, Zap, ArrowUpRight, BookOpen, Flame } from 'lucide-react';
 import type { DailyStudyPlan, QuestionType, SkillMastery, UserProfile } from '../types';
 import { isSchoolGrade } from '../features/questions/quality-policy';
 import { isDemoUser } from '../lib/demo-access';
 import { sound } from '../lib/sound';
+import { NativeStudyStart } from './NativeStudyStart';
+import { useNativeScreenBack } from '../hooks/useNativeScreenBack';
 import { isAndroidApp } from '../lib/native-app';
 import { dataService } from '../services/data-service';
 import { isAvailableCategory } from '../features/student/available-categories';
@@ -118,6 +120,7 @@ const CATEGORY_STYLE_CONFIG: Record<string, {
 
 export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries = EMPTY_MASTERIES, mistakes,
   onUserUpdate, onStartPractice, onStartTopicPractice, onStartAdaptive, onStartExam, onOpenMistakes, onNavigate, membership }: StudentDashboardProps) {
+  const screenRoot = useRef<HTMLElement>(null);
   const activeUser = user || dataService.getCurrentUser();
   const activeMistakes = mistakes ?? dataService.getMistakes();
   const [nativeDetailView, setNativeDetailView] = useState(0);
@@ -144,10 +147,18 @@ export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries
   const premium = membership?.active === true && !demo;
   const detailChoices = activeTab === 'plan' ? ['Hedefim','Öneriler','Çalışma planı'] : activeTab === 'challenges' ? ['Haftalık yarış','Günlük görev','Rozet görevi'] : activeTab === 'progress' ? ['Grafik','Rozetler','Günlük özet'] : [];
   const lockedSection = !premium && ['plan', 'skills', 'challenges'].includes(activeTab);
+  useNativeScreenBack(screenRoot, () => {
+    if (nativeDetailView !== 0) { setNativeDetailView(0); }
+    else if (activeTab !== 'modes') { setActiveTab('modes'); setNativeStudyView('quick'); }
+    else if (nativeStudyView !== 'quick') { setNativeStudyView('quick'); }
+    else return false;
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    return true;
+  });
   if (isLoading) return <main id="student-dashboard" aria-busy="true" className="zp-dashboard-page zp-student-dashboard zp-student-pro"><div className="zp-student-shell"><ProfileBannerSkeleton /><div className="zp-mode-grid"><ModeCardSkeleton /><ModeCardSkeleton /></div></div></main>;
   return <MotionConfig reducedMotion={reduced ? 'always' : 'user'}>
     <div className="zp-dashboard-page zp-student-dashboard zp-student-pro" data-reduced-motion={reduced}>
-      <main id="student-dashboard" className="zp-student-shell">
+      <main ref={screenRoot} id="student-dashboard" className="zp-student-shell">
         <div className="zp-student-topline"><span><span className="zp-brand-dot" /> ZekaPark <span className="zp-topline-divider">/</span> Çalışma masam</span><StudentExperienceControls /></div>
         <StudentHeroBanner user={activeUser} greeting={greeting} xpProgress={xpProgress} onUserUpdate={onUserUpdate} onNavigate={onNavigate} prefersReducedMotion={reduced} />
         <nav className="zp-study-navigation" aria-label="Öğrenci paneli bölümleri">{SECTIONS.map(({ id, label, icon: Icon }) =>
@@ -165,7 +176,8 @@ export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries
                   {(!isAndroidApp || nativeStudyView === 'quick') && <>
                   {!premium && !demo && <DailyChallenge />}
                   {!premium && <MembershipPrompt onUpgrade={() => onNavigate('parent')} onRegister={demo ? () => onNavigate('register') : undefined} loading={membership?.loading} error={membership?.error} onRetry={membership?.refresh} />}
-                  {(!isAndroidApp || premium || demo) && <StudentModesGrid unresolvedMistakesCount={unresolved} onStartAdaptive={onStartAdaptive} onStartExam={onStartExam} onStartPractice={onStartPractice} onOpenMistakes={onOpenMistakes} onNavigate={onNavigate} onOpenChallenges={() => switchSection('challenges')} />}
+                  {isAndroidApp && premium && <NativeStudyStart user={activeUser} unresolved={unresolved} savedExam={dataService.getActiveExam()} onPractice={() => onStartPractice('mixed')} onAdaptive={onStartAdaptive} onExam={onStartExam} onMistakes={onOpenMistakes} onTopics={() => setNativeStudyView('topics')} onGames={() => setNativeStudyView('games')} />}
+                  {(!isAndroidApp || demo) && <StudentModesGrid unresolvedMistakesCount={unresolved} onStartAdaptive={onStartAdaptive} onStartExam={onStartExam} onStartPractice={onStartPractice} onOpenMistakes={onOpenMistakes} onNavigate={onNavigate} onOpenChallenges={() => switchSection('challenges')} />}
                   </>}
                   {isAndroidApp && nativeStudyView !== 'quick' && !premium && <MembershipPrompt onUpgrade={() => onNavigate('parent')} onRegister={demo ? () => onNavigate('register') : undefined} loading={membership?.loading} error={membership?.error} onRetry={membership?.refresh} />}
                   {(!isAndroidApp || nativeStudyView === 'topics') && premium && onStartTopicPractice && isSchoolGrade(activeUser.grade) && <StudentTopicPractice grade={activeUser.grade} onStart={onStartTopicPractice} />}

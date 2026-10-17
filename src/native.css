@@ -107,3 +107,7 @@ html[data-native-app] .zp-student-topline>span{display:none}
 html[data-native-app] .zp-student-topline .zp-experience-controls>summary{min-height:44px;padding:8px 10px;font-size:10px}
 html[data-native-app] .zp-study-navigation>button{font-size:11px;white-space:nowrap}
 html[data-native-app] .zp-study-navigation>button>span{overflow-wrap:normal}
+html[data-native-app] .zp-native-connection{display:flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:8px 14px;background:#fff1db;color:#7c5d29;font-size:11px;line-height:1.5;border-bottom:1px solid #edd4ab}
+html[data-native-app] .zp-native-connection svg{flex:none}
+html[data-native-app] .zp-study-navigation>button:focus-visible{outline-offset:0}
+@media(prefers-reduced-motion:reduce){.zp-native-home button,.zp-native-start button{transition:none}}

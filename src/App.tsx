@@ -17,6 +17,7 @@ import { sound } from './lib/sound';
 import { reminderService } from './services/reminder-service';
 import { demoQuestionsRemaining, isDemoUser } from './lib/demo-access';
 import { Navbar } from './components/Navbar';
+import { NativeConnectionNotice } from './components/NativeConnectionNotice';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { StudyReminderInAppAlert } from './components/StudyReminderInAppAlert';
 import { StudyReminderSettingsModal } from './components/StudyReminderSettingsModal';
@@ -427,6 +428,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
+      {isAndroidApp && !isTestRoute && <NativeConnectionNotice />}
       {/* Workspace navigation; public pages own their header. Tests stay distraction-free. */}
       {!isTestRoute && currentRoute !== 'landing' && currentRoute !== 'login' && (
         <Navbar

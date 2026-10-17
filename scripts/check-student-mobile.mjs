@@ -44,7 +44,7 @@ try {
  const go=async()=>{await page.goto('http://127.0.0.1:5189/tests/browser/student-membership.html');await page.locator('#student-dashboard').waitFor().catch(async error=>{console.error('Isolated dashboard errors:',errors);console.error('Isolated dashboard content:',(await page.locator('body').innerText()).slice(0,1200));throw error;});};
  const noOverflow=async(label)=>{
   const measurements=await page.evaluate(()=>({viewport:innerWidth,document:document.documentElement.scrollWidth,
-   clipped:[...document.querySelectorAll('.zp-arena,.zp-arena-duel,.zp-arena h2,.zp-study-navigation,.zp-study-navigation button,.zp-membership-prompt')].filter(node=>{const r=node.getBoundingClientRect();return r.left< -1||r.right>innerWidth+1||(!node.matches('.zp-arena,.zp-arena-duel')&&node.scrollWidth>node.clientWidth+1);}).map(n=>n.className)}));
+   clipped:[...document.querySelectorAll('.zp-arena,.zp-arena-duel,.zp-arena h2,.zp-study-navigation,.zp-study-navigation button,.zp-membership-prompt,.zp-native-start,.zp-native-start button')].filter(node=>{const r=node.getBoundingClientRect();return r.left< -1||r.right>innerWidth+1||(!node.matches('.zp-arena,.zp-arena-duel')&&node.scrollWidth>node.clientWidth+1);}).map(n=>n.className)}));
   assert.ok(measurements.document<=measurements.viewport+1,label+': document '+JSON.stringify(measurements));
   assert.deepEqual(measurements.clipped,[],label+': content must fit, not merely be hidden');
  };
@@ -55,9 +55,20 @@ try {
    await page.getByRole('button',{name:'Konu testleri',exact:true}).click();await page.locator('[aria-label="Konuya göre test"]').waitFor();
    assert.equal(await page.locator('.zp-modes-section').count(),0);
    await page.getByRole('button',{name:'Oyunlar',exact:true}).click();await page.getByRole('button',{name:'Hızlı başla',exact:true}).click();
-   await page.locator('.zp-modes-section').waitFor();assert.equal(await page.locator('[aria-label="Konuya göre test"]').count(),0);assert.equal(await page.locator('.zp-student-aside').count(),0);
+   await page.getByRole('region',{name:'Hızlı çalışma alanım',exact:true}).waitFor();assert.equal(await page.locator('[aria-label="Konuya göre test"]').count(),0);assert.equal(await page.locator('.zp-student-aside').count(),0);
    const layout=await page.evaluate(()=>({height:document.documentElement.scrollHeight,viewport:innerHeight}));assert.ok(layout.height<layout.viewport*1.6,'Quick screen should stay compact '+JSON.stringify(layout));
   }else await page.locator('[aria-label="Konuya göre test"]').waitFor();
+  if(native){
+   const back=()=>page.evaluate(()=>document.dispatchEvent(new Event('zekapark:native-back',{bubbles:true,cancelable:true})));
+   await page.getByRole('region',{name:'Hızlı çalışma alanım',exact:true}).getByRole('button',{name:/Konu testleri/}).click();
+   await page.locator('[aria-label="Konuya göre test"]').waitFor();await back();
+   await page.getByRole('region',{name:'Hızlı çalışma alanım',exact:true}).waitFor();
+   await page.locator('.zp-study-navigation').getByRole('button',{name:'Kişisel planım',exact:true}).click();await back();
+   await page.waitForFunction(()=>document.querySelector('.zp-study-navigation button[aria-pressed="true"]')?.getAttribute('aria-label')==='Çalışma alanım');
+   await page.getByRole('region',{name:'Hızlı çalışma alanım',exact:true}).waitFor();
+   await page.getByText('Hesap ve giriş bilgileri',{exact:true}).click();await page.locator('.zp-profile-tools[open]').waitFor();await back();assert.equal(await page.locator('.zp-profile-tools[open]').count(),0);
+   if(width===390)await page.screenshot({path:'test-artifacts/student-mobile/quick-start-390.png',fullPage:true});
+  }
   for(const name of ['Görevlerim','Kişisel planım','Yeteneklerim','İlerlemem','Çalışma alanım']){
    await page.locator('.zp-study-navigation').getByRole('button',{name,exact:true}).click();
    await page.waitForTimeout(240);await noOverflow(`${width}px ${name}`);

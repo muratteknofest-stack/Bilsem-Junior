@@ -20,7 +20,7 @@ try{
   assert.equal(await page.locator('.zp-world-grid,.zp-rewards-section,footer').count(),0,'Marketing sections must not stack under home');
   await page.locator('.zp-native-home-nav').getByRole('button',{name:'Yardım',exact:true}).click();
   await page.getByRole('region',{name:'Sık sorulan sorular'}).waitFor();await back();await page.locator('#native-home-title').waitFor();
-  await page.locator('.zp-native-home-nav').getByRole('button',{name:'Bir soru dene',exact:true}).click();await page.locator('.zp-demo-card').waitFor();
+  await page.getByRole('button',{name:/Önce bir soru dene/}).click();await page.locator('.zp-demo-card').waitFor();
   assert.equal(await page.locator('#native-home-title').count(),0);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
   await back();await page.locator('#native-home-title').waitFor();
   await page.getByRole('button',{name:'Abone ol',exact:true}).click();await page.locator('#zp-auth-heading').waitFor();assert.equal(new URL(page.url()).searchParams.get('role'),'parent');
@@ -31,8 +31,12 @@ try{
   await back();await page.waitForFunction(()=>document.querySelector('button.zp-auth-mode-button[aria-pressed="true"]')?.textContent.trim()==='Giriş Yap');
   await back();await page.locator('#native-home-title').waitFor();await page.waitForURL(url=>url.pathname==='/');
   await page.screenshot({path:`test-artifacts/native-home/home-${width}.png`,fullPage:true});
+  if(width===390){await page.evaluate(()=>document.documentElement.classList.add('dark'));await page.screenshot({path:'test-artifacts/native-home/home-dark-390.png',fullPage:true});await page.evaluate(()=>document.documentElement.classList.remove('dark'));}
   console.log(`Compact native home, demo/help Back, parent entry, registration and touch navigation: ${width}×${height} passed`);
  }
+ await page.context().setOffline(true);await page.locator('.zp-native-connection').waitFor();
+ assert.match(await page.locator('.zp-native-connection').innerText(),/Bağlantı yok/);
+ await page.context().setOffline(false);await page.locator('.zp-native-connection').waitFor({state:'hidden'});
  // Larger text may scroll naturally; it must remain readable and reachable.
  await page.setViewportSize({width:320,height:640});await page.evaluate(()=>document.documentElement.style.fontSize='125%');
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);

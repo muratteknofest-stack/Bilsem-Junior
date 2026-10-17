@@ -1,0 +1,32 @@
+.zp-native-start{display:grid;gap:12px;min-width:0}
+.zp-native-start button{touch-action:manipulation;cursor:pointer}
+.zp-native-goal{display:flex;align-items:center;gap:11px;padding:13px 14px;border-radius:16px;border:1px solid #cfe0d7;background:#eef8f1;color:#315c48}
+.zp-native-goal-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:11px;background:#dceede;flex:none}
+.zp-native-goal>div{flex:1;min-width:0;display:grid;gap:3px}
+.zp-native-goal>div>span{font-size:11px}.zp-native-goal strong{font-size:14px}.zp-native-goal-percent{font-size:12px;font-weight:700}
+.zp-native-goal progress{display:block;appearance:none;width:100%;height:5px;border:0;border-radius:5px;overflow:hidden;background:#d8e8dd;margin-top:3px;accent-color:#4b9164}
+.zp-native-goal progress::-webkit-progress-bar{background:#d8e8dd}.zp-native-goal progress::-webkit-progress-value{background:#4b9164;border-radius:5px}.zp-native-goal progress::-moz-progress-bar{background:#4b9164}
+.zp-native-start-card{padding:18px;border:1px solid #dcd3ef;border-radius:19px;background:linear-gradient(130deg,#f0eafa,#fdfbff);color:#413151}
+.zp-native-start-eyebrow{display:flex;align-items:center;gap:6px;font-size:9px;font-weight:750;letter-spacing:.08em;color:#8768aa}
+.zp-student-pro .zp-native-start-card h2{font-size:23px;font-weight:750;line-height:1.2;letter-spacing:-.025em;margin:9px 0 7px;color:#463454}
+.zp-native-start-card p{font-size:12px;line-height:1.6;color:#76677f;margin:0}
+.zp-native-start-card button{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;width:100%;padding:12px 14px;margin-top:14px;border:1px solid #6944bd;border-radius:12px;background:#7853d0;color:#fff;box-shadow:0 3px 0 #56359d;font-size:13px;font-weight:700;text-align:left}
+.zp-native-start-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.zp-native-start-grid>button{min-width:0;min-height:114px;padding:13px;border-radius:17px;border:1px solid #e0dce9;background:#fffefa;display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:5px;color:#473c5d;box-shadow:0 2px 0 #dfdddf}
+.zp-native-start-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:#eee7fa;color:#8963c4;margin-bottom:3px;flex:none}
+.zp-native-start-grid strong{font-size:14px;line-height:1.3;overflow-wrap:anywhere}.zp-native-start-grid small{font-size:10px;line-height:1.5;color:#8b8195}
+.zp-native-start-grid [data-tone=blue] .zp-native-start-icon{background:#e6effc;color:#648abe}.zp-native-start-grid [data-tone=mint] .zp-native-start-icon{background:#e5f2e9;color:#628e71}.zp-native-start-grid [data-tone=peach] .zp-native-start-icon{background:#fbebde;color:#b48664}
+.zp-native-games-link{display:flex;align-items:center;gap:10px;min-height:48px;padding:12px 14px;border:1px solid #dedbd0;border-radius:14px;background:#fff9e8;color:#806e42;font-size:12px;font-weight:650}
+.zp-native-games-link>span{flex:1;text-align:left}
+.dark .zp-native-start-card{background:#302a3d;border-color:#534566}.dark .zp-student-pro .zp-native-start-card h2{color:#f0e6ff}.dark .zp-native-start-card p,.dark .zp-native-start-eyebrow{color:#c9b9dd}
+.dark .zp-native-start-grid>button{background:#29322d;border-color:#485140;color:#f2f0e4;box-shadow:0 2px 0 #18221a}.dark .zp-native-start-grid small{color:#b6bbaa}
+.dark .zp-native-goal{background:#263b30;border-color:#45614e;color:#d7e8db}.dark .zp-native-goal-icon{background:#36513c}
+.dark .zp-native-games-link{background:#3c3527;border-color:#665b3f;color:#edddb5}
+@media(max-width:350px){.zp-native-start-grid>button{padding:11px;min-height:108px}.zp-student-pro .zp-native-start-card h2{font-size:21px}}
+@media(orientation:landscape) and (max-height:550px){.zp-native-start{grid-template-columns:1fr 1fr}.zp-native-goal{grid-column:1/-1}.zp-native-start-grid{grid-row:2/4;grid-column:2}.zp-native-start-grid>button{min-height:100px}.zp-native-start-card{grid-row:2;grid-column:1}.zp-native-games-link{grid-column:1}}
+.zp-native-start-grid>button{display:grid;grid-template-columns:32px minmax(0,1fr);column-gap:9px;row-gap:3px;align-content:center;min-height:84px;padding:12px}
+.zp-native-start-grid .zp-native-start-icon{grid-column:1;grid-row:1/3;width:32px;height:34px;align-self:center;margin:0}
+.zp-native-start-grid strong{grid-column:2;font-size:12px}
+.zp-native-start-grid small{grid-column:2;font-size:10px}
+@media(max-width:350px){.zp-native-start-grid>button{padding:10px;column-gap:7px;min-height:84px}}
+@media(max-height:740px){.zp-native-start-card{padding:15px}.zp-student-pro .zp-native-start-card h2{font-size:21px}.zp-native-start-card button{margin-top:11px}.zp-native-goal{padding:11px 13px}}

@@ -38,6 +38,7 @@ export function NativeHome({ screen, onScreen, onLogin, onRegister, soundActive,
           <img src="/images/membership/monthly-robot.webp" alt="Tabletindeki şekillerle keşfe hazır Zeki robot" width={1536} height={1024}/>
           <div><p><Sparkles size={14} aria-hidden="true"/>1–4. sınıflar için</p><h1 id="native-home-title">Bugün ne<br/>keşfedelim?</h1><span>Oyna, düşün, kendini geliştir.</span></div>
         </section>
+        <button type="button" className="zp-native-demo-shortcut" onClick={() => onScreen('demo')}><Puzzle size={20} aria-hidden="true"/><span>Önce bir soru dene<small>Hesap açmadan keşfet</small></span><ArrowRight size={18} aria-hidden="true"/></button>
         <div className="zp-native-home-actions">
           <button type="button" className="zp-native-primary" onClick={() => onLogin('student')}><GraduationCap size={23}/><span>Öğrenci girişi<small>Kaldığın yerden devam et</small></span><ArrowRight size={20}/></button>
           <button type="button" className="zp-native-register" onClick={onRegister}><UserPlus size={23}/><span>Üye ol<small>Ücretsiz keşfe başla</small></span><ArrowRight size={20}/></button>
