@@ -36,6 +36,11 @@ try {
     await page.getByRole('button', { name: 'Menüyü aç', exact: true }).click();
     await page.locator('dialog[open]').getByRole('button', { name: 'Öğrenci girişi', exact: true }).click();
     await page.locator('#zp-auth-heading').waitFor();
+    await page.getByRole('button', { name: 'Yeni Kayıt', exact: true }).click();
+    await page.locator('#parent-email').waitFor();
+    await page.evaluate(() => window.dispatchEvent(new Event('zekapark:native-back', { cancelable: true })));
+    await page.waitForFunction(() => document.querySelector('button.zp-auth-mode-button[aria-pressed="true"]')?.textContent.trim() === 'Giriş Yap');
+    assert.equal(await page.locator('#hero-title').count(), 0, 'Registration Back must stop at login');
     await page.evaluate(() => window.dispatchEvent(new Event('zekapark:native-back', { cancelable: true })));
     await page.locator('#hero-title').waitFor();
     assert.equal(new URL(page.url()).pathname, '/');

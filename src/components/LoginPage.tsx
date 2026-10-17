@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { isAndroidApp } from '../lib/native-app';
 import { UserRole, UserProfile } from '../types';
 import { sound } from '../lib/sound';
@@ -53,7 +53,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     observer.observe(node);
     return () => observer.disconnect();
   }, []);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isAndroidApp) return;
     const onNativeBack = (event: Event) => {
       if (registrationBusy) { event.preventDefault(); event.stopImmediatePropagation(); return; }

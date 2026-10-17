@@ -1,6 +1,14 @@
 # ZekaPark Android hazırlığı
 
-Bu dal, mevcut React/Vite uygulamasının Capacitor 8.5.3 ile Android projesini hazırlar. Google Play'e yüklenmiş, üretim anahtarıyla imzalanmış veya gerçek telefonda doğrulanmış bir sürüm değildir; CI debug APK'sı ayrı emülatör kabul kontrolünden geçirilir.
+Bu dal mevcut React/Vite uygulamasını Capacitor 8.5.3 ile Android'e taşır. 17 Ekim 2026 tarihinde 1.0.3 (`versionCode=4`) release APK/AAB derlendi ve CI dışında yeni bir yükleme anahtarıyla imzalandı. APK ve AAB imzaları doğrulandı; derlenmiş release manifestinde debug/test-only, yedekleme ve açık metin trafik kapalıdır. Google Play'e yüklenmiş veya gerçek telefonda doğrulanmış değildir. Yeni anahtar henüz Play Console'a kaydedilmedi; mevcut bir mağaza kaydı varsa yükleme sertifikasıyla eşleşmesi gerekir.
+
+## Release üretimi ve anahtarın korunması
+
+- `Android release candidate` iş akışı imzasız AAB ve hizalanmış APK üretir. Derlenmiş kimlik/sürüm/güvenlik bayrakları ve 63 release runtime bağımlılığı OSV ile denetlenmiştir. İş akışı özel imza anahtarı kullanmaz.
+- CI paketini indirip artifact SHA-256 değerini GitHub'ın verdiği digest ile karşılaştırın. `python scripts/sign-android-release.py CANDIDATE_DIR PRIVATE_KEY_DIR OUTPUT_DIR` komutu AAB'yi JDK `jarsigner`, APK'yı resmi SDK `apksigner` ile yerelde imzalar ve iki sertifikayı da doğrular. JDK 17+ ile `keytool` ve `jdk.jartool` modülü gerekir. Özel klasörde `zekapark-upload.p12` ve `upload-key.json` bulunmalıdır.
+- Özel anahtar, parolası ve henüz kurulmamış sunucu sırları indirme paketinden ayrı bir özel kurtarma arşivinde saklanır. Bu arşivi kaynak depoya veya başkalarıyla paylaşılabilen uygulama paketine koymayın. Sonraki sürümlerde aynı yükleme anahtarını kullanın; kendiliğinden yenisini üretmeyin.
+- APK'nın yeni sertifikası eski debug APK'dan farklıdır. Android eski debug uygulamanın üzerine kuruluma izin vermeyebilir. Eski uygulamayı kaldırmak cihaz oturumunu ve senkronize edilmemiş verileri siler. Play App Signing ile mağazadan dağıtılan APK sertifikası da yükleme anahtarından farklı olabilir.
+- İmzalı dosyalar teknik yükleme adaylarıdır; Console ürünleri, ödeme kabul testi, hesap doğrulaması ve hedef kitle/veri güvenliği beyanları tamamlanmadan ticari yayın onayı sayılmaz.
 
 ## Kapsam
 

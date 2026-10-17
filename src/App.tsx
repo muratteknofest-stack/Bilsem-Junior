@@ -1,7 +1,7 @@
 import { topicCategory, type LearningTopic } from './features/student/learning-topics';
 import { isAndroidApp } from './lib/native-app';
 import { ProgressSyncBanner } from './components/ProgressSyncBanner';
-import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { ADMIN_PANEL_PATH, ADMIN_LOGIN_PATH, hasVerifiedAdminAccess } from './lib/admin-access';
 import { accountEntry, accountEntryPath } from './features/auth/account-entry';
@@ -77,9 +77,10 @@ export default function App() {
   const previousRouteRef = useRef(currentRoute);
   const testReturnRouteRef = useRef('dashboard');
   const hasTestHistoryEntryRef = useRef(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isAndroidApp) return;
     const onNativeBack = (event: Event) => {
+      if (event.defaultPrevented) return;
       if (showParentAccess) { event.preventDefault(); setShowParentAccess(false); return; }
       const root = !isAuth ? 'landing' : currentUser.role === 'parent' ? 'parent' : 'dashboard';
       if (isTestPage(currentRoute) && hasTestHistoryEntryRef.current) {

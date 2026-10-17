@@ -1,6 +1,16 @@
 # Google Play abonelik kurulumu
 
-Durum: PR içindeki entegrasyon taslağı. Canlı ödeme açılmadı; gerçek Google satın alımı, imzalı Android derlemesi ve cihaz kabul testi henüz yapılmadı. Sunucu, Play Console ve veritabanı kurulumu birlikte tamamlanmalıdır. Web satış akışı bu değişiklikle Google Play'e taşınmaz; Google Play bu Android sürümünün ödeme yöntemidir.
+Durum (17 Ekim 2026): Entegrasyon PR içinde; canlı ödeme açılmadı. İmzalı Android 1.0.3 release APK/AAB hazırlandı. Supabase üretim projesine ödeme tabloları ve sunucu RPC'leri kuruldu; RLS ve anon/authenticated erişim yasağı doğrulandı. Gerçek Google satın alımı ve fiziksel cihaz kabul testi yapılmadı. Web üyeliği Android uygulamasındaki Google Play satın alımına yönlendirir; erişim aynı öğrenci hesabıyla webde kullanılır. Web tarayıcısı doğrudan Play Billing ödeme ekranı çalıştırmaz.
+
+### Kalan dış bağımlılıklar
+
+- Play Console'a yetkili erişim, mevcut yükleme sertifikasının kontrolü veya yeni uygulamanın ilk AAB yüklemesi.
+- `zekapark_uyelik` ve `monthly` / `quarterly` / `annual` planlarının Console'da oluşturulması ve etkinleştirilmesi.
+- Android Publisher yetkili servis hesabı, Pub/Sub RTDN konusu ve kimlik doğrulamalı push aboneliği.
+- Sunucudaki eksik servis hesabı/push bilgileri ve sırların kurulması; PR'ın web/API dağıtımı.
+- Lisans testçisiyle satın alım, restore, pending, iptal/iade ve erişim testi. Test tamamlanmadan satış veya zorunlu ücretli erişim açılmaz.
+
+Bağlama ve token şifreleme sırları bu hazırlık için özel kurtarma arşivinde oluşturuldu, ancak sunucuya kurulmadı. Paylaşılan eski üçüncü taraf parolalarının veya tokenların yenilenmesi bununla gerçekleşmiş sayılmaz. Supabase paneli güvenli giriş gerektirdi; giriş tamamlanmadığından sağlayıcının sızdırılmış parola ayarı değiştirilemedi.
 
 ## Ürünler
 
@@ -19,10 +29,10 @@ Fiyatları ve ülkeleri Play Console'da belirleyip temel planları etkinleştiri
 
 ## Sunucu ve veritabanı
 
-1. `20261016172040_google_play_subscriptions.sql` geçişini ilgili Supabase ortamına uygulayın. Önceki hesap-silme geçişleri uygulanmış olmalıdır. Tablo, RLS ve izinlerle yalnızca sunucuya açıktır. Bu PR geçişi üretimde otomatik çalıştırmaz.
+1. `20261017061944_google_play_subscriptions.sql` geçişi `vehhvsdkifwstbjhnhao` üretim projesine uygulandı ve migration geçmişi doğrulandı. Başka bir ortama kurarken önceki hesap-silme geçişleri uygulanmış olmalıdır. Tablolar/RPC'ler yalnızca sunucuya açıktır. GitHub iş akışı migration'ı otomatik çalıştırmaz; üretimde aynı geçişi tekrar uygulamayın.
 2. Google Cloud'da Android Publisher API'yi etkinleştirin. Kullanıcının inceleyip oluşturduğu hizmet hesabını Play Console uygulamasına ekleyin. Abonelikleri görüntüleme ve onaylama için gereken uygulama kapsamlı en az izinleri verin; gereksiz finans/yönetici erişimi vermeyin. İlk kurulum lisans testçisiyle doğrulanmalıdır. Hizmet hesabı/anahtar veya erişim yetkisi bu PR tarafından oluşturulmaz.
 3. `google-play-server-env.example` içindeki değerleri yalnızca sunucu ortam değişkenlerine girin. `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` bir sunucu sırrıdır; uygulamaya, depoya veya sohbet mesajına konulmaz. Bağımsız hesap-bağlama sırrını ve şifreleme anahtarını kullanıcı güvenli ortamda oluşturmalıdır. Satış ve zorunlu erişim bayrakları başlangıçta `false` kalır.
-4. Android kaynağı `https://localhost` mevcut CORS listesine eklenmelidir. JWT, aktif oturum, doğrulanmış veli e-postası ve aile yetkisi kontrolleri korunur. Bu PR üretim CORS ayarını değiştirmez.
+4. Native API istekleri `CapacitorHttp` kullanır; sahte Origin göndermez, CORS istisnası eklemek gerekmez. Yalnız tarayıcı tabanlı localhost WebView testleri yapılacaksa `https://localhost` açıkça izinli kaynaklara eklenebilir. JWT, aktif oturum, doğrulanmış veli e-postası ve aile yetkisi kontrolleri korunur. Bu PR üretim CORS ayarını değiştirmez.
 5. Platformun yasal işletmeci bilgileri ve mevcut yayın kabul kontrolleri tamamlanmalıdır; eksikse `/prepare` satış başlatmaz. Bu kontrolleri yapmadan başarılı işaretlemeyin.
 
 Anahtarlar uzun ömürlü kayıtları korur: bağlama sırrını rastgele değiştirmek eski satın alımların eşleşmesini, token anahtarını değiştirmek kayıtların çözülmesini bozar. Rotasyon için kontrollü yeniden eşleme/şifreleme geçişi gerekir. Şifreli tokenlar, sahiplik ve gerekli mali kayıtlar için saklama süresini gerçek gizlilik metnine ekleyin. Hesap silmede ödeme saklama incelemesi tamamlanana kadar mevcut yönetici akışı durur; yönetici incelemesi sonrasında kimliksizleştirme ve token kaldırma prosedürü ayrıca tamamlanmalıdır. Sahipsiz token-hash kaydı başka aileye yeniden atanamaz.

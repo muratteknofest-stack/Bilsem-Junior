@@ -59,7 +59,7 @@ test('real Postgres preserves one binding and exact expiry, rejects stale grants
     grant usage on schema auth,public to anon,authenticated,service_role;
     create table public.profiles(id uuid primary key,role text,linked_student_ids text[] default '{}',linked_parent_id text,deletion_pending boolean not null default false);
     grant select,update on public.profiles to service_role;`);
-    await db.exec(await readFile('supabase/migrations/20261016172040_google_play_subscriptions.sql','utf8'));
+    await db.exec(await readFile('supabase/migrations/20261017061944_google_play_subscriptions.sql','utf8'));
     await db.query("insert into public.profiles(id,role,linked_student_ids,linked_parent_id) values($1::uuid,'parent',array[$2::text,$3::text],null),($2::uuid,'student','{}',$1::text),($3::uuid,'student','{}',$1::text)",[parent,student,other]);
     const hash=tokenHash(purchaseToken), encrypted=encryptPlayToken(purchaseToken,key);
     const save=(options:{hash?:string;child?:string;state?:string;date?:string;linked?:string}={})=>db.query("select public.record_google_play_subscription($1,$2,$3,$4,'com.zekapark.app','zekapark_uyelik','quarterly',$5,$6,true,'ACKNOWLEDGEMENT_STATE_PENDING',$7,$8,false)",[options.hash||hash,parent,options.child||student,encrypted,options.state||'SUBSCRIPTION_STATE_ACTIVE',expiry,options.linked||null,options.date||new Date().toISOString()]);

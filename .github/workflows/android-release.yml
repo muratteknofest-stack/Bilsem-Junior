@@ -4,9 +4,12 @@ on:
     branches: [codex/android-capacitor-preparation]
     paths:
       - '.github/workflows/android-release.yml'
-      - 'mobile/android/release.gradle'
-      - 'mobile/android/play-billing.gradle'
+      - 'mobile/**'
+      - 'src/**'
+      - 'scripts/prepare-android.mjs'
       - 'scripts/verify-android-release.mjs'
+      - 'capacitor.config.ts'
+      - 'package*.json'
   workflow_dispatch:
 permissions:
   contents: read
@@ -40,6 +43,10 @@ jobs:
       - run: npm run lint
       - run: npm run test:android && npm run test:google-play
       - run: npm run android:sync
+      - name: Verify native layouts and Back navigation
+        run: |
+          npx playwright install --with-deps chromium
+          node scripts/check-native-home.mjs
       - name: Build release without uploading private signing keys
         working-directory: android
         run: |
