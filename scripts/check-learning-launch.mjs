@@ -53,6 +53,8 @@ try {
  await page.getByRole('button',{name:'Sesi dene',exact:true}).click();
  await page.getByRole('button',{name:'Canlı',exact:true}).click();
  assert.equal(await page.getByRole('slider',{name:'Ses düzeyi',exact:true}).inputValue(),'60');
+ const motionButton=page.getByRole('button',{name:'Hareketli efektler',exact:false});
+ assert.equal(await motionButton.evaluate(el=>{const r=el.getBoundingClientRect();const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return hit===el||el.contains(hit);}),true,'Preferences must not be obscured by their trigger');
  await page.screenshot({path:`${output}/preferences-mobile.png`,animations:'disabled'});
  await page.getByRole('button',{name:'Tercihleri kapat',exact:true}).click();
  await page.reload();await page.getByText('Görünüm ve ses',{exact:true}).click();
