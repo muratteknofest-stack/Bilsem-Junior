@@ -7,6 +7,9 @@ process.env.VITE_SUPABASE_URL = 'https://student-mobile-fixture.invalid';
 process.env.VITE_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_isolated_fixture';
 const server = await createServer({server:{host:'127.0.0.1',port:5189,strictPort:true}}); await server.listen();
 const studentId = '22222222-2222-4222-8222-222222222222', parentId = '11111111-1111-4111-8111-111111111111';
+const monday = new Date(); monday.setDate(monday.getDate() - (monday.getDay()+6)%7);
+const weekStart = `${monday.getFullYear()}-${String(monday.getMonth()+1).padStart(2,'0')}-${String(monday.getDate()).padStart(2,'0')}`;
+const weekly = JSON.stringify({thisWeekDays:[184,0,0,0,0,0,0],lastWeekDays:[26,0,0,0,0,0,0],pastWeeks:[0,0],weekStart});
 const profile = {id:studentId,role:'student',name:'Kaşif',grade:2,linked_parent_id:parentId,student_code:'EXPLORER1234',xp:3066,level:5,total_questions_solved:184};
 const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url');
 const session = {access_token:`${encode({alg:'HS256',typ:'JWT'})}.${encode({sub:studentId,role:'authenticated',aal:'aal1',exp:Math.floor(Date.now()/1000)+3600,session_id:'99999999-9999-4999-8999-999999999999'})}.fixture`,refresh_token:'isolated-refresh',token_type:'bearer',expires_in:3600,user:{id:studentId,aud:'authenticated',email:'student@example.invalid',email_confirmed_at:new Date().toISOString(),created_at:new Date().toISOString(),app_metadata:{role:'student'},user_metadata:{}}};
@@ -20,7 +23,7 @@ try {
   if(url.pathname.includes('/auth/v1/token'))value=session;
   else if(url.pathname.includes('/auth/v1/user'))value=session.user;
   else if(url.pathname.includes('/rest/v1/profiles'))value=profile;
-  else if(url.pathname.includes('/rest/v1/user_private_state'))value={user_id:studentId,values:{}};
+  else if(url.pathname.includes('/rest/v1/user_private_state'))value={user_id:studentId,values:{yapyap_weekly_questions_v1:weekly}};
   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(value)});
  });
  await page.route('**/api/**',async route=>{
@@ -50,6 +53,7 @@ try {
    await page.waitForTimeout(240);await noOverflow(`${width}px ${name}`);
   }
   await page.locator('.zp-study-navigation').getByRole('button',{name:'Görevlerim',exact:true}).click();await page.locator('#arena-title').waitFor();
+  assert.match(await page.locator('#arena-title').innerText(),/Geçen haftaki kendini geç/);assert.equal(await page.locator('.zp-arena-total strong').innerText(),'184');
   const top=await page.locator('.zp-native-topbar').boundingBox();assert.ok(top.y>=29,'status bar safe area');
   if(width===390)await page.screenshot({path:'test-artifacts/student-mobile/paid-tasks-390.png',fullPage:true});
  }
