@@ -227,6 +227,8 @@ routes.post('/learning/:id/answer', requireStudentMembership, async (req: Authen
 routes.post('/learning/:id/finish', async (req: AuthenticatedRequest, res) => {
   try {
     if (!z.object({}).strict().safeParse(req.body || {}).success) throw new LearningError('Sonuçlar sunucu tarafından hesaplanır.', 400);
+    const current = await readSession(req.authUser!.uid, String(req.params.id));
+    if (!current.finished_at) await requireLearningAccess(req.authUser!.uid);
     const saved = await commit(req.authUser!.uid, String(req.params.id), finishLearningSession);
     return res.json(req.query.view === 'update' ? learningUpdateView(saved) : learningView(saved));
   } catch (error) { return handleError(error, res); }

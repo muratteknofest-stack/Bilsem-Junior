@@ -56,6 +56,7 @@ test('free accounts retain daily questions and history while premium routes reje
       const error = await response.json() as { code: string }; assert.equal(error.code, 'MEMBERSHIP_REQUIRED');
     }
     assert.equal((await request('learning/' + session.id)).status, 403, 'old unfinished sessions cannot bypass membership');
+    assert.equal((await request('learning/' + session.id + '/finish', {})).status, 403, 'finishing an old session cannot expose unearned solutions');
     session.finished_at = new Date().toISOString();
     assert.equal((await request('learning/' + session.id)).status, 200, 'own completed results remain available');
     assert.equal((await request('learning/history')).status, 200);
