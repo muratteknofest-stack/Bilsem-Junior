@@ -1,0 +1,106 @@
+name: Quality and Function build
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+permissions:
+  contents: read
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run test:student
+      - run: npm audit --audit-level=moderate
+      - run: npm run vercel-build
+      - run: npm run security:http
+      - run: npm run test:load
+      - name: Install Chromium for mobile and tablet layout checks
+        run: npx playwright install --with-deps chromium
+      - name: Check question layouts on mobile and tablet viewports
+        run: npm run test:layout
+
+      - name: Check Shopier package controls on mobile and tablet
+        run: npm run test:shopier-layout
+      - name: Verify English practice, device progress and mobile layouts
+        run: npm run test:english-browser
+
+  english-accounts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Verify English family accounts and saved learning flows
+        run: npm run test:english-accounts
+
+      - name: Save ThinkHarbor screen previews for design review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: thinkharbor-design-previews
+          path: test-artifacts/thinkharbor/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  turkish-accounts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:turkish-accounts
+      - name: Verify student mobile layout and membership boundaries
+        run: npm run test:student-mobile
+
+      - name: Save student workspace previews for design review
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: zekapark-student-design-previews
+          path: |
+            test-artifacts/student/
+            test-artifacts/student-mobile/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  live-release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [quality, english-accounts, turkish-accounts]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify the actual production release and Turkish public routes
+        run: node scripts/check-live-release.mjs https://zekapark.vercel.app "$GITHUB_SHA" vehhvsdkifwstbjhnhao

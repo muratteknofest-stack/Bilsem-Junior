@@ -1,0 +1,406 @@
+import React, { useState } from 'react';
+import { UserRole, UserProfile } from '../../../types';
+import { auth, db } from '../../../lib/platform';
+import {
+  browserLocalPersistence,
+  browserSessionPersistence,
+  setPersistence,
+  signInWithEmailAndPassword,
+  signOut as supabaseSignOut,
+} from '../../../lib/supabase';
+import { doc, getDoc } from '../../../lib/supabase-data';
+import { dataService } from '../../../services/data-service';
+import { sound } from '../../../lib/sound';
+import { useAuth } from '../../../contexts/AuthContext';
+import { isManagedStudentEmail, studentCodeToEmail } from '../../../lib/account-identifiers';
+import { loginSchema, formatZodError } from '../../../lib/validations';
+import { loginAuthError } from '../auth-error-messages';
+import { cancelAccountSwitch } from '../../../lib/account-switch';
+import { ConfirmationEmailAction } from './ConfirmationEmailAction';
+import { 
+  Eye, 
+  EyeOff, 
+  Lock, 
+  Mail, 
+  User, 
+  AlertCircle, 
+  ArrowRight,
+  GraduationCap,
+  Users,
+} from 'lucide-react';
+
+interface LoginFormProps {
+  selectedRole: UserRole;
+  adminOnly?: boolean;
+  initialIdentifier?: string;
+  setSelectedRole: (role: UserRole) => void;
+  onLoginSuccess: (role: UserRole, userProfile?: UserProfile) => void;
+  onShowForgotPassword: () => void;
+  setErrorMessage: (msg: string | null) => void;
+  setSuccessToast: (msg: string | null) => void;
+}
+
+export const LoginForm: React.FC<LoginFormProps> = ({
+  selectedRole: requestedRole,
+  adminOnly = false,
+  initialIdentifier = '',
+  setSelectedRole,
+  onLoginSuccess,
+  onShowForgotPassword,
+  setErrorMessage,
+  setSuccessToast
+}) => {
+  const { loginLocally, sendEmailVerification } = useAuth();
+  const selectedRole: UserRole = adminOnly ? 'admin' : requestedRole === 'parent' ? 'parent' : 'student';
+
+  const [identifier, setIdentifier] = useState(initialIdentifier);
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(!adminOnly);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+    setErrorMessage(null);
+    setFieldErrors({});
+    setNeedsConfirmation(false);
+
+    const validationResult = loginSchema.safeParse({
+      identifier: identifier.trim(),
+      password: password,
+      role: selectedRole,
+      rememberMe: rememberMe,
+    });
+
+    if (!validationResult.success) {
+      sound.playError();
+      const { firstMessage, fieldErrors: errs } = formatZodError(validationResult.error);
+      setErrorMessage(firstMessage);
+      setFieldErrors(errs);
+      return;
+    }
+
+    setIsSubmitting(true);
+    cancelAccountSwitch();
+    let authenticated = false;
+    try {
+      let loginEmail = identifier.trim();
+      if (!loginEmail.includes('@')) {
+        loginEmail = studentCodeToEmail(loginEmail);
+      }
+
+      await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
+      
+      const credential = await signInWithEmailAndPassword(auth, loginEmail, password);
+      authenticated = true;
+      if (selectedRole === 'admin') {
+        const token = await credential.user.getIdTokenResult(true);
+        if (!credential.user.emailVerified || token.claims.role !== 'admin') {
+          throw new Error('ADMIN_ACCESS_DENIED');
+        }
+      }
+
+      if (!isManagedStudentEmail(credential.user.email) && !credential.user.emailVerified) {
+        let verificationSent = false;
+        try {
+          await sendEmailVerification(credential.user);
+          verificationSent = true;
+        } catch { /* Report the delivery request failure accurately below. */ }
+        throw new Error(verificationSent ? 'EMAIL_NOT_VERIFIED_SENT' : 'EMAIL_NOT_VERIFIED_FAILED');
+      }
+
+      const userDocRef = doc(db, 'users', credential.user.uid);
+      const profileSnapshot = await getDoc(userDocRef);
+      if (!profileSnapshot.exists()) throw new Error('PROFILE_NOT_FOUND');
+      const loggedInProfile = profileSnapshot.data() as UserProfile;
+      if (loggedInProfile.id !== credential.user.uid) throw new Error('PROFILE_NOT_FOUND');
+      if (loggedInProfile.role !== selectedRole) throw new Error('ROLE_MISMATCH');
+      const activeProfile: UserProfile = { ...loggedInProfile,
+        email: credential.user.email || loginEmail };
+
+      dataService.loginAs(selectedRole, activeProfile);
+      loginLocally(activeProfile);
+      sound.playSuccess();
+      setSuccessToast(
+        selectedRole === 'student'
+          ? 'Öğrenci girişi başarılı! Yönlendiriliyorsunuz...'
+          : selectedRole === 'parent'
+          ? 'Veli girişi başarılı! Yönlendiriliyorsunuz...'
+          : 'Yönetici girişi başarılı! Yönlendiriliyorsunuz...'
+      );
+      
+      setTimeout(() => {
+        onLoginSuccess(selectedRole, activeProfile);
+      }, 400);
+      
+    } catch (error: any) {
+      if (authenticated) {
+        await supabaseSignOut(auth).catch(() => undefined);
+        dataService.logout();
+      }
+      sound.playError();
+      console.warn('Login notice (handled):', error.code || error.message);
+      let errMsg = 'Giriş yapılamadı.';
+      const authMessage = loginAuthError(error);
+      if (selectedRole === 'parent' && (error.code === 'email_not_confirmed' || /^EMAIL_NOT_VERIFIED_/.test(error.message || ''))) setNeedsConfirmation(true);
+      if (authMessage) {
+         errMsg = authMessage;
+      } else if (error.message === 'PROFILE_NOT_FOUND') {
+         errMsg = 'Kullanıcı profili bulunamadı. Lütfen yeni kayıt oluşturun veya destek ile iletişime geçin.';
+      } else if (error.message === 'ADMIN_ACCESS_DENIED') {
+          errMsg = 'Yönetici yetkisi doğrulanamadı. Hesap yetkilerini kontrol edin.';
+      } else if (error.message === 'ROLE_MISMATCH') {
+         errMsg = 'Seçtiğiniz rol bu hesap ile eşleşmiyor.';
+      } else if (error.message === 'EMAIL_NOT_VERIFIED_SENT') {
+         errMsg = 'E-posta adresiniz henüz doğrulanmadı. Yeni doğrulama bağlantısı gönderildi.';
+      } else if (error.message === 'EMAIL_NOT_VERIFIED_FAILED') {
+         errMsg = 'E-posta adresiniz doğrulanmadı; yeni bağlantı gönderilemedi. Bir süre sonra tekrar deneyin.';
+      }
+      setErrorMessage(errMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div>
+      {/* Modern Minimalist Role Selector */}
+      {!adminOnly && <div className="mb-5">
+        <div className="flex items-center justify-between mb-2">
+          <p className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Hesap Türü
+          </p>
+          <span className="text-[11px] text-slate-400 font-medium">Lütfen rolünüzü belirleyin</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2" role="group" aria-label="Hesap türü">
+          <button
+            type="button"
+            aria-pressed={selectedRole === 'student'}
+            onClick={() => {
+              sound.playClick();
+              setSelectedRole('student');
+              setErrorMessage(null);
+            }}
+            className={`zp-auth-role-button p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between ${
+              selectedRole === 'student'
+                ? 'border-indigo-600 bg-indigo-50/70 ring-2 ring-indigo-500/20 shadow-xs'
+                : 'border-slate-200 hover:border-slate-300 bg-slate-50/40 hover:bg-slate-50'
+            }`}
+          >
+            <div className="flex items-center justify-between w-full mb-1.5">
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                selectedRole === 'student' ? 'bg-indigo-600 text-white' : 'bg-slate-200/80 text-slate-600'
+              }`}>
+                <GraduationCap className="w-4 h-4" />
+              </div>
+              {selectedRole === 'student' && (
+                <span className="w-2 h-2 rounded-full bg-indigo-600" />
+              )}
+            </div>
+            <div>
+              <div className="text-xs font-bold text-slate-900 font-['Outfit',sans-serif]">
+                Öğrenci
+              </div>
+              <div className="text-[10px] text-slate-500 font-medium leading-tight mt-0.5">
+                Bireysel Çalışma
+              </div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            aria-pressed={selectedRole === 'parent'}
+            onClick={() => {
+              sound.playClick();
+              setSelectedRole('parent');
+              setErrorMessage(null);
+            }}
+            className={`zp-auth-role-button p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between ${
+              selectedRole === 'parent'
+                ? 'border-emerald-600 bg-emerald-50/70 ring-2 ring-emerald-500/20 shadow-xs'
+                : 'border-slate-200 hover:border-slate-300 bg-slate-50/40 hover:bg-slate-50'
+            }`}
+          >
+            <div className="flex items-center justify-between w-full mb-1.5">
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                selectedRole === 'parent' ? 'bg-emerald-600 text-white' : 'bg-slate-200/80 text-slate-600'
+              }`}>
+                <Users className="w-4 h-4" />
+              </div>
+              {selectedRole === 'parent' && (
+                <span className="w-2 h-2 rounded-full bg-emerald-600" />
+              )}
+            </div>
+            <div>
+              <div className="text-xs font-bold text-slate-900 font-['Outfit',sans-serif]">
+                Veli
+              </div>
+              <div className="text-[10px] text-slate-500 font-medium leading-tight mt-0.5">
+                Gelişim Portalı
+              </div>
+            </div>
+          </button>
+
+        </div>
+      </div>}
+
+      <form onSubmit={handleLoginSubmit} className="space-y-4" noValidate>
+        <div>
+          <label htmlFor="login-identifier" className="block text-xs font-bold text-slate-700 mb-1.5">
+            {selectedRole === 'student'
+              ? 'Öğrenci Kodu, Kullanıcı Adı veya E-posta'
+              : selectedRole === 'parent'
+              ? 'Veli E-posta Adresi'
+              : 'Yönetici E-posta Adresi'}
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              {selectedRole === 'student' ? (
+                <User className="w-4 h-4" />
+              ) : (
+                <Mail className="w-4 h-4" />
+              )}
+            </div>
+            <input
+              id="login-identifier"
+              type={selectedRole === 'student' ? 'text' : 'email'}
+              value={identifier}
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              aria-invalid={Boolean(fieldErrors.identifier)}
+              aria-describedby={fieldErrors.identifier ? 'login-identifier-error' : undefined}
+              onChange={(e) => {
+                setIdentifier(e.target.value);
+                if (fieldErrors.identifier) {
+                  setFieldErrors((prev) => ({ ...prev, identifier: '' }));
+                }
+              }}
+              placeholder={
+                selectedRole === 'student'
+                  ? 'Örn: DENIZ2026 veya ogrenci@zekapark.com'
+                  : selectedRole === 'parent'
+                  ? 'Örn: veli@zekapark.com'
+                  : 'Örn: yonetici@ornek.com'
+              }
+              className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm font-medium text-slate-900 placeholder:text-slate-400 bg-white focus:outline-hidden focus:ring-2 transition-all ${
+                fieldErrors.identifier
+                  ? 'border-rose-400 bg-rose-50/20 focus:ring-rose-500 focus:border-rose-500'
+                  : 'border-slate-300 focus:ring-indigo-500/20 focus:border-indigo-600'
+              }`}
+            />
+          </div>
+          {fieldErrors.identifier && (
+            <p id="login-identifier-error" className="zp-auth-field-error mt-1.5 text-xs text-rose-600 font-bold flex items-center gap-1">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>{fieldErrors.identifier}</span>
+            </p>
+          )}
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label htmlFor="login-password" className="block text-xs font-bold text-slate-700">
+              Şifre
+            </label>
+            <button
+              type="button"
+              onClick={onShowForgotPassword}
+              className="zp-auth-help text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer"
+            >
+              Şifremi Unuttum?
+            </button>
+          </div>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <Lock className="w-4 h-4" />
+            </div>
+            <input
+              id="login-password"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              autoComplete="current-password"
+              aria-invalid={Boolean(fieldErrors.password)}
+              aria-describedby={fieldErrors.password ? 'login-password-error' : undefined}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (fieldErrors.password) {
+                  setFieldErrors((prev) => ({ ...prev, password: '' }));
+                }
+              }}
+              placeholder="••••••••"
+              className={`w-full pl-10 pr-10 py-2.5 rounded-xl border text-sm font-medium text-slate-900 placeholder:text-slate-400 bg-white focus:outline-hidden focus:ring-2 transition-all ${
+                fieldErrors.password
+                  ? 'border-rose-400 bg-rose-50/20 focus:ring-rose-500 focus:border-rose-500'
+                  : 'border-slate-300 focus:ring-indigo-500/20 focus:border-indigo-600'
+              }`}
+            />
+            <button
+              type="button"
+              aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
+              onClick={() => setShowPassword(!showPassword)}
+              className="zp-auth-reveal absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+            >
+              {showPassword ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+          {fieldErrors.password && (
+            <p id="login-password-error" className="zp-auth-field-error mt-1.5 text-xs text-rose-600 font-bold flex items-center gap-1">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>{fieldErrors.password}</span>
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between pt-0.5">
+          <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-600 select-none">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
+            />
+            <span>Beni bu cihazda hatırla</span>
+          </label>
+        </div>
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          aria-busy={isSubmitting}
+          className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60 shadow-xs"
+        >
+          {isSubmitting ? (
+            <span className="inline-flex items-center gap-2">
+              <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+              <span>Giriş Yapılıyor...</span>
+            </span>
+          ) : (
+            <>
+              <span>
+                {selectedRole === 'student'
+                  ? 'Öğrenci Paneline Giriş Yap'
+                  : selectedRole === 'parent'
+                  ? 'Veli Portalı Raporlarına Gir'
+                  : 'Yönetim Stüdyosuna Giriş'}
+              </span>
+              <ArrowRight className="w-4 h-4" />
+            </>
+          )}
+        </button>
+      </form>
+
+      {needsConfirmation && selectedRole === 'parent' && <div className="mt-5 border-t border-slate-200 pt-4"><ConfirmationEmailAction key={identifier.trim().toLowerCase()} email={identifier.trim().toLowerCase()} /></div>}
+
+    </div>
+  );
+};
+
+

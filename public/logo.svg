@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient: Deep Modern Indigo/Purple with Royal Glow -->
+    <linearGradient id="appBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4338ca"/>
+      <stop offset="35%" stop-color="#4f46e5"/>
+      <stop offset="70%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+
+    <!-- Top Glass Gloss Highlight -->
+    <linearGradient id="glossGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- 3D Bevel Rim -->
+    <linearGradient id="rimGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.6"/>
+      <stop offset="50%" stop-color="#818cf8" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#312e81" stop-opacity="0.8"/>
+    </linearGradient>
+
+    <!-- Crystal Prism & Tangram Gradients -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="40%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a5f3fc"/>
+      <stop offset="50%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+
+    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6ee7b7"/>
+      <stop offset="50%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+
+    <linearGradient id="coralGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fda4af"/>
+      <stop offset="50%" stop-color="#f43f5e"/>
+      <stop offset="100%" stop-color="#e11d48"/>
+    </linearGradient>
+
+    <linearGradient id="violetGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e9d5ff"/>
+      <stop offset="50%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#7e22ce"/>
+    </linearGradient>
+
+    <linearGradient id="whiteGlowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#e0e7ff" stop-opacity="0.85"/>
+    </linearGradient>
+
+    <!-- Radial Central Sunburst Core -->
+    <radialGradient id="centerCoreGlow" cx="50%" cy="48%" r="45%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.45"/>
+      <stop offset="45%" stop-color="#a5f3fc" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#4f46e5" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Filters -->
+    <filter id="masterShadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#1e1b4b" flood-opacity="0.45"/>
+    </filter>
+
+    <filter id="starGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="0" stdDeviation="10" flood-color="#fde047" flood-opacity="0.9"/>
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#f59e0b" flood-opacity="0.6"/>
+    </filter>
+
+    <filter id="sparklePulse" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#38bdf8" flood-opacity="0.8"/>
+    </filter>
+  </defs>
+
+  <!-- Base App Tile with Squircle Curve (iOS/macOS style rx=116) -->
+  <rect x="16" y="16" width="480" height="480" rx="116" fill="url(#appBgGrad)"/>
+  
+  <!-- Outer Bevel Stroke Border -->
+  <rect x="16" y="16" width="480" height="480" rx="116" fill="none" stroke="url(#rimGrad)" stroke-width="4"/>
+
+  <!-- Top Curved Glass Luster / Gloss Highlight -->
+  <path d="M 20 128 C 20 68, 68 20, 128 20 L 384 20 C 444 20, 492 68, 492 128 C 492 160, 360 210, 256 210 C 152 210, 20 160, 20 128 Z" fill="url(#glossGrad)"/>
+
+  <!-- Background Ambient Glow Center -->
+  <circle cx="256" cy="250" r="190" fill="url(#centerCoreGlow)"/>
+
+  <!-- Cosmic Playful Orbital Rings (Zeka & Park) -->
+  <ellipse cx="256" cy="254" rx="195" ry="110" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-opacity="0.22" stroke-dasharray="10 14" transform="rotate(-22 256 254)"/>
+  <ellipse cx="256" cy="254" rx="195" ry="110" fill="none" stroke="#38bdf8" stroke-width="2" stroke-opacity="0.35" stroke-dasharray="6 12" transform="rotate(35 256 254)"/>
+
+  <!-- Floating Star & Planet Elements on Orbits -->
+  <circle cx="100" cy="180" r="7" fill="#67e8f9" filter="url(#sparklePulse)"/>
+  <circle cx="415" cy="195" r="9" fill="#f43f5e" filter="url(#masterShadow)"/>
+  <circle cx="395" cy="365" r="7.5" fill="#34d399" filter="url(#sparklePulse)"/>
+  <circle cx="95" cy="335" r="6.5" fill="#fbbf24" filter="url(#starGlow)"/>
+
+  <!-- Mini Sparkle Stars in Background -->
+  <path d="M 390 120 Q 390 135 405 135 Q 390 135 390 150 Q 390 135 375 135 Q 390 135 390 120 Z" fill="#ffffff" opacity="0.85"/>
+  <path d="M 125 385 Q 125 396 136 396 Q 125 396 125 407 Q 125 396 114 396 Q 125 396 125 385 Z" fill="#fde047" opacity="0.9"/>
+  <path d="M 120 115 Q 120 124 129 124 Q 120 124 120 133 Q 120 124 111 124 Q 120 124 120 115 Z" fill="#a5f3fc" opacity="0.9"/>
+
+  <!-- MAIN EMBLEM: Dynamic 3D Geometric Brain & Gamified Tangram Park Crystal -->
+  <g filter="url(#masterShadow)">
+    
+    <!-- Outer Brain Contour Halo - Left & Right Curvature -->
+    <!-- Left Brain Hemisphere (Logic & Structure) -->
+    <path d="M 256 100 C 190 90, 110 130, 105 215 C 100 280, 140 330, 180 375 C 215 410, 248 422, 256 422 Z" fill="#312e81" fill-opacity="0.45"/>
+    <!-- Right Brain Hemisphere (Creativity & Spatial) -->
+    <path d="M 256 100 C 322 90, 402 130, 407 215 C 412 280, 372 330, 332 375 C 297 410, 264 422, 256 422 Z" fill="#312e81" fill-opacity="0.45"/>
+
+    <!-- TANGRAM CRYSTAL FACETS (Playful, Colorful, Vibrant Brain) -->
+    
+    <!-- 1. Top Crown Diamond (Wisdom & Clarity) -->
+    <polygon points="256,92 334,148 256,190 178,148" fill="url(#whiteGlowGrad)"/>
+    <polygon points="256,92 256,190 178,148" fill="#e0e7ff" fill-opacity="0.6"/>
+
+    <!-- 2. Left Upper Temporal Crystal (Cyan - Spatial / Logic) -->
+    <polygon points="178,148 256,190 208,272 120,220" fill="url(#cyanGrad)"/>
+    <polygon points="178,148 208,272 120,220" fill="#0284c7" fill-opacity="0.3"/>
+
+    <!-- 3. Right Upper Temporal Crystal (Coral/Pink - Creativity / Visual) -->
+    <polygon points="256,190 334,148 392,220 304,272" fill="url(#coralGrad)"/>
+    <polygon points="334,148 392,220 304,272" fill="#be123c" fill-opacity="0.25"/>
+
+    <!-- 4. Left Mid Cortex Crystal (Violet - Memory / Pattern) -->
+    <polygon points="120,220 208,272 168,360 98,298" fill="url(#violetGrad)"/>
+    <polygon points="120,220 168,360 98,298" fill="#6b21a8" fill-opacity="0.35"/>
+
+    <!-- 5. Right Mid Cortex Crystal (Amber Gold - Speed / Focus) -->
+    <polygon points="304,272 392,220 414,298 344,360" fill="url(#goldGrad)"/>
+    <polygon points="392,220 414,298 344,360" fill="#b45309" fill-opacity="0.3"/>
+
+    <!-- 6. Left Lower Base Crystal (Emerald Mint - Problem Solving) -->
+    <polygon points="168,360 208,272 256,360 256,420 186,412" fill="url(#emeraldGrad)"/>
+
+    <!-- 7. Right Lower Base Crystal (Electric Cyan - Discovery) -->
+    <polygon points="304,272 344,360 326,412 256,420 256,360" fill="url(#cyanGrad)"/>
+
+    <!-- 8. Central Brilliant Diamond (The Core Catalyst) -->
+    <polygon points="256,190 304,272 256,354 208,272" fill="#ffffff" fill-opacity="0.96"/>
+    <polygon points="256,190 208,272 256,354" fill="#e0e7ff" fill-opacity="0.5"/>
+
+    <!-- Dynamic 3D Inner Lighting Lines -->
+    <polyline points="256,92 256,190 256,354 256,420" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-opacity="0.8"/>
+    <polyline points="178,148 256,190 334,148" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-opacity="0.7"/>
+    <polyline points="120,220 208,272 304,272 392,220" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-opacity="0.75"/>
+    <polyline points="168,360 256,354 344,360" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-opacity="0.75"/>
+
+    <!-- Interactive Neural Synapse Nodes (Glowing Pearls) -->
+    <circle cx="256" cy="92" r="9" fill="#ffffff" filter="url(#sparklePulse)"/>
+    <circle cx="178" cy="148" r="8" fill="#a5f3fc"/>
+    <circle cx="334" cy="148" r="8" fill="#fbcfe8"/>
+    <circle cx="120" cy="220" r="8.5" fill="#38bdf8"/>
+    <circle cx="392" cy="220" r="8.5" fill="#fb7185"/>
+    <circle cx="98" cy="298" r="8" fill="#c084fc"/>
+    <circle cx="414" cy="298" r="8" fill="#fde047"/>
+    <circle cx="168" cy="360" r="8.5" fill="#6ee7b7"/>
+    <circle cx="344" cy="360" r="8.5" fill="#38bdf8"/>
+    <circle cx="256" cy="420" r="9" fill="#ffffff"/>
+
+    <!-- CENTERPIECE: Golden 4-Point Sparkle Star of Intelligence (Zeka Yıldızı) -->
+    <g filter="url(#starGlow)">
+      <!-- 4-point radiant star -->
+      <path d="M 256 226 Q 256 272 210 272 Q 256 272 256 318 Q 256 272 302 272 Q 256 272 256 226 Z" fill="url(#goldGrad)"/>
+      <!-- Inner brilliant core -->
+      <circle cx="256" cy="272" r="6" fill="#ffffff"/>
+      <!-- Diagonal mini rays -->
+      <line x1="236" y1="252" x2="276" y2="292" stroke="#fef08a" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="276" y1="252" x2="236" y2="292" stroke="#fef08a" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>

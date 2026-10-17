@@ -1,0 +1,717 @@
+{
+  "batchId": "robot-20261012-reasoning-v2",
+  "policy": "reasoning-bank-3",
+  "seed": 20261012,
+  "generatedAt": "2026-10-11T21:15:28.236Z",
+  "summary": {
+    "total": 4000,
+    "existingCompared": 0,
+    "attempts": 21762,
+    "rejected": {
+      "generation": 0,
+      "quality": 0,
+      "duplicate": 17762
+    },
+    "redistributed": [
+      {
+        "grade": 1,
+        "type": "paper_folding",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 1,
+        "type": "punch_folding",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 1,
+        "type": "punch_folding",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 1,
+        "type": "paper_folding",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 1,
+        "type": "symmetry_completion",
+        "difficulty": 2,
+        "reason": "limited-visible-stems"
+      },
+      {
+        "grade": 1,
+        "type": "symmetry_completion",
+        "difficulty": 1,
+        "reason": "limited-visible-stems"
+      },
+      {
+        "grade": 1,
+        "type": "word_scramble_logic",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 1,
+        "type": "number_pattern",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 1,
+        "type": "number_pattern",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 1,
+        "type": "word_scramble_logic",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 2,
+        "type": "punch_folding",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 2,
+        "type": "word_scramble_logic",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 2,
+        "type": "shape_equation",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 2,
+        "type": "paper_folding",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 2,
+        "type": "punch_folding",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 2,
+        "type": "word_scramble_logic",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 2,
+        "type": "shape_equation",
+        "difficulty": 3,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 2,
+        "type": "paper_folding",
+        "difficulty": 3,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 2,
+        "type": "punch_folding",
+        "difficulty": 3,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 2,
+        "type": "symmetry_completion",
+        "difficulty": 3,
+        "reason": "limited-visible-stems"
+      },
+      {
+        "grade": 2,
+        "type": "paper_folding",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 2,
+        "type": "symmetry_completion",
+        "difficulty": 2,
+        "reason": "limited-visible-stems"
+      },
+      {
+        "grade": 2,
+        "type": "symmetry_completion",
+        "difficulty": 1,
+        "reason": "limited-visible-stems"
+      },
+      {
+        "grade": 2,
+        "type": "number_pattern",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 2,
+        "type": "number_pattern",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 2,
+        "type": "figure_completion",
+        "difficulty": 3,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 2,
+        "type": "figure_completion",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 2,
+        "type": "shape_equation",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 2,
+        "type": "figure_completion",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "shape_equation",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "punch_folding",
+        "difficulty": 3,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "shape_equation",
+        "difficulty": 3,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "figure_completion",
+        "difficulty": 3,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "number_pattern",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "shape_equation",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "punch_folding",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "figure_completion",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "paper_folding",
+        "difficulty": 3,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "paper_folding",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "word_scramble_logic",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "number_pattern",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "figure_completion",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "paper_folding",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "punch_folding",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "word_scramble_logic",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "symmetry_completion",
+        "difficulty": 3,
+        "reason": "limited-visible-stems"
+      },
+      {
+        "grade": 3,
+        "type": "symmetry_completion",
+        "difficulty": 1,
+        "reason": "limited-visible-stems"
+      },
+      {
+        "grade": 3,
+        "type": "symmetry_completion",
+        "difficulty": 2,
+        "reason": "limited-visible-stems"
+      },
+      {
+        "grade": 3,
+        "type": "paper_folding",
+        "difficulty": 4,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "punch_folding",
+        "difficulty": 4,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 3,
+        "type": "number_pyramid",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "shape_equation",
+        "difficulty": 3,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "paper_folding",
+        "difficulty": 6,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "punch_folding",
+        "difficulty": 4,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "paper_folding",
+        "difficulty": 4,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "number_pattern",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "paper_folding",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "punch_folding",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "paper_folding",
+        "difficulty": 5,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "punch_folding",
+        "difficulty": 5,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "punch_folding",
+        "difficulty": 6,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "figure_completion",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "paper_folding",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "punch_folding",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "figure_completion",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "number_pyramid",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "word_scramble_logic",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "word_scramble_logic",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "figure_completion",
+        "difficulty": 3,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "paper_folding",
+        "difficulty": 3,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "punch_folding",
+        "difficulty": 3,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "shape_equation",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "number_pattern",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "number_pyramid",
+        "difficulty": 2,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      },
+      {
+        "grade": 4,
+        "type": "symmetry_completion",
+        "difficulty": 1,
+        "reason": "limited-visible-stems"
+      },
+      {
+        "grade": 4,
+        "type": "symmetry_completion",
+        "difficulty": 3,
+        "reason": "limited-visible-stems"
+      },
+      {
+        "grade": 4,
+        "type": "symmetry_completion",
+        "difficulty": 2,
+        "reason": "limited-visible-stems"
+      },
+      {
+        "grade": 4,
+        "type": "shape_equation",
+        "difficulty": 1,
+        "reason": "no-unique-certified-candidate-in-250-attempts"
+      }
+    ],
+    "distribution": {
+      "1": {
+        "count": 1000,
+        "types": {
+          "visual_sequence": 38,
+          "matrix_2x2": 38,
+          "figure_rotation": 38,
+          "mirror_reflection": 37,
+          "symmetry_completion": 4,
+          "figure_completion": 38,
+          "visual_analogy": 38,
+          "shape_counting": 38,
+          "direction_path": 36,
+          "visual_memory": 36,
+          "symbol_coding": 36,
+          "visual_attention": 36,
+          "number_pattern": 18,
+          "shape_equation": 37,
+          "latin_square": 37,
+          "paper_folding": 2,
+          "venn_diagram": 37,
+          "cube_counting": 37,
+          "dice_unfold": 36,
+          "cryptogram": 36,
+          "top_view": 36,
+          "shape_combination": 36,
+          "number_pyramid": 36,
+          "story_logic": 36,
+          "maze_path": 36,
+          "logic_grid": 36,
+          "punch_folding": 2,
+          "weight_comparison": 37,
+          "multiview_perspective": 37,
+          "word_scramble_logic": 18,
+          "spatial_origami": 37
+        },
+        "difficulty": {
+          "1": 250,
+          "2": 750
+        },
+        "category": {
+          "pattern": 38,
+          "matrix": 38,
+          "spatial": 265,
+          "visual_perception": 74,
+          "logic": 184,
+          "attention": 111,
+          "memory": 36,
+          "coding": 108,
+          "numerical": 128,
+          "verbal": 18
+        }
+      },
+      "2": {
+        "count": 1000,
+        "types": {
+          "visual_sequence": 33,
+          "matrix_2x2": 33,
+          "figure_rotation": 33,
+          "mirror_reflection": 33,
+          "symmetry_completion": 4,
+          "figure_completion": 26,
+          "visual_analogy": 34,
+          "shape_counting": 33,
+          "direction_path": 33,
+          "visual_memory": 33,
+          "symbol_coding": 33,
+          "visual_attention": 33,
+          "number_pattern": 32,
+          "matrix_3x3": 34,
+          "shape_equation": 23,
+          "latin_square": 32,
+          "paper_folding": 2,
+          "venn_diagram": 33,
+          "cube_counting": 32,
+          "dice_unfold": 32,
+          "cryptogram": 32,
+          "operation_machine": 32,
+          "top_view": 32,
+          "shape_combination": 32,
+          "number_pyramid": 32,
+          "story_logic": 32,
+          "maze_path": 32,
+          "logic_grid": 32,
+          "weight_comparison": 32,
+          "multiview_perspective": 32,
+          "raven_matrix": 32,
+          "word_scramble_logic": 32,
+          "spatial_origami": 33,
+          "punch_folding": 2
+        },
+        "difficulty": {
+          "1": 150,
+          "2": 350,
+          "3": 500
+        },
+        "category": {
+          "pattern": 33,
+          "matrix": 99,
+          "spatial": 236,
+          "visual_perception": 58,
+          "logic": 163,
+          "attention": 98,
+          "memory": 33,
+          "coding": 97,
+          "numerical": 151,
+          "verbal": 32
+        }
+      },
+      "3": {
+        "count": 1000,
+        "types": {
+          "visual_sequence": 33,
+          "matrix_2x2": 33,
+          "figure_rotation": 33,
+          "mirror_reflection": 33,
+          "symmetry_completion": 14,
+          "figure_completion": 13,
+          "visual_analogy": 34,
+          "shape_counting": 33,
+          "direction_path": 33,
+          "visual_memory": 33,
+          "symbol_coding": 33,
+          "visual_attention": 33,
+          "number_pattern": 32,
+          "matrix_3x3": 34,
+          "latin_square": 32,
+          "paper_folding": 8,
+          "venn_diagram": 33,
+          "cube_counting": 32,
+          "dice_unfold": 32,
+          "cryptogram": 32,
+          "operation_machine": 32,
+          "top_view": 32,
+          "shape_combination": 32,
+          "number_pyramid": 32,
+          "story_logic": 33,
+          "maze_path": 32,
+          "logic_grid": 32,
+          "weight_comparison": 33,
+          "multiview_perspective": 32,
+          "raven_matrix": 32,
+          "word_scramble_logic": 32,
+          "spatial_origami": 33,
+          "shape_equation": 12,
+          "punch_folding": 8
+        },
+        "difficulty": {
+          "1": 100,
+          "2": 200,
+          "3": 350,
+          "4": 350
+        },
+        "category": {
+          "pattern": 33,
+          "matrix": 99,
+          "spatial": 258,
+          "visual_perception": 45,
+          "logic": 164,
+          "attention": 98,
+          "memory": 33,
+          "coding": 97,
+          "numerical": 141,
+          "verbal": 32
+        }
+      },
+      "4": {
+        "count": 1000,
+        "types": {
+          "visual_sequence": 32,
+          "matrix_2x2": 32,
+          "figure_rotation": 32,
+          "mirror_reflection": 32,
+          "symmetry_completion": 31,
+          "figure_completion": 31,
+          "visual_analogy": 32,
+          "shape_counting": 32,
+          "direction_path": 32,
+          "visual_memory": 32,
+          "symbol_coding": 32,
+          "visual_attention": 32,
+          "number_pattern": 31,
+          "matrix_3x3": 32,
+          "latin_square": 31,
+          "shape_equation": 30,
+          "venn_diagram": 31,
+          "cube_counting": 31,
+          "dice_unfold": 31,
+          "cryptogram": 31,
+          "operation_machine": 31,
+          "top_view": 31,
+          "shape_combination": 31,
+          "number_pyramid": 29,
+          "story_logic": 31,
+          "maze_path": 31,
+          "logic_grid": 31,
+          "weight_comparison": 31,
+          "multiview_perspective": 31,
+          "raven_matrix": 31,
+          "word_scramble_logic": 30,
+          "spatial_origami": 32
+        },
+        "difficulty": {
+          "1": 50,
+          "2": 100,
+          "3": 150,
+          "4": 200,
+          "5": 250,
+          "6": 250
+        },
+        "category": {
+          "pattern": 32,
+          "matrix": 95,
+          "spatial": 252,
+          "visual_perception": 62,
+          "logic": 156,
+          "attention": 95,
+          "memory": 32,
+          "coding": 94,
+          "numerical": 152,
+          "verbal": 30
+        }
+      }
+    }
+  },
+  "validation": {
+    "total": 4000,
+    "uniqueStems": 4000,
+    "uniqueVisuals": 4000,
+    "automaticChecks": "passed",
+    "humanEditorialReview": "not-performed"
+  }
+}

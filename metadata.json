@@ -1,0 +1,6 @@
+{
+  "name": "ZekaPark",
+  "description": "BİLSEM ve bilişsel yetenek sınavlarına hazırlık için özgün parametrik görsel soru motoru, adaptif pratik ve deneme platformu.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
