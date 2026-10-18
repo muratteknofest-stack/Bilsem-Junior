@@ -277,7 +277,7 @@ export default function App() {
   const navigateTo = (targetRoute: string, practiceTopic: LearningTopic = 'mixed', story?: StoryStage) => {
     if(targetRoute==='adaptive')setActiveStory(story?{stage:story,userId:currentUser.id,grade:currentUser.grade||1}:null);
     if (targetRoute === 'practice') setSelectedPracticeTopic(practiceTopic);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: isAndroidApp ? 'instant' : 'smooth' });
 
     if (targetRoute === 'admin' || targetRoute === 'login:admin') { window.location.assign(ADMIN_PANEL_PATH); return; }
 
