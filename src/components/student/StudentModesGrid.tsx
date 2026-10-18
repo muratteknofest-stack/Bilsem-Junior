@@ -29,7 +29,7 @@ export function StudentModesGrid(p: StudentModesGridProps) {
       <div className="bj-fox-bubble"><strong>Haydi, keşfedelim!</strong><p>Bir durak seç, zihnini oyuna davet et.</p><span><Sparkles size={14} aria-hidden="true" /> Her soru yeni bir keşif!</span></div>
     </div>
     <div className="bj-quest-path">
-      <svg className="bj-quest-connector" viewBox="0 0 520 650" preserveAspectRatio="none" aria-hidden="true"><path d="M160 65 C160 170 360 110 360 230 S170 300 170 395 S340 470 340 580" /></svg>
+      <svg className="bj-quest-connector" viewBox="0 0 520 650" preserveAspectRatio="none" aria-hidden="true"><path d="M70 65 C70 170 175 110 175 230 S70 300 70 395 S175 470 175 580" /></svg>
       <span className="bj-world-cloud bj-world-cloud-one" aria-hidden="true" /><span className="bj-world-cloud bj-world-cloud-two" aria-hidden="true" />
       <span className="bj-world-spark bj-world-spark-one" aria-hidden="true">✦</span><span className="bj-world-spark bj-world-spark-two" aria-hidden="true">✧</span>
       <span className="bj-world-plant" aria-hidden="true"><i /><i /><i /></span>
