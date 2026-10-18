@@ -26,11 +26,16 @@ try {
     await page.locator('.zp-public-brand .bj-wordmark').waitFor();
     assert.match(await page.locator('.zp-public-brand .bj-wordmark').innerText(), /Bilsem Junior/);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'Homepage overflow at ' + width);
+    for (const button of await page.locator('.zp-public-nav button:visible').all()) {
+      const rect = await button.boundingBox();
+      assert.ok(rect && rect.x >= -1 && rect.x + rect.width <= width + 1, 'Header action must stay on screen at ' + width);
+    }
     assert.equal(await page.locator('.bj-guide-card').count(), 4);
     assert.equal(await page.locator('.bj-logo-symbol').first().evaluate(img => img.complete && img.naturalWidth > 0), true);
     await page.screenshot({ path: output + '/home-' + width + '.png', animations: 'disabled' });
     await page.locator('.bj-guide').screenshot({ path: output + '/guide-' + width + '.png', animations: 'disabled' });
-    if (width <= 1000) {
+    await page.evaluate(() => window.scrollTo(0, 0));
+    if (width <= 1200) {
       await page.getByRole('button', { name: 'Menüyü aç', exact: true }).click();
       await page.getByRole('dialog').getByRole('link', { name: /BİLSEM hazırlık rehberi/ }).waitFor();
       await page.getByRole('button', { name: 'Menüyü kapat', exact: true }).click();

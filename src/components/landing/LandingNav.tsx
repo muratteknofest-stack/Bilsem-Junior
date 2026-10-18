@@ -48,7 +48,7 @@ export function LandingNav({ onLogin, onRegister, onHome, onDemo, moving, reduce
     el.showModal();
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const media = window.matchMedia('(min-width: 1001px)');
+    const media = window.matchMedia('(min-width: 1201px)');
     const onResize = () => { if (media.matches) setMobileOpen(false); };
     media.addEventListener('change', onResize);
     return () => { media.removeEventListener('change', onResize); document.body.style.overflow = previousOverflow; el.close(); };
