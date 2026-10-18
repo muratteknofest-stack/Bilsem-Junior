@@ -13,11 +13,11 @@
     },
     {
       "source": "/paketler",
-      "destination": "/api/index?__path=public/shopier/page"
+      "destination": "/api/index?__path=public/membership/page"
     },
     {
       "source": "/paketler/",
-      "destination": "/api/index?__path=public/shopier/page"
+      "destination": "/api/index?__path=public/membership/page"
     },
     {
       "source": "/api/:path*",

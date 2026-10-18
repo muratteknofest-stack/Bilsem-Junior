@@ -17,14 +17,7 @@ import {
   type AuthenticatedRequest,
 } from "../security";
 import { accountSecurityLimiter } from "../rate-limiters";
-import { verifyShopierProducts } from '../shopier-client';
-import { ShopierError } from '../shopier-model';
-import {
-  inspectShopierProducts,
-  inspectShopierPackageCandidates,
-  inspectShopierTokenMetadata,
-} from '../shopier-diagnostics';
-
+import { playConfig, playSetupReady, verifyPlayCatalog } from '../google-play-client';
 const routes = Router();
 
 routes.get("/public/platform", async (_req, res) => {
@@ -63,21 +56,10 @@ routes.get("/admin/platform-settings", async (_req, res) => {
   res.json({ ...record, blockers: releaseBlockers(record.settings) });
 });
 
-routes.get("/admin/platform-settings/shopier-diagnostics", async (_req, res) => {
-  const record = await readPlatformSettings().catch(() => ({
-    settings: defaultPlatformSettings(),
-  }));
-  const tokenMeta = inspectShopierTokenMetadata();
-  const [productsReport, candidatesReport] = await Promise.all([
-    inspectShopierProducts(record.settings.shopier),
-    inspectShopierPackageCandidates(),
-  ]);
-  res.json({
-    tokenMeta,
-    productsReport,
-    candidatesReport,
-    blockers: releaseBlockers(record.settings),
-  });
+routes.get('/admin/platform-settings/billing-diagnostics', async (_req,res) => {
+  const {settings}=await readPlatformSettings();const config=playConfig(),configured=playSetupReady();let catalogVerified=false;
+  if(configured)try{await verifyPlayCatalog();catalogVerified=true;}catch{}
+  res.json({provider:'google_play',configured,catalogVerified,enabled:config.enabled,enforced:config.enforced,packageName:config.packageName,productId:config.productId,blockers:releaseBlockers(settings)});
 });
 
 routes.put(
@@ -93,11 +75,6 @@ routes.put(
     if (!parsed.success)
       return res.status(400).json({ error: "Ayar bilgileri geçersiz." });
     const { settings, revision } = parsed.data;
-    if (settings.shopier.enabled || settings.shopier.enforcePaidAccess) {
-      if (releaseBlockers(settings).length) return res.status(422).json({ error: 'Ücretli satış için işletmeci bilgileri ve kabul kontrolleri tamamlanmalı.' });
-      try { await verifyShopierProducts(settings.shopier); }
-      catch(error) { if(error instanceof ShopierError) return res.status(error.status).json({error:error.message}); throw error; }
-    }
     const { data, error } = await getServiceClient()
       .from("platform_settings")
       .update({

@@ -1,0 +1,59 @@
+name: Google Play Android candidate
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      VITE_API_BASE_URL: https://zekapark.vercel.app
+      VITE_PUBLIC_SITE_URL: https://zekapark.vercel.app
+      VITE_SUPABASE_URL: https://vehhvsdkifwstbjhnhao.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ijE2Jbn1oGn9Elz03fiYrA_FUBnEWXI
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+      - name: Select JDK 21
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_21_X64" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME_21_X64/bin" >> "$GITHUB_PATH"
+      - run: npm ci
+      - run: npm run lint && npm run test:google-play
+      - run: npm run android:sync
+      - name: Verify billing screens
+        run: |
+          npx playwright install --with-deps chromium
+          node --import tsx scripts/check-google-play-ui.tsx
+      - name: Compile Android Billing and release bundle
+        working-directory: android
+        run: ./gradlew --no-daemon :app:bundleRelease :app:assembleRelease :app:assembleDebug
+      - name: Verify release security
+        run: |
+          mkdir -p test-artifacts/android
+          cp android/app/build/outputs/bundle/release/app-release.aab test-artifacts/android/ZekaPark-1.0.12-unsigned.aab
+          cp android/app/build/outputs/apk/debug/app-debug.apk test-artifacts/android/ZekaPark-1.0.12-test.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android/app/build/outputs/apk/release/app-release-unsigned.apk > test-artifacts/android/package.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree android/app/build/outputs/apk/release/app-release-unsigned.apk AndroidManifest.xml > test-artifacts/android/manifest.txt
+          node scripts/verify-android-release.mjs test-artifacts/android/manifest.txt test-artifacts/android/package.txt > test-artifacts/android/release-check.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: Google-Play-Android-candidate
+          path: |
+            test-artifacts/android/
+            test-artifacts/google-play-ui/
+          if-no-files-found: ignore
+          retention-days: 7

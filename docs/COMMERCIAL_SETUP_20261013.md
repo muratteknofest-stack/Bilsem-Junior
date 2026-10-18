@@ -1,3 +1,5 @@
+> Ödeme bölümleri tarihsel kayıttır. Güncel sistem yalnızca Google Play kullanır; [güncel kurulum](GOOGLE_PLAY_BILLING.md).
+
 # Quantum tech — Shopier ile bireysel satış kararı
 
 13 Ekim 2026. Kullanıcı şirketi ve henüz Shopier hesabı olmadığını belirtti; site tarafının hazırlanmasını yetkilendirdi. Önceki iyzico önerisinin şirket varsayımı kaldırıldı.

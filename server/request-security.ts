@@ -10,7 +10,7 @@ function canonicalOrigin(value: string): string | null {
 
 /** Only these public HTML pages may be opened by a cross-site top-level link. */
 function publicDocumentPath(path: string, format: unknown): boolean {
-  return /^\/public\/shopier\/page\/?$/.test(path)
+  return /^\/public\/membership\/page\/?$/.test(path)
     || (format === 'html' && /^\/public\/policy\/(?:gizlilik-ve-veriler|kullanim-kosullari|iletisim-ve-destek)\/?$/.test(path));
 }
 

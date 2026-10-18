@@ -1,3 +1,5 @@
+> Ödeme bölümleri tarihsel kayıttır. Güncel sistem yalnızca Google Play kullanır; [güncel kurulum](GOOGLE_PLAY_BILLING.md).
+
 # Hesap ve yönetici ekranlarında hata toparlama
 
 - Talep kodu kopyalama işlemi panoya yazma sonucunu bekler. İzin yoksa veya tarayıcı desteklemiyorsa açıklayıcı hata gösterir; başarılı kopyalama erişilebilir durum mesajıyla bildirilir. Düğme dokunmatik kullanım için en az 44 px boyutundadır.

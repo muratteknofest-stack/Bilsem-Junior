@@ -26,7 +26,7 @@ export async function fetchReleaseResource(input,init={}){
 }
 
 export async function verifyPublicRelease(origin,fetcher=fetchReleaseResource){
- const checks=[['/',200],['/blog',200],['/reset-password',200],['/bilgi/gizlilik-ve-veriler',200],['/paketler',200],['/paketler/',200],['/sales/sales.css',200],['/robots.txt',200],['/sitemap.xml',200],['/api/public/platform',200],['/api/public/shopier',200],['/api/account/export',401],['/api/learning/history',401],['/api/admin/platform-settings',401],['/api/admin/question-review-summary',401],['/api/admin/support-requests/55555555-5555-4555-8555-555555555555/deletion',401],['/api/release-unknown',404]];
+ const checks=[['/',200],['/blog',200],['/reset-password',200],['/bilgi/gizlilik-ve-veriler',200],['/paketler',200],['/paketler/',200],['/sales/sales.css',200],['/robots.txt',200],['/sitemap.xml',200],['/api/public/platform',200],['/api/public/membership',200],['/api/account/export',401],['/api/learning/history',401],['/api/admin/platform-settings',401],['/api/admin/question-review-summary',401],['/api/admin/support-requests/55555555-5555-4555-8555-555555555555/deletion',401],['/api/release-unknown',404]];
  let registrationOpen=false,paidSalesReady=false;
  for(const [path,status] of checks){
   const response=await fetcher(new URL(path,origin),{redirect:'manual',signal:AbortSignal.timeout(10_000)});
@@ -36,7 +36,7 @@ export async function verifyPublicRelease(origin,fetcher=fetchReleaseResource){
   if(path.startsWith('/api/'))assert.equal(response.headers.get('cache-control'),'no-store',path);
   if(path==='/api/public/platform'){
    const data=await response.json();assert.equal(typeof data.registrationOpen,'boolean');assert.equal(typeof data.policyVersion,'string');assert.ok(data.policyVersion.length);registrationOpen=data.registrationOpen;
-  }else if(path==='/api/public/shopier'){
+  }else if(path==='/api/public/membership'){
    const data=await response.json();assert.equal(typeof data.ready,'boolean');assert.equal(typeof data.enforced,'boolean');assert.ok(Array.isArray(data.plans)&&data.plans.length===3);paidSalesReady=data.ready;
   }else{
    const body=await response.text();if(path==='/')assert.match(body,/<html[^>]*lang="tr"/i);
@@ -59,9 +59,9 @@ export async function verifyPublicRelease(origin,fetcher=fetchReleaseResource){
   const body=await response.text();assert.match(body,/<html/i);if(path.startsWith('/paketler'))assert.ok(body.includes('sales-heading'));
  }
  const blockedRequests=[
-  ['/api/public/shopier',{headers:{...navigation,'Sec-Fetch-Mode':'cors','Sec-Fetch-Dest':'empty'}}],
+  ['/api/public/membership',{headers:{...navigation,'Sec-Fetch-Mode':'cors','Sec-Fetch-Dest':'empty'}}],
   ['/api/account/export',{headers:navigation}],
-  ['/api/parent/shopier/claim',{method:'POST',headers:{...navigation,'Content-Type':'application/json'},body:'{}'}],
+  ['/api/parent/google-play/verify',{method:'POST',headers:{...navigation,'Content-Type':'application/json'},body:'{}'}],
  ];
  for(const [path,init]of blockedRequests){
   const response=await fetcher(new URL(path,origin),{...init,redirect:'manual',signal:AbortSignal.timeout(10_000)});assert.equal(response.status,403,`cross-site API: ${path}`);await response.arrayBuffer();

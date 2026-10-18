@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import { createApiApp } from './server/api-app';
 import { readPlatformSettings } from './server/platform-settings';
 import { publicPolicy, policyHtml } from './server/platform-policy';
-import { publicShopierView,shopierPageHtml } from './server/routes/shopier-routes';
+import { publicPlayMembership,playMembershipPageHtml } from './server/play-membership-page';
 import { defaultPlatformSettings } from './src/lib/platform-settings';
 
 dotenv.config();
@@ -20,7 +20,7 @@ async function startServer() {
     }
     next();
   });
-  app.get('/paketler',async(_req,res)=>{res.setHeader('Cache-Control','no-store');res.type('html').send(shopierPageHtml(await publicShopierView()));});
+  app.get('/paketler',async(_req,res)=>{res.setHeader('Cache-Control','no-store');res.type('html').send(playMembershipPageHtml(await publicPlayMembership()));});
   app.get('/bilgi/:slug', async (req, res, next) => {
     if (!['gizlilik-ve-veriler', 'kullanim-kosullari', 'iletisim-ve-destek'].includes(req.params.slug)) return next();
     const { settings } = await readPlatformSettings().catch(() => ({ settings: defaultPlatformSettings() }));

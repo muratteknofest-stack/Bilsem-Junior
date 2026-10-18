@@ -1,3 +1,4 @@
+@import "./components/play-billing.css";
 @import './components/student/learning-setup.css';
 @import './components/student/student-experience-controls.css';
 @import "tailwindcss";

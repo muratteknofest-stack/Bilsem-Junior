@@ -39,7 +39,8 @@ test('public settings export exact names and reject service-role, secret keys an
   assert.throws(() => publicBuildSettings({ ...publicEnv, VITE_API_BASE_URL: 'http://localhost:3000' }, true, false, ''));
   const vite = fs.readFileSync('vite.config.ts', 'utf8');
   assert.match(vite, /envPrefix: \[\]/);
-  assert.match(vite, /publicBuildSettings\(loadEnv/);
+  assert.match(vite, /publicBuildSettings\(env,/);
+  assert.match(vite, /androidBuildSettings\(env\)/);
 });
 
 test('static and API policies agree; only style attributes permit inline content and network access is project-specific', () => {
@@ -131,21 +132,21 @@ test('external links may navigate only to allowlisted public HTML without granti
     return new Response(Buffer.concat(chunks),{status:incoming.statusCode,headers});
   };
   const navigation={'Sec-Fetch-Site':'cross-site','Sec-Fetch-Mode':'navigate','Sec-Fetch-Dest':'document','Sec-Fetch-User':'?1',Referer:'https://chatgpt.com/'};
-  const publicPaths=['/public/shopier/page','/public/shopier/page/','/public/policy/gizlilik-ve-veriler?format=html','/public/policy/kullanim-kosullari?format=html','/public/policy/iletisim-ve-destek?format=html'];
+  const publicPaths=['/public/membership/page','/public/membership/page/','/public/policy/gizlilik-ve-veriler?format=html','/public/policy/kullanim-kosullari?format=html','/public/policy/iletisim-ve-destek?format=html'];
   try{
     for(const path of publicPaths)for(const method of ['GET','HEAD']){
       const r=await send(path,{method,headers:navigation});assert.equal(r.status,200,`${method} ${path}`);
       assert.equal(r.headers.get('access-control-allow-origin'),null);assert.equal(r.headers.get('cache-control'),'no-store');await r.arrayBuffer();
     }
     const blocked=[
-      ...['cors','no-cors','same-origin'].map(mode=>({path:'/public/shopier/page',headers:{...navigation,'Sec-Fetch-Mode':mode,'Sec-Fetch-Dest':'empty'}})),
-      ...['iframe','frame','object','embed','script','image'].map(dest=>({path:'/public/shopier/page',headers:{...navigation,'Sec-Fetch-Dest':dest}})),
-      ...['/public/shopier','/public/platform','/public/policy/gizlilik-ve-veriler','/public/policy/unknown?format=html','/public/shopier/page/extra','/account/export','/admin/platform-settings','/parent/shopier/access'].map(path=>({path,headers:navigation})),
-      {path:'/public/shopier/page',headers:{...navigation,Origin:'https://attacker.example'}},
-      {path:'/public/shopier/page',headers:{...navigation,Origin:'null'}},
+      ...['cors','no-cors','same-origin'].map(mode=>({path:'/public/membership/page',headers:{...navigation,'Sec-Fetch-Mode':mode,'Sec-Fetch-Dest':'empty'}})),
+      ...['iframe','frame','object','embed','script','image'].map(dest=>({path:'/public/membership/page',headers:{...navigation,'Sec-Fetch-Dest':dest}})),
+      ...['/public/membership','/public/platform','/public/policy/gizlilik-ve-veriler','/public/policy/unknown?format=html','/public/membership/page/extra','/account/export','/admin/platform-settings','/parent/google-play/access'].map(path=>({path,headers:navigation})),
+      {path:'/public/membership/page',headers:{...navigation,Origin:'https://attacker.example'}},
+      {path:'/public/membership/page',headers:{...navigation,Origin:'null'}},
     ];
     for(const {path,headers} of blocked){const r=await send(path,{headers});assert.equal(r.status,403,path);assert.equal(r.headers.get('access-control-allow-origin'),null);await r.arrayBuffer();}
-    for(const path of [...publicPaths,'/parent/shopier/claim'])for(const method of ['POST','PUT','DELETE','OPTIONS']){
+    for(const path of [...publicPaths,'/parent/google-play/verify'])for(const method of ['POST','PUT','DELETE','OPTIONS']){
       const r=await send(path,{method,headers:{...navigation,'Content-Type':'application/json'},...(method==='OPTIONS'?{}:{body:'{}'})});assert.equal(r.status,403,`${method} ${path}`);await r.arrayBuffer();
     }
   }finally{await new Promise<void>(resolve=>server.close(()=>resolve()));}

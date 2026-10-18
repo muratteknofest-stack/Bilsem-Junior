@@ -1,3 +1,5 @@
+> Ödeme bölümleri tarihsel kayıttır. Güncel sistem yalnızca Google Play kullanır; [güncel kurulum](GOOGLE_PLAY_BILLING.md).
+
 # ZekaPark İngilizce sürüm ve uluslararası sunum planı
 
 Tarih: 13 Ekim 2026. Kullanıcı talebi: İngilizce bir sürüm oluşturmak; yurt dışında BİLSEM hazırlığı yerine düşünme/zeka becerileri başlıkları ve açıklamalarıyla sunmak; ayrıntılı bir uygulama planı hazırlamak.

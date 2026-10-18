@@ -55,3 +55,11 @@ backup-private/
 
 # Browser design review output
 test-artifacts/
+
+# Generated Android project and private upload keys
+/android/
+dist-android/
+*.jks
+*.keystore
+*.p12
+keystore.properties

@@ -34,8 +34,8 @@ jobs:
       - name: Check entry routes, separate student progress and activity timer cleanup
         run: npm run test:audit-browser
 
-      - name: Check Shopier package controls on mobile and tablet
-        run: npm run test:shopier-layout
+      - name: Check Google Play membership controls on mobile and tablet
+        run: npm run test:play-layout
       - name: Verify English practice, device progress and mobile layouts
         run: npm run test:english-browser
 

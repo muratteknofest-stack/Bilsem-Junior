@@ -17,7 +17,7 @@ try {
     try { const response = await fetch(base, { signal: AbortSignal.timeout(1000) }); await response.arrayBuffer(); ready = true; break; } catch { await pause(100); }
   }
   assert.ok(ready, 'Production server did not start');
-  const checks = [['/thinkharbor.webmanifest',200],['/thinkharbor-192.png',200],['/thinkharbor-512.png',200],['/thinkharbor-180.png',200],['/api/account/requests',401],['/', 200], ['/en', 200], ['/en/', 200], ['/en/unknown', 404], ['/unknown-release-page', 404], ['/reset-password', 200], ['/admin', 200], ['/admin/giris', 200], ['/admin/giris/', 200], ['/blog', 200], ['/bilgi/gizlilik-ve-veriler', 200], ['/bilgi/unknown', 404], ['/blog/unknown', 404], ['/server.cjs', 404], ['/server.cjs.map', 404], ['/build/server.cjs', 404], ['/bilgi/%2e%2e/.env', 404], ['/api/learning/history', 401], ['/api/parent/learning-history/22222222-2222-4222-8222-222222222222', 401], ['/api/account/export', 401], ['/api/admin/support-requests', 401], ['/api/parent/shopier/access?studentId=22222222-2222-4222-8222-222222222222', 401]];
+  const checks = [['/thinkharbor.webmanifest',200],['/thinkharbor-192.png',200],['/thinkharbor-512.png',200],['/thinkharbor-180.png',200],['/api/account/requests',401],['/', 200], ['/en', 200], ['/en/', 200], ['/en/unknown', 404], ['/unknown-release-page', 404], ['/reset-password', 200], ['/admin', 200], ['/admin/giris', 200], ['/admin/giris/', 200], ['/blog', 200], ['/bilgi/gizlilik-ve-veriler', 200], ['/bilgi/unknown', 404], ['/blog/unknown', 404], ['/server.cjs', 404], ['/server.cjs.map', 404], ['/build/server.cjs', 404], ['/bilgi/%2e%2e/.env', 404], ['/api/learning/history', 401], ['/api/parent/learning-history/22222222-2222-4222-8222-222222222222', 401], ['/api/account/export', 401], ['/api/admin/support-requests', 401], ['/api/parent/google-play/access?studentId=22222222-2222-4222-8222-222222222222', 401]];
   for (const [path, expected] of checks) {
     const response = await fetch(base + path, { signal: AbortSignal.timeout(3000) });
     assert.equal(response.status, expected, path);
@@ -51,7 +51,7 @@ try {
   assert.equal(studentSwitch.status, 401, 'Unauthenticated student-session switch');
   assert.equal(studentSwitch.headers.get('cache-control'), 'no-store');
   await studentSwitch.arrayBuffer();
-  for (const path of ['/api/parent/return-session', '/api/parent/reset-student-password', '/api/parent/shopier/claim','/api/account/deletion-request']) {
+  for (const path of ['/api/parent/return-session', '/api/parent/reset-student-password', '/api/parent/google-play/verify','/api/account/deletion-request']) {
     const response = await fetch(base + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}', signal: AbortSignal.timeout(3000) });
     assert.equal(response.status, 401, `Unauthenticated ${path}`);
     assert.equal(response.headers.get('cache-control'), 'no-store', path);
