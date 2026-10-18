@@ -68,11 +68,16 @@ export function selectLearningQuestions(options: {
   }
   for (const group of groups.values()) group.sort((a, b) => a.lastAssigned - b.lastAssigned);
   const seen = new Set<string>(), selected: BaseQuestion[] = [];
+  const typeCounts = new Map<BaseQuestion['type'], number>();
   const take = (category: CognitiveCategory, allowRecent: boolean) => {
     const group = groups.get(category) || [];
     while (group.length) {
-      if (!allowRecent && group[0].lastAssigned) return undefined;
-      const item = group.shift()!;
+      const eligible = group.filter(item => allowRecent ? item.lastAssigned === group[0].lastAssigned : !item.lastAssigned);
+      if (!eligible.length) return undefined;
+      // Among equally fresh candidates, avoid a run of the same question template.
+      // Stable ordering preserves oldest-first exposure when template counts tie.
+      const item = eligible.reduce((best, next) => (typeCounts.get(next.question.type) || 0) < (typeCounts.get(best.question.type) || 0) ? next : best);
+      group.splice(group.indexOf(item), 1);
       if (seen.has(item.key) || !options.canUse(item.question)) continue;
       seen.add(item.key);
       return item.question;
@@ -94,6 +99,7 @@ export function selectLearningQuestions(options: {
     chosen ||= take(category, true);
     if (!chosen) throw new LearningError('Bu çalışma için yeterli farklı ve doğrulanmış soru hazır değil.');
     selected.push(chosen);
+    typeCounts.set(chosen.type, (typeCounts.get(chosen.type) || 0) + 1);
   }
   return shuffle(selected, randomIndex);
 }

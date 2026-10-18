@@ -1,0 +1,11 @@
+/* Vector artwork stays sharp at every device pixel ratio. Depth never changes puzzle geometry. */
+.zp-curriculum-token{width:64px;height:68px;max-width:100%;display:block;flex:none}
+.zp-curriculum-grid{width:260px;max-width:100%;height:auto;display:block;margin-inline:auto}
+.zp-curriculum-pair{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:12px;width:100%}
+.zp-curriculum-comparison{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%;max-width:620px;margin-inline:auto}
+.zp-curriculum-comparison>div{min-width:0}
+.zp-curriculum-piece{width:128px;height:128px;max-width:100%;display:block;margin-inline:auto}
+.zp-question-visual svg{shape-rendering:geometricPrecision;text-rendering:geometricPrecision}
+.zp-question-visual [data-workshop-kind=visual_attention] .qb-symbol-svg{width:100%;max-width:56px;height:auto;margin-inline:auto}
+.zp-focus .zp-question-visual{padding:0;max-width:100%}
+.zp-focus .zp-answer-content .zp-curriculum-token,.zp-focus .zp-answer-content .zp-curriculum-grid,.zp-focus .zp-answer-content .zp-curriculum-piece{width:100%;height:100%;max-height:100%;object-fit:contain}

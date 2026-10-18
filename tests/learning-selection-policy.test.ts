@@ -52,6 +52,15 @@ test('a newly proved variant is preferred over a recently assigned bank question
   assert.equal(selected[0].id, novel.id);
 });
 
+test('fresh question types are balanced within an area before repeating the same template', () => {
+  const patterns = Array.from({length:8},(_,i)=>generateQuestion({targetGrade:2,type:'visual_sequence',difficulty:2,seed:40000+i*997}));
+  const other = Array.from({length:4},(_,i)=>generateQuestion({targetGrade:2,type:'number_pattern',difficulty:2,seed:80000+i*997}));
+  const numerical = Array.from({length:4},(_,i)=>generateQuestion({targetGrade:2,type:'number_pyramid',difficulty:2,seed:90000+i*997}));
+  const selected=selectLearningQuestions({count:4,category:'numerical',candidates:[...patterns,...other,...numerical],exposure:new Map(),canUse:q=>q.category==='numerical'&&isQuestionReadyForStudents(q),generate:cannotGenerate,randomIndex:()=>0});
+  assert.equal(selected.filter(q=>q.type==='number_pattern').length,2);
+  assert.equal(selected.filter(q=>q.type==='number_pyramid').length,2);
+});
+
 test('renamed duplicates and invalid candidates cannot fill a quota or relax the proof gate', () => {
   const q = numeric(21), wrong = { ...numeric(42), correctOptionId: 'INVALID' };
   assert.throws(() => selectLearningQuestions({ count: 2, category: 'numerical',

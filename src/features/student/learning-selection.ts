@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { BaseQuestion, DifficultyLevel } from '../../types';
+import type { BaseQuestion, CognitiveCategory, DifficultyLevel, SkillMastery } from '../../types';
 import { EDUCATION_PROFILES, type SchoolGrade } from '../questions/quality-policy';
 import { LEARNING_TOPICS, type LearningTopic } from './learning-topics';
 import { AVAILABLE_CATEGORIES } from './available-categories';
@@ -9,6 +9,12 @@ export const LEARNING_BANK_POLICY = 'published-selection-3';
 export type LearningDifficulty = 'mixed' | DifficultyLevel;
 export const DEFAULT_ADAPTIVE_COUNT = 10;
 export const MAX_LEARNING_QUESTIONS = 50;
+/** An explicit story/skill area is a constraint. Only mixed practice chooses a weak area. */
+export function selectAdaptiveCategory(requested: CognitiveCategory | 'mixed', masteries: readonly Pick<SkillMastery, 'category' | 'mastery'>[]): CognitiveCategory {
+  if (requested !== 'mixed') return requested;
+  return [...AVAILABLE_CATEGORIES].sort((a, b) =>
+    (masteries.find(m => m.category === a)?.mastery || 0) - (masteries.find(m => m.category === b)?.mastery || 0))[0];
+}
 export const learningStartSchema = z.object({
   topic: z.enum(['mixed', ...LEARNING_TOPICS]).default('mixed'),
   mode: z.enum(['practice', 'adaptive', 'exam']),

@@ -12,7 +12,7 @@ import { requireSupabaseAuth, requireVerifiedEmail, requireProfileRole, type Aut
 import { authenticatedRateLimitKey } from '../rate-limiters';
 import { generateQuestion } from '../../src/features/questions/generators';
 import { EDUCATION_PROFILES, isSchoolGrade } from '../../src/features/questions/quality-policy';
-import { DEFAULT_ADAPTIVE_COUNT, fitsLearningSelection, learningStartSchema, sameLearningSelection, type LearningDifficulty, type LearningSelection } from '../../src/features/student/learning-selection';
+import { DEFAULT_ADAPTIVE_COUNT, fitsLearningSelection, learningStartSchema, sameLearningSelection, selectAdaptiveCategory, type LearningDifficulty, type LearningSelection } from '../../src/features/student/learning-selection';
 import { topicCategory, topicQuestionCount } from '../../src/features/student/learning-topics';
 import { questionVisualKey } from '../../src/features/questions/quality';
 import { loadPublishedLearningBank } from '../learning-bank';
@@ -89,7 +89,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
       if (progress.error) throw progress.error;
       let masteries: SkillMastery[] = [];
       try { masteries = JSON.parse(progress.data?.values?.yapyap_mastery || '[]'); } catch { /* Empty history. */ }
-      category = [...AVAILABLE_CATEGORIES].sort((a, b) => (masteries.find(m => m.category === a)?.mastery || 0) - (masteries.find(m => m.category === b)?.mastery || 0))[0];
+      category = selectAdaptiveCategory(category, masteries);
     }
     const configuration = await readPlatformSettings();
     const settings = configuredExams(configuration.settings).find(e => e.id === exam)!;

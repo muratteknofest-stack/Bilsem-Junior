@@ -12,6 +12,20 @@ import { QuestionRenderer } from '../src/features/questions/renderers/QuestionRe
 import { AnswerWorkspace } from '../src/features/questions/renderers/AnswerWorkspace';
 import { SymbolDiagram } from '../src/features/questions/renderers/VisualGlyph';
 import type { DifficultyLevel } from '../src/types';
+import { generateWorkshopQuestion } from '../src/features/questions/workshop-engine';
+import type { WorkshopBoard } from '../src/features/questions/workshop-mechanics';
+
+test('verbal analogy diagrams never print the requested animal/home pair among the examples', () => {
+  for(let seed=1;seed<=20;seed++){
+    const q=generateWorkshopQuestion('verbal_analogy',seed*997,2);
+    const board=q.visualConfig as WorkshopBoard;
+    const html=renderToStaticMarkup(<QuestionRenderer question={q}/>);
+    assert.ok(html.includes(board.pairs![board.target!][0]));
+    assert.ok(!html.replace(/<[^>]*>/g,' ').includes(board.pairs![board.target!].join(' → ')));
+    assert.ok(html.includes(board.pairs![0][1]));
+    assert.equal(isQuestionReadyForStudents(q),true);
+  }
+});
 
 test('published v3 proofs remain unchanged and accepted at every difficulty', () => {
   const frozen = {

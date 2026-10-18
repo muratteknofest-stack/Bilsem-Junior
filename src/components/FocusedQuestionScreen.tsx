@@ -18,7 +18,20 @@ export function FitQuestionVisual({question}:{question:BaseQuestion}) {
   const frame=useRef<HTMLDivElement>(null),content=useRef<HTMLDivElement>(null);
   const [scale,setScale]=useState(1);
   useLayoutEffect(()=>{
-    const measure=()=>{if(frame.current&&content.current)setScale(Math.min(1,frame.current.clientWidth/560,frame.current.clientHeight/Math.max(1,content.current.scrollHeight)));};
+    const measure=()=>{
+      if(!frame.current||!content.current)return;
+      const width=Math.max(1,frame.current.clientWidth-12),height=Math.max(1,frame.current.clientHeight-12);
+      let bestWidth=width,bestScale=0;
+      // Try the real phone width first. Dense equations may benefit from a wider
+      // logical canvas; choose the layout with the largest readable symbols.
+      for(const logicalWidth of [...new Set([width,Math.max(width,440),Math.max(width,560)])]){
+        content.current.style.width=`${logicalWidth}px`;
+        const next=Math.min(1,width/Math.max(logicalWidth,content.current.scrollWidth),height/Math.max(1,content.current.scrollHeight));
+        if(next>bestScale){bestScale=next;bestWidth=logicalWidth;}
+      }
+      content.current.style.width=`${bestWidth}px`;
+      setScale(bestScale);
+    };
     const observer=new ResizeObserver(measure);observer.observe(frame.current!);observer.observe(content.current!);measure();return()=>observer.disconnect();
   },[question.id]);
   return <div className="zp-fit-frame" ref={frame}><div ref={content} className="zp-fit-content" style={{transform:`translate(-50%, -50%) scale(${scale})`}}><QuestionRenderer question={question}/></div></div>;
@@ -46,6 +59,7 @@ export function FocusedQuestionScreen(p:Props) {
     catch{setScreenMessage('Tarayıcı tam ekranı açamadı. Sorular mevcut ekrana sığacak şekilde gösteriliyor.');}
   };
   useEffect(()=>{
+    screen.current?.scrollTo({top:0,behavior:'instant'});
     heading.current?.focus({preventScroll:true});tools.current?.close();zoom.current?.close();
     if(lastTransition.current!==p.sessionKey){lastTransition.current=p.sessionKey;sound.playTransition();}
   },[p.sessionKey]);

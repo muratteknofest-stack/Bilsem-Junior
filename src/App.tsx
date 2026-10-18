@@ -1,7 +1,7 @@
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { isAndroidApp } from './lib/native-app';
-import { advanceStory, type StoryStage, type StoryProgress } from './features/student/story-adventure';
+import { advanceStory, STORY_STAGES, type StoryStage, type StoryProgress } from './features/student/story-adventure';
 import { readStoryProgress, saveStoryProgress } from './services/story-progress-service';
 import type { LearningSessionView } from './features/student/learning-contract';
 import type { StudentSection } from './components/StudentDashboard';
@@ -529,7 +529,7 @@ export default function App() {
             ) : <VerifiedLearningView key={`verified-${selectedPracticeCategory}-${selectedPracticeTopic}`} mode="practice" initialCategory={selectedPracticeCategory} initialTopic={selectedPracticeTopic} onNavigateHome={leaveTest} />)}
 
             {currentRoute === 'adaptive' && (
-              <VerifiedLearningView key={activeStory?.stage.id || 'free-adaptive'} mode="adaptive" storyStage={isAndroidApp?activeStory?.stage:undefined} onStoryComplete={completeStory} onNavigateHome={leaveTest} />
+              <VerifiedLearningView key={activeStory?.stage.id || 'free-adaptive'} mode="adaptive" storyStage={isAndroidApp?activeStory?.stage:undefined} onStoryComplete={completeStory} onContinueStory={isAndroidApp&&activeStory&&storyProgress.completed.includes(activeStory.stage.id)&&STORY_STAGES[storyProgress.completed.length]?()=>navigateTo('adaptive','mixed',STORY_STAGES[storyProgress.completed.length]):undefined} onNavigateHome={leaveTest} />
             )}
 
             {currentRoute === 'exams' && (
