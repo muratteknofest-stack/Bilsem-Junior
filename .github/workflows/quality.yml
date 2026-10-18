@@ -38,16 +38,6 @@ jobs:
         run: npm run test:play-layout
       - name: Verify English practice, device progress and mobile layouts
         run: npm run test:english-browser
-      - name: Verify Bilsem Junior branding and responsive public flows
-        run: node scripts/check-bilsem-brand.mjs
-      - name: Save Bilsem Junior design previews
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: bilsem-junior-design-previews
-          path: test-artifacts/bilsem-junior/
-          if-no-files-found: ignore
-          retention-days: 7
 
   english-accounts:
     runs-on: ubuntu-latest
@@ -98,9 +88,33 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  branding:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Verify Bilsem Junior branding and responsive public flows
+        run: node scripts/check-bilsem-brand.mjs
+      - name: Save Bilsem Junior design previews
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: bilsem-junior-design-previews
+          path: test-artifacts/bilsem-junior/
+          if-no-files-found: ignore
+          retention-days: 7
+
   live-release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [quality, english-accounts, turkish-accounts, learning-launch]
+    needs: [quality, english-accounts, turkish-accounts, learning-launch, branding]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

@@ -2,18 +2,21 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { createServer } from 'vite';
 import { chromium } from 'playwright';
+// Isolated display fixture; never connects to a real account.
+process.env.VITE_SUPABASE_URL = 'https://branding-fixture.invalid';
+process.env.VITE_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_isolated_branding_fixture';
 const output = 'test-artifacts/bilsem-junior';
 await fs.mkdir(output, { recursive: true });
 const server = await createServer({ server: { host: '127.0.0.1', port: 0, strictPort: true } });
 await server.listen();
 const origin = 'http://127.0.0.1:' + server.httpServer.address().port;
-let browser;
+let browser, page;
+const errors = [];
 try {
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ reducedMotion: 'reduce' });
   await context.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
-  const page = await context.newPage();
-  const errors = [];
+  page = await context.newPage();
   page.on('pageerror', error => errors.push(error.message));
   let checks = 0;
   for (const width of [320, 360, 390, 768, 1024, 1440]) {
@@ -44,4 +47,10 @@ try {
   }
   assert.deepEqual(errors, []);
   console.log('Bilsem Junior: ' + checks + ' homepage/register/login viewport checks; logo, preparation guide and mobile navigation passed.');
+} catch (error) {
+  if (page) {
+    await page.screenshot({ path: output + '/failure.png', fullPage: true, animations: 'disabled' }).catch(() => {});
+    console.error(JSON.stringify({ pageErrors: errors, url: page.url(), text: (await page.locator('body').innerText().catch(() => '')).slice(0, 2000) }));
+  }
+  throw error;
 } finally { await browser?.close(); await server.close(); }
