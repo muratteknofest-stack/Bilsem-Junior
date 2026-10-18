@@ -50,6 +50,8 @@
 .zp-study-navigation>button[aria-pressed=true] { color:#2649ac; background:#fffefa; box-shadow:0 1px 0 #fff inset,0 2px 4px #28391b1c; }
 .zp-nav-indicator { width:5px; height:5px; border-radius:50%; background:#325dc9; position:absolute; bottom:4px; }
 .zp-student-workspace { display:grid; grid-template-columns:minmax(0,1fr) 266px; gap:26px; align-items:start; }
+.zp-student-workspace[data-study-section=tests] { grid-template-columns:minmax(0,1fr); }
+.zp-tests-back { display:inline-flex; align-items:center; gap:8px; justify-self:start; min-height:44px; padding:10px 14px; border:1px solid var(--study-line); border-radius:10px; background:var(--study-paper); color:var(--study-ink); font-size:13px; font-weight:650; }
 .zp-student-section,.zp-student-aside { min-width:0; }
 .zp-student-section-stack,.zp-student-aside { display:grid; gap:24px; }
 .zp-panel-eyebrow { display:flex; align-items:center; gap:7px; font-size:8px; font-weight:800; letter-spacing:.13em; color:#6c725d; }
@@ -157,6 +159,7 @@
  .zp-student-aside { grid-template-columns:1fr; }.zp-student-section-stack { gap:22px; }.zp-student-pro [aria-label="Konuya göre test"] { padding:18px; border-radius:13px; }.zp-profile-progress>p { display:none; }.zp-daily-snapshot,.zp-week-overview { border-radius:13px; }
 }
 @media(max-width:350px) { .zp-student-pro .zp-student-shell { padding-inline:12px; }.zp-student-pro .zp-pro-hero { padding:13px; }.zp-student-pro .zp-dashboard-hero h1 { font-size:20px; }.zp-student-profile { gap:9px; }.zp-student-avatar { width:43px; height:53px; }.zp-profile-tools>summary { font-size:7px; }.zp-student-topline>span { max-width:125px; }.zp-study-navigation>button { font-size:8px; }.zp-feature-headline { font-size:22px; }.zp-feature-label { font-size:5px; }.zp-feature-copy { padding-left:14px; }.zp-feature-description { font-size:9px; }.zp-feature-cta { font-size:8px; gap:5px; padding:9px 7px; }.zp-student-pro .zp-mode-feature { min-height:264px; }.zp-student-pro .zp-mode-section-heading h2 { font-size:22px; }.zp-art-caption { display:none; } }
+@media(max-width:640px) { .zp-study-navigation { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }.zp-study-navigation>button { flex-direction:row; min-height:48px; padding:8px 4px; font-size:11px; gap:6px; } }
 @media(hover:none) { .zp-mode-feature:hover .zp-feature-art>img { transform:none; }.zp-mode-feature:hover .zp-feature-cta { transform:none; } }
 .zp-student-pro[data-reduced-motion=true] *,.zp-student-pro[data-reduced-motion=true] *::before,.zp-student-pro[data-reduced-motion=true] *::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; }
 .zp-student-pro[data-reduced-motion=true] .zp-mode-feature:hover .zp-feature-art>img,.zp-student-pro[data-reduced-motion=true] .zp-mode-feature:hover .zp-feature-cta { transform:none; }
