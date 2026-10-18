@@ -31,7 +31,7 @@ export function StudentModesGrid(p: StudentModesGridProps) {
       transition={{ duration: .3 }} whileTap={reduced ? undefined : { scale: .994 }} onClick={startAdaptive}>
       <span className="zp-feature-copy">
         <span className="zp-feature-label"><span aria-hidden="true" /> İLK DURAK · KENDİ HIZINDA</span>
-        <span className="zp-feature-headline" aria-hidden="true">Haydi, yeni bir<br />keşfe çıkalım!</span>
+        <span className="zp-feature-headline" aria-hidden="true">Haydi,<br />keşfedelim!</span>
         <h3>Adaptif Test</h3>
         <span className="zp-feature-description">Soru sayını sen seç. Sana uygun sorularla kendi ritminde ilerle.</span>
         <span className="zp-feature-cta">Çalışmaya başla <ArrowUpRight size={19} aria-hidden="true" /></span>
