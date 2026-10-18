@@ -14,6 +14,24 @@ import { SymbolDiagram } from '../src/features/questions/renderers/VisualGlyph';
 import type { DifficultyLevel } from '../src/types';
 import { generateWorkshopQuestion } from '../src/features/questions/workshop-engine';
 import type { WorkshopBoard } from '../src/features/questions/workshop-mechanics';
+import { PUZZLE_COLORS, contrastRatio, materialFor } from '../src/features/questions/question-materials';
+import { objectSilhouette } from '../src/features/questions/object-geometry';
+import { ColorfulArt } from '../src/features/questions/renderers/ColorfulBoard';
+
+test('every puzzle colour has a legible numeric/motif mark with at least 4.5:1 face contrast',()=>{
+  for(const face of PUZZLE_COLORS){const m=materialFor(face);assert.ok(contrastRatio(face,m.ink)>=4.5,face);assert.notEqual(m.face,m.edge);}
+});
+test('twelve original object variants differ physically, and paint never creates a shadow clue',()=>{
+  const contours=new Set<string>();
+  for(let shape=0;shape<3;shape++)for(let variant=0;variant<4;variant++){
+    const value={art:'object' as const,shape,variant,tilt:0};
+    contours.add(JSON.stringify(objectSilhouette(value)));
+    const normal=renderToStaticMarkup(<ColorfulArt value={value}/>),shadow=renderToStaticMarkup(<ColorfulArt value={value} shadow/>);
+    for(const d of objectSilhouette(value)){assert.ok(normal.includes(`d="${d}"`));assert.ok(shadow.includes(`d="${d}"`));}
+    assert.doesNotMatch(shadow,/<circle|<text/,'Painted eyes, windows and stamps must disappear from a silhouette');
+  }
+  assert.equal(contours.size,12);
+});
 
 test('verbal analogy diagrams never print the requested animal/home pair among the examples', () => {
   for(let seed=1;seed<=20;seed++){

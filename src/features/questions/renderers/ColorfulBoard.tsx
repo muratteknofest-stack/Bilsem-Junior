@@ -1,24 +1,37 @@
 import React, { useId } from 'react';
 import type { ColorfulValue, ObjectArt } from '../colorful-engine';
 import type { DisplayColorfulBoard as Board, DisplayMosaic } from '../public-visual';
-const colors=['#ef476f','#168aad','#ffba08','#06a77d','#805ad5','#f07822'];
+import { PUZZLE_COLORS as colors, materialFor } from '../question-materials';
+import { objectSilhouette } from '../object-geometry';
 /** Color always has a second cue: a distinct geometric motif. */
 function Motif({color}:{color:number}) {
-  const id=useId().replace(/:/g,'_');
-  return <g><defs><linearGradient id={`${id}-tile`} x2=".3" y2="1"><stop stopColor="#fff" stopOpacity=".32"/><stop offset=".45" stopColor="#fff" stopOpacity="0"/><stop offset="1" stopColor="#14233f" stopOpacity=".22"/></linearGradient></defs><rect y="4" width="100" height="96" rx="9" fill="#263b56"/><rect width="100" height="95" rx="9" fill={colors[color]}/><rect width="100" height="95" rx="9" fill={`url(#${id}-tile)`}/><path d="M4 84V10Q4 4 10 4H89" fill="none" stroke="white" strokeOpacity=".55" strokeWidth="2"/>
-    {color===0?<circle cx="50" cy="50" r="22" fill="white"/>:color===1?<path d="M50 20L80 76H20Z" fill="white"/>:color===2?<path d="M50 16L84 50L50 84L16 50Z" fill="white"/>:color===3?<path d="M38 18H62V38H82V62H62V82H38V62H18V38H38Z" fill="white"/>:color===4?<g fill="white"><circle cx="30" cy="50" r="13"/><circle cx="70" cy="50" r="13"/></g>:<path d="M25 25H75V75H25Z M37 37V63H63V37Z" fill="white" fillRule="evenodd"/>}</g>;
-}
-function ObjectShape({value,shadow=false}:{value:ObjectArt;shadow?:boolean}) {
-  const id=useId().replace(/:/g,'_');
-  const {shape,variant}=value,fill=shadow?'#172033':`url(#${id}-object)`, detail=shadow?fill:'#ffdd73';
-  // Original cup, rocket and fish outlines; variants alter physical geometry.
-  return <g stroke={shadow?fill:'#25324a'} strokeWidth="2" strokeLinejoin="round">
-    {!shadow&&<defs><linearGradient id={`${id}-object`} x2=".7" y2="1"><stop stopColor={colors[shape]}/><stop offset=".5" stopColor={colors[shape]}/><stop offset="1" stopColor="#27465c"/></linearGradient></defs>}
-    {shape===0?<><path d={variant===1?'M25 22H70V72Q47 92 25 72Z M70 30H93V62H70 M77 38V54H85V38Z':'M20 25H65V72Q42 90 20 72Z M65 32H88V63H65 M72 40V55H81V40Z'} fill={fill} fillRule="evenodd"/>{variant===2&&<path d="M30 12Q40 3 40 18M49 12Q59 3 59 18" stroke={fill} strokeWidth="7" fill="none"/>}{variant===3&&<path d="M13 81H82V88H13Z" fill={fill}/>}</>:shape===1?<><path d={variant===1?'M50 8Q70 28 65 69L82 84L63 81L50 94L37 81L18 84L35 69Q30 28 50 8Z':'M50 8Q74 31 65 71L80 89L59 82H41L20 89L35 71Q26 31 50 8Z'} fill={fill}/>{variant!==2&&<circle cx="50" cy={variant===3?59:42} r="10" fill="white"/ >}</>:<><path d={variant===1?'M18 50Q52 8 78 50Q52 92 18 50L4 73V27Z':'M18 50Q52 18 78 50Q52 82 18 50L4 70V30Z'} fill={fill}/>{variant===2&&<path d="M34 30L48 10L56 28Z" fill={fill}/>}<circle cx={variant===3?52:63} cy="45" r="4" fill="white"/></>}
-    {!shadow&&shape===0&&<path d="M30 38H53V62H30Z" fill={detail} stroke="none"/>}
+  const id=useId().replace(/:/g,'_'),m=materialFor(colors[color]);
+  return <g data-puzzle-piece="ceramic"><defs><linearGradient id={`${id}-tile`} x2=".12" y2="1"><stop stopColor={m.light}/><stop offset=".18" stopColor={m.face}/><stop offset=".8" stopColor={m.face}/><stop offset="1" stopColor={m.shade}/></linearGradient></defs>
+    <rect x="1" y="5" width="98" height="94" rx="12" fill={m.edge}/><rect x="1" y="1" width="98" height="93" rx="12" fill={`url(#${id}-tile)`} stroke={m.edge} strokeWidth="1.5"/>
+    <path d="M6 30V13Q6 6 13 6H86" fill="none" stroke="#fff" strokeOpacity=".55" strokeWidth="1.5"/>
+    <g fill={m.ink}>{color===0?<circle cx="50" cy="47" r="21"/>:color===1?<path d="M50 18L80 74H20Z"/>:color===2?<path d="M50 14L83 47L50 80L17 47Z"/>:color===3?<path d="M38 16H62V36H82V60H62V80H38V60H18V36H38Z"/>:color===4?<><circle cx="30" cy="47" r="13"/><circle cx="70" cy="47" r="13"/></>:<path d="M25 22H75V72H25Z M37 34V60H63V34Z" fillRule="evenodd"/>}</g>
   </g>;
 }
-function Crayon({color}:{color:number}) {return <g><path d="M-83 0L-55 -11H64Q73 -11 73 0Q73 11 64 11H-55Z" fill={colors[color]} stroke="#26324a" strokeWidth="1.5"/><path d="M-38 -11V11M51 -11V11" stroke="#26324a" strokeWidth="2"/><rect x="-28" y="-5" width="56" height="10" rx="4" fill="white" fillOpacity=".4"/><text x="42" y="5" fontSize="14" fontWeight="bold" fill="#111827">{color+1}</text></g>;}
+export function ObjectShape({value,shadow=false}:{value:ObjectArt;shadow?:boolean}) {
+  const id=useId().replace(/:/g,'_'),m=materialFor(colors[value.shape]),paths=objectSilhouette(value);
+  return <g data-object-shape={value.shape} data-object-variant={value.variant} data-object-shadow={shadow} strokeLinejoin="round">
+    <defs><clipPath id={`${id}-contour`}>{paths.map((d,i)=><path key={i} d={d} clipRule="evenodd"/>)}</clipPath><linearGradient id={`${id}-body`} x2="1" y2=".65"><stop stopColor={m.light}/><stop offset=".24" stopColor={m.face}/><stop offset=".72" stopColor={m.face}/><stop offset="1" stopColor={m.edge}/></linearGradient></defs>
+    {paths.map((d,i)=><path key={i} data-object-contour="true" d={d} fill={shadow?'#13283d':`url(#${id}-body)`} fillRule="evenodd" stroke={shadow?'#13283d':m.edge} strokeWidth="1.7"/>)}
+    {!shadow&&<g clipPath={`url(#${id}-contour)`}>
+      {paths.map((d,i)=><path key={i} d={d} transform="translate(0 -2)" fill="none" stroke="#fff" strokeOpacity=".52" strokeWidth="1.25"/>)}
+      {value.shape===0?<><path d="M20 27H69" stroke={m.edge} strokeWidth="3"/><path d="M27 35V66Q27 73 36 74" fill="none" stroke="#fff" strokeOpacity=".32" strokeWidth="3"/><path d="M39 43H49V53H59V63H49V73H39V63H29V53H39Z" fill={m.ink} opacity=".86"/></>:value.shape===1?<><path d="M31 69H69L61 84H39Z" fill={m.edge}/>{value.variant===3?<circle cx="50" cy="43" r="8" fill="none" stroke={m.ink} strokeWidth="3"/>:<><circle cx="50" cy="42" r="12" fill="#123f68" stroke="#f4f6df" strokeWidth="3"/><path d="M43 39A8 8 0 0 1 52 35" fill="none" stroke="#bce9f5" strokeWidth="2.5" strokeLinecap="round"/></>}<path d="M47 16Q37 31 38 56" fill="none" stroke="#fff" strokeOpacity=".28" strokeWidth="3"/></>:<><path d="M37 38Q31 50 37 62" fill="none" stroke={m.edge} strokeWidth="2.4"/><circle cx="70" cy="43" r="6" fill="#fff"/><circle cx="71" cy="43" r="3" fill="#172d46"/><path d="M45 35Q56 26 65 32" fill="none" stroke="#fff" strokeOpacity=".5" strokeWidth="2" strokeLinecap="round"/></>}
+    </g>}
+  </g>;
+}
+function Crayon({color}:{color:number}) {
+  const id=useId().replace(/:/g,'_'),m=materialFor(colors[color]);
+  return <g><defs><linearGradient id={`${id}-pencil`} x1="0" y1="0" x2="0" y2="1"><stop stopColor={m.light}/><stop offset=".3" stopColor={m.face}/><stop offset=".65" stopColor={m.face}/><stop offset="1" stopColor={m.edge}/></linearGradient></defs>
+    <path d="M-55 -11H64Q73 -11 73 0Q73 11 64 11H-55Z" fill={`url(#${id}-pencil)`} stroke={m.edge} strokeWidth="1.2"/>
+    <path d="M-83 0L-55 -11V11Z" fill="#e8c89b" stroke="#795a3b" strokeWidth="1"/><path d="M-83 0L-73 -4V4Z" fill={m.edge}/>
+    <path d="M-51 -8H56" stroke="#fff" strokeOpacity=".5" strokeWidth="1.5"/><path d="M58 -10V10" stroke={m.edge} strokeWidth="2"/>
+    <rect x="34" y="-8" width="16" height="16" rx="4" fill="#fffef5" stroke={m.edge} strokeWidth=".7"/><text x="42" y="5" textAnchor="middle" fontSize="14" fontWeight="800" fill="#152d46">{color+1}</text>
+  </g>;
+}
 export function ColorfulArt({value,shadow=false,locale='tr'}:{value:ColorfulValue | DisplayMosaic;shadow?:boolean;locale?:'tr'|'en'}) {
   return <svg viewBox={value.art==='crayon'?'-95 -30 190 60':'0 0 100 100'} shapeRendering="geometricPrecision" role="img" aria-label={value.art==='object'?(locale==='en'?'Object drawing':'Nesne çizimi'):value.art==='crayon'?(locale==='en'?`Crayon number ${value.color+1}`:`${value.color+1} numaralı kalem`):(locale==='en'?'Colourful geometric pattern':'Renkli geometrik desen')} className="zp-colorful-art" style={{width:'100%',height:'100%',maxHeight:'100%',display:'block'}}>
     {value.art==='mosaic'?value.cells.map((color,i)=><g key={i} data-mosaic-cell={i} transform={`translate(${i%value.size*100/value.size} ${Math.floor(i/value.size)*100/value.size}) scale(${.96/value.size})`}>{color===null?<g aria-label={locale==='en'?'Missing tile':'Eksik kare'}><rect width="100" height="100" rx="9" fill="#f1f5f9" stroke="#64748b" strokeWidth="3" strokeDasharray="8 5"/><text x="50" y="67" textAnchor="middle" fontSize="55" fontWeight="800" fill="#172033">?</text></g>:<Motif color={color}/>}</g>):value.art==='swatch'?<Motif color={value.color}/>:value.art==='object'?<g transform={`rotate(${value.tilt*90} 50 50)`}><ObjectShape value={value} shadow={shadow}/></g>:<Crayon color={value.color}/>}

@@ -17,7 +17,7 @@ def sign_release(candidate, private_dir, output):
     candidate, private_dir, output = map(lambda p: Path(p).resolve(), (candidate, private_dir, output))
     output.mkdir(parents=True, exist_ok=True)
     checks = json.loads((candidate / 'release-check.json').read_text())
-    if checks != {'packageName': 'com.zekapark.app', 'versionCode': 19, 'versionName': '1.0.18', 'debuggable': False, 'testOnly': False, 'cleartext': False, 'backup': False}:
+    if checks != {'packageName': 'com.zekapark.app', 'versionCode': 20, 'versionName': '1.0.19', 'debuggable': False, 'testOnly': False, 'cleartext': False, 'backup': False}:
         raise ValueError('Compiled release checks did not pass')
     dependency_audit = json.loads((candidate / 'release-maven-osv.json').read_text())
     if dependency_audit.get('ecosystem') != 'Maven' or not dependency_audit.get('count') or dependency_audit.get('findings') != []:

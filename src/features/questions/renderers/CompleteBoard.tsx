@@ -1,8 +1,10 @@
 import React, { useId } from 'react';
 import type { CompleteBoard as Board, CompleteValue, Token } from '../complete-curriculum';
 import { GlyphBody } from './VisualGlyph';
+import { PUZZLE_COLORS as COLORS, materialFor } from '../question-materials';
+import { AnswerValue } from './AnswerValue';
 
-const COLORS=['#4f46e5','#e11d48','#059669','#d97706','#0284c7','#9333ea'];
+
 export function CompleteToken({shape,color}:Token){
   const paths=['M10 32a22 22 0 1 0 44 0a22 22 0 1 0-44 0','M32 8L56 54H8Z','M14 10H50Q54 10 54 14V50Q54 54 50 54H14Q10 54 10 50V14Q10 10 14 10Z','M32 5L39 23H59L43 36L49 56L32 44L15 56L21 36L5 23H25Z','M32 5L59 32L32 59L5 32Z','M19 8H45L58 32L45 56H19L6 32Z'];
   return <svg viewBox="0 0 64 68" className="zp-curriculum-token" role="img" shapeRendering="geometricPrecision" aria-label={`Şekil ${shape+1}, renk ${color+1}`}>
@@ -12,17 +14,18 @@ export function CompleteToken({shape,color}:Token){
 export function CompleteGrid({cells,size,axis}:{cells:number[];size:number;axis?:Board['axis']}){
   const id=useId().replace(/:/g,'_');
   return <svg viewBox={`0 0 ${size*30} ${size*30}`} className="zp-curriculum-grid" role="img" shapeRendering="geometricPrecision" aria-label="Hücre deseni">
-    <defs><linearGradient id={`${id}-cell`} x2=".35" y2="1"><stop stopColor="#fff" stopOpacity=".28"/><stop offset=".5" stopColor="#fff" stopOpacity="0"/><stop offset="1" stopColor="#102440" stopOpacity=".14"/></linearGradient></defs>
-    {cells.map((n,i)=><g key={i} transform={`translate(${i%size*30} ${Math.floor(i/size)*30})`}><rect x="1" y="3" width="28" height="26" rx="4" fill={n?'#243756':'#d8e1ed'}/><rect x="1" y="1" width="28" height="26" rx="4" fill={n?COLORS[n-1]:'#f8fafc'} stroke={n?'#273b60':'#94a3b8'} strokeWidth=".8"/>{n>0&&<><rect x="1.5" y="1.5" width="27" height="25" rx="3.5" fill={`url(#${id}-cell)`}/><text x="15" y="20" textAnchor="middle" fontSize="13" fill="white" fontWeight="bold" stroke="#152849" strokeWidth=".3" paintOrder="stroke">{n}</text></>}</g>)}
+    <defs><linearGradient id={`${id}-cell`} x2=".35" y2="1"><stop stopColor="#fff" stopOpacity=".25"/><stop offset=".25" stopColor="#fff" stopOpacity="0"/><stop offset=".82" stopColor="#102440" stopOpacity="0"/><stop offset="1" stopColor="#102440" stopOpacity=".14"/></linearGradient></defs>
+    {cells.map((n,i)=>{const m=n?materialFor(COLORS[n-1]):null;return <g key={i} transform={`translate(${i%size*30} ${Math.floor(i/size)*30})`}><rect x="1" y="3" width="28" height="26" rx="4" fill={m?.edge||'#d8e1ed'}/><rect x="1" y="1" width="28" height="26" rx="4" fill={m?.face||'#f8fafc'} stroke={m?.edge||'#94a3b8'} strokeWidth=".8"/>{m&&<><rect x="1.5" y="1.5" width="27" height="25" rx="3.5" fill={`url(#${id}-cell)`}/><text x="15" y="20" textAnchor="middle" fontSize="13" fill={m.ink} fontWeight="800">{n}</text></>}</g>;})}
     {(axis==='x'||axis==='xy')&&<line x1={size*15} y1="0" x2={size*15} y2={size*30} stroke="#0f172a" strokeWidth="2" strokeDasharray="4 3"/>}
     {(axis==='y'||axis==='xy')&&<line x1="0" y1={size*15} x2={size*30} y2={size*15} stroke="#0f172a" strokeWidth="2" strokeDasharray="4 3"/>}
   </svg>;
 }
 export function CompletePiece({points,outline=false}:{points:number[][];outline?:boolean}){
-  return <svg viewBox="-0.2 -0.2 4.4 4.4" className="zp-curriculum-piece" shapeRendering="geometricPrecision" role="img" aria-label={outline?'Boş parçanın sınırı':'Tangram parçası'}>{!outline&&<polygon points={points.map(p=>p.join(',')).join(' ')} transform="translate(0 .1)" fill="#37308e"/>}<polygon points={points.map(p=>p.join(',')).join(' ')} fill={outline?'#f8fafc':'#7772ed'} stroke="#312e81" strokeWidth="0.065" strokeDasharray={outline?'0.15 0.1':undefined}/></svg>;
+  const id=useId().replace(/:/g,'_'),m=materialFor(COLORS[1]);
+  return <svg viewBox="-0.2 -0.2 4.4 4.4" className="zp-curriculum-piece" shapeRendering="geometricPrecision" role="img" aria-label={outline?'Boş parçanın sınırı':'Tangram parçası'}><defs><linearGradient id={`${id}-piece`} x2=".2" y2="1"><stop stopColor={m.light}/><stop offset=".3" stopColor={m.face}/><stop offset="1" stopColor={m.shade}/></linearGradient></defs>{!outline&&<polygon points={points.map(p=>p.join(',')).join(' ')} transform="translate(0 .1)" fill={m.edge}/>}<polygon points={points.map(p=>p.join(',')).join(' ')} fill={outline?'#f8fafc':`url(#${id}-piece)`} stroke={m.edge} strokeWidth="0.065" strokeDasharray={outline?'0.15 0.1':undefined}/></svg>;
 }
 export function CompleteOption({value}:{value:CompleteValue}){
-  if('textNumber' in value)return <span>{value.textNumber}</span>;
+  if('textNumber' in value)return <AnswerValue value={value.textNumber}/>;
   if(value.curriculum==='grid')return <CompleteGrid cells={value.cells} size={value.size}/>;
   if(value.curriculum==='token')return <CompleteToken shape={value.shape} color={value.color}/>;
   return <CompletePiece points={value.points}/>;

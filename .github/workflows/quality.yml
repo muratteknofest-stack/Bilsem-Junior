@@ -31,6 +31,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Check question layouts on mobile and tablet viewports
         run: npm run test:layout
+      - name: Check original question artwork and silhouette uniqueness
+        run: npm run test:question-art
       - name: Check entry routes, separate student progress and activity timer cleanup
         run: npm run test:audit-browser
 

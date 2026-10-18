@@ -1,19 +1,21 @@
 import React, { useId } from 'react';
 import { isVisualSymbol, VISUAL_SYMBOLS } from '../visual-vocabulary';
+import { materialFor } from '../question-materials';
 
 export function GlyphBody({ path, color, flat = false }: { path: string; color: string; flat?: boolean }) {
   const id = useId().replace(/:/g, '_');
+  const material=materialFor(color);
   return <>
     <defs>
-      <linearGradient id={`${id}-glyph`} x1="0" y1="0" x2=".7" y2="1"><stop stopColor="#fff" stopOpacity=".48"/><stop offset=".42" stopColor="#fff" stopOpacity=".05"/><stop offset="1" stopColor="#091732" stopOpacity=".25"/></linearGradient>
-      <linearGradient id={`${id}-edge`} x1="0" y1="0" x2="0" y2="1"><stop stopColor="#0d1934" stopOpacity=".15"/><stop offset="1" stopColor="#0d1934" stopOpacity=".55"/></linearGradient>
+      <linearGradient id={`${id}-glyph`} x1="0" y1="0" x2=".3" y2="1"><stop stopColor={material.light}/><stop offset=".22" stopColor={color}/><stop offset=".74" stopColor={color}/><stop offset="1" stopColor={material.shade}/></linearGradient>
+      <linearGradient id={`${id}-edge`} x1="0" y1="0" x2="1" y2="1"><stop stopColor={material.shade}/><stop offset="1" stopColor={material.edge}/></linearGradient>
     </defs>
     {!flat && <>
-      <path d={path} transform="translate(0 4)" fill={color} stroke={color} strokeWidth="1.8" strokeLinejoin="round"/>
-      <path d={path} transform="translate(0 4)" fill={`url(#${id}-edge)`} stroke="#142641" strokeOpacity=".3" strokeWidth="1" strokeLinejoin="round"/>
+      <path d={path} transform="translate(0 5)" fill="#142b43" opacity=".13"/>
+      <path d={path} transform="translate(0 3.5)" fill={`url(#${id}-edge)`} stroke={material.edge} strokeWidth="1.5" strokeLinejoin="round"/>
     </>}
-    <path d={path} fill={color} stroke={color} strokeWidth="1.5" strokeLinejoin="round"/>
-    {!flat && <path d={path} fill={`url(#${id}-glyph)`} stroke="#fff" strokeOpacity=".5" strokeWidth="1" strokeLinejoin="round"/>}
+    <path d={path} fill={flat?color:`url(#${id}-glyph)`} stroke={flat?color:material.edge} strokeWidth="1.2" strokeLinejoin="round"/>
+    {!flat && <path d={path} fill="none" stroke="#fff" strokeOpacity=".5" strokeWidth=".65" strokeLinejoin="round"/>}
   </>;
 }
 

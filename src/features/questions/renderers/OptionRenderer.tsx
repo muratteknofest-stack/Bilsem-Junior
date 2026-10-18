@@ -9,6 +9,7 @@ import { questionVisualTheme } from '../visual-vocabulary';
 import { WorkshopShape } from './WorkshopBoard';
 import { useMemoryStudy } from './MemoryStudy';
 import { CompleteOption } from './CompleteBoard';
+import { AnswerValue } from './AnswerValue';
 import { validCompleteValue } from '../complete-curriculum';
 
 interface OptionRendererProps {
@@ -78,16 +79,7 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
 
     // 1. Direct numerical or text badge (e.g. counting, equation, or number pattern)
     if (vd.textNumber !== undefined && vd.textNumber !== null) {
-      const text = String(vd.textNumber);
-      const numeric = /^-?\d+(?:[.,]\d+)?$/.test(text);
-      const size = numeric && text.length <= 4 ? 'text-xl sm:text-2xl md:text-3xl font-mono' : text.length <= 4 ? 'text-lg sm:text-xl' : text.length <= 8 ? 'text-sm sm:text-base' : 'text-sm';
-      return (
-        <div className={`flex items-center justify-center w-full min-w-0 min-h-[60px] font-bold text-center text-slate-800 ${size}`}>
-          <span className="max-w-full break-words px-2 py-2.5 rounded-2xl bg-gradient-to-b from-white to-slate-50 border-2 border-slate-200 shadow-[0_4px_0_0_#cbd5e1]">
-            {vd.textNumber}
-          </span>
-        </div>
-      );
+      return <AnswerValue value={vd.textNumber}/>;
     }
 
     // 2. Tangram piece (Tangram Puzzle)
