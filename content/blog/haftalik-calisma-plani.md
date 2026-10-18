@@ -27,7 +27,7 @@ Kaçırılan gün için iki kat çalışma eklemek yerine sıradaki planlı otur
 ## Haftalık değerlendirme
 Hafta sonunda üç soru seçin: “Neyi yapmayı sevdin?”, “Hangi yardım işe yaradı?”, “Gelecek hafta neyi değiştirelim?” Aile üyeleri kısa cevaplarla paylaşım yapabilir. Sonuç tablosunu bir sıralama yarışına çevirmeyin.
 
-ZekaPark’taki çalışma kayıtlarını bu sohbeti başlatmak için kullanabilirsiniz. Az sayıdaki etkinlik sonucu genel öğrenme kapasitesini göstermez. Notları somut davranışlarla ve ilgili oturumun koşullarıyla birlikte değerlendirin.
+Bilsem Junior’taki çalışma kayıtlarını bu sohbeti başlatmak için kullanabilirsiniz. Az sayıdaki etkinlik sonucu genel öğrenme kapasitesini göstermez. Notları somut davranışlarla ve ilgili oturumun koşullarıyla birlikte değerlendirin.
 
 ## Sık sorulan sorular
 ### Her gün çalışma zorunlu mu?

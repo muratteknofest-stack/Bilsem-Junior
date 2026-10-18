@@ -27,12 +27,12 @@ Görselin büyütülmesi, klavye kullanımı veya hareket azaltma gibi seçenekl
 ## 8: Gerçekçi vaat ve deneme deneyimi
 Resmî sınavı kazanma, özel yetenek tanısı veya kesin gelişim gibi vaatlerin dayanağını sorun. Uygulama içi puan resmî değerlendirme değildir. Ücretli özelliklerin kapsamı, yenileme ve iptal bilgisi açık olmalıdır.
 
-ZekaPark için de aynı kontrol listesini kullanabilirsiniz. Platform bağımsızdır; MEB veya BİLSEM bağlantısı ve sonuç garantisi sunmaz. Örnek etkinlik, soru açıklaması ve hata bildirme akışını kendi ihtiyaçlarınıza göre inceleyin.
+Bilsem Junior için de aynı kontrol listesini kullanabilirsiniz. Platform bağımsızdır; MEB veya BİLSEM bağlantısı ve sonuç garantisi sunmaz. Örnek etkinlik, soru açıklaması ve hata bildirme akışını kendi ihtiyaçlarınıza göre inceleyin.
 
 ## Sık sorulan sorular
 ### Renkli tasarım iyi eğitim içeriği anlamına gelir mi?
 Tek başına değil. Görev açıklığı ve cevap doğruluğu ayrıca kontrol edilmelidir.
 ### Yüksek uygulama puanı resmî başarıyı gösterir mi?
 Hayır. Platform içi puan farklı bir ölçüdür.
-### ZekaPark için de bu liste geçerli mi?
+### Bilsem Junior için de bu liste geçerli mi?
 Evet. Aynı sorularla içerik ve kullanım deneyimini değerlendirebilirsiniz.

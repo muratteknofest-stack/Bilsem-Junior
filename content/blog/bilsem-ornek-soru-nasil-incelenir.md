@@ -22,7 +22,7 @@ Bir şekil aynı anda renk, büyüklük, yön ve parça sayısı bakımından de
 ## Seçenekleri kanıtla eleyin
 “Bu hoşuma gitti” yerine “Bu seçenek yön kuralına uymuyor” gibi bir gerekçe isteyin. Her seçeneği uzun uzun açıklatmanız gerekmez. Bir doğru özellik ve bir eleme gerekçesi, düşünme yolunu anlamak için başlangıç olabilir.
 
-Doğru cevap açıklaması görsellerle uyuşmuyorsa çocuğu zorlamayın. Ekran görüntüsünü ve sorunun neden belirsiz olduğunu yetişkin olarak not edin. ZekaPark’ta uygun soru bildirimini kullanabilirsiniz. Hatalı bir soru üzerinden ısrarla puanlama yapmak öğrenme hedefini bozabilir.
+Doğru cevap açıklaması görsellerle uyuşmuyorsa çocuğu zorlamayın. Ekran görüntüsünü ve sorunun neden belirsiz olduğunu yetişkin olarak not edin. Bilsem Junior’ta uygun soru bildirimini kullanabilirsiniz. Hatalı bir soru üzerinden ısrarla puanlama yapmak öğrenme hedefini bozabilir.
 
 ## Sonunda yeni bir örnek üretin
 Çocuk aynı kuralı kullanarak iki yeni öğe eklesin veya sizin çözeceğiniz küçük bir soru hazırlasın. Böylece yanıtı hatırlamakla kuralı kullanmak arasındaki fark görülebilir. Ürettiği soruda birden fazla cevap varsa birlikte düzenleyin.

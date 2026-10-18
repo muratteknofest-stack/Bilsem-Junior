@@ -27,7 +27,7 @@ Gerçek bir kitapta sonraki bölüm okunduğunda tahmini kontrol edin. Farklı �
 ## Sohbeti sorguya çevirmeyin
 Her sayfada peş peşe soru sormak okumayı kesebilir. Önce bölümün keyifle okunmasına izin verin, sonra bir veya iki soruyu seçin. Çocuk da size soru sorabilir. Birlikte okumayı yalnızca doğru cevap toplama etkinliği yapmayın.
 
-Kapanışta en sevdiği cümleyi veya karakterin kararını konuşun. ZekaPark’taki yönergeleri anlamada da “Ne isteniyor, hangi bilgi var?” soruları kullanılabilir. Ancak bir hikâye sohbetinden resmî değerlendirme sonucu çıkarılamaz.
+Kapanışta en sevdiği cümleyi veya karakterin kararını konuşun. Bilsem Junior’taki yönergeleri anlamada da “Ne isteniyor, hangi bilgi var?” soruları kullanılabilir. Ancak bir hikâye sohbetinden resmî değerlendirme sonucu çıkarılamaz.
 
 ## Sık sorulan sorular
 ### Yetişkin okursa etkinlik işe yarar mı?

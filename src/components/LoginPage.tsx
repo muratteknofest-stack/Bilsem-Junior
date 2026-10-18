@@ -93,8 +93,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </div>
 
             <div className="zp-auth-intro">
-              <p className="zp-auth-kicker">ZEKA PARKI / HESAP ALANI</p>
-              <h1 id="zp-auth-heading">{activeTab === 'login' ? 'Keşfe kaldığın yerden devam et.' : 'Yeni bir keşif başlasın.'}</h1>
+              <p className="zp-auth-kicker">BİLSEM JUNIOR / HAZIRLIK HESABI</p>
+              <h1 id="zp-auth-heading">{activeTab === 'login' ? 'Hazırlığına kaldığın yerden devam et.' : 'Bilsem Junior yolculuğun başlasın.'}</h1>
               <p>{activeTab === 'login' ? 'Hesabına gir, yeni sorular ve küçük zaferler seni bekliyor.' : 'Veli bilgilerini gir, öğrenci hesabını ekle ve e-postanı doğrula.'}</p>
             </div>
 
@@ -185,10 +185,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </div>
         </section>
 
-        <aside className="zp-auth-showcase relative flex flex-col justify-between overflow-hidden" aria-label="ZekaPark keşif alanları">
+        <aside className="zp-auth-showcase relative flex flex-col justify-between overflow-hidden" aria-label="Bilsem Junior keşif alanları">
           <div className="zp-auth-showcase-content">
             <span className="zp-auth-showcase-kicker"><Sparkles size={16} aria-hidden="true" /> MERAK EDEN ZİHİNLER İÇİN</span>
-            <h2>Her soruda yeni bir dünya.</h2>
+            <h2>BİLSEM hazırlığında her gün bir adım.</h2>
             <p>Örüntüleri yakala, mantık kur ve öğrendikçe kendi yolunu çiz.</p>
           </div>
           <div className="zp-auth-scene" aria-hidden="true">

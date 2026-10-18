@@ -1,0 +1,12 @@
+/* Presentation only: question data, scoring, timers and interactions are untouched. */
+.bilsem-junior-skin{background:#f7f6fb}
+.bilsem-junior-skin .zp-student-pro{--zp-violet:#6e43cf;--zp-ink:#292344;background:#f7f6fb}
+.bilsem-junior-skin .zp-student-pro .zp-pro-hero{background:linear-gradient(115deg,#eee8fb,#fdf9ed 65%,#e6f6eb);border-color:#ddd2ed;box-shadow:0 5px 0 #e6deef60}
+.bilsem-junior-skin .zp-dashboard-kicker{color:#614198;letter-spacing:.12em}
+.bilsem-junior-skin .zp-learning-setup{--zp-violet:#6e43cf}
+.bilsem-junior-skin .zp-game-launch{border-color:#6e43cf}
+.bilsem-junior-skin .zp-focus-header{background:#f6f0ff;border-color:#e6d9f1}
+.bilsem-junior-skin .zp-focus-header b{color:#573095}
+@media(prefers-reduced-motion:reduce){.bj-logo-symbol{transition:none}}
+
+@media(max-width:420px){.bilsem-junior-skin .zp-focus-header b{font-size:16px;letter-spacing:-.5px}.bilsem-junior-skin .zp-focus-header>span{min-width:0}}

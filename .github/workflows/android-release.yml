@@ -43,15 +43,15 @@ jobs:
       - name: Verify release security
         run: |
           mkdir -p test-artifacts/android
-          cp android/app/build/outputs/bundle/release/app-release.aab test-artifacts/android/ZekaPark-1.0.12-unsigned.aab
-          cp android/app/build/outputs/apk/debug/app-debug.apk test-artifacts/android/ZekaPark-1.0.12-test.apk
+          cp android/app/build/outputs/bundle/release/app-release.aab test-artifacts/android/Bilsem-Junior-1.0.13-unsigned.aab
+          cp android/app/build/outputs/apk/debug/app-debug.apk test-artifacts/android/Bilsem-Junior-1.0.13-test.apk
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android/app/build/outputs/apk/release/app-release-unsigned.apk > test-artifacts/android/package.txt
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree android/app/build/outputs/apk/release/app-release-unsigned.apk AndroidManifest.xml > test-artifacts/android/manifest.txt
           node scripts/verify-android-release.mjs test-artifacts/android/manifest.txt test-artifacts/android/package.txt > test-artifacts/android/release-check.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: Google-Play-Android-candidate
+          name: Bilsem-Junior-Android-candidate
           path: |
             test-artifacts/android/
             test-artifacts/google-play-ui/

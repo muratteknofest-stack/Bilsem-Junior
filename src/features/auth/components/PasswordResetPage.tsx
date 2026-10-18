@@ -75,7 +75,7 @@ export const PasswordResetPage: React.FC = () => {
   return (
     <main className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <section className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h1 className="text-xl font-bold text-slate-900">ZekaPark şifre yenileme</h1>
+        <h1 className="text-xl font-bold text-slate-900">Bilsem Junior şifre yenileme</h1>
         {state === 'checking' && <p className="mt-4 text-sm text-slate-600">Bağlantı doğrulanıyor…</p>}
         {state === 'invalid' && (
           <div className="mt-4 space-y-4">

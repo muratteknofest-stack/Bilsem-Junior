@@ -27,7 +27,7 @@ Kısa bir gözlem notu kullanın: “Dört nesneyi şekle göre ayırdı; iki ko
 ## Aile için kapanış sorusu
 “Bir daha hangisini oynamak istersin?” sorusuyla çocuğun tercihine alan açın. Son oturumun tamamlanması kadar istekli bir dönüş de önemlidir. Günlük rutine küçük bir ekran dışı oyun ekleyebilirsiniz.
 
-ZekaPark’ta sınıf seçimini materyalin uygunluğu için kullanın; uygulama puanını okul notu veya resmî tanılama puanı olarak yorumlamayın. Çocuğun zorlandığı görevi öğretmeniyle somut örnek üzerinden konuşabilirsiniz.
+Bilsem Junior’ta sınıf seçimini materyalin uygunluğu için kullanın; uygulama puanını okul notu veya resmî tanılama puanı olarak yorumlamayın. Çocuğun zorlandığı görevi öğretmeniyle somut örnek üzerinden konuşabilirsiniz.
 
 ## Sık sorulan sorular
 ### Yönergeyi ben okuyabilir miyim?

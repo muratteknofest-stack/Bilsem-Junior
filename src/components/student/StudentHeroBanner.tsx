@@ -41,7 +41,7 @@ export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({ user, gree
           <span>{user.avatar || '🦊'}</span><small>SEVİYE {xpProgress.level}</small>
         </button>
         <div className="zp-student-profile-copy">
-          <p className="zp-dashboard-kicker">ZEKA PARK / ÖĞRENCİ</p>
+          <p className="zp-dashboard-kicker">BİLSEM JUNIOR / HAZIRLIK</p>
           <h1>{greeting.text}, {user.name?.split(' ')[0] || 'Kaşif'}<span className="zp-profile-period" aria-hidden="true">.</span></h1>
           <div className="zp-profile-settings">
             <details className="zp-grade-settings"><summary>{user.grade || 1}. sınıf <span>Sınıfımı düzenle</span></summary><StudentGradeSelector key={user.id} user={user} onSaved={onUserUpdate} /></details>

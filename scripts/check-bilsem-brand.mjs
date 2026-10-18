@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import { createServer } from 'vite';
+import { chromium } from 'playwright';
+const output = 'test-artifacts/bilsem-junior';
+await fs.mkdir(output, { recursive: true });
+const server = await createServer({ server: { host: '127.0.0.1', port: 0, strictPort: true } });
+await server.listen();
+const origin = 'http://127.0.0.1:' + server.httpServer.address().port;
+let browser;
+try {
+  browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ reducedMotion: 'reduce' });
+  await context.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  let checks = 0;
+  for (const width of [320, 360, 390, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: width < 700 ? 844 : 1024 });
+    await page.goto(origin + '/tests/browser/bilsem-branding.html');
+    await page.getByRole('heading', { level: 1, name: /BİLSEM’e hazırlık/ }).waitFor();
+    await page.locator('.zp-public-brand .bj-wordmark').waitFor();
+    assert.match(await page.locator('.zp-public-brand .bj-wordmark').innerText(), /Bilsem Junior/);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'Homepage overflow at ' + width);
+    assert.equal(await page.locator('.bj-guide-card').count(), 4);
+    assert.equal(await page.locator('.bj-logo-symbol').first().evaluate(img => img.complete && img.naturalWidth > 0), true);
+    await page.screenshot({ path: output + '/home-' + width + '.png', animations: 'disabled' });
+    await page.locator('.bj-guide').screenshot({ path: output + '/guide-' + width + '.png', animations: 'disabled' });
+    if (width <= 1000) {
+      await page.getByRole('button', { name: 'Menüyü aç', exact: true }).click();
+      await page.getByRole('dialog').getByRole('link', { name: /BİLSEM hazırlık rehberi/ }).waitFor();
+      await page.getByRole('button', { name: 'Menüyü kapat', exact: true }).click();
+    }
+    await page.locator('.zp-nav-signup').click();
+    await page.getByRole('heading', { name: 'Bilsem Junior yolculuğun başlasın.', exact: true }).waitFor();
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'Register overflow at ' + width);
+    await page.screenshot({ path: output + '/register-' + width + '.png', animations: 'disabled' });
+    await page.goto(origin + '/tests/browser/bilsem-branding.html?view=login');
+    await page.getByRole('heading', { name: 'Hazırlığına kaldığın yerden devam et.', exact: true }).waitFor();
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'Login overflow at ' + width);
+    await page.screenshot({ path: output + '/login-' + width + '.png', animations: 'disabled' });
+    checks += 3;
+  }
+  assert.deepEqual(errors, []);
+  console.log('Bilsem Junior: ' + checks + ' homepage/register/login viewport checks; logo, preparation guide and mobile navigation passed.');
+} finally { await browser?.close(); await server.close(); }

@@ -373,7 +373,7 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
     if (generatedQuestions.length === 0) return;
     sound.playClick();
     const exportData = {
-      title: 'ZekaPark BİLSEM Toplu Üretilen Soru Paketi',
+      title: 'Bilsem Junior BİLSEM Toplu Üretilen Soru Paketi',
       generatedAt: new Date().toISOString(),
       count: generatedQuestions.length,
       gradeMode: selectedGradeMode,

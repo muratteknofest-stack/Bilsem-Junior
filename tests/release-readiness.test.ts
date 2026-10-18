@@ -53,7 +53,7 @@ test('all authentication email templates are Turkish and retain the provider tok
   const subjects = JSON.parse(fs.readFileSync('supabase/templates/subjects.json', 'utf8'));
   assert.equal(Object.keys(subjects).length, 6);
   for (const [slug, subject] of Object.entries(subjects)) {
-    assert.match(String(subject), /ZekaPark/);
+    assert.match(String(subject), /Bilsem Junior/);
     const html = fs.readFileSync(`supabase/templates/${slug}.html`, 'utf8');
     assert.match(html, /lang="tr"/); assert.ok(!html.includes('Reset your password'));
     assert.ok(html.includes(slug === 'reauthentication' ? '{{ .Token }}' : '{{ .ConfirmationURL }}'));
@@ -109,7 +109,7 @@ test('free registration does not imply completed commercial launch checks',()=>{
 
 function releaseFetch(overrides:Record<string,{status?:number;body?:string;headers?:Record<string,string>}>={}){
  return async (input:Parameters<typeof fetch>[0],init?:RequestInit)=>{const url=input instanceof URL?input:new URL(typeof input==='string'?input:input.url);const path=url.pathname;const crossSite=new Headers(init?.headers).get('Sec-Fetch-Site')==='cross-site';const status=crossSite&&path.startsWith('/api/')?403:init?.method==='POST'?(new Headers(init.headers).has('Origin')?403:401):path==='/api/release-unknown'?404:path.startsWith('/api/')&&!path.startsWith('/api/public/')?401:200;
- const body=path==='/'?'<html lang="tr"><title>ZekaPark</title></html>':path==='/robots.txt'?'User-agent: *\nDisallow: /admin':path==='/sitemap.xml'?'https://zekapark.vercel.app/':path==='/api/public/platform'?JSON.stringify({registrationOpen:true,policyVersion:'fixture-1'}):path==='/api/public/membership'?JSON.stringify({ready:false,enforced:false,plans:[{},{},{}]}):path==='/paketler'||path==='/paketler/'?'<html><link href="/sales/sales.css"><h1 id="sales-heading">Keşif</h1><section class="zp-plan-card"></section></html>':path==='/sales/sales.css'?'.zp-plan-mint{color:green}':path.startsWith('/bilgi/')?'<html><h1>Policy</h1></html>':'fixture';
+ const body=path==='/'?'<html lang="tr"><title>Bilsem Junior</title></html>':path==='/robots.txt'?'User-agent: *\nDisallow: /admin':path==='/sitemap.xml'?'https://zekapark.vercel.app/':path==='/api/public/platform'?JSON.stringify({registrationOpen:true,policyVersion:'fixture-1'}):path==='/api/public/membership'?JSON.stringify({ready:false,enforced:false,plans:[{},{},{}]}):path==='/paketler'||path==='/paketler/'?'<html><link href="/sales/sales.css"><h1 id="sales-heading">Keşif</h1><section class="zp-plan-card"></section></html>':path==='/sales/sales.css'?'.zp-plan-mint{color:green}':path.startsWith('/bilgi/')?'<html><h1>Policy</h1></html>':'fixture';
  const override=overrides[path]||{};return new Response(override.body??body,{status:override.status??status,headers:{'x-content-type-options':'nosniff','x-frame-options':'DENY','cache-control':'no-store','content-type':path.endsWith('.css')?'text/css; charset=utf-8':'text/html; charset=utf-8',...override.headers}});
  };
 }

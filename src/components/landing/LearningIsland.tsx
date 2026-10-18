@@ -17,7 +17,7 @@ export function LearningIsland({ moving }: { moving: boolean }) {
   const reset = () => { x.set(0); y.set(turned ? -12 : 0); };
   return <div ref={ref} className="zp-island-wrap" data-active={moving && visible}>
     <div className="zp-scene-halo" aria-hidden="true" />
-    <div className="zp-scene-caption"><span className="zp-status-dot" /> ZEKİ’NİN KEŞİF ADASI</div>
+    <div className="zp-scene-caption"><span className="zp-status-dot" /> BİLSEM JUNIOR · HAZIRLIK STÜDYOSU</div>
     <div className="zp-island-viewport" onPointerMove={e => {
       if (!moving || e.pointerType !== 'mouse') return;
       const rect = e.currentTarget.getBoundingClientRect();
@@ -43,13 +43,13 @@ export function LearningIsland({ moving }: { moving: boolean }) {
             <div className="zp-antenna"><i /></div>
             <div className="zp-robot-ear zp-ear-left" /><div className="zp-robot-ear zp-ear-right" />
             <div className="zp-robot-head"><div className="zp-robot-screen"><i className="zp-eye" /><i className="zp-eye" /><span className="zp-smile" /></div><span className="zp-cheek zp-cheek-left" /><span className="zp-cheek zp-cheek-right" /></div>
-            <div className="zp-robot-body"><span>z</span></div>
+            <div className="zp-robot-body"><span>j</span></div>
             <div className="zp-arm zp-arm-left" /><div className="zp-arm zp-arm-right" />
             <div className="zp-foot zp-foot-left" /><div className="zp-foot zp-foot-right" />
           </div>
           <div className="zp-orbit zp-orbit-front" />
         </div>
-        <div className="zp-floating-note zp-note-quest"><span className="zp-note-icon"><Sparkles size={20} /></span><div><small>YENİ BİR MACERA</small><strong>Keşfe hazır mısın?</strong></div></div>
+        <div className="zp-floating-note zp-note-quest"><span className="zp-note-icon"><Sparkles size={20} /></span><div><small>DÜŞÜN. KEŞFET. GELİŞ.</small><strong>Hazırlığa başlayalım!</strong></div></div>
         <div className="zp-floating-note zp-note-trophy"><span className="zp-trophy-icon"><Trophy size={24} /></span><div><strong>Dene. Öğren. Parla!</strong><small>Her adımın çok değerli</small></div></div>
       </motion.div>
     </div>

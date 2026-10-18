@@ -38,6 +38,16 @@ jobs:
         run: npm run test:play-layout
       - name: Verify English practice, device progress and mobile layouts
         run: npm run test:english-browser
+      - name: Verify Bilsem Junior branding and responsive public flows
+        run: node scripts/check-bilsem-brand.mjs
+      - name: Save Bilsem Junior design previews
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: bilsem-junior-design-previews
+          path: test-artifacts/bilsem-junior/
+          if-no-files-found: ignore
+          retention-days: 7
 
   english-accounts:
     runs-on: ubuntu-latest

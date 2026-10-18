@@ -25,7 +25,7 @@ Bir görevde iki kural aynı verilere uyuyorsa sorunun belirsizliğini konuşun.
 Her oturumun sonunda yalnızca bir kayıt tutun: kullanılan yöntem ve kontrol sonucu. Uzun raporlar çocuğun oyundan aldığı keyfi azaltıyorsa sadeleştirin. Plan, aileyi sürekli veri toplamaya zorlamak için değildir.
 
 ## BİLSEM bilgisi ile sınıf etkinliğini ayırın
-ZekaPark’ın 1–4. sınıf materyalleri sunması, bütün bu sınıfların aynı yıl resmî tanılama kapsamına alındığı anlamına gelmez. Aday gösterme sınıfları ve koşullar ilgili yılın MEB kılavuzundan doğrulanmalıdır.
+Bilsem Junior’ın 1–4. sınıf materyalleri sunması, bütün bu sınıfların aynı yıl resmî tanılama kapsamına alındığı anlamına gelmez. Aday gösterme sınıfları ve koşullar ilgili yılın MEB kılavuzundan doğrulanmalıdır.
 
 Bu yazı genel düşünme çalışması planıdır. Çocuğun sevdiği araştırma, sanat veya oyun deneyimlerini tek bir yerleştirme sonucuna bağlamadan sürdürebilirsiniz. Uygulama içi başarıyı yalnızca o etkinlik bağlamında yorumlayın.
 

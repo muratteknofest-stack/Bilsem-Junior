@@ -1,6 +1,6 @@
 # Android ve Google Play yayını
 
-Uygulama kimliği `com.zekapark.app`, bu sürüm `1.0.12` / versionCode `13`.
+Uygulama kimliği `com.zekapark.app`, bu sürüm `1.0.13` / versionCode `14`.
 
 1. `.env.android` içinde yalnız açık bağlantı ayarlarını tanımlayın: VITE_API_BASE_URL ve VITE_PUBLIC_SITE_URL `https://zekapark.vercel.app`; VITE_SUPABASE_URL ve VITE_SUPABASE_PUBLISHABLE_KEY mevcut açık proje değerleri olmalı. Sunucu sırlarını Android paketine koymayın.
 2. `npm ci`, `npm run lint`, `npm run test:google-play`, `npm run android:sync` çalıştırın.

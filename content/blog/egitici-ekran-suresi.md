@@ -27,7 +27,7 @@ Etkinlik sonrası sürekli huzursuzluk veya belirgin güçlük varsa önce kulla
 ## Aile anlaşmasını sade tutun
 Üç madde yazabilirsiniz: ne için açıyoruz, ne zaman bitiriyoruz, sonrasında ne yapıyoruz. Çocuk kendi cümlesiyle tekrar etsin. Kuralların yalnızca çocuk için değil, yetişkinin eşlik etmesi için de anlamı olsun.
 
-ZekaPark kullanırken bir görev seçip sonucu konuşabilirsiniz. Uygulama içi puan için planlanan bitişi sürekli ertelemeyin. Öğrenme deneyimini dinlenme, kitap, hareket ve serbest oyunla birlikte değerlendirin.
+Bilsem Junior kullanırken bir görev seçip sonucu konuşabilirsiniz. Uygulama içi puan için planlanan bitişi sürekli ertelemeyin. Öğrenme deneyimini dinlenme, kitap, hareket ve serbest oyunla birlikte değerlendirin.
 
 ## Sık sorulan sorular
 ### Eğitici uygulamada sınırsız kullanım uygun mu?

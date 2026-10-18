@@ -56,5 +56,5 @@ export function EnglishAuth(){
  <button className="en-primary" disabled={mode==='register'&&!availability?.registrationOpen} type="submit">{busy?'Please wait…':mode==='register'?'Create family account':mode==='reset'?'Send recovery link':'Sign in'}</button></fieldset>
  {notice&&<p role="status" className="en-notice">{notice}</p>}{code&&<p className="en-notice">Student code: <strong>{code}</strong>. Keep it with the student password in a safe place. Students do not need a personal email.</p>}{error&&<p role="alert" className="en-notice">{error}</p>}
  {confirmation&&<button type="button" className="en-secondary" disabled={busy} onClick={resend}>Resend confirmation email</button>}
- </form><p><button className="en-text-button" disabled={busy} type="button" onClick={()=>change('reset')}>Forgot password?</button></p><p>Already use ZekaPark? The same parent email or student code works here. Accounts share progress across languages.</p></section>;
+ </form><p><button className="en-text-button" disabled={busy} type="button" onClick={()=>change('reset')}>Forgot password?</button></p><p>Already use Bilsem Junior? The same parent email or student code works here. Accounts share progress across languages.</p></section>;
 }
