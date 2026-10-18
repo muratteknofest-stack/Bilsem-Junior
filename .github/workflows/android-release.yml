@@ -37,14 +37,16 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           node --import tsx scripts/check-google-play-ui.tsx
+      - name: Verify Android story adventure and simplified menus
+        run: npm run test:android-story
       - name: Compile Android Billing and release bundle
         working-directory: android
         run: ./gradlew --no-daemon :app:bundleRelease :app:assembleRelease :app:assembleDebug
       - name: Verify release security
         run: |
           mkdir -p test-artifacts/android
-          cp android/app/build/outputs/bundle/release/app-release.aab test-artifacts/android/Bilsem-Junior-1.0.15-unsigned.aab
-          cp android/app/build/outputs/apk/debug/app-debug.apk test-artifacts/android/Bilsem-Junior-1.0.15-test.apk
+          cp android/app/build/outputs/bundle/release/app-release.aab test-artifacts/android/Bilsem-Junior-1.0.16-unsigned.aab
+          cp android/app/build/outputs/apk/debug/app-debug.apk test-artifacts/android/Bilsem-Junior-1.0.16-test.apk
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android/app/build/outputs/apk/release/app-release-unsigned.apk > test-artifacts/android/package.txt
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree android/app/build/outputs/apk/release/app-release-unsigned.apk AndroidManifest.xml > test-artifacts/android/manifest.txt
           node scripts/verify-android-release.mjs test-artifacts/android/manifest.txt test-artifacts/android/package.txt > test-artifacts/android/release-check.json
@@ -55,5 +57,6 @@ jobs:
           path: |
             test-artifacts/android/
             test-artifacts/google-play-ui/
+            test-artifacts/android-story/
           if-no-files-found: ignore
           retention-days: 7
