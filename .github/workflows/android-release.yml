@@ -45,8 +45,8 @@ jobs:
       - name: Verify release security
         run: |
           mkdir -p test-artifacts/android
-          cp android/app/build/outputs/bundle/release/app-release.aab test-artifacts/android/Bilsem-Junior-1.0.16-unsigned.aab
-          cp android/app/build/outputs/apk/debug/app-debug.apk test-artifacts/android/Bilsem-Junior-1.0.16-test.apk
+          cp android/app/build/outputs/bundle/release/app-release.aab test-artifacts/android/Bilsem-Junior-1.0.17-unsigned.aab
+          cp android/app/build/outputs/apk/debug/app-debug.apk test-artifacts/android/Bilsem-Junior-1.0.17-test.apk
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android/app/build/outputs/apk/release/app-release-unsigned.apk > test-artifacts/android/package.txt
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree android/app/build/outputs/apk/release/app-release-unsigned.apk AndroidManifest.xml > test-artifacts/android/manifest.txt
           node scripts/verify-android-release.mjs test-artifacts/android/manifest.txt test-artifacts/android/package.txt > test-artifacts/android/release-check.json

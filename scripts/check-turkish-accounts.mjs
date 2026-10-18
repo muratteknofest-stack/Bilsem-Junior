@@ -99,7 +99,7 @@ try{
   else if(u.pathname.endsWith('/complete-deletion')){assert.deepEqual(body,{confirmed:true,retentionReviewed:true,members:[parentId,studentId]});deleteAttempts++;if(deleteAttempts===1){await route.fulfill({status:503,contentType:'application/json',body:'{"error":"Kesinti; aynı talep tekrar denenebilir."}'});return;}if(deleteAttempts===3){await route.fulfill({status:200,contentType:'application/json',body:'not-json'});return;}value=deleteAttempts===2?{completed:true,deletedAccounts:1}:{completed:true,deletedAccounts:2};if(deleteAttempts>3)successfulCompletion=true;}
   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(value)});
  });
- if(androidStory){activeRole='student';unconfirmed=false;await (await import('./check-android-story-flow.mjs')).checkAndroidStory(page,{student,topicSessions,requests:topicRequests,failAnswer:()=>{failNextLearningAnswer=true;}});}
+ if(androidStory){activeRole='student';unconfirmed=false;await (await import('./check-android-story-flow.mjs')).checkAndroidStory(page,{student,topicSessions,requests:topicRequests,failAnswer:()=>{failNextLearningAnswer=true;}});assert.deepEqual(errors,[]);}
  else {
  await page.goto('http://127.0.0.1:5186/tests/browser/turkish-accounts.html');await page.getByRole('heading',{name:'Bilsem Junior yolculuğun başlasın.'}).waitFor();
  await page.locator('#parent-email').fill('parent@example.invalid');await page.getByLabel('Veli şifresi',{exact:true}).fill('ExampleOnly123');await page.getByLabel('Veli şifresi tekrar',{exact:true}).fill('ExampleOnly123');await page.getByRole('button',{name:'Devam et',exact:true}).click();
