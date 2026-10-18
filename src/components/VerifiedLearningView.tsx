@@ -28,8 +28,8 @@ import { DEFAULT_ADAPTIVE_COUNT, MAX_LEARNING_QUESTIONS, difficultyChoices, type
 import { isSchoolGrade } from '../features/questions/quality-policy';
 
 const button = 'min-h-11 rounded-xl bg-indigo-700 px-5 py-3 font-bold text-white disabled:opacity-50 focus-visible:outline-4 focus-visible:outline-indigo-300';
-interface Props { storyStage?:StoryStage; onStoryComplete?:(session:LearningSessionView)=>void; mode: LearningMode; initialCategory?: LearningCategory; initialTopic?: LearningTopic; reviewMistakeId?: string; onNavigateHome: () => void; }
-export function VerifiedLearningView({ storyStage, onStoryComplete, mode, initialCategory = 'mixed', initialTopic = 'mixed', reviewMistakeId, onNavigateHome }: Props) {
+interface Props { storyStage?:StoryStage; onStoryComplete?:(session:LearningSessionView)=>void; onContinueStory?:()=>void; mode: LearningMode; initialCategory?: LearningCategory; initialTopic?: LearningTopic; reviewMistakeId?: string; onNavigateHome: () => void; }
+export function VerifiedLearningView({ storyStage, onStoryComplete, onContinueStory, mode, initialCategory = 'mixed', initialTopic = 'mixed', reviewMistakeId, onNavigateHome }: Props) {
   const reducedMotion = useStudentReducedMotion();
   const feedbackLedger = useRef(new AnswerFeedbackLedger());
   const [feedback, setFeedback] = useState<AnswerFeedback | null>(null);
@@ -197,7 +197,7 @@ export function VerifiedLearningView({ storyStage, onStoryComplete, mode, initia
       {session.result && <section aria-label="Çalışma sonucu" className="zp-result space-y-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
         <Trophy size={38} aria-hidden="true" />
         <h2 className="text-xl font-extrabold">Çalışman tamamlandı</h2><p>{session.result.correctAnswers} doğru · {session.result.wrongAnswers} yanlış · {session.result.blankAnswers} boş · %{session.result.scorePercentage} başarı</p><p className="font-bold text-emerald-800">{session.result.xp} XP kazandın</p>
-        <p className="text-sm">Sorular arasında geçerek çözüm açıklamalarını inceleyebilirsin.</p><button type="button" disabled={busy} onClick={storyStage?onNavigateHome:restart} className={button}>{storyStage?'Maceraya dön':'Yeni çalışma'}</button>
+        <p className="text-sm">Sorular arasında geçerek çözüm açıklamalarını inceleyebilirsin.</p>{storyStage&&onContinueStory&&<button type="button" disabled={busy} onClick={onContinueStory} className={button}>Sıradaki keşfe geç</button>}<button type="button" disabled={busy} onClick={storyStage?onNavigateHome:restart} className={button}>{storyStage?'Maceraya dön':'Yeni çalışma'}</button>
       </section>}
       {q && renderQuestion && <section className="zp-session space-y-5 p-4 sm:p-7">
         <div className="zp-round-header"><div><p className="zp-eyebrow">{COGNITIVE_CATEGORY_LABELS[q.category]}</p><p className="zp-round-title">{isExam ? 'Soru' : 'Sıradaki keşfin'} <span>{index + 1} / {session.questions.length}</span></p><p className="zp-round-detail">{q.targetGrade}. sınıf · Zorluk {q.difficulty}</p></div>{!session.result && <div className={`zp-timer ${remaining <= 60 ? 'zp-timer-low' : ''}`} role="timer" aria-label="Kalan süre"><Clock3 size={21} aria-hidden="true" /><span><small>Kalan süre</small>{Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}</span></div>}</div>

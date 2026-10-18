@@ -54,3 +54,13 @@
 @keyframes zp-feedback-duration{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 .zp-focus[data-reduced-motion=true] *, .zp-focus[data-reduced-motion=true] *::before, .zp-focus[data-reduced-motion=true] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.zp-focus[data-reduced-motion=true] .zp-feedback-particles{display:none}
 @media(prefers-reduced-motion:reduce){.zp-feedback-card,.zp-feedback-card::after{animation:none!important}}
+
+/* Larger fitted vector artwork and tactile choices, without scrolling the test. */
+.zp-focus .zp-memory-study{grid-template-rows:minmax(0,1.12fr) minmax(0,1fr)}
+.zp-focus .zp-memory-study[data-locked=true]{grid-template-rows:minmax(0,1fr) auto auto}
+.zp-focus .zp-answer-option{box-shadow:0 4px 0 #cbd5e1,inset 0 1px 0 #fff;background:linear-gradient(155deg,#fff 65%,#f3f6fc)}
+.zp-focus .zp-answer-option[aria-pressed=true]{box-shadow:0 3px 0 #b8a0e6,inset 0 1px 0 #fff}
+@media(orientation:landscape) and (max-height:600px){.zp-focus .zp-memory-study{grid-template-rows:minmax(0,1fr)}.zp-focus .zp-memory-study[data-locked=true]{grid-template-rows:minmax(0,1fr) auto}}
+
+.zp-focus .zp-answer-option{padding-left:32px}
+.zp-focus .zp-answer-badge{width:22px;height:22px;font-size:11px}

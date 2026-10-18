@@ -10,6 +10,8 @@ import {createServer} from 'vite';
 import {chromium} from 'playwright';
 import {generateQuestion} from '../src/features/questions/generators/index.ts';
 import {LEARNING_TOPICS,topicCategory} from '../src/features/student/learning-topics.ts';
+import {selectAdaptiveCategory} from '../src/features/student/learning-selection.ts';
+import {AVAILABLE_CATEGORIES} from '../src/features/student/available-categories.ts';
 import {prepareLearningQuestions,learningView,answerLearningSession,finishLearningSession} from '../server/learning-model.ts';
 import {prepareEditorialQuestion} from '../server/editorial-validation.ts';
 process.env.VITE_SUPABASE_URL='https://turkish-fixture.invalid';process.env.VITE_SUPABASE_PUBLISHABLE_KEY='sb_publishable_isolated_fixture';
@@ -72,7 +74,8 @@ try{
    topicRequests.push(body);
    const level=body.difficulty==='mixed'?1:body.difficulty;
    const count=body.mode==='adaptive'?body.questionCount:2;
-   const questions=Array.from({length:count},(_,i)=>generateQuestion({profile:'complete',targetGrade:student.grade,type:body.topic||(body.category==='logic'?'logic_grid':body.category==='spatial'?'figure_rotation':body.category==='matrix'?'matrix_2x2':body.category==='attention'?'shape_counting':'visual_sequence'),difficulty:level,seed:90000+topicRequests.length*997+i*37}));
+   const category=body.mode==='adaptive'&&!body.topic?selectAdaptiveCategory(body.category,AVAILABLE_CATEGORIES.map(category=>({category,mastery:category==='numerical'?0:100}))):body.category;
+   const questions=Array.from({length:count},(_,i)=>generateQuestion({profile:androidStory?'professional':'complete',targetGrade:student.grade,...(androidStory&&!body.topic?{category}:{type:body.topic}),difficulty:level,seed:90000+topicRequests.length*997+i*37}));
    const s={id:crypto.randomUUID(),student_id:studentId,mode:body.mode,title:body.topic+' konu testi',questions:prepareLearningQuestions(questions),answers:{},created_at:new Date().toISOString(),expires_at:new Date(Date.now()+3600000).toISOString(),finished_at:null,result:null,revision:0,rewarded_xp:0};topicSessions.set(s.id,s);value=learningView(s);
   }
   else if(/^\/api\/learning\/[^/]+\/(answer|finish)$/.test(u.pathname)){

@@ -4,6 +4,7 @@
 @import './components/student/student-experience-controls.css';
 @import "tailwindcss";
 @import "./features/questions/renderers/question-studio.css";
+@import "./features/questions/renderers/question-art.css";
 
 @theme {
   --font-sans: "Plus Jakarta Sans", "Inter", sans-serif;

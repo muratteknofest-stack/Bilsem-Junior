@@ -7,7 +7,7 @@ await fs.mkdir(output,{recursive:true});
 const server=await createServer({server:{host:'127.0.0.1',port:5182,strictPort:true}});
 await server.listen();
 const browser=await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE,args:['--no-sandbox','--disable-dev-shm-usage']}: {})});
-const page=await browser.newPage({viewport:{width:360,height:640},deviceScaleFactor:1});page.on('pageerror',e=>console.log('ERROR',e.message));
+const page=await browser.newPage({viewport:{width:360,height:640},deviceScaleFactor:1});const pageErrors=[];page.on('pageerror',e=>{pageErrors.push(e.message);console.log('ERROR',e.message);});
 await page.goto('http://127.0.0.1:5182/tests/browser/question-screen.html');await page.waitForSelector('.zp-answer-option');await page.screenshot({path:output+'/zekapark-mobile.png'});
 
 const failures=[];let count=0;
@@ -24,7 +24,7 @@ for(const [width,height] of [[320,480],[320,568],[360,560],[360,640],[390,844],[
    for(const card of cards)for(const svg of card.querySelectorAll('svg')){const r=svg.getBoundingClientRect(),c=card.getBoundingClientRect();if(r.height>0&&(r.top<c.top-1||r.bottom>c.bottom+1||r.left<c.left-1||r.right>c.right+1))bad.push('clipped-svg');}
    if(cards.length!==4)bad.push('missing-options');
    if(root.scrollHeight>root.clientHeight+1||root.scrollWidth>root.clientWidth+1)bad.push('scroll');
-   return bad;
+   const frame=document.querySelector('.zp-focus-visual').getBoundingClientRect();for(const svg of document.querySelectorAll('.zp-focus-visual .zp-question-visual svg')){const v=svg.getBoundingClientRect();if(v.width&&v.height&&(v.left<frame.left-1||v.right>frame.right+1||v.top<frame.top-1||v.bottom>frame.bottom+1))bad.push('clipped-question');}return bad;
   });
   if(result.length)failures.push({width,height,type,result});count++;
  }
@@ -54,7 +54,7 @@ for(const [width,height] of [[320,480],[390,844],[768,1024]])for(const grade of 
    const errors=cards.length===4?[]:['missing-options'];
    if(root.scrollHeight>root.clientHeight+1||root.scrollWidth>root.clientWidth+1)errors.push('overflow');
    for(const card of cards){const r=card.getBoundingClientRect();if(r.height<44||r.width<44||r.bottom>innerHeight+1||r.right>innerWidth+1)errors.push('card');for(const svg of card.querySelectorAll('svg')){const v=svg.getBoundingClientRect();if(v.top<r.top-1||v.bottom>r.bottom+1||v.left<r.left-1||v.right>r.right+1)errors.push('clipped-svg');}}
-   return errors;
+   const frame=document.querySelector('.zp-focus-visual').getBoundingClientRect();for(const svg of document.querySelectorAll('.zp-focus-visual .zp-question-visual svg')){const v=svg.getBoundingClientRect();if(v.width&&v.height&&(v.left<frame.left-1||v.right>frame.right+1||v.top<frame.top-1||v.bottom>frame.bottom+1))errors.push('clipped-question');}return errors;
   });
   if(bad.length)failures.push({width,height,grade,type,curriculum:true,result:bad});count++;
  }
@@ -66,7 +66,7 @@ await page.keyboard.press('Escape');
 // Expanding/collapsing mobile browser controls changes usable portrait height.
 for(const height of [700,510,740]){await page.setViewportSize({width:360,height});await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));const overflow=await page.evaluate(()=>{const root=document.querySelector('.zp-focus');return root.scrollHeight>root.clientHeight+1;});if(overflow)failures.push({height,result:['viewport-resize-overflow']});count++;}
 await page.setViewportSize({width:768,height:1024});await page.evaluate(()=>window.__show('mirror_reflection',3));await page.screenshot({path:output+'/zekapark-tablet.png'});
-console.log(JSON.stringify({count,failures}));
+if(pageErrors.length)failures.push({pageErrors});console.log(JSON.stringify({count,failures}));
 await fs.writeFile(output+'/results.json',JSON.stringify({count,failures},null,2));
 await browser.close();await server.close();
 

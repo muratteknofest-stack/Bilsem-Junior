@@ -2,7 +2,7 @@ import React, { useId } from 'react';
 
 /** Orthographic projection: exact unit cubes, back-to-front ordering, no perspective distortion. */
 export function CubeSculpture({size, heights}: {size: number; heights: number[]}) {
-  const id=useId().replace(/:/g,'_'), unit=30, lift=30, originX=size*unit+18, originY=120;
+  const id=useId().replace(/:/g,'_'), unit=30, lift=30, originX=size*unit+18, originY=Math.max(1,...heights)*lift+8;
   const cells=heights.map((height,i)=>({height,row:Math.floor(i/size),col:i%size})).sort((a,b)=>(a.row+a.col)-(b.row+b.col)||a.row-b.row);
   const at=(r:number,c:number,z=0)=>[originX+(c-r)*unit,originY+(r+c)*unit/2-z*lift];
   const diamond=(x:number,y:number)=>`${x},${y} ${x+unit},${y+unit/2} ${x},${y+unit} ${x-unit},${y+unit/2}`;
@@ -14,7 +14,7 @@ export function CubeSculpture({size, heights}: {size: number; heights: number[]}
     </defs>
     <ellipse cx={originX} cy={originY+size*unit/2+12} rx={size*unit*.92} ry={size*unit*.47} fill="#243d68" opacity=".06"/>
     {cells.map(({row,col})=>{const [x,y]=at(row,col);return <polygon key={`floor-${row}-${col}`} points={diamond(x,y)} fill="#edf2fa" stroke="#c4d2e8" strokeWidth=".8"/>;})}
-    {cells.flatMap(({height,row,col})=>Array.from({length:height},(_,z)=>{const [x,y]=at(row,col,z+1);return <g key={`${row}-${col}-${z}`} data-unit-cube="true" stroke="#223f72" strokeWidth=".7" strokeLinejoin="round">
+    {cells.flatMap(({height,row,col})=>Array.from({length:height},(_,z)=>{const [x,y]=at(row,col,z+1);return <g key={`${row}-${col}-${z}`} data-unit-cube="true" stroke="#223f72" strokeWidth=".9" strokeLinejoin="round">
       <path d={`M${x-unit} ${y+unit/2}L${x} ${y+unit}V${y+unit+lift}L${x-unit} ${y+unit/2+lift}Z`} fill={`url(#${id}-left)`}/>
       <path d={`M${x} ${y+unit}L${x+unit} ${y+unit/2}V${y+unit/2+lift}L${x} ${y+unit+lift}Z`} fill={`url(#${id}-right)`}/>
       <polygon points={diamond(x,y)} fill={`url(#${id}-top)`}/>

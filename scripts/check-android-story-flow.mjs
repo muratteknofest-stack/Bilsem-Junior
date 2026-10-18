@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import { STORY_STAGES } from '../src/features/student/story-adventure.ts';
 export async function checkAndroidStory(page,{student,topicSessions,requests,failAnswer}){
  await fs.mkdir('test-artifacts/android-story',{recursive:true});
  await page.goto('http://127.0.0.1:5186/tests/browser/turkish-accounts.html?mode=student-app');
@@ -32,6 +33,26 @@ export async function checkAndroidStory(page,{student,topicSessions,requests,fai
  await page.getByRole('button',{name:'Maceraya dön',exact:true}).waitFor();await page.getByRole('button',{name:'Maceraya dön',exact:true}).click();await page.getByRole('heading',{name:'Merak Ormanı',exact:true}).waitFor();
  assert.equal(await page.locator('.bj-story-stages li[data-state=complete]').count(),1);assert.equal(await page.locator('.bj-story-stages li[data-state=current] strong').textContent(),'Ormanın şifresi');
  await page.reload();await page.getByRole('heading',{name:'Merak Ormanı',exact:true}).waitFor();assert.equal(await page.locator('.bj-story-stages li[data-state=complete]').count(),1);
+ // Follow every real category constraint and cross all chapter boundaries, without a map detour.
+ await page.locator('.bj-story-stages li[data-state=current] button').click();
+ for(let stageIndex=1;stageIndex<STORY_STAGES.length;stageIndex++){
+  await page.getByRole('heading',{name:STORY_STAGES[stageIndex].title,exact:true}).waitFor();
+  await page.getByRole('button',{name:'Maceraya başla',exact:true}).click();
+  await page.getByRole('main',{name:'Soru çözme ekranı',exact:true}).waitFor();
+  const task=[...topicSessions.values()].at(-1);
+  assert.equal(requests.at(-1).category,STORY_STAGES[stageIndex].category);
+  for(let i=0;i<3;i++){
+   await page.locator('.zp-focus-footer').getByText(`${i+1} / 3`,{exact:true}).waitFor();
+   if(await page.getByRole('button',{name:'Deseni gizle ve cevapla',exact:true}).count())await page.getByRole('button',{name:'Deseni gizle ve cevapla',exact:true}).click();
+   await page.locator('#option-card-'+task.questions[i].correctOptionId).click();
+  }
+  await page.getByRole('button',{name:'Maceraya dön',exact:true}).waitFor();
+  if(stageIndex<STORY_STAGES.length-1)await page.getByRole('button',{name:'Sıradaki keşfe geç',exact:true}).click();
+  else {assert.equal(await page.getByRole('button',{name:'Sıradaki keşfe geç',exact:true}).count(),0);await page.getByRole('button',{name:'Maceraya dön',exact:true}).click();}
+ }
+ await page.getByRole('heading',{name:'Yıldız Bahçesi',exact:true}).waitFor();
+ assert.equal(await page.locator('.bj-story-stages li[data-state=complete]').count(),3);
+ await page.reload();await page.getByRole('heading',{name:'Yıldız Bahçesi',exact:true}).waitFor();
  // Free study, library, topics and reports remain accessible without finishing the story.
  await nav.getByRole('button',{name:'Çalış',exact:true}).click();await page.getByRole('heading',{name:'Bugün ne keşfedelim?',exact:true}).waitFor();assert.equal(await page.locator('.bj-native-feature-grid button').count(),5);
  const groups=page.getByRole('navigation',{name:'Çalışma alanı grupları',exact:true});
