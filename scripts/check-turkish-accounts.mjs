@@ -36,6 +36,8 @@ try{
   }
   window.AudioContext=FixtureAudioContext;
  });const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('https://screens.cdn.wordwall.net/**',route=>route.abort());
+ await page.route('https://wordwall.net/**',route=>route.abort());
  await page.route('https://turkish-fixture.invalid/**',async route=>{
   const u=new URL(route.request().url());let value=[];
   if(u.pathname.includes('/auth/v1/token')){if(activeRole==='admin'&&u.searchParams.get('grant_type')==='refresh_token')adminRefreshes++;if(unconfirmed){unconfirmed=false;await route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({error_code:'email_not_confirmed',code:'email_not_confirmed',msg:'Email not confirmed'})});return;}value=session(activeRole);}
@@ -221,6 +223,7 @@ try{
    for(let step=0;step<4;step++)await page.getByRole('slider',{name:'Ses düzeyi',exact:true}).press('ArrowRight');
    await page.getByText('Görünüm ve ses',{exact:true}).click();
    const navigation=page.getByRole('navigation',{name:'Öğrenci paneli bölümleri',exact:true});
+   assert.equal(await page.locator('.ww-library').count(),0,'The test library must stay closed until selected from the menu');
    for(const name of ['Kişisel planım','Yeteneklerim','Görevlerim','İlerlemem','Çalışma alanım']){
     await navigation.getByRole('button',{name,exact:true}).click();
     await page.getByRole('region',{name,exact:true}).waitFor();
@@ -238,6 +241,26 @@ try{
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
     assert.equal(await page.locator('.zp-mode-card').count(),4);
     await page.screenshot({path:`test-artifacts/student/dashboard-${width}.png`});
+    const testsButton=navigation.getByRole('button',{name:'Zeka Testleri',exact:true});
+    const bounds=await testsButton.boundingBox();
+    assert.ok(bounds&&bounds.width>=44&&bounds.height>=44&&bounds.x>=0&&bounds.x+bounds.width<=width,'The tests menu button must remain reachable');
+    await testsButton.click();
+    await page.getByRole('heading',{name:'Zeka Testleri',exact:true}).waitFor();
+    assert.equal(await testsButton.getAttribute('aria-pressed'),'true');
+    assert.equal(await page.locator('.ww-card').count(),12);
+    assert.equal(await page.getByRole('group',{name:'Testler için sınıf seçimi',exact:true}).getByRole('button',{name:/^1\. sınıf\b/}).getAttribute('aria-pressed'),'true');
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
+    await page.screenshot({path:`test-artifacts/student/tests-menu-${width}.png`,animations:'disabled'});
+    if(width===320)await page.locator('.ww-node-complete-toggle').first().click();
+    await page.getByRole('button',{name:'Çalışma alanıma dön',exact:true}).click();
+    await page.locator('.ww-library').waitFor({state:'detached'});
+    assert.equal(await navigation.getByRole('button',{name:'Çalışma alanım',exact:true}).getAttribute('aria-pressed'),'true');
+    if(width===320){
+     await testsButton.click();await page.locator('.ww-card').first().waitFor();
+     assert.equal(await page.locator('.ww-card[data-node-status="completed"]').count(),1,'Returning through the menu must retain student progress');
+     await navigation.getByRole('button',{name:'Çalışma alanım',exact:true}).click();
+     await page.locator('.ww-library').waitFor({state:'detached'});
+    }
     await page.locator('.zp-grade-settings>summary').click();
     assert.equal(await page.getByRole('region',{name:'Profilimdeki sınıf',exact:true}).getByRole('combobox').locator('option').count(),4);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);

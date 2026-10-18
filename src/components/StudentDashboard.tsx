@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'motion/react';
-import { Activity, BarChart3, Brain, Compass, Layers, Lightbulb, Sparkles, Target, Trophy, Zap, ArrowUpRight, BookOpen, Flame } from 'lucide-react';
+import { Activity, ArrowLeft, BarChart3, Brain, Compass, Layers, Lightbulb, Shapes, Sparkles, Target, Trophy, Zap, ArrowUpRight, BookOpen, Flame } from 'lucide-react';
 import type { DailyStudyPlan, QuestionType, SkillMastery, UserProfile } from '../types';
 import { isSchoolGrade } from '../features/questions/quality-policy';
 import { isDemoUser } from '../lib/demo-access';
@@ -40,6 +40,7 @@ interface StudentDashboardProps {
 const EMPTY_MASTERIES: SkillMastery[] = [];
 const SECTIONS = [
   { id: 'modes', label: 'Çalışma alanım', icon: BookOpen },
+  { id: 'tests', label: 'Zeka Testleri', icon: Shapes },
   { id: 'plan', label: 'Kişisel planım', icon: Compass },
   { id: 'skills', label: 'Yeteneklerim', icon: Brain },
   { id: 'challenges', label: 'Görevlerim', icon: Trophy },
@@ -143,13 +144,16 @@ export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries
           <button type="button" key={id} aria-pressed={activeTab === id} aria-controls="zp-student-section" onClick={() => switchSection(id)}>
             <Icon size={18} aria-hidden="true" /><span>{label}</span>{activeTab === id && <span className="zp-nav-indicator" aria-hidden="true" />}
           </button>)}</nav>
-        <div className="zp-student-workspace">
+        <div className="zp-student-workspace" data-study-section={activeTab}>
           <section id="zp-student-section" className="zp-student-section" aria-label={SECTIONS.find(section => section.id === activeTab)!.label}>
             <AnimatePresence mode="wait" initial={false}>
               <motion.div key={activeTab} initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: reduced ? 0 : .18 }} className="zp-student-section-stack">
                 {activeTab === 'modes' && <>
                   <StudentModesGrid unresolvedMistakesCount={unresolved} onStartAdaptive={onStartAdaptive} onStartExam={onStartExam} onStartPractice={onStartPractice} onOpenMistakes={onOpenMistakes} onNavigate={onNavigate} onOpenChallenges={() => switchSection('challenges')} />
                   {onStartTopicPractice && isSchoolGrade(activeUser.grade) && !isDemoUser(activeUser.id) && <StudentTopicPractice grade={activeUser.grade} onStart={onStartTopicPractice} />}
+                </>}
+                {activeTab === 'tests' && <>
+                  <button type="button" className="zp-tests-back" onClick={() => switchSection('modes')}><ArrowLeft size={18} aria-hidden="true" /> Çalışma alanıma dön</button>
                   <WordwallLibrary key={`wordwall-${activeUser.id}-${activeUser.grade}`} initialGrade={activeUser.grade} progressOwnerId={activeUser.id} />
                 </>}
                 {activeTab === 'plan' && <><DailyGoalProgressCard user={activeUser} dailyPlan={dailyPlan || undefined} onUserUpdate={onUserUpdate} onStartPractice={() => onStartPractice('mixed')} /><StudentStudyHub masteries={safeMasteries} unresolved={unresolved} savedExam={dataService.getActiveExam()} favorites={favorites} onFavoriteChange={value => setFavorites(saveStudyFavorites(value))} onPractice={onStartPractice} onMistakes={onOpenMistakes} onResumeExam={onStartExam} />
@@ -161,7 +165,7 @@ export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries
               </motion.div>
             </AnimatePresence>
           </section>
-          <aside className="zp-student-aside" aria-label="Günlük ilerlemem">
+          {activeTab !== 'tests' && <aside className="zp-student-aside" aria-label="Günlük ilerlemem">
             <article className="zp-daily-snapshot" aria-labelledby="zp-daily-snapshot-title">
               <div className="zp-panel-eyebrow"><Target size={16} aria-hidden="true" /> BUGÜNKÜ HEDEFİN</div>
               <h2 id="zp-daily-snapshot-title">{dailyGoal.completed ? 'Hedefini tamamladın!' : 'Her soru bir adım.'}</h2>
@@ -173,7 +177,7 @@ export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries
             <article className="zp-week-overview"><div className="zp-panel-eyebrow"><BarChart3 size={16} aria-hidden="true" /> BU HAFTA</div><h2>Küçük adımlar, kalıcı ilerleme.</h2><div className="zp-week-stats"><div><strong>{weekly.thisWeekTotal}</strong><span>çözülen soru</span></div><div><strong>{activeUser.streak || 0}<Flame size={19} aria-hidden="true" /></strong><span>günlük seri</span></div></div><button type="button" onClick={() => switchSection('progress')}>İlerlememi incele <ArrowUpRight size={16} aria-hidden="true" /></button></article>
             <DailyStreakCard user={activeUser} onUserUpdate={onUserUpdate} onStartPractice={() => onStartPractice('mixed')} onOpenDetailsModal={() => onNavigate('achievements')} />
             <p className="zp-study-note"><Sparkles size={17} aria-hidden="true" /> Kendi hızında ilerle. Her soru yeni bir keşif.</p>
-          </aside>
+          </aside>}
         </div>
       </main>
     </div>
