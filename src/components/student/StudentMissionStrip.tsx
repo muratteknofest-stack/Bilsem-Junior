@@ -7,7 +7,7 @@ export function StudentMissionStrip({ user, weeklyQuestions }: { user: UserProfi
   const league = weeklyLeague(weeklyQuestions);
   const icons = [Target, Flame, Star];
   return <section className="bj-mission-strip" aria-label="Günlük keşif görevlerim">
-    <div className="bj-mission-heading"><span><Star size={18} aria-hidden="true" /> Günün yıldızları</span><span><Trophy size={15} aria-hidden="true" />{league.name} ligi</span></div>
+    <div className="bj-mission-heading"><span><Star size={18} aria-hidden="true" /> Günün yıldızları <small>{missions.filter(mission => mission.completed).length}/3</small></span><span><Trophy size={15} aria-hidden="true" />{league.name} ligi</span></div>
     <div className="bj-mission-cards">{missions.map((mission, index) => {
       const Icon = icons[index];
       return <article key={mission.id} data-complete={mission.completed}>

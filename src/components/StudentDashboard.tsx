@@ -31,6 +31,7 @@ import './landing/design-system.css';
 import './dashboard-design-system.css';
 import './student/student-professional.css';
 import './student/student-adventure.css';
+import './student/student-quest-world.css';
 interface StudentDashboardProps {
   isLoading?: boolean; user?: UserProfile | null; dailyPlan?: DailyStudyPlan | null;
   masteries?: SkillMastery[]; mistakes?: any[];
