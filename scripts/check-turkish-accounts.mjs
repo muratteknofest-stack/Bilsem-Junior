@@ -13,7 +13,9 @@ import {LEARNING_TOPICS,topicCategory} from '../src/features/student/learning-to
 import {prepareLearningQuestions,learningView,answerLearningSession,finishLearningSession} from '../server/learning-model.ts';
 import {prepareEditorialQuestion} from '../server/editorial-validation.ts';
 process.env.VITE_SUPABASE_URL='https://turkish-fixture.invalid';process.env.VITE_SUPABASE_PUBLISHABLE_KEY='sb_publishable_isolated_fixture';
-const server=await createServer({server:{host:'127.0.0.1',port:5186,strictPort:true}});await server.listen();let browser,page;
+const androidStory=process.env.BILSEM_ANDROID_STORY_CHECK==='1';
+if(androidStory){process.env.VITE_API_BASE_URL='https://turkish-fixture.invalid';process.env.VITE_PUBLIC_SITE_URL='https://zekapark.vercel.app';}
+const server=await createServer({...(androidStory?{mode:'android'}:{}),server:{host:'127.0.0.1',port:5186,strictPort:true}});await server.listen();let browser,page;
 const parentId='11111111-1111-4111-8111-111111111111',studentId='22222222-2222-4222-8222-222222222222';
 const parent={id:parentId,role:'parent',name:'Pilot veli',linked_student_ids:[studentId],xp:0,level:1},student={id:studentId,role:'student',name:'Kaşif',grade:2,student_code:'EXPLORER1234',linked_parent_id:parentId,xp:0,level:1};
 const admin={...parent,role:'admin',name:'Test yöneticisi',linked_student_ids:[]};
@@ -66,11 +68,11 @@ try{
   else if(u.pathname==='/api/learning/grade'){student.grade=body.grade;value={profile:{...student}};}
   else if(u.pathname==='/api/learning/start'){
    assert.equal(activeRole,'student');assert.equal(body.expectedGrade,student.grade);
-   assert.ok(LEARNING_TOPICS.includes(body.topic));assert.equal(body.category,topicCategory(body.topic,'mixed'));
+   if(!androidStory){assert.ok(LEARNING_TOPICS.includes(body.topic));assert.equal(body.category,topicCategory(body.topic,'mixed'));}
    topicRequests.push(body);
    const level=body.difficulty==='mixed'?1:body.difficulty;
    const count=body.mode==='adaptive'?body.questionCount:2;
-   const questions=Array.from({length:count},(_,i)=>generateQuestion({profile:'complete',targetGrade:student.grade,type:body.topic,difficulty:level,seed:90000+topicRequests.length*997+i*37}));
+   const questions=Array.from({length:count},(_,i)=>generateQuestion({profile:'complete',targetGrade:student.grade,type:body.topic||(body.category==='logic'?'logic_grid':body.category==='spatial'?'figure_rotation':body.category==='matrix'?'matrix_2x2':body.category==='attention'?'shape_counting':'visual_sequence'),difficulty:level,seed:90000+topicRequests.length*997+i*37}));
    const s={id:crypto.randomUUID(),student_id:studentId,mode:body.mode,title:body.topic+' konu testi',questions:prepareLearningQuestions(questions),answers:{},created_at:new Date().toISOString(),expires_at:new Date(Date.now()+3600000).toISOString(),finished_at:null,result:null,revision:0,rewarded_xp:0};topicSessions.set(s.id,s);value=learningView(s);
   }
   else if(/^\/api\/learning\/[^/]+\/(answer|finish)$/.test(u.pathname)){
@@ -97,6 +99,8 @@ try{
   else if(u.pathname.endsWith('/complete-deletion')){assert.deepEqual(body,{confirmed:true,retentionReviewed:true,members:[parentId,studentId]});deleteAttempts++;if(deleteAttempts===1){await route.fulfill({status:503,contentType:'application/json',body:'{"error":"Kesinti; aynı talep tekrar denenebilir."}'});return;}if(deleteAttempts===3){await route.fulfill({status:200,contentType:'application/json',body:'not-json'});return;}value=deleteAttempts===2?{completed:true,deletedAccounts:1}:{completed:true,deletedAccounts:2};if(deleteAttempts>3)successfulCompletion=true;}
   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(value)});
  });
+ if(androidStory){activeRole='student';unconfirmed=false;await (await import('./check-android-story-flow.mjs')).checkAndroidStory(page,{student,topicSessions,requests:topicRequests,failAnswer:()=>{failNextLearningAnswer=true;}});}
+ else {
  await page.goto('http://127.0.0.1:5186/tests/browser/turkish-accounts.html');await page.getByRole('heading',{name:'Bilsem Junior yolculuğun başlasın.'}).waitFor();
  await page.locator('#parent-email').fill('parent@example.invalid');await page.getByLabel('Veli şifresi',{exact:true}).fill('ExampleOnly123');await page.getByLabel('Veli şifresi tekrar',{exact:true}).fill('ExampleOnly123');await page.getByRole('button',{name:'Devam et',exact:true}).click();
  await page.locator('#child-alias').fill('Kaşif');await page.locator('#child-grade').selectOption('2');await page.getByLabel('Öğrenci şifresi',{exact:true}).fill('DifferentExample456');await page.getByLabel('Öğrenci şifresi tekrar',{exact:true}).fill('DifferentExample456');await page.getByRole('button',{name:'Devam et',exact:true}).click();
@@ -404,4 +408,5 @@ try{
   await page.getByRole('button',{name:'Çalışmadan çık',exact:true}).click();
  }
  console.log('Turkish isolated browser: registration, grade, consent, confirmation retry, unconfirmed-parent rejection, verified login, export, history failure/retry, deletion request, secure family switching clipboard denial/success, review validation/refresh/empty state admin deletion stale-scope rejection/receipt validation/confirmed completion acknowledged correct/wrong feedback, failed-save silence, muted reload, reduced motion and hidden exam correctness; adaptive count validation, finite 3-question completion and fresh 2-question restarts in grades 1–4; student App topic handoff/reset across all four grades at 320/390/820 px and actual admin portal MFA/educator review navigation/paging/three approvals/save retry passed. This is not a real email/pilot acceptance record.');
-}catch(error){console.error('Turkish component scenario failed:',error.message);if(page)console.error(await page.locator('body').innerText().catch(()=>'(page unavailable)'));throw error;}finally{await browser?.close();await server.close();}
+ }
+}catch(error){console.error('Turkish component scenario failed:',error.message);if(page)console.error(await page.locator('body').innerText().catch(()=>'(page unavailable)'));throw error; }finally{await browser?.close();await server.close();}

@@ -1,3 +1,4 @@
+import { isAndroidApp } from '../lib/native-app';
 import React, { useState, useEffect, useSyncExternalStore } from 'react';
 import { UserProfile, UserRole } from '../types';
 import {
@@ -55,6 +56,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     return 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800';
   };
 
+  if(isAndroidApp && !isLanding && role==='student')return <header className="bj-native-header"><button type="button" onClick={onNavigateHome} aria-label="Bilsem Junior macera alanı"><img src="/brand/junior-fox.svg" alt="" width={32} height={37}/>Bilsem Junior</button><button type="button" onClick={()=>onNavigate('student-profile')} aria-label="Profil ve ayarlar"><User size={20} aria-hidden="true"/></button></header>;
   return (
     <header 
       className={`sticky top-0 z-50 w-full transition-all duration-300 ${

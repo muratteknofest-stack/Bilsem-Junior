@@ -1,3 +1,10 @@
+import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+import { isAndroidApp } from './lib/native-app';
+import { advanceStory, type StoryStage, type StoryProgress } from './features/student/story-adventure';
+import { readStoryProgress, saveStoryProgress } from './services/story-progress-service';
+import type { LearningSessionView } from './features/student/learning-contract';
+import type { StudentSection } from './components/StudentDashboard';
 import { topicCategory, type LearningTopic } from './features/student/learning-topics';
 import { ProgressSyncBanner } from './components/ProgressSyncBanner';
 import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
@@ -19,6 +26,8 @@ import { MobileBottomNav } from './components/MobileBottomNav';
 import { StudyReminderInAppAlert } from './components/StudyReminderInAppAlert';
 import { StudyReminderSettingsModal } from './components/StudyReminderSettingsModal';
 
+const AndroidStudentHub = lazy(() => import('./components/android/AndroidStudentHub').then(m => ({default:m.AndroidStudentHub})));
+const nativeSections: Record<string, StudentSection> = {'student-tests':'tests','student-plan':'plan','student-skills':'skills','student-challenges':'challenges','student-progress':'progress','student-topics':'modes'};
 const StudentDashboard = lazy(() => import('./components/StudentDashboard').then((m) => ({ default: m.StudentDashboard })));
 const LandingPage = lazy(() => import('./components/LandingPage').then((m) => ({ default: m.LandingPage })));
 const VerifiedLearningView = lazy(() => import('./components/VerifiedLearningView').then(m => ({ default: m.VerifiedLearningView })));
@@ -54,6 +63,15 @@ export default function App() {
   };
 
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => dataService.getCurrentUser());
+  const [storyProgress,setStoryProgress] = useState<StoryProgress>(()=>readStoryProgress(currentUser.id,currentUser.grade||1));
+  const [storySaveError,setStorySaveError] = useState('');
+  const [activeStory,setActiveStory] = useState<{stage:StoryStage;userId:string;grade:number}|null>(null);
+  useEffect(()=>{setStoryProgress(readStoryProgress(currentUser.id,currentUser.grade||1));setStorySaveError('');setActiveStory(null);},[currentUser.id,currentUser.grade]);
+  const completeStory = (session:LearningSessionView) => {
+    if(!isAndroidApp || !activeStory || dataService.getCurrentUser().id!==activeStory.userId || currentUser.grade!==activeStory.grade)return;
+    const next=advanceStory(storyProgress,activeStory.stage.id,session,activeStory.grade);
+    if(next!==storyProgress){const saved=saveStoryProgress(activeStory.userId,activeStory.grade,next);setStorySaveError(saved?'':'Hikâye ilerlemesi cihazına kaydedilemedi. Bu oturumda devam edebilirsin; uygulamayı kapatınca son durak korunmayabilir.');setStoryProgress(next);}
+  };
   const [isSwitchingStudent, setIsSwitchingStudent] = useState(false);
   const [studentSwitchError, setStudentSwitchError] = useState<string | null>(null);
   const [showParentAccess, setShowParentAccess] = useState(false);
@@ -256,7 +274,8 @@ export default function App() {
     setCurrentRoute('login');
   };
 
-  const navigateTo = (targetRoute: string, practiceTopic: LearningTopic = 'mixed') => {
+  const navigateTo = (targetRoute: string, practiceTopic: LearningTopic = 'mixed', story?: StoryStage) => {
+    if(targetRoute==='adaptive')setActiveStory(story?{stage:story,userId:currentUser.id,grade:currentUser.grade||1}:null);
     if (targetRoute === 'practice') setSelectedPracticeTopic(practiceTopic);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -301,7 +320,7 @@ export default function App() {
       return;
     }
 
-    const u = userProfile || currentUser || dataService.getCurrentUser();
+    const u = userProfile && currentUser?.id===userProfile.id ? {...userProfile,...currentUser,role:userProfile.role} : userProfile || currentUser || dataService.getCurrentUser();
     if (!u) {
       setCurrentRoute('login');
       return;
@@ -312,7 +331,7 @@ export default function App() {
         setCurrentRoute('demo-limit');
         return;
       }
-      if (['adaptive', 'exams', 'mistakes', 'achievements', 'leaderboard', 'glossary', 'parent'].includes(targetRoute)) {
+      if (['adaptive', 'exams', 'mistakes', 'achievements', 'leaderboard', 'glossary', 'parent','student-tests','student-topics','student-plan','student-skills','student-challenges','student-progress'].includes(targetRoute)) {
         setCurrentRoute('demo-limit');
         return;
       }
@@ -334,6 +353,7 @@ export default function App() {
     }
 
     if (targetRoute === 'dashboard') {
+      if(userProfile?.role==='student'){setCurrentRoute('dashboard');syncState();return;}
       if (userProfile?.role === 'parent' && !u.id.startsWith('demo_')) {
         void openStudentPanel();
         return;
@@ -348,6 +368,7 @@ export default function App() {
     }
 
     // If parent navigates to student test/practice/achievements, allow it in student role
+    if (targetRoute.startsWith('student-') && u.role==='parent' && !u.id.startsWith('demo_')) {void openStudentPanel();return;}
     if (['practice', 'adaptive', 'exams', 'mistakes', 'achievements', 'leaderboard', 'glossary'].includes(targetRoute)) {
       if (u.role === 'parent' && u.id.startsWith('demo_')) {
         const updated = { ...u, role: 'student' as UserRole };
@@ -403,11 +424,25 @@ export default function App() {
     navigateTo(isAuth ? (currentUser.role === 'parent' ? 'parent' : currentUser.role === 'admin' ? 'admin' : 'dashboard') : 'landing');
   };
 
+  useEffect(()=>{
+    if(!isAndroidApp || !Capacitor.isNativePlatform() || isTestRoute)return;
+    let disposed=false;let remove:(()=>Promise<void>)|undefined;
+    void CapacitorApp.addListener('backButton',({canGoBack})=>{
+      if(showParentAccess){setShowParentAccess(false);return;}
+      if(currentUser.role==='student'&&currentRoute!=='dashboard'&&!['landing','login'].includes(currentRoute)){
+        const target=['student-tests','student-topics','student-plan','student-skills','mistakes','glossary'].includes(currentRoute)?'student-study':['student-challenges','student-progress','achievements','leaderboard'].includes(currentRoute)?'student-rewards':'dashboard';
+        navigateTo(target);return;
+      }
+      if(canGoBack)window.history.back();else void CapacitorApp.minimizeApp();
+    }).then(handle=>{if(disposed)void handle.remove();else remove=()=>handle.remove();}).catch(()=>{});
+    return()=>{disposed=true;void remove?.();};
+  },[currentRoute,isTestRoute,showParentAccess,currentUser.role]);
+
   if (authLoading && authUser && !userProfile) return <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6"><p role="status">Hesap ve ilerleme bilgileri yükleniyor…</p></main>;
   if (currentRoute !== 'login' && hasVerifiedAdminAccess({ currentUser: authUser, userProfile, loading: authLoading, isAdminAuthorized })) return <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6"><p role="status">Yönetici alanına yönlendiriliyorsunuz…</p></main>;
 
   return (
-    <div className="bilsem-junior-skin min-h-screen bg-slate-50 text-slate-900 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className={`${isAndroidApp ? 'bj-native-shell ' : ''}bilsem-junior-skin min-h-screen bg-slate-50 text-slate-900 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]`}>
       {/* Workspace navigation; public pages own their header. Tests stay distraction-free. */}
       {!isTestRoute && currentRoute !== 'landing' && currentRoute !== 'login' && (
         <Navbar
@@ -445,8 +480,13 @@ export default function App() {
               />
             )}
 
-            {currentRoute === 'dashboard' && (
+            {isAndroidApp && currentUser.role==='student' && ['dashboard','student-study','student-rewards','student-profile'].includes(currentRoute) && <AndroidStudentHub key={`${currentUser.id}-${currentUser.grade}-${currentRoute}`} route={currentRoute} user={currentUser} progress={storyProgress} saveError={storySaveError} onNavigate={navigateTo} onStartStory={stage=>navigateTo('adaptive','mixed',stage)} onUserUpdate={setCurrentUser} onReminder={()=>setShowGlobalReminderModal(true)} onLogout={()=>void handleLogout()} />}
+            {((currentRoute === 'dashboard' && !isAndroidApp) || (isAndroidApp && !!nativeSections[currentRoute])) && (
+              <div className={isAndroidApp?'bj-native-detail':undefined}>
+              {isAndroidApp&&<button type="button" className="bj-native-back" onClick={()=>navigateTo(['student-challenges','student-progress'].includes(currentRoute)?'student-rewards':'student-study')}>← Geri dön</button>}
               <StudentDashboard
+                key={currentRoute}
+                initialSection={nativeSections[currentRoute]}
                 isLoading={authLoading}
                 user={currentUser}
                 dailyPlan={dailyPlan}
@@ -463,7 +503,7 @@ export default function App() {
                 onStartExam={() => navigateTo('exams')}
                 onOpenMistakes={() => navigateTo('mistakes')}
                 onNavigate={navigateTo}
-              />
+              /></div>
             )}
 
             {currentRoute === 'demo-limit' && (
@@ -489,7 +529,7 @@ export default function App() {
             ) : <VerifiedLearningView key={`verified-${selectedPracticeCategory}-${selectedPracticeTopic}`} mode="practice" initialCategory={selectedPracticeCategory} initialTopic={selectedPracticeTopic} onNavigateHome={leaveTest} />)}
 
             {currentRoute === 'adaptive' && (
-              <VerifiedLearningView mode="adaptive" onNavigateHome={leaveTest} />
+              <VerifiedLearningView key={activeStory?.stage.id || 'free-adaptive'} mode="adaptive" storyStage={isAndroidApp?activeStory?.stage:undefined} onStoryComplete={completeStory} onNavigateHome={leaveTest} />
             )}
 
             {currentRoute === 'exams' && (

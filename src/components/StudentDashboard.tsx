@@ -32,7 +32,9 @@ import './dashboard-design-system.css';
 import './student/student-professional.css';
 import './student/student-adventure.css';
 import './student/student-quest-world.css';
+export type StudentSection = typeof SECTIONS[number]['id'];
 interface StudentDashboardProps {
+  initialSection?: StudentSection;
   isLoading?: boolean; user?: UserProfile | null; dailyPlan?: DailyStudyPlan | null;
   masteries?: SkillMastery[]; mistakes?: any[];
   onUserUpdate: (user: UserProfile) => void;
@@ -115,11 +117,11 @@ const CATEGORY_STYLE_CONFIG: Record<string, {
   },
 };
 
-export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries = EMPTY_MASTERIES, mistakes,
+export function StudentDashboard({ initialSection = 'modes', isLoading = false, user, dailyPlan, masteries = EMPTY_MASTERIES, mistakes,
   onUserUpdate, onStartPractice, onStartTopicPractice, onStartAdaptive, onStartExam, onOpenMistakes, onNavigate }: StudentDashboardProps) {
   const activeUser = user || dataService.getCurrentUser();
   const activeMistakes = mistakes ?? dataService.getMistakes();
-  const [activeTab, setActiveTab] = useState<Section>('modes');
+  const [activeTab, setActiveTab] = useState<Section>(initialSection);
   const [favorites, setFavorites] = useState(getStudyFavorites);
   const [skillSearch, setSkillSearch] = useState('');
   const [skillFilter, setSkillFilter] = useState<'all' | 'practice' | 'new'>('all');
