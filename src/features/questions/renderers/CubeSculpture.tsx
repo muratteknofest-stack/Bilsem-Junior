@@ -8,9 +8,9 @@ export function CubeSculpture({size, heights}: {size: number; heights: number[]}
   const diamond=(x:number,y:number)=>`${x},${y} ${x+unit},${y+unit/2} ${x},${y+unit} ${x-unit},${y+unit/2}`;
   return <svg viewBox={`0 0 ${size*unit*2+36} ${originY+size*unit+42}`} className="w-full max-w-md mx-auto" role="img" shapeRendering="geometricPrecision" aria-label={`Üç boyutlu birim küp yapısı. ${heights.map((h,i)=>`${Math.floor(i/size)+1}. satır ${i%size+1}. sütun: ${h} küp`).join('; ')}`}>
     <defs>
-      <linearGradient id={`${id}-top`} x2=".8" y2="1"><stop stopColor="#dce8ff"/><stop offset="1" stopColor="#9bbbf6"/></linearGradient>
-      <linearGradient id={`${id}-left`} x2="1" y2="1"><stop stopColor="#749ee7"/><stop offset="1" stopColor="#476eb9"/></linearGradient>
-      <linearGradient id={`${id}-right`} x2="1" y2="1"><stop stopColor="#3864ac"/><stop offset="1" stopColor="#203f79"/></linearGradient>
+      <linearGradient id={`${id}-top`} x2=".8" y2="1"><stop stopColor="#b4d0ff"/><stop offset="1" stopColor="#5e95ed"/></linearGradient>
+      <linearGradient id={`${id}-left`} x2="1" y2="1"><stop stopColor="#4c87e1"/><stop offset="1" stopColor="#2d63bc"/></linearGradient>
+      <linearGradient id={`${id}-right`} x2="1" y2="1"><stop stopColor="#2859ae"/><stop offset="1" stopColor="#173b7b"/></linearGradient>
     </defs>
     <ellipse cx={originX} cy={originY+size*unit/2+12} rx={size*unit*.92} ry={size*unit*.47} fill="#243d68" opacity=".06"/>
     {cells.map(({row,col})=>{const [x,y]=at(row,col);return <polygon key={`floor-${row}-${col}`} points={diamond(x,y)} fill="#edf2fa" stroke="#c4d2e8" strokeWidth=".8"/>;})}
