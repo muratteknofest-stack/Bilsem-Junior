@@ -35,7 +35,7 @@ try {
       await page.getByRole('dialog').getByRole('link', { name: /BİLSEM hazırlık rehberi/ }).waitFor();
       await page.getByRole('button', { name: 'Menüyü kapat', exact: true }).click();
     }
-    await page.locator('.zp-nav-signup').click();
+    await page.getByRole('button', { name: 'Kayıt ol', exact: true }).click();
     await page.getByRole('heading', { name: 'Bilsem Junior yolculuğun başlasın.', exact: true }).waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'Register overflow at ' + width);
     await page.screenshot({ path: output + '/register-' + width + '.png', animations: 'disabled' });
