@@ -139,7 +139,7 @@ export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries
     <div className="zp-dashboard-page zp-student-dashboard zp-student-pro" data-reduced-motion={reduced}>
       <main id="student-dashboard" className="zp-student-shell">
         <div className="zp-student-topline"><span><span className="zp-brand-dot" /> Bilsem Junior <span className="zp-topline-divider">/</span> Çalışma masam</span><StudentExperienceControls /></div>
-        <StudentHeroBanner user={activeUser} greeting={greeting} xpProgress={xpProgress} onUserUpdate={onUserUpdate} onNavigate={onNavigate} prefersReducedMotion={reduced} />
+        {activeTab !== 'tests' && <StudentHeroBanner user={activeUser} greeting={greeting} xpProgress={xpProgress} onUserUpdate={onUserUpdate} onNavigate={onNavigate} prefersReducedMotion={reduced} />}
         <nav className="zp-study-navigation" aria-label="Öğrenci paneli bölümleri">{SECTIONS.map(({ id, label, icon: Icon }) =>
           <button type="button" key={id} aria-pressed={activeTab === id} aria-controls="zp-student-section" onClick={() => switchSection(id)}>
             <Icon size={18} aria-hidden="true" /><span>{label}</span>{activeTab === id && <span className="zp-nav-indicator" aria-hidden="true" />}
