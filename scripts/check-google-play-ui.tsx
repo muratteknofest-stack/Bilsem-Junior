@@ -33,7 +33,7 @@ function Fixture(){const[state,setState]=useState(ready);window.__billingShow=ki
 };return <PlayBillingPanel studentName="Deniz Örnek" state={state} onPurchase={plan=>window.__billingActions.push(plan)} onRestore={()=>window.__billingActions.push('restore')} onRefresh={()=>window.__billingActions.push('refresh')}/>;}
 createRoot(document.getElementById('root')).render(<Fixture/>);`;
 await build({stdin:{contents:fixture,resolveDir:process.cwd(),loader:'tsx'},bundle:true,platform:'browser',format:'iife',outfile:resolve(output,'fixture.js'),logLevel:'silent'});
-const html='<!doctype html>'+renderToStaticMarkup(<html lang="tr" data-native-app="android"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>ZekaPark yerel abonelik testi</title><style>{css}</style></head><body style={{background:'#f1f5f9'}}><main style={{maxWidth:760,margin:'0 auto',padding:12}}><p style={{fontSize:12,padding:4}}>Yerel arayüz testi · Örnek fiyatlar · Gerçek ödeme alınmaz</p><div id="root"/></main><script src="./fixture.js"/></body></html>);
+const html='<!doctype html>'+renderToStaticMarkup(<html lang="tr" data-native-app="android"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Bilsem Junior yerel abonelik testi</title><style>{css}</style></head><body style={{background:'#f1f5f9'}}><main style={{maxWidth:760,margin:'0 auto',padding:12}}><p style={{fontSize:12,padding:4}}>Yerel arayüz testi · Örnek fiyatlar · Gerçek ödeme alınmaz</p><div id="root"/></main><script src="./fixture.js"/></body></html>);
 await writeFile(resolve(output,'index.html'),html);
 const app=express();app.use(express.static(output));app.use(express.static(resolve('public')));
 const server=app.listen(0,'127.0.0.1');await once(server,'listening');
@@ -44,7 +44,7 @@ try{
  await page.goto(`http://127.0.0.1:${(server.address() as AddressInfo).port}/`);await page.getByRole('radio',{name:/Aylık/}).waitFor();
  await page.locator('.zp-play-plan-art').evaluateAll(async nodes=>{await Promise.all(nodes.map(node=>(node as HTMLImageElement).decode()));});
  if(await page.locator('.zp-play-plan-art').evaluateAll(nodes=>nodes.length!==3||nodes.some(node=>(node as HTMLImageElement).naturalWidth!==1536)))throw Error('Plan artwork did not load');
- const glyphWidth=await page.evaluate(()=>{const ctx=document.createElement('canvas').getContext('2d')!;ctx.font='16px sans-serif';return ctx.measureText('ZekaPark').width;});
+ const glyphWidth=await page.evaluate(()=>{const ctx=document.createElement('canvas').getContext('2d')!;ctx.font='16px sans-serif';return ctx.measureText('Bilsem Junior').width;});
  if(glyphWidth<10)throw Error('QA browser has no usable fonts; layout results would be invalid.');
  await page.getByRole('radio',{name:/Yıllık/}).check();
  if(await page.evaluate(()=>(window as any).__billingActions.length)!==0)throw Error('Selecting a plan initiated checkout');

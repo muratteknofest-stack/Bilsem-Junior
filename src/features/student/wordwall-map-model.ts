@@ -112,7 +112,7 @@ export function getGradeWorld(grade: number | 'all'): GradeWorldConfig {
   }
   return {
     ...GRADE_WORLDS[4],
-    worldName: 'Tüm Sınıflar · Büyük ZekaPark Kıta Haritası',
+    worldName: 'Tüm Sınıflar · Bilsem Junior Keşif Haritası',
     worldSubtitle: '1. sınıftan 4. sınıfa tüm BİLSEM zeka durakları tek haritada!',
     biomeEmoji: '🗺️',
     badgeText: 'Birleşik Macera Kıtası'

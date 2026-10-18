@@ -27,7 +27,7 @@ Yalnızca ekrandaki biçimi zihninde çevirmesini beklemek yerine önce gerçek 
 ## Özgün model koleksiyonu yapın
 Çocuk bir hayvan, ev veya soyut şekil oluştursun. Modele isim verip dış sınırını çizin. Başka bir aile üyesi aynı parçalarla bu sınırı doldurmayı denesin. Bu turda çocuk soru tasarımcısı olur.
 
-ZekaPark’taki görsel görevlerin yanında kısa bir fiziksel parça oyunu kullanılabilir. Fotoğraftaki ahşap oyuncaklar kavramı temsil eder; klasik tangram setinin birebir görüntüsü değildir. Etkinlikten genel zekâ puanı çıkarılmaz.
+Bilsem Junior’taki görsel görevlerin yanında kısa bir fiziksel parça oyunu kullanılabilir. Fotoğraftaki ahşap oyuncaklar kavramı temsil eder; klasik tangram setinin birebir görüntüsü değildir. Etkinlikten genel zekâ puanı çıkarılmaz.
 
 ## Sık sorulan sorular
 ### Tangram için pahalı bir set gerekli mi?

@@ -181,14 +181,14 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', initialT
   }
   return <main data-reduced-motion={reducedMotion} className={`zp-learning ${isExam ? 'zp-exam' : 'zp-game'} ${!session ? 'zp-learning-setup' : ''} mx-auto w-full max-w-6xl space-y-5 px-3 py-6 sm:px-6`}>
     <header className="zp-page-header flex flex-wrap items-center justify-between gap-3">
-      <div><p className="zp-eyebrow">ZekaPark · {isExam ? 'Sınav merkezi' : 'Oyun alanı'}</p><h1 className="text-2xl font-extrabold">{session?.title || title}</h1></div>
+      <div><p className="zp-eyebrow">Bilsem Junior · {isExam ? 'Sınav merkezi' : 'Oyun alanı'}</p><h1 className="text-2xl font-extrabold">{session?.title || title}</h1></div>
       <button type="button" disabled={busy} onClick={() => void leave()} className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 py-2 font-semibold">Ana sayfaya dön</button>
     </header>
     <div className={isExam ? 'zp-tablet' : 'zp-game-shell'}>
     {isExam && <div className="zp-tablet-camera" aria-hidden="true"><span /></div>}
     <div className="zp-screen">
     <LearningRefreshNotice/>
-    <div className="zp-screen-bar"><span>{isExam ? <Tablet size={17} aria-hidden="true" /> : <Gamepad2 size={19} aria-hidden="true" />} {isExam ? 'ZEKA PARK / DENEME' : 'KEŞFET · DÜŞÜN · ÇÖZ'}</span><span>{grade}. SINIF</span></div>
+    <div className="zp-screen-bar"><span>{isExam ? <Tablet size={17} aria-hidden="true" /> : <Gamepad2 size={19} aria-hidden="true" />} {isExam ? 'BİLSEM JUNIOR / DENEME' : 'KEŞFET · DÜŞÜN · ÇÖZ'}</span><span>{grade}. SINIF</span></div>
     {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{error}</div>}
     <AnswerHistory items={history} />
     {!session ? <LearningSetupPanel mode={mode} grade={grade} review={!!reviewMistakeId} busy={busy} topic={topic} onTopic={setTopic} category={category} onCategory={setCategory} difficulty={difficulty} onDifficulty={setDifficulty} questionCount={questionCount} onCount={setQuestionCount} validCount={validQuestionCount} exam={exam} onExam={setExam} exams={exams} onStart={() => void start()} /> : <>

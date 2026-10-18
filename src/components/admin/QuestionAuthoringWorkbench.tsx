@@ -233,7 +233,7 @@ export function QuestionAuthoringWorkbench({ initialSection = 'compose', initial
 
   return <div className="space-y-5 text-slate-900">
     <header className="flex flex-wrap items-start justify-between gap-4">
-      <div><p className="text-sm font-semibold text-indigo-300 mb-1">ZekaPark · Editoryal çalışma alanı</p><h2 className="text-2xl sm:text-3xl font-bold text-white">{reviewMode ? 'Eğitmen Onayı' : 'Soru Atölyesi'}</h2><p className="mt-2 text-sm text-slate-300 max-w-2xl">{reviewMode ? 'Yayındaki sorulardan birini seç, kendin çöz ve açıklamayı kontrol et. Onay kutuları seçilen sorunun “Eğitmen onayı ve yayınlama” bölümündedir.' : 'Özgün varyasyon üret, öğrenci görünümünde çöz, denetle ve yayımla. Sorular resmî sınav kopyası değildir.'}</p></div>
+      <div><p className="text-sm font-semibold text-indigo-300 mb-1">Bilsem Junior · Editoryal çalışma alanı</p><h2 className="text-2xl sm:text-3xl font-bold text-white">{reviewMode ? 'Eğitmen Onayı' : 'Soru Atölyesi'}</h2><p className="mt-2 text-sm text-slate-300 max-w-2xl">{reviewMode ? 'Yayındaki sorulardan birini seç, kendin çöz ve açıklamayı kontrol et. Onay kutuları seçilen sorunun “Eğitmen onayı ve yayınlama” bölümündedir.' : 'Özgün varyasyon üret, öğrenci görünümünde çöz, denetle ve yayımla. Sorular resmî sınav kopyası değildir.'}</p></div>
       <div className="flex flex-wrap gap-2">
         {!reviewMode && <button className={button + ' bg-slate-800 text-white hover:bg-slate-700'} onClick={() => importRef.current?.click()}><FolderOpen size={16} />JSON içe aktar</button>}
         <input ref={importRef} type="file" accept=".json,application/json" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) void importFile(f); e.target.value = ''; }} />

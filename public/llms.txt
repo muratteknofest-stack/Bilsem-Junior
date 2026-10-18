@@ -1,8 +1,8 @@
-# ZekaPark
+# Bilsem Junior
 
 > Türkçe, 1–4. sınıflara yönelik bağımsız düşünme alıştırmaları ve aile rehberleri.
 
-ZekaPark MEB veya BİLSEM'in resmî hizmeti değildir. Sorular resmî sınav soruları değildir. Zekâ puanı, tanı veya sınav başarısı garantisi sunmaz.
+Bilsem Junior MEB veya BİLSEM'in resmî hizmeti değildir. Sorular resmî sınav soruları değildir. Zekâ puanı, tanı veya sınav başarısı garantisi sunmaz.
 
 ## Herkese açık içerik
 - [Blog](https://zekapark.vercel.app/blog): 30 BİLSEM, dikkat, mantık, görsel düşünme ve aile desteği rehberi.
@@ -14,6 +14,6 @@ ZekaPark MEB veya BİLSEM'in resmî hizmeti değildir. Sorular resmî sınav sor
 - [Site haritası](https://zekapark.vercel.app/sitemap.xml)
 
 ## Özellik sınırları
-Uygulama içi çalışmalar sunucuda değerlendirilir. Wordwall etkinliklerinin puanları ZekaPark çalışma raporlarına otomatik aktarılmaz. Adaptif çalışma geçmişte daha az ilerleme kaydedilen çalışma alanlarından soru seçer. Ücretli abonelik satışı etkin değildir.
+Uygulama içi çalışmalar sunucuda değerlendirilir. Wordwall etkinliklerinin puanları Bilsem Junior çalışma raporlarına otomatik aktarılmaz. Adaptif çalışma geçmişte daha az ilerleme kaydedilen çalışma alanlarından soru seçer. Ücretli abonelik satışı etkin değildir.
 
 Kullanıcı hesapları, öğrenci kayıtları, yönetici alanı ve şifre sıfırlama bağlantıları herkese açık içerik değildir.

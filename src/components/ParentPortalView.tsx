@@ -413,7 +413,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
             </motion.div>
 
             <div className="flex-1">
-              <p className="zp-dashboard-kicker">VELİ ALANI / GELİŞİM</p>
+              <p className="zp-dashboard-kicker">BİLSEM JUNIOR / VELİ TAKİBİ</p>
               <div className="flex items-center gap-2.5">
                 <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 font-['Outfit',sans-serif]">
                   Veli Portalı

@@ -83,7 +83,7 @@ export function Footer({ onNavigate, onNavigateToLogin }: FooterProps) {
         <div className="platform-footer-intro">
           <div>
             <p className="platform-footer-eyebrow">
-              <Sparkles size={12} aria-hidden="true" /> MERAKTAN KEŞFE
+              <Sparkles size={12} aria-hidden="true" /> BİLSEM HAZIRLIĞINDA YANINDA
             </p>
             <h2>
               Birlikte düşünün.
@@ -91,7 +91,7 @@ export function Footer({ onNavigate, onNavigateToLogin }: FooterProps) {
               Her adımı fark edin.
             </h2>
             <p>
-              1–4. sınıflar için düşünme alıştırmaları.
+              1–4. sınıflar için BİLSEM hazırlık alıştırmaları.
               <br />
               Öğrenciler için keşif, veliler için takip alanı.
             </p>
@@ -219,7 +219,7 @@ export function Footer({ onNavigate, onNavigateToLogin }: FooterProps) {
             <ShieldCheck size={20} />
           </div>
           <p>
-            <strong>ZekaPark bağımsız bir eğitim platformudur.</strong> MEB veya BİLSEM ile kurumsal bağlantısı yoktur.
+            <strong>Bilsem Junior bağımsız bir eğitim platformudur.</strong> MEB veya BİLSEM ile kurumsal bağlantısı yoktur.
             Alıştırmalar tanılama aracı değildir ve sınav başarısı garantisi sunmaz.
           </p>
         </div>
@@ -227,7 +227,7 @@ export function Footer({ onNavigate, onNavigateToLogin }: FooterProps) {
         {/* Bottom Bar */}
         <div className="platform-footer-bottom">
           <div className="platform-footer-bottom-copy">
-            <span>© {new Date().getFullYear()} ZekaPark · Merakla büyüyen zihinler için.</span>
+            <span>© {new Date().getFullYear()} Bilsem Junior · Merakla büyüyen zihinler için.</span>
           </div>
           <div className="platform-footer-bottom-links">
             <a href="/blog/feed.xml" className="platform-footer-rss-link">

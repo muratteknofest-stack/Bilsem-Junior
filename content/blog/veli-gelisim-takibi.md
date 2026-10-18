@@ -27,7 +27,7 @@ Doğru oranı düşerse görevler zorlaşmış olabilir. Çocuğun yorgunluğu v
 ## Sonraki adımı birlikte seçin
 Bir hedef belirleyin: yönergeyi tekrar söylemek, yönleri ayrı incelemek veya bir yanlış sorunun çözümünü anlatmak. Aynı anda bütün kategorileri düzeltmeye çalışmayın. Çocuk hedefin ne olduğunu anlayabilsin.
 
-ZekaPark veli alanı, bağlı öğrenci hesabının kaydedilen etkinliklerini takip etmek için kullanılabilir. Öğretmen görüşmesi veya gerektiğinde profesyonel değerlendirme yerine geçmez. Somut örnekler bu görüşmelere hazırlık için saklanabilir.
+Bilsem Junior veli alanı, bağlı öğrenci hesabının kaydedilen etkinliklerini takip etmek için kullanılabilir. Öğretmen görüşmesi veya gerektiğinde profesyonel değerlendirme yerine geçmez. Somut örnekler bu görüşmelere hazırlık için saklanabilir.
 
 ## Sık sorulan sorular
 ### Doğru oranı düşerse gerileme mi vardır?

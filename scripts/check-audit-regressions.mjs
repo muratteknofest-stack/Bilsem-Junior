@@ -28,7 +28,7 @@ try {
     }
     for (const path of ['/reset-password', '/reset-password/']) {
       await page.goto(base + path);
-      await page.getByRole('heading', { level: 1, name: 'ZekaPark şifre yenileme', exact: true }).waitFor();
+      await page.getByRole('heading', { level: 1, name: 'Bilsem Junior şifre yenileme', exact: true }).waitFor();
       pathChecks++;
     }
   }

@@ -22,7 +22,7 @@ Kurallar karıştığında yavaşlayın veya tek kurala dönün. Çocuk da yöne
 ## 5: Kurala göre ayır
 Blokları önce renge göre, sonra şekle göre ayırın. Geçişten önce yeni kuralı sesli söyleyin. Çocuk eski kurala dönüyorsa “Şu anda hangi özelliğe bakıyoruz?” diye hatırlatın. Bir turda tek değişiklik yeterlidir.
 
-Harvard’ın etkinlik rehberi, yaşa uygun oyunlarla yürütücü işlev becerilerinin çalışılmasına örnekler sunar. Buradaki ev oyunları ZekaPark’ın özgün uygulama önerileridir; her çocuk için ölçülmüş bir gelişim sonucu vaat etmez.
+Harvard’ın etkinlik rehberi, yaşa uygun oyunlarla yürütücü işlev becerilerinin çalışılmasına örnekler sunar. Buradaki ev oyunları Bilsem Junior’ın özgün uygulama önerileridir; her çocuk için ölçülmüş bir gelişim sonucu vaat etmez.
 
 ## Oturumu nasıl kapatmalı?
 Başlangıç için iki oyun ve kısa bir kapanış sohbeti seçin. Çocuk yorulursa daha erken bitirin. “En çok hangi tur hoşuna gitti?” ve “Bir sonraki turu nasıl değiştirelim?” soruları hem tercih hem yöntem hakkında bilgi verir.

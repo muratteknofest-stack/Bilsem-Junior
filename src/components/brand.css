@@ -1,0 +1,12 @@
+.bj-logo{display:inline-flex;align-items:center;gap:10px;min-width:0;max-width:100%;user-select:none}
+.bj-logo[role=button]{cursor:pointer;border-radius:12px}.bj-logo:focus-visible{outline:3px solid #0f766e;outline-offset:5px}
+.bj-logo-symbol{width:44px;height:44px;flex:none;filter:drop-shadow(0 3px 0 #31205920)}
+.bj-logo-copy{display:flex;flex-direction:column;min-width:0;gap:5px}
+.bj-wordmark{font-family:'Outfit',sans-serif;font-size:25px;font-weight:800;letter-spacing:-1.1px;line-height:1.08;white-space:nowrap;color:#282343}
+.bj-wordmark>span{color:#6e43cf}.bj-logo-tagline{color:#5b6177;font-size:9px;font-weight:700;line-height:1.4;letter-spacing:.025em}
+.bj-logo[data-theme=dark] .bj-wordmark{color:#fff}.bj-logo[data-theme=dark] .bj-wordmark>span{color:#c6f3b6}.bj-logo[data-theme=dark] .bj-logo-tagline{color:#d7d5e7}
+.bj-logo[data-size=xs] .bj-logo-symbol{width:30px;height:30px}.bj-logo[data-size=xs] .bj-wordmark{font-size:17px;letter-spacing:-.5px}
+.bj-logo[data-size=sm] .bj-logo-symbol{width:36px;height:36px}.bj-logo[data-size=sm] .bj-wordmark{font-size:20px;letter-spacing:-.7px}
+.bj-logo[data-size=lg] .bj-logo-symbol{width:56px;height:56px}.bj-logo[data-size=lg] .bj-wordmark{font-size:32px}
+.bj-logo[data-size=xl] .bj-logo-symbol{width:76px;height:76px}.bj-logo[data-size=xl] .bj-wordmark{font-size:clamp(28px,5vw,44px)}
+@media(max-width:680px){.bj-logo[data-size=md] .bj-logo-symbol{width:36px;height:36px}.bj-logo[data-size=md] .bj-wordmark{font-size:20px;letter-spacing:-.65px}.bj-logo-tagline{font-size:8px;max-width:190px}.bj-logo{gap:8px}}

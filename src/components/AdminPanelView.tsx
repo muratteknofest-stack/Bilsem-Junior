@@ -221,7 +221,7 @@ export const AdminPanelView: React.FC = () => {
               </div>
               <div>
                 <div className="text-sm font-black tracking-wider uppercase text-white font-['Outfit',sans-serif] flex items-center gap-1.5">
-                  <span>ZekaPark</span>
+                  <span>Bilsem Junior</span>
                   <span className="text-[10px] px-1.5 py-0.2 bg-indigo-500/20 text-indigo-400 rounded-md border border-indigo-500/30 font-mono">
                     OS
                   </span>
@@ -303,7 +303,7 @@ export const AdminPanelView: React.FC = () => {
             <span>Sistem Tanısı Çalıştır</span>
           </button>
           <div className="text-center text-[10px] text-slate-500 font-mono">
-            ZekaPark Engine v2.6.4 • React 18
+            Bilsem Junior Engine v2.6.4 • React 18
           </div>
         </div>
 
@@ -632,7 +632,7 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-extrabold uppercase tracking-wider bg-indigo-500/20 text-indigo-400 px-2.5 py-0.5 rounded-full border border-indigo-500/30">
-                ZekaPark Soru Motoru v1.0
+                Bilsem Junior Soru Motoru v1.0
               </span>
               <span className="text-xs text-slate-400 font-medium">10 Bilişsel Çalışma Alanı</span>
             </div>

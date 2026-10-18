@@ -27,7 +27,7 @@ Yeni sorunun doğru cevabını yetişkin önceden doğrulasın. Birden fazla yor
 ## Kapanışta yöntemi görünür kılın
 “Bu kez bütün yönleri kontrol ettin” gibi somut bir geri bildirim verin. “Artık hiç hata yapmazsın” demeyin. Aynı güçlük farklı görevlerde yeniden ortaya çıkabilir; bu durum yeni bir kontrol ihtiyacı olarak ele alınabilir.
 
-ZekaPark’taki yanlış sorular alanı tekrar için bir başlangıç olabilir. Gerçek hesaplarda tekrar ve ödüller sunucu üzerinden değerlendirilir. Uygulama kaydını çocuğun bütün öğrenme sürecinin eksiksiz raporu gibi yorumlamayın.
+Bilsem Junior’taki yanlış sorular alanı tekrar için bir başlangıç olabilir. Gerçek hesaplarda tekrar ve ödüller sunucu üzerinden değerlendirilir. Uygulama kaydını çocuğun bütün öğrenme sürecinin eksiksiz raporu gibi yorumlamayın.
 
 ## Sık sorulan sorular
 ### Bütün yanlışları aynı gün tekrar etmeli miyiz?

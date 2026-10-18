@@ -2,7 +2,7 @@
 
 BİLSEM’in amacı, okuldan farkı ve ailelerin tanılama sürecinde takip etmesi gereken resmî bilgi kaynakları.
 
-BİLSEM, özel yetenekli öğrencilerin yeteneklerini geliştirmelerine destek veren bilim ve sanat merkezidir. ZekaPark ise bağımsız bir düşünme ve öğrenme platformudur; resmî tanılama yapmaz.
+BİLSEM, özel yetenekli öğrencilerin yeteneklerini geliştirmelerine destek veren bilim ve sanat merkezidir. Bilsem Junior ise bağımsız bir düşünme ve öğrenme platformudur; resmî tanılama yapmaz.
 
 ## BİLSEM ne için vardır?
 BİLSEM’i yalnızca kazanılması gereken bir sınav olarak görmek, çocuğun öğrenme yolculuğunu daraltabilir. Merkezler, özel yetenekli olarak tanılanan öğrenciler için destek eğitimi sunar. Ailenin ilk sorusu “Kaç soru çözmeli?” yerine “Bu eğitim çocuğumun merakına ve ihtiyaçlarına nasıl karşılık verebilir?” olabilir.
@@ -32,7 +32,7 @@ Bir kaynak “kesin kazanma” veya “gerçek sınavın aynısı” vaat ediyor
 ## Sık sorulan sorular
 ### BİLSEM normal okulun yerine geçer mi?
 BİLSEM destek eğitimi sunar. Eğitim düzeni ve devam koşulları için merkezin ve MEB’in güncel açıklamaları esas alınmalıdır.
-### ZekaPark bir BİLSEM kuruluşu mu?
-Hayır. ZekaPark’ın MEB veya BİLSEM ile kurumsal bağlantısı yoktur.
+### Bilsem Junior bir BİLSEM kuruluşu mu?
+Hayır. Bilsem Junior’ın MEB veya BİLSEM ile kurumsal bağlantısı yoktur.
 ### Uygulama puanı özel yetenek tanısı koyar mı?
 Hayır. Etkinlik sonuçları yalnızca uygulama içindeki çalışmaya ilişkin bilgi verir.

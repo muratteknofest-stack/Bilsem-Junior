@@ -27,7 +27,7 @@ Sıralamanın kapsamını ve verinin neyi içerdiğini yetişkin kontrol etsin. 
 ## Ödülden sonra öğrenme sohbeti
 Bir rozet kazanıldığında yalnızca animasyonu izlemekle kalmayın. “Bunu kazanırken hangi görevleri yaptın?” diye sorun. Çocuk bir yöntemi hatırlıyorsa kısa bir yeni örnek deneyebilir; her ödül sonrası yeni görev şart değildir.
 
-ZekaPark’ta gerçek hesap ödülleri sunucuda doğrulanır. Bu teknik kural, puanların güvenilir tutulmasına hizmet eder; öğretim etkisi iddiası değildir. Aile açısından hedef, ödülün çocuğun çalışmasını anlamaya katkı verip vermediğini izlemektir.
+Bilsem Junior’ta gerçek hesap ödülleri sunucuda doğrulanır. Bu teknik kural, puanların güvenilir tutulmasına hizmet eder; öğretim etkisi iddiası değildir. Aile açısından hedef, ödülün çocuğun çalışmasını anlamaya katkı verip vermediğini izlemektir.
 
 ## Sık sorulan sorular
 ### XP zekâ puanı mı?

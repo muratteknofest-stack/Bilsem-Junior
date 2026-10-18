@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   // Confirm ownership/availability before the first Play Console upload.
   appId: 'com.zekapark.app',
-  appName: 'ZekaPark',
+  appName: 'Bilsem Junior',
   // HTTP plugin options can contain credentials; never log them, including debug APKs.
   loggingBehavior: 'none',
   webDir: 'dist-android',

@@ -13,7 +13,7 @@ const config = { ready: true, enforced: true, productId: 'zekapark_uyelik', stor
   binding: { accountId: 'a'.repeat(64), profileId: 'b'.repeat(64) }, access: { active: false, expiresAt: null } };
 
 test('unpublished membership page has three periods and no dead store link or guessed price', () => {
-  const html = renderToStaticMarkup(<PlayMembershipPage brand="ZekaPark" storeUrl={null} ready={false}/>);
+  const html = renderToStaticMarkup(<PlayMembershipPage brand="Bilsem Junior" storeUrl={null} ready={false}/>);
   for (const text of ['Aylık', '3 aylık', 'Yıllık', 'henüz satışa açılmadı', 'otomatik yenilenir', 'aynı öğrenci']) assert.ok(html.includes(text));
   assert.equal((html.match(/class="zp-plan-card /g) || []).length, 3);
   assert.ok(!/shopier.com|₺|\d+ TL|href="https:\/\/play.google.com/.test(html));

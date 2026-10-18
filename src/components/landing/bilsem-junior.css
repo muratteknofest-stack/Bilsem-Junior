@@ -1,0 +1,32 @@
+/* Bilsem Junior: learning studio, shared by web and Android. */
+.zp-landing.zp-colorful-home{--zp-canvas:#fffdf8;--zp-ink:#292344;--zp-ink-muted:#59566d;--zp-violet:#6e43cf;--zp-violet-deep:#48288d}
+.zp-landing.zp-colorful-home .zp-hero-section{background:radial-gradient(ellipse at 78% 44%,#e0f6dc 0,transparent 40%),linear-gradient(120deg,#fbf6ea,#f2eaff 65%,#e6e9fc)}
+.zp-landing.zp-colorful-home .zp-hero{min-height:37rem;padding-block:1.5rem 4rem}
+.zp-landing.zp-colorful-home .zp-hero h1{font-size:clamp(2.8rem,4.2vw,4.1rem);line-height:1.12;letter-spacing:-.045em}
+.zp-landing.zp-colorful-home .zp-hero-description{color:#514960;max-width:30rem;line-height:1.8}
+.zp-landing.zp-colorful-home .zp-eyebrow{background:#fffaf2;color:#574078;border-color:#e6d9ef;line-height:1.5;letter-spacing:.055em}
+.zp-landing.zp-colorful-home .zp-welcome-strip{background:#44258c;color:#fff8ed}
+.zp-landing.zp-colorful-home .zp-welcome-strip a{color:#fff4b6}
+.zp-landing.zp-colorful-home .zp-public-nav{min-height:5rem}
+.zp-landing.zp-colorful-home .zp-public-brand>span{margin-left:54px;color:#655c76}
+.zp-landing.zp-colorful-home .zp-hero-buttons .zp-button-primary{background:#6e43cf;box-shadow:0 5px 0 #432587,0 14px 22px #6e43cf20}
+.zp-landing.zp-colorful-home .zp-hero-buttons .zp-button-quiet{border-color:#d2bedb;box-shadow:0 4px 0 #ded1e5}
+.zp-landing.zp-colorful-home .zp-sky-sun{width:4.5rem;height:4.5rem;box-shadow:0 0 0 10px #ffe79c35}
+.bj-guide{padding-block:3.25rem 3.75rem;scroll-margin-top:100px}
+.bj-guide-heading{display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:end;margin-bottom:1.8rem}
+.bj-guide-heading h2{font-size:clamp(2rem,3.4vw,3rem);line-height:1.12;margin:.8rem 0 0}
+.bj-guide-heading h2>span{color:#6e43cf}.bj-guide-heading>p{color:#59566d;line-height:1.85;max-width:35rem;font-size:.95rem}
+.bj-guide-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}
+.bj-guide-card{background:#fff;border:1px solid #e9e2ed;border-radius:1.5rem;padding:1.5rem;box-shadow:0 4px 0 #e9e2ed80}
+.bj-guide-icon{width:3rem;height:3rem;display:grid;place-items:center;border-radius:1rem;margin-bottom:1.3rem;color:#376957;background:#e5f5e4}
+.bj-tone-violet .bj-guide-icon{color:#6e43cf;background:#eee5fb}.bj-tone-coral .bj-guide-icon{color:#9e4d42;background:#fce9df}.bj-tone-gold .bj-guide-icon{color:#896328;background:#fff1c6}
+.bj-guide-card h3{font-size:1.15rem;margin-bottom:.7rem}.bj-guide-card p{font-size:.85rem;line-height:1.8;color:#615b72}
+.bj-about-bilsem{margin-top:1.5rem;border:1px solid #e8dfed;border-radius:1rem;background:#f6f1fb}
+.bj-about-bilsem summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.1rem 1.3rem;font-size:.85rem;font-weight:750;color:#55416d;list-style:none}
+.bj-about-bilsem summary::-webkit-details-marker{display:none}.bj-about-bilsem>div{padding:0 1.3rem 1.3rem;max-width:60rem}
+.bj-about-bilsem p{font-size:.85rem;line-height:1.85;margin:.6rem 0;color:#615b72}.bj-about-bilsem a{display:inline-flex;align-items:center;gap:.5rem;color:#5c339c;font-size:.85rem;text-decoration:underline;text-underline-offset:4px}
+@media(max-width:1000px){.bj-guide-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.zp-landing.zp-colorful-home .zp-hero{min-height:0}.zp-landing.zp-colorful-home .zp-hero-copy{padding-top:1rem}}
+@media(max-width:680px){.zp-landing.zp-colorful-home .zp-public-nav{min-height:4.5rem;gap:8px}.zp-public-actions{gap:6px}.zp-public-actions .zp-nav-signup{padding-inline:10px;font-size:10px;min-height:40px;gap:5px}.zp-public-actions .zp-nav-signup>svg{display:none}.zp-public-actions .zp-mobile-trigger{width:38px;height:40px}.zp-public-nav .bj-wordmark{font-size:18px}.zp-public-nav .bj-logo-symbol{width:34px;height:34px}.zp-landing.zp-colorful-home .zp-hero{padding-block:1rem 2rem}.zp-landing.zp-colorful-home .zp-hero-copy{padding-block:.75rem}.zp-landing.zp-colorful-home .zp-hero h1{font-size:clamp(2.25rem,8.7vw,3rem)}.zp-landing.zp-colorful-home .zp-eyebrow{font-size:.59rem;padding:.55rem .7rem;margin-bottom:1.1rem}.zp-landing.zp-colorful-home .zp-hero-description{font-size:.9rem;margin-top:1rem}.zp-landing.zp-colorful-home .zp-hero-buttons{gap:.65rem}.zp-landing.zp-colorful-home .zp-hero-buttons .zp-ui-button{font-size:.75rem;padding-inline:.9rem;min-height:3rem}.zp-landing.zp-colorful-home .zp-hero-footnote{margin-top:1rem}.zp-landing.zp-colorful-home .zp-island-viewport{max-height:24rem}.zp-landing.zp-colorful-home .zp-scene-caption{top:1rem;font-size:.52rem}.bj-guide{padding-block:2rem}.bj-guide-heading{grid-template-columns:1fr;gap:1rem;margin-bottom:1.2rem}.bj-guide-heading h2{font-size:2.1rem}.bj-guide-heading>p{font-size:.85rem}.bj-guide-grid{gap:.7rem}.bj-guide-card{padding:1rem;border-radius:1.1rem}.bj-guide-card h3{font-size:1rem}.bj-guide-card p{font-size:.76rem;line-height:1.7}.bj-guide-icon{margin-bottom:1rem;width:2.6rem;height:2.6rem}.bj-about-bilsem summary{font-size:.77rem;padding:1rem}.bj-about-bilsem p{font-size:.8rem}}
+
+/* Keep the complete public menu accessible when the longer wordmark needs room. */
+@media(max-width:1200px){.zp-landing .zp-public-links,.zp-landing .zp-desktop-setting,.zp-landing .zp-desktop-login{display:none}.zp-landing .zp-mobile-trigger{display:inline-flex}}

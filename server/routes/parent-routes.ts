@@ -154,7 +154,7 @@ parentRoutes.post('/send-weekly-report', requireSupabaseAuth, reportLimiter, req
     const emailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
         <div style="background-color: #4f46e5; padding: 24px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 24px;">ZekaPark Haftalık Gelişim Özeti</h1>
+          <h1 style="color: white; margin: 0; font-size: 24px;">Bilsem Junior Haftalık Gelişim Özeti</h1>
         </div>
         <div style="padding: 24px; background-color: #ffffff;">
           <p style="font-size: 16px; line-height: 1.5;">Merhaba,</p>
@@ -210,7 +210,7 @@ parentRoutes.post('/send-weekly-report', requireSupabaseAuth, reportLimiter, req
     await transporter.sendMail({
       from: process.env.SMTP_FROM || process.env.SMTP_USER,
       to: parentEmail,
-      subject: `${studentNameHeader} - Haftalık ZekaPark Gelişim Özeti`,
+      subject: `${studentNameHeader} - Haftalık Bilsem Junior Gelişim Özeti`,
       html: emailHtml,
     });
 
