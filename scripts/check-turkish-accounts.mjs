@@ -247,6 +247,7 @@ try{
     await testsButton.click();
     await page.getByRole('heading',{name:'Zeka Testleri',exact:true}).waitFor();
     assert.equal(await testsButton.getAttribute('aria-pressed'),'true');
+    assert.equal(await page.locator('.zp-pro-hero').count(),0,'Test view must leave room for the library on phones');
     assert.equal(await page.locator('.ww-card').count(),12);
     assert.equal(await page.getByRole('group',{name:'Testler için sınıf seçimi',exact:true}).getByRole('button',{name:/^1\. sınıf\b/}).getAttribute('aria-pressed'),'true');
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
@@ -254,6 +255,7 @@ try{
     if(width===320)await page.locator('.ww-node-complete-toggle').first().click();
     await page.getByRole('button',{name:'Çalışma alanıma dön',exact:true}).click();
     await page.locator('.ww-library').waitFor({state:'detached'});
+    assert.equal(await page.locator('.zp-pro-hero').count(),1);
     assert.equal(await navigation.getByRole('button',{name:'Çalışma alanım',exact:true}).getAttribute('aria-pressed'),'true');
     if(width===320){
      await testsButton.click();await page.locator('.ww-card').first().waitFor();
