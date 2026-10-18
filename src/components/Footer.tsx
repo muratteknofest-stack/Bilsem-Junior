@@ -1,3 +1,4 @@
+import { publicPageUrl } from '../lib/native-app';
 import React, { useState } from 'react';
 import {
   ArrowUpRight,
@@ -96,7 +97,7 @@ export function Footer({ onNavigate, onNavigateToLogin }: FooterProps) {
             </p>
           </div>
           <div className="platform-footer-actions">
-            <a href="/paketler" className="platform-footer-btn-secondary">Shopier paketleri</a>
+            <a href={publicPageUrl('/paketler')} className="platform-footer-btn-secondary">Google Play üyeliği</a>
             <a href="/en/" lang="en" hrefLang="en" className="platform-footer-btn-secondary">English · Thinking games</a>
             <button
               type="button"

@@ -1,3 +1,5 @@
+> Ödeme bölümleri tarihsel kayıttır. Güncel sistem yalnızca Google Play kullanır; [güncel kurulum](GOOGLE_PLAY_BILLING.md).
+
 # ThinkHarbor İngilizce uygulama sürümü
 
 ThinkHarbor, ZekaPark'ın mevcut hesap altyapısını kullanan İngilizce web uygulamasıdır. Türkçe sürüm aynı adres kökünde, İngilizce uygulama `/en/` yolundadır. Ayrı marka/domain tescili yapılmış değildir. MindSprout adı mevcut eğitim ürünlerinde kullanıldığı için tercih edilmedi. ThinkHarbor için yapılan genel internet kontrolü hukuki marka uygunluğu incelemesi yerine geçmez.

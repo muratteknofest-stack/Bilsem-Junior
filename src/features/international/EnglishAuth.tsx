@@ -1,3 +1,4 @@
+import { apiFetch } from '../../lib/api-fetch';
 import React,{useEffect,useRef,useState} from 'react';
 import {useAuth} from '../../contexts/AuthContext';
 import {auth,db} from '../../lib/platform';
@@ -16,7 +17,7 @@ export function EnglishAuth(){
  const [mode,setMode]=useState<'login'|'register'|'reset'>('login'),[role,setRole]=useState<'parent'|'student'>('parent'),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[error,setError]=useState(''),[confirmation,setConfirmation]=useState(false),[availability,setAvailability]=useState<{registrationOpen:boolean;policyVersion:string}|null>(null),[code,setCode]=useState('');
  const lock=useRef(false),alive=useRef(true),confirmationEmail=useRef('');
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
- useEffect(()=>{const controller=new AbortController();fetch(apiUrl('/api/public/platform'),{signal:controller.signal,cache:'no-store'}).then(async r=>{if(!r.ok)throw Error();const v=await r.json();if(typeof v.registrationOpen!=='boolean'||typeof v.policyVersion!=='string')throw Error();setAvailability(v);}).catch(()=>{if(!controller.signal.aborted)setError('Account availability could not load. Reload this page to retry.');});return()=>controller.abort();},[]);
+ useEffect(()=>{const controller=new AbortController();apiFetch(apiUrl('/api/public/platform'),{signal:controller.signal,cache:'no-store'}).then(async r=>{if(!r.ok)throw Error();const v=await r.json();if(typeof v.registrationOpen!=='boolean'||typeof v.policyVersion!=='string')throw Error();setAvailability(v);}).catch(()=>{if(!controller.signal.aborted)setError('Account availability could not load. Reload this page to retry.');});return()=>controller.abort();},[]);
  async function submit(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(lock.current)return;const form=e.currentTarget;const f=new FormData(form);setError('');setNotice('');setConfirmation(false);lock.current=true;setBusy(true);let signedId:string|null=null;
  try{
  const identifier=String(f.get('identifier')||'').trim(),password=String(f.get('password')||'');

@@ -1,3 +1,5 @@
+> Ödeme bölümleri tarihsel kayıttır. Güncel sistem yalnızca Google Play kullanır; [güncel kurulum](GOOGLE_PLAY_BILLING.md).
+
 # Türkçe uygulama: tamamlanan teknik akışlar ve gerçek kabul kontrolleri
 
 ## Hesap silme

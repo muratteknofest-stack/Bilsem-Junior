@@ -1,7 +1,7 @@
 import { englishBankForGrade, ENGLISH_BANK_VERSION } from '../english-learning-bank';
 import { ENGLISH_AREAS } from '../../src/features/international/english-content';
-import { requireLearningAccess } from '../shopier-access';
-import { ShopierError } from '../shopier-model';
+import { requireLearningAccess } from '../membership-access';
+import { GooglePlayError } from '../google-play-model';
 import { sharedRateLimit } from '../shared-rate-limit';
 import { Router } from 'express';
 import { randomInt, randomUUID } from 'node:crypto';
@@ -59,7 +59,7 @@ async function commit(student: string, id: string, change: (s: LearningSession) 
   throw new LearningError('Başka cihazdaki değişiklik kaydediliyor. Yeniden dene.', 409);
 }
 function handleError(error: unknown, res: import('express').Response) {
-  if (error instanceof LearningError || error instanceof ShopierError) return res.status(error.status).json({ error: error.message });
+  if (error instanceof LearningError || error instanceof GooglePlayError) return res.status(error.status).json({ error: error.message });
   throw error;
 }
 routes.patch('/learning/grade', async (req: AuthenticatedRequest, res) => {
@@ -142,7 +142,7 @@ routes.get('/learning/rewards', async (req: AuthenticatedRequest, res) => {
     const badges = createLockedAchievements().map(b => {
       const claimed = saved.find(item => item.id === b.id && item.rewardClaimed);
       if (claimed) return { ...b, ...claimed };
-      try { eligibleReward('badge', b.id, user, facts.data as RewardFacts, progress); return { ...b, unlocked: true, progress: b.maxProgress }; } catch (error) { if (!(error instanceof LearningError || error instanceof ShopierError)) throw error; return b; }
+      try { eligibleReward('badge', b.id, user, facts.data as RewardFacts, progress); return { ...b, unlocked: true, progress: b.maxProgress }; } catch (error) { if (!(error instanceof LearningError || error instanceof GooglePlayError)) throw error; return b; }
     });
     badges.push(...saved.filter(b => b.category === 'weekly'));
     return res.json({ badges, reviewToday: facts.data.reviewToday });

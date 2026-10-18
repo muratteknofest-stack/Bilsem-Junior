@@ -90,27 +90,26 @@ import {commercialReadiness} from '../server/commercial-readiness';
 // @ts-ignore Read-only production verifier is also used by CI.
 import {verifyPublicRelease,fetchReleaseResource} from '../scripts/check-live-release.mjs';
 
-test('commercial readiness uses the real operator settings and verified Shopier products',()=>{
+test('commercial readiness uses the real operator settings and verified Google Play products',()=>{
  const settings=defaultPlatformSettings();settings.business={legalName:'Test Operator',address:'Test postal address',contactEmail:'test@example.invalid',legalBases:'Test purposes',retention:'Test retention',transfers:'Test providers'};
  settings.release={registrationEnabled:true,emailTested:true,restoreTested:true,familyPilotTested:true,monitoringTested:true};
- settings.shopier={enabled:false,enforcePaidAccess:false,monthlyProductId:'monthly-real',quarterlyProductId:'quarterly-real',annualProductId:'annual-real',annualUrl:'https://www.shopier.com/annual-real',monthlyUrl:'https://www.shopier.com/monthly-real',quarterlyUrl:'https://www.shopier.com/quarterly-real'};
- const checks={databaseReady:true,originReady:true,shopierTokenReady:true,productsVerified:true};
+ const checks={databaseReady:true,originReady:true,playSetupReady:true,productsVerified:true};
  assert.equal(commercialReadiness(settings,checks).readyForPaidLaunch,true);assert.equal(commercialReadiness(settings,checks).paidSalesEnabled,false);
  assert.equal(commercialReadiness(settings,{...checks,productsVerified:false}).readyForPaidLaunch,false);
- assert.equal(commercialReadiness(settings,{...checks,shopierTokenReady:false}).readyForPaidLaunch,false);
+ assert.equal(commercialReadiness(settings,{...checks,playSetupReady:false}).readyForPaidLaunch,false);
  settings.release.emailTested=false;assert.equal(commercialReadiness(settings,checks).readyForPaidLaunch,false);
  settings.release.emailTested=true;settings.business.legalName='';assert.equal(commercialReadiness(settings,checks).readyForPaidLaunch,false);
 });
 
 test('free registration does not imply completed commercial launch checks',()=>{
  const settings=defaultPlatformSettings();settings.release.registrationEnabled=true;
- const report=commercialReadiness(settings,{databaseReady:true,originReady:true,shopierTokenReady:false,productsVerified:false});
- assert.equal(report.registrationOpen,true);assert.equal(report.readyForPaidLaunch,false);assert.ok(report.blockers.some(b=>b.includes('Shopier')));assert.ok(report.blockers.some(b=>b.includes('geri yükleme')));
+ const report=commercialReadiness(settings,{databaseReady:true,originReady:true,playSetupReady:false,productsVerified:false});
+ assert.equal(report.registrationOpen,true);assert.equal(report.readyForPaidLaunch,false);assert.ok(report.blockers.some(b=>b.includes('Google Play')));assert.ok(report.blockers.some(b=>b.includes('geri yükleme')));
 });
 
 function releaseFetch(overrides:Record<string,{status?:number;body?:string;headers?:Record<string,string>}>={}){
  return async (input:Parameters<typeof fetch>[0],init?:RequestInit)=>{const url=input instanceof URL?input:new URL(typeof input==='string'?input:input.url);const path=url.pathname;const crossSite=new Headers(init?.headers).get('Sec-Fetch-Site')==='cross-site';const status=crossSite&&path.startsWith('/api/')?403:init?.method==='POST'?(new Headers(init.headers).has('Origin')?403:401):path==='/api/release-unknown'?404:path.startsWith('/api/')&&!path.startsWith('/api/public/')?401:200;
- const body=path==='/'?'<html lang="tr"><title>ZekaPark</title></html>':path==='/robots.txt'?'User-agent: *\nDisallow: /admin':path==='/sitemap.xml'?'https://zekapark.vercel.app/':path==='/api/public/platform'?JSON.stringify({registrationOpen:true,policyVersion:'fixture-1'}):path==='/api/public/shopier'?JSON.stringify({ready:false,enforced:false,plans:[{},{},{}]}):path==='/paketler'||path==='/paketler/'?'<html><link href="/sales/sales.css"><h1 id="sales-heading">Keşif</h1><section class="zp-plan-card"></section></html>':path==='/sales/sales.css'?'.zp-plan-mint{color:green}':path.startsWith('/bilgi/')?'<html><h1>Policy</h1></html>':'fixture';
+ const body=path==='/'?'<html lang="tr"><title>ZekaPark</title></html>':path==='/robots.txt'?'User-agent: *\nDisallow: /admin':path==='/sitemap.xml'?'https://zekapark.vercel.app/':path==='/api/public/platform'?JSON.stringify({registrationOpen:true,policyVersion:'fixture-1'}):path==='/api/public/membership'?JSON.stringify({ready:false,enforced:false,plans:[{},{},{}]}):path==='/paketler'||path==='/paketler/'?'<html><link href="/sales/sales.css"><h1 id="sales-heading">Keşif</h1><section class="zp-plan-card"></section></html>':path==='/sales/sales.css'?'.zp-plan-mint{color:green}':path.startsWith('/bilgi/')?'<html><h1>Policy</h1></html>':'fixture';
  const override=overrides[path]||{};return new Response(override.body??body,{status:override.status??status,headers:{'x-content-type-options':'nosniff','x-frame-options':'DENY','cache-control':'no-store','content-type':path.endsWith('.css')?'text/css; charset=utf-8':'text/html; charset=utf-8',...override.headers}});
  };
 }
@@ -129,7 +128,7 @@ test('live release refuses sign-in walls, private exports, missing protection an
 test('package addresses with and without a trailing slash use the same public server page',()=>{
  const config=JSON.parse(fs.readFileSync('vercel.json','utf8'));
  for(const path of ['/paketler','/paketler/']){
-  assert.equal(config.rewrites.find((route:{source:string})=>route.source===path)?.destination,'/api/index?__path=public/shopier/page');
+  assert.equal(config.rewrites.find((route:{source:string})=>route.source===path)?.destination,'/api/index?__path=public/membership/page');
  }
 });
 test('live release refuses a broken package address or a missing sales stylesheet',async()=>{

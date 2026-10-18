@@ -1,3 +1,4 @@
+import { apiFetch } from '../../../lib/api-fetch';
 import React, { useEffect, useRef, useState } from 'react';
 import { FamilyRegistrationError, registerFamilyInSupabase } from '../../../services/family-registration-service';
 import { FooterInfoModal, type FooterModalTopic } from '../../../components/FooterInfoModal';
@@ -40,7 +41,7 @@ export function RegistrationForm({ setErrorMessage, onRegisterSuccess, onBusyCha
     const timeout = setTimeout(() => controller.abort(), 12000);
     let mounted = true;
     setAvailability(null); setAvailabilityError('');
-    fetch(apiUrl('/api/public/platform'), { signal: controller.signal, cache: 'no-store' }).then(async response => {
+    apiFetch(apiUrl('/api/public/platform'), { signal: controller.signal, cache: 'no-store' }).then(async response => {
       if (!response.ok) throw Error();
       const value = await response.json();
       if (typeof value.registrationOpen !== 'boolean' || !/^2026-10-11\.\d+$/.test(value.policyVersion)) throw Error();

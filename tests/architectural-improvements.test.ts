@@ -4,7 +4,6 @@ import fs from "node:fs";
 import { AI_PIPELINE_BUDGET_MS } from "../server/ai-prompts/ai-config";
 import { buildContentSecurityPolicy, resolveConnectSrcOrigins, contentSecurityPolicy } from "../server/browser-security";
 import { routeFromPathname, pathnameForRoute } from "../src/lib/route-sync";
-import { normalizeEntitlementDurationDays } from "../src/lib/subscription-entitlements";
 import { recordWordwallActivityStart, recordWordwallActivityClose, getWordwallTelemetryHistory } from "../src/features/student/wordwall-telemetry";
 import { sortSkillMasteriesByScore, buildCognitiveRadarData, calculateDailyGoalProgressPct } from "../src/features/parent/parent-portal-helpers";
 
@@ -33,10 +32,6 @@ test("route-sync maps cleanly between URL pathnames and application routes", () 
   assert.equal(pathnameForRoute("parent"), "/parent");
 });
 
-test("subscription-entitlements supports multi-provider duration normalization", () => {
-  assert.equal(normalizeEntitlementDurationDays({ duration_days: 30 }), 30);
-  assert.throws(() => normalizeEntitlementDurationDays({ duration_days: 999 }));
-});
 
 test("wordwall-telemetry records session start and duration on close", () => {
   recordWordwallActivityStart({ id: "78822332", title: "Şekil sınıflandırma", grade: 4, category: "Şekil sınıflandırma" }, 1000);

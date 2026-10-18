@@ -1,3 +1,5 @@
+> Ödeme bölümleri tarihsel kayıttır. Güncel sistem yalnızca Google Play kullanır; [güncel kurulum](GOOGLE_PLAY_BILLING.md).
+
 # ZekaPark Türkçe yayın durumu — 14 Ekim 2026
 
 Ücretsiz Türkçe sürüm https://zekapark.vercel.app/ adresinde yayımlanıyor. Ücretli satışın hazır olduğu beyan edilmiyor.

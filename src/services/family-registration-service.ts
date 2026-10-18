@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api-fetch';
 import type { UserProfile } from '../types';
 import { apiUrl } from '../lib/api-url';
 import { z } from 'zod';
@@ -33,7 +34,7 @@ const resultSchema = z.object({
 
 async function publicRequest(path: string, body: unknown) {
   let response: Response;
-  try { response = await fetch(apiUrl(path), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), cache: 'no-store' }); }
+  try { response = await apiFetch(apiUrl(path), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), cache: 'no-store' }); }
   catch { throw new FamilyRegistrationError(path === '/api/register-family' ? 'Sunucu yanıtı alınamadı. Bağlantınızı kontrol edin. Kayıt gönderdiyseniz yeniden kayıt açmadan önce veli e-postanızla giriş yapmayı deneyin.' : 'Sunucu yanıtı alınamadı. Bağlantınızı kontrol edip yeniden deneyin.', 'NETWORK_ERROR'); }
   const value = await response.json().catch(() => ({}));
   const result = value && typeof value === 'object' && !Array.isArray(value) ? value : {};

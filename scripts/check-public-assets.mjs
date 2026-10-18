@@ -16,7 +16,7 @@ export function secretKinds(text) {
         break;
       }
       if (Array.isArray(claims.scopes) && claims.scopes.includes('orders:read')) {
-        kinds.push('Shopier access token');
+        kinds.push('private commerce token');
         break;
       }
     } catch { /* Not a JWT. */ }

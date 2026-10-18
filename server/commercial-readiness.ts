@@ -1,12 +1,9 @@
 import {releaseBlockers,type PlatformSettings} from '../src/lib/platform-settings';
-import {shopierConfigured} from '../src/lib/shopier-config';
-
-export function commercialReadiness(settings:PlatformSettings,checks:{databaseReady:boolean;originReady:boolean;shopierTokenReady:boolean;productsVerified:boolean}){
+export function commercialReadiness(settings:PlatformSettings,checks:{databaseReady:boolean;originReady:boolean;playSetupReady:boolean;productsVerified:boolean}) {
  const blockers=releaseBlockers(settings);
  if(!checks.databaseReady)blockers.push('Üretim veritabanı bağlantısı');
  if(!checks.originReady)blockers.push('Gerçek HTTPS uygulama adresi');
- if(!shopierConfigured(settings.shopier))blockers.push('Üç gerçek Shopier ürün numarası ve HTTPS ürün bağlantısı');
- if(!checks.shopierTokenReady)blockers.push('Sunucuda Shopier erişim anahtarı');
- if(!checks.productsVerified)blockers.push('Shopier ürünlerinin fiyat ve dijital teslimat doğrulaması');
- return {readyForPaidLaunch:blockers.length===0,registrationOpen:settings.release.registrationEnabled,paidSalesEnabled:settings.shopier.enabled,paidAccessEnforced:settings.shopier.enforcePaidAccess,blockers};
+ if(!checks.playSetupReady)blockers.push('Google Play sunucu, hesap bağlantısı ve bildirim yapılandırması');
+ if(!checks.productsVerified)blockers.push('Google Play abonelik ürünü ve üç temel planın doğrulaması');
+ return {readyForPaidLaunch:blockers.length===0,registrationOpen:settings.release.registrationEnabled,paidSalesEnabled:process.env.GOOGLE_PLAY_BILLING_ENABLED==='true',paidAccessEnforced:process.env.GOOGLE_PLAY_ENFORCE_PAID_ACCESS==='true',blockers};
 }

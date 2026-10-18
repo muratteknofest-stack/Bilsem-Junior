@@ -14,7 +14,8 @@ import { getServiceClient } from './supabase-admin';
 import { browserDirectives, securityHeaders } from './browser-security';
 import { requestSecurity } from './request-security';
 import platformRoutes from './routes/platform-routes';
-import shopierRoutes from './routes/shopier-routes';
+import googlePlayRoutes from './routes/google-play-routes';
+import { publicPlayMembership, playMembershipPageHtml } from './play-membership-page';
 
 export function createApiApp() {
   const app = express();
@@ -35,7 +36,9 @@ export function createApiApp() {
   app.use('/api', requestSecurity(corsOrigins));
   app.use(express.json({ limit: '256kb' }));
   app.use('/api', platformRoutes);
-  app.use('/api', shopierRoutes);
+  app.get('/api/public/membership', async (_req,res) => { const view=await publicPlayMembership();res.json({...view,enforced: process.env.GOOGLE_PLAY_ENFORCE_PAID_ACCESS === 'true',plans: [{id:'monthly'},{id:'quarterly'},{id:'annual'}]}); });
+  app.get('/api/public/membership/page', async (_req,res) => res.type('html').send(playMembershipPageHtml(await publicPlayMembership())));
+  app.use('/api', googlePlayRoutes);
   app.use('/api', parentRoutes);
   app.use('/api', studentAiRoutes);
   app.use('/api', adminAiRoutes);

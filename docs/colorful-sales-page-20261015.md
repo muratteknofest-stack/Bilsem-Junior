@@ -1,3 +1,5 @@
+> Ödeme bölümleri tarihsel kayıttır. Güncel sistem yalnızca Google Play kullanır; [güncel kurulum](GOOGLE_PLAY_BILLING.md).
+
 # Colorful package sales page
 
 The public `/paketler` page and parent billing controls now share pastel package cards: peach for 30 days (299 TL), lilac for 90 days (699 TL), and mint for 365 days (1,499 TL). Every package retains the same features, one-student scope, single payment, and no automatic renewal.

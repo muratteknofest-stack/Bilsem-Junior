@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api-fetch';
 import { LearningSetupPanel } from './student/LearningSetupPanel';
 import { useStudentReducedMotion } from '../features/student/experience-preferences';
 import { sound } from '../lib/sound';
@@ -43,7 +44,7 @@ export function VerifiedLearningView({ mode, initialCategory = 'mixed', initialT
   const [exams, setExams] = useState<Array<{id: string; title: string; count: number; seconds: number}>>([...LEARNING_EXAMS]);
   useEffect(() => {
     const controller = new AbortController();
-    fetch(apiUrl('/api/public/platform'), { signal: controller.signal, cache: 'no-store' }).then(async res => { if (!res.ok) throw new Error(); return res.json(); }).then(value => { if (Array.isArray(value.exams)) setExams(value.exams); }).catch(() => { if (!controller.signal.aborted) setError('Deneme ayarları yüklenemedi. Başlatıldığında sunucunun güncel ayarları kullanılacak.'); });
+    apiFetch(apiUrl('/api/public/platform'), { signal: controller.signal, cache: 'no-store' }).then(async res => { if (!res.ok) throw new Error(); return res.json(); }).then(value => { if (Array.isArray(value.exams)) setExams(value.exams); }).catch(() => { if (!controller.signal.aborted) setError('Deneme ayarları yüklenemedi. Başlatıldığında sunucunun güncel ayarları kullanılacak.'); });
     return () => controller.abort();
   }, []);
   const [session, setSession] = useState<LearningSessionView | null>(null);
