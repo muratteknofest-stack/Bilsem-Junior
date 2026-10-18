@@ -3,7 +3,6 @@ import { motion } from 'motion/react';
 import { ArrowRight, ArrowUpRight, Clock3, Target, RotateCcw, BookOpen, Trophy } from 'lucide-react';
 import { sound } from '../../lib/sound';
 import { useStudentReducedMotion } from '../../features/student/experience-preferences';
-import puzzleDesk from '../../assets/student/tactile-puzzle.webp';
 
 export interface StudentModesGridProps {
   unresolvedMistakesCount: number; onStartAdaptive: () => void; onStartExam: () => void;
@@ -21,23 +20,25 @@ export function StudentModesGrid(p: StudentModesGridProps) {
   ];
 
   return <section className="zp-modes-section" aria-labelledby="zp-mode-title">
-    <div className="zp-mode-section-heading">
-      <div><p className="zp-panel-eyebrow">ÇALIŞMA MASASI / 01</p><h2 id="zp-mode-title">Bugün nasıl çalışmak istersin?</h2></div>
-      <span className="zp-desk-edition" aria-hidden="true">DÜŞÜNMEK<br />İÇİN BİR ALAN.</span>
+    <div className="zp-mode-section-heading bj-chapter-heading">
+      <div><p className="zp-panel-eyebrow">KEŞİF YOLU · BİLSEM HAZIRLIK</p><h2 id="zp-mode-title">Bugün nasıl çalışmak istersin?</h2></div>
+      <span className="bj-chapter-star" aria-hidden="true">✦</span>
     </div>
+    <div className="bj-learning-trail">
+    <svg className="bj-trail-line" viewBox="0 0 600 700" preserveAspectRatio="none" aria-hidden="true"><path d="M350 25C550 140 70 180 150 310S570 390 430 510 90 530 180 690" /></svg>
     <motion.button type="button" className="zp-mode-card zp-mode-feature" data-tone="cobalt"
       initial={reduced ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       transition={{ duration: .3 }} whileTap={reduced ? undefined : { scale: .994 }} onClick={startAdaptive}>
       <span className="zp-feature-copy">
-        <span className="zp-feature-label"><span aria-hidden="true" /> SANA UYARLANAN ÇALIŞMA</span>
-        <span className="zp-feature-headline" aria-hidden="true">Bak. Düşün.<br />Bağlantıyı bul.</span>
+        <span className="zp-feature-label"><span aria-hidden="true" /> İLK DURAK · KENDİ HIZINDA</span>
+        <span className="zp-feature-headline" aria-hidden="true">Haydi,<br />keşfedelim!</span>
         <h3>Adaptif Test</h3>
         <span className="zp-feature-description">Soru sayını sen seç. Sana uygun sorularla kendi ritminde ilerle.</span>
         <span className="zp-feature-cta">Çalışmaya başla <ArrowUpRight size={19} aria-hidden="true" /></span>
       </span>
       <span className="zp-feature-art" aria-hidden="true">
-        <img src={puzzleDesk} alt="" width={1254} height={1254} fetchPriority="high" decoding="async" />
-        <span className="zp-art-caption">ŞEKİLLER. OLASILIKLAR. YENİ FİKİRLER.</span>
+        <img src="/brand/junior-fox.svg" alt="" width={280} height={280} fetchPriority="high" decoding="async" />
+        <span className="zp-art-caption">HER GÜN BİR KÜÇÜK KEŞİF.</span>
       </span>
     </motion.button>
     <div className="zp-mode-grid">{modes.map(({ title, number, text, icon: Icon, tone, tag, action }, index) =>
@@ -46,10 +47,11 @@ export function StudentModesGrid(p: StudentModesGridProps) {
         transition={{ duration: .25, delay: reduced ? 0 : index * .04 }}
         whileHover={reduced ? undefined : { y: -3 }} whileTap={reduced ? undefined : { y: 1 }}
         onClick={() => { sound.playClick(); action(); }}>
-        <span className="zp-mode-card-top"><span className="zp-mode-icon"><Icon size={23} strokeWidth={1.7} aria-hidden="true" /></span><span className="zp-tool-number" aria-hidden="true">{number}</span></span>
-        <h3>{title}</h3><p>{text}</p>
+        <span className="zp-mode-card-top"><span className="zp-mode-icon"><Icon size={27} strokeWidth={2.4} aria-hidden="true" /></span><span className="zp-tool-number" aria-hidden="true">DURAK {number}</span></span>
+        <div className="bj-trail-copy"><h3>{title}</h3><p>{text}</p></div>
         <span className="zp-mode-open"><span>{tag}</span><ArrowUpRight size={19} aria-hidden="true" /></span>
       </motion.button>)}</div>
+    </div>
     <div className="zp-mode-links">
       <button type="button" onClick={() => { sound.playClick(); p.onNavigate('glossary'); }}><BookOpen size={19} aria-hidden="true" /><span>Bilişsel Sözlük<small>Görsel kavramlar ve mini oyunlar</small></span><ArrowRight size={16} aria-hidden="true" /></button>
       <button type="button" onClick={() => { sound.playClick(); p.onOpenChallenges(); }}><Trophy size={19} aria-hidden="true" /><span>Haftalık Görevler<small>Yeni bir hedef belirle</small></span><ArrowRight size={16} aria-hidden="true" /></button>

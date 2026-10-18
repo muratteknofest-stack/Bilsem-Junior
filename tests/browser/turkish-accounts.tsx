@@ -10,6 +10,7 @@ import {AdminPortal} from '../../src/components/AdminPortal';
 import {supabase} from '../../src/lib/supabase';
 import {openLinkedParentSession,openLinkedStudentSession} from '../../src/services/account-security-service';
 import '../../src/index.css';
+import '../../src/components/wordwall.css';
 function Fixture(){
  const {userProfile}=useAuth();const [mode,setMode]=useState(new URLSearchParams(location.search).get('mode')||'register');
  // Like the real App, restore the verified role after AuthProvider's loading boundary remounts children.
@@ -27,10 +28,10 @@ function ReviewPortalFixture(){
  if(error)return <p role="alert">{error}</p>;
  return ready?<AuthProvider><AdminPortal/></AuthProvider>:<p role="status">Yalıtılmış yönetici senaryosu açılıyor…</p>;
 }
-function StudentAppFixture(){
+function StudentAppFixture({role='student'}:{role?:'parent'|'student'}){
  const [ready,setReady]=useState(false),[error,setError]=useState('');
- useEffect(()=>{let active=true;void supabase.auth.signInWithPassword({email:'student@example.invalid',password:'ExampleOnly123'}).then(result=>{if(!active)return;if(result.error)setError(result.error.message);else setReady(true);});return()=>{active=false;};},[]);
+ useEffect(()=>{let active=true;void supabase.auth.signInWithPassword({email:`${role}@example.invalid`,password:'ExampleOnly123'}).then(result=>{if(!active)return;if(result.error)setError(result.error.message);else setReady(true);});return()=>{active=false;};},[role]);
  if(error)return <p role="alert">{error}</p>;
  return ready?<AuthProvider><App/></AuthProvider>:<p role="status">Yalıtılmış öğrenci senaryosu açılıyor…</p>;
 }
-createRoot(document.getElementById('root')!).render(new URLSearchParams(location.search).get('mode')==='student-app'?<StudentAppFixture/>:new URLSearchParams(location.search).get('mode')==='workbench'?<ReviewPortalFixture/>:<AuthProvider><Fixture/></AuthProvider>);
+createRoot(document.getElementById('root')!).render(new URLSearchParams(location.search).get('mode')==='parent-app'?<StudentAppFixture role="parent"/>:new URLSearchParams(location.search).get('mode')==='student-app'?<StudentAppFixture/>:new URLSearchParams(location.search).get('mode')==='workbench'?<ReviewPortalFixture/>:<AuthProvider><Fixture/></AuthProvider>);

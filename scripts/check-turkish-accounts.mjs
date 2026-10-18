@@ -197,6 +197,29 @@ try{
  assert.equal(await page.getByLabel('Soru ailesi').locator('option[value=matrix_3x3]').isDisabled(),false);
  await page.getByLabel('Adet',{exact:true}).fill('1');await page.getByRole('button',{name:'Taslak üret',exact:true}).click();await page.getByRole('status').filter({hasText:'1 taslak hazır.'}).waitFor();
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);assert.deepEqual(errors,[]);
+ // The real parent App must keep charts, empty states and family navigation usable.
+ activeRole='parent';
+ await page.goto('http://127.0.0.1:5186/tests/browser/turkish-accounts.html?mode=parent-app');
+ await page.getByRole('heading',{name:'Veli Portalı',exact:true}).waitFor();
+ await page.locator('.bj-parent-overview').waitFor();
+ await fs.mkdir('test-artifacts/student',{recursive:true});
+ for(const [width,height]of [[320,568],[390,844],[820,1180],[1440,1000]]){
+  await page.setViewportSize({width,height});await page.evaluate(()=>scrollTo(0,0));
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,`Parent layout at ${width}`);
+  assert.equal(await page.locator('.bj-parent-metrics article').count(),4);
+  assert.equal(await page.locator('.bj-volume-bar[data-empty=true]').count(),7,'Empty weeks must not fabricate chart activity');
+  await page.screenshot({path:`test-artifacts/student/parent-${width}.png`,animations:'disabled'});
+  assert.equal(await page.locator('.bj-parent-metrics article').evaluateAll(cards=>cards.every(card=>card.querySelector('p').getBoundingClientRect().bottom<=card.querySelector('strong').getBoundingClientRect().top+1)),true,'Metric descriptions must appear above their values');
+  await page.locator('.bj-parent-overview').screenshot({path:`test-artifacts/student/parent-overview-${width}.png`,animations:'disabled',style:'header,nav[aria-label$="alt menüsü"]{visibility:hidden!important}'});
+ }
+ const parentTabs=page.getByRole('group',{name:'Veli paneli bölümleri',exact:true}).getByRole('button');
+ for(const index of [1,2,0]){await parentTabs.nth(index).click();assert.equal(await parentTabs.nth(index).getAttribute('aria-pressed'),'true');}
+ await page.locator('.bj-parent-overview').waitFor();
+ await page.evaluate(()=>document.documentElement.classList.add('dark'));
+ await page.locator('.bj-parent-overview').screenshot({path:'test-artifacts/student/parent-overview-dark.png',animations:'disabled'});
+ await page.evaluate(()=>document.documentElement.classList.remove('dark'));
+ await page.getByRole('button',{name:'Öğrenci Paneline Geç',exact:true}).click();
+ await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
  // The actual App must hand the dashboard's exact topic to the verified learning API.
  activeRole='student';
  for(const grade of [1,2,3,4]){
@@ -240,7 +263,10 @@ try{
     await page.setViewportSize({width,height});await page.evaluate(()=>scrollTo(0,0));
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
     assert.equal(await page.locator('.zp-mode-card').count(),4);
+    assert.equal(await page.locator('.bj-mission-cards article').count(),3);
     await page.screenshot({path:`test-artifacts/student/dashboard-${width}.png`});
+    assert.equal(await page.locator('.zp-mode-tool').evaluateAll(cards=>cards.every(card=>{const title=card.querySelector('h3').getBoundingClientRect(),tag=card.querySelector('.zp-tool-number').getBoundingClientRect();return title.top>=tag.bottom||title.left>=tag.right||title.right<=tag.left;})),true,'Activity names must not overlap stop badges');
+    await page.locator('.zp-modes-section').screenshot({path:`test-artifacts/student/adventure-${width}.png`,animations:'disabled',style:'header,nav[aria-label$="alt menüsü"]{visibility:hidden!important}'});
     const testsButton=navigation.getByRole('button',{name:'Zeka Testleri',exact:true});
     const bounds=await testsButton.boundingBox();
     assert.ok(bounds&&bounds.width>=44&&bounds.height>=44&&bounds.x>=0&&bounds.x+bounds.width<=width,'The tests menu button must remain reachable');

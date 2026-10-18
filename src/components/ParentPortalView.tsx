@@ -1,7 +1,7 @@
 import { NativeAccessStatus } from './NativeAccessStatus';
 import { AccountCenter, FamilyActivation } from './AccountCenter';
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'motion/react';
 import confetti from 'canvas-confetti';
 import { 
   UserProfile, 
@@ -76,6 +76,8 @@ import { NewPasswordFields } from '../features/auth/components/NewPasswordFields
 import { sortSkillMasteriesByScore, buildCognitiveRadarData, buildMomentumSeries, calculateDailyGoalProgressPct } from '../features/parent/parent-portal-helpers';
 import './landing/design-system.css';
 import './dashboard-design-system.css';
+import { ParentProgressOverview, ParentWeeklyVolume } from './parent/ParentProgressOverview';
+import './parent/parent-executive.css';
 
 interface ParentPortalViewProps {
   student?: UserProfile | null;
@@ -224,11 +226,6 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
   const needsAttention = useMemo(() => sorted.slice(-3).reverse(), [sorted]);
   const accuracy = strengths.length > 0 ? (strengths[0].accuracy ?? 0) : 0;
 
-  // Activity is sourced from the linked student's persisted progress.
-  const weekDays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
-  const activityData: number[] = weeklyData?.dailyStats.map((day) => day.thisWeek) || [0, 0, 0, 0, 0, 0, 0];
-  const maxQuestions = Math.max(...activityData, 1);
-
   // Radar Data for 8 Cognitive Dimensions
   const radarData = useMemo(() => buildCognitiveRadarData(displayMasteries || []), [displayMasteries]);
   const monthlyMomentumData = useMemo(() => buildMomentumSeries(weeklyData), [weeklyData]);
@@ -369,7 +366,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
   }
 
   return (
-    <div className="zp-dashboard-page zp-parent-dashboard min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24 text-zinc-900 dark:text-zinc-100 selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
+    <MotionConfig reducedMotion={prefersReducedMotion ? 'always' : 'user'}><div className="zp-dashboard-page zp-parent-dashboard bj-parent-executive min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24 text-zinc-900 dark:text-zinc-100 selection:bg-indigo-500 selection:text-white relative overflow-x-hidden" data-reduced-motion={prefersReducedMotion}>
       
       <div className="relative z-10 mx-auto max-w-6xl px-5 pt-4">{studentSelector}{passwordResetNotice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{passwordResetNotice}</p>}</div>
       {/* Animated Subtle Background Ambience */}
@@ -413,13 +410,13 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
             </motion.div>
 
             <div className="flex-1">
-              <p className="zp-dashboard-kicker">BİLSEM JUNIOR / VELİ TAKİBİ</p>
+              <p className="zp-dashboard-kicker">BİLSEM JUNIOR · AİLE GELİŞİM MERKEZİ</p>
               <div className="flex items-center gap-2.5">
                 <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 font-['Outfit',sans-serif]">
                   Veli Portalı
                 </h1>
                 <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-800/50">
-                  <Sparkles className="w-3 h-3" /> Canlı Takip
+                  <ShieldCheck className="w-3 h-3" /> Gelişim Takibi
                 </span>
               </div>
 
@@ -638,119 +635,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               transition={{ duration: 0.25 }}
               className="space-y-8"
             >
-              {/* Bento KPI Row */}
-              <div className="zp-dashboard-kpis grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                
-                {/* 1. Bugünkü Çalışma & Dairesel İlerleme */}
-                <motion.div 
-                  whileHover={{ y: -4 }}
-                  className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/70 dark:border-zinc-800 shadow-sm flex flex-col justify-between relative overflow-hidden"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30">
-                      <Clock className="w-5 h-5" />
-                    </div>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900/30">
-                      Hedef: {targetMins} dk
-                    </span>
-                  </div>
-
-                  <div className="mt-4 flex items-center justify-between">
-                    <div>
-                      <h3 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 font-['Outfit',sans-serif]">
-                        {spentMins} <span className="text-sm font-semibold text-zinc-400">dk</span>
-                      </h3>
-                      <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">Bugünkü Odak Süresi</p>
-                    </div>
-
-                    {/* Circular Mini Progress */}
-                    <div className="relative w-12 h-12 flex items-center justify-center">
-                      <svg className="w-12 h-12 -rotate-90">
-                        <circle cx="24" cy="24" r="18" stroke="currentColor" strokeWidth="4" className="text-zinc-100 dark:text-zinc-800" fill="transparent" />
-                        <motion.circle 
-                          cx="24" 
-                          cy="24" 
-                          r="18" 
-                          stroke="currentColor" 
-                          strokeWidth="4" 
-                          className="text-blue-500" 
-                          fill="transparent" 
-                          strokeDasharray={113}
-                          initial={{ strokeDashoffset: 113 }}
-                          animate={{ strokeDashoffset: 113 - (113 * goalProgressPct) / 100 }}
-                          transition={{ duration: 1.2, ease: "easeOut" }}
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                      <span className="absolute text-[10px] font-bold text-blue-600 dark:text-blue-400">%{goalProgressPct}</span>
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* 2. Toplam Çözülen Soru */}
-                <motion.div 
-                  whileHover={{ y: -4 }}
-                  className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/70 dark:border-zinc-800 shadow-sm flex flex-col justify-between"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30">
-                      <CheckCircle2 className="w-5 h-5" />
-                    </div>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-900/30 flex items-center gap-1">
-                      <ArrowUpRight className="w-3 h-3" /> Aktif Pratik
-                    </span>
-                  </div>
-                  <div className="mt-4">
-                    <h3 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 font-['Outfit',sans-serif]">
-                      {currentStudent.totalQuestionsSolved || 0}
-                    </h3>
-                    <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">Toplam Çözülen BİLSEM Sorusu</p>
-                  </div>
-                </motion.div>
-
-                {/* 3. Genel Doğruluk */}
-                <motion.div 
-                  whileHover={{ y: -4 }}
-                  className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/70 dark:border-zinc-800 shadow-sm flex flex-col justify-between"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/30">
-                      <Target className="w-5 h-5" />
-                    </div>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-900/30">
-                      Başarı Oranı
-                    </span>
-                  </div>
-                  <div className="mt-4">
-                    <h3 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 font-['Outfit',sans-serif]">
-                      %{accuracy}
-                    </h3>
-                    <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">En Güçlü Alanlar Ortalaması</p>
-                  </div>
-                </motion.div>
-
-                {/* 4. Öğrenme Serisi */}
-                <motion.div 
-                  whileHover={{ y: -4 }}
-                  className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/70 dark:border-zinc-800 shadow-sm flex flex-col justify-between"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-500 border border-amber-100 dark:border-amber-900/30">
-                      <Flame className="w-5 h-5 animate-pulse" />
-                    </div>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/50 dark:border-amber-900/30 flex items-center gap-1">
-                      <Shield className="w-3 h-3 text-indigo-500" /> {currentStudent.streakFreezeCount || 0} Kalkan
-                    </span>
-                  </div>
-                  <div className="mt-4">
-                    <h3 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 font-['Outfit',sans-serif]">
-                      {currentStudent.streak || 0} <span className="text-sm font-semibold text-zinc-400">Gün</span>
-                    </h3>
-                    <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">Kesintisiz Öğrenme Disiplini</p>
-                  </div>
-                </motion.div>
-
-              </div>
+              <ParentProgressOverview student={currentStudent} weeklyData={weeklyData} masteries={displayMasteries} />
 
               {/* Main Visuals Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -835,7 +720,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                                   stroke="#a1a1aa" 
                                   tick={{ fontSize: 10, fill: '#a1a1aa' }} 
                                 />
-                                <Radar 
+                                <Radar isAnimationActive={!prefersReducedMotion}
                                   name="Ustalık Puanı" 
                                   dataKey="mastery" 
                                   stroke="#6366f1" 
@@ -904,7 +789,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                                   }}
                                   cursor={{ stroke: '#10b981', strokeWidth: 2, strokeDasharray: '3 3' }}
                                 />
-                                <Area 
+                                <Area isAnimationActive={!prefersReducedMotion}
                                   type="monotone" 
                                   dataKey="score" 
                                   stroke="#10b981" 
@@ -921,54 +806,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                     </div>
                   </div>
 
-                  {/* Animated Weekly Solved Questions Bar Chart */}
-                  <div className="zp-dashboard-surface bg-white dark:bg-zinc-900 rounded-3xl p-6 md:p-8 border border-zinc-200/70 dark:border-zinc-800 shadow-sm">
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-2">
-                        <BarChart2 className="w-5 h-5 text-indigo-500" />
-                        <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                          Haftalık Çözülen Soru Dağılımı
-                        </h2>
-                      </div>
-                      <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded-full">
-                        Toplam: {activityData.reduce((a, b) => a + b, 0)} Soru
-                      </span>
-                    </div>
-
-                    <div className="flex items-end justify-between h-44 pt-6 gap-2 sm:gap-4 px-2">
-                      {weekDays.map((day, i) => {
-                        const count = activityData[i];
-                        const heightPct = Math.max(8, (count / maxQuestions) * 100);
-                        const isToday = i === (new Date().getDay() + 6) % 7;
-
-                        return (
-                          <div key={day} className="flex flex-col items-center gap-3 flex-1 group">
-                            <div className="w-full max-w-[44px] h-32 flex flex-col justify-end relative">
-                              <div className="w-full bg-zinc-100 dark:bg-zinc-800/80 rounded-2xl absolute inset-0 -z-0" />
-                              <motion.div 
-                                initial={{ height: 0 }}
-                                animate={{ height: `${heightPct}%` }}
-                                transition={{ duration: 0.8, delay: i * 0.08, type: "spring", stiffness: 300, damping: 25 }}
-                                className={`w-full rounded-2xl relative transition-all duration-300 ${
-                                  isToday 
-                                    ? 'bg-gradient-to-t from-indigo-600 to-indigo-400 shadow-md shadow-indigo-500/20' 
-                                    : 'bg-zinc-300 dark:bg-zinc-700 group-hover:bg-indigo-500/80'
-                                }`}
-                              >
-                                {/* Floating Number Tooltip */}
-                                <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[11px] font-bold px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-md z-20">
-                                  {count} soru
-                                </div>
-                              </motion.div>
-                            </div>
-                            <span className={`text-xs font-bold ${isToday ? 'text-indigo-600 dark:text-indigo-400 font-extrabold' : 'text-zinc-500 dark:text-zinc-400'}`}>
-                              {day}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <ParentWeeklyVolume weeklyData={weeklyData} />
 
                   <div className="zp-dashboard-surface bg-white dark:bg-zinc-900 rounded-3xl p-6 md:p-8 border border-zinc-200/70 dark:border-zinc-800 shadow-sm">
                     <div className="flex items-start gap-3">
@@ -1001,13 +839,13 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                           <Lightbulb className="w-5 h-5 text-amber-400 animate-pulse" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-base text-white font-['Outfit',sans-serif]">Yapay Zeka Bilişsel Koçu</h3>
+                          <h3 className="font-bold text-base text-white font-['Outfit',sans-serif]">Çalışma Rehberi</h3>
                           <p className="text-[11px] text-zinc-400">Pedagojik Gelişim Analizi</p>
                         </div>
                       </div>
 
                       <p className="text-zinc-300 text-xs sm:text-sm leading-relaxed mb-6">
-                        Öğrencimiz <strong className="text-amber-300 font-bold">{strengths[0]?.categoryName || 'Henüz veri yok'}</strong> kategorisinde %{strengths[0]?.accuracy || 0} doğruluk gösteriyor.
+                        {strengths[0]?.attemptCount ? <>{currentStudent.name}, <strong className="text-amber-300 font-bold">{strengths[0].categoryName}</strong> alanındaki çalışmalarında %{strengths[0].accuracy || 0} doğruluk gösteriyor.</> : 'Çalışma kayıtları oluştuğunda öğrencinizin güçlü alanları ve pekiştirme önerileri burada görünecek.'}
                         Buna karşın <strong className="text-rose-300 font-bold">{needsAttention[0]?.categoryName || 'Matris'}</strong> alanında hata tekrarı mevcut. Hafta sonu 10 dakikalık odak egzersizi önerilir.
                       </p>
 
@@ -1289,7 +1127,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                 </div>
                 <div>
                   <h3 className="text-xl font-black text-zinc-900 dark:text-white font-['Outfit',sans-serif]">
-                    Yapay Zeka Çalışma Programı
+                    Kişisel Çalışma Programı
                   </h3>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     {currentStudent.name} için kişiselleştirilmiş 7 günlük takviye planı
@@ -1407,7 +1245,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
         }}
       />
 
-    </div>
+    </div></MotionConfig>
   );
 };
 

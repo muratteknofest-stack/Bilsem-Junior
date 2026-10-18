@@ -13,6 +13,7 @@ import { dailyMissions } from '../features/student/gamification-model';
 import { getStudyFavorites, saveStudyFavorites } from '../services/student-preferences-service';
 import { StudentHeroBanner } from './student/StudentHeroBanner';
 import { StudentModesGrid } from './student/StudentModesGrid';
+import { StudentMissionStrip } from './student/StudentMissionStrip';
 import { StudentSkillsGrid } from './student/StudentSkillsGrid';
 import { StudentTopicPractice } from './student/StudentTopicPractice';
 import { StudentExperienceControls } from './student/StudentExperienceControls';
@@ -29,6 +30,7 @@ import { ProfileBannerSkeleton, ModeCardSkeleton } from './Skeletons';
 import './landing/design-system.css';
 import './dashboard-design-system.css';
 import './student/student-professional.css';
+import './student/student-adventure.css';
 interface StudentDashboardProps {
   isLoading?: boolean; user?: UserProfile | null; dailyPlan?: DailyStudyPlan | null;
   masteries?: SkillMastery[]; mistakes?: any[];
@@ -136,7 +138,7 @@ export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries
   const switchSection = (section: Section) => { sound.playClick(); setActiveTab(section); };
   if (isLoading) return <main id="student-dashboard" aria-busy="true" className="zp-dashboard-page zp-student-dashboard zp-student-pro"><div className="zp-student-shell"><ProfileBannerSkeleton /><div className="zp-mode-grid"><ModeCardSkeleton /><ModeCardSkeleton /></div></div></main>;
   return <MotionConfig reducedMotion={reduced ? 'always' : 'user'}>
-    <div className="zp-dashboard-page zp-student-dashboard zp-student-pro" data-reduced-motion={reduced}>
+    <div className="zp-dashboard-page zp-student-dashboard zp-student-pro bj-student-game" data-reduced-motion={reduced}>
       <main id="student-dashboard" className="zp-student-shell">
         <div className="zp-student-topline"><span><span className="zp-brand-dot" /> Bilsem Junior <span className="zp-topline-divider">/</span> Çalışma masam</span><StudentExperienceControls /></div>
         {activeTab !== 'tests' && <StudentHeroBanner user={activeUser} greeting={greeting} xpProgress={xpProgress} onUserUpdate={onUserUpdate} onNavigate={onNavigate} prefersReducedMotion={reduced} />}
@@ -149,6 +151,7 @@ export function StudentDashboard({ isLoading = false, user, dailyPlan, masteries
             <AnimatePresence mode="wait" initial={false}>
               <motion.div key={activeTab} initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: reduced ? 0 : .18 }} className="zp-student-section-stack">
                 {activeTab === 'modes' && <>
+                  <StudentMissionStrip user={activeUser} weeklyQuestions={weekly.thisWeekTotal} />
                   <StudentModesGrid unresolvedMistakesCount={unresolved} onStartAdaptive={onStartAdaptive} onStartExam={onStartExam} onStartPractice={onStartPractice} onOpenMistakes={onOpenMistakes} onNavigate={onNavigate} onOpenChallenges={() => switchSection('challenges')} />
                   {onStartTopicPractice && isSchoolGrade(activeUser.grade) && !isDemoUser(activeUser.id) && <StudentTopicPractice grade={activeUser.grade} onStart={onStartTopicPractice} />}
                 </>}
