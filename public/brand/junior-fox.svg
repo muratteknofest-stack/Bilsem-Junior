@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 280" fill="none">
+ <defs><linearGradient id="coat" x1="60" y1="55" x2="220" y2="230" gradientUnits="userSpaceOnUse"><stop stop-color="#ffb34e"/><stop offset="1" stop-color="#ef642c"/></linearGradient><linearGradient id="book" x1="93" y1="181" x2="193" y2="243" gradientUnits="userSpaceOnUse"><stop stop-color="#9568ec"/><stop offset="1" stop-color="#6433c6"/></linearGradient></defs>
+ <ellipse cx="142" cy="252" rx="79" ry="12" fill="#4b2899" opacity=".13"/>
+ <path d="M197 174c68-36 65 45 16 54-31 5-50-20-28-29" fill="#f48b38" stroke="#dc6d2b" stroke-width="6"/>
+ <path d="M237 184c11 10 5 29-9 37l-13-24 22-13Z" fill="#fff2d6"/>
+ <path d="M95 171c-19 19-20 52-5 68h101c16-24 8-53-12-68" fill="url(#coat)" stroke="#db722d" stroke-width="5"/>
+ <path d="m69 105 4-71c1-7 7-9 12-4l43 39m84 38-3-73c-1-7-7-8-12-3l-42 40" fill="url(#coat)" stroke="#d96a2a" stroke-width="5" stroke-linejoin="round"/>
+ <path d="m82 78 2-28 22 23m92 7-2-29-22 23" fill="#8d3f43"/>
+ <path d="M63 116c0-42 35-60 77-60 43 0 78 22 78 60 0 46-36 79-78 79s-77-31-77-79Z" fill="url(#coat)"/>
+ <path d="M68 117c24-5 48 6 72 35 24-29 49-40 73-35-3 40-32 69-73 69-40 0-69-28-72-69Z" fill="#fff1d9"/>
+ <ellipse cx="101" cy="111" rx="12" ry="16" fill="#2c2850"/><ellipse cx="180" cy="111" rx="12" ry="16" fill="#2c2850"/>
+ <ellipse cx="104" cy="106" rx="4" ry="5" fill="white"/><ellipse cx="183" cy="106" rx="4" ry="5" fill="white"/>
+ <path d="M131 147c0-7 19-7 19 0l-9 9-10-9Z" fill="#342b45"/><path d="M127 163q14 13 28 0" stroke="#9a4b3a" stroke-width="5" stroke-linecap="round"/>
+ <ellipse cx="84" cy="140" rx="12" ry="6" fill="#f5b2a3"/><ellipse cx="196" cy="140" rx="12" ry="6" fill="#f5b2a3"/>
+ <path d="M87 195q25-11 53 2 25-13 52-2v43q-27-10-52 1-27-11-53-1v-43Z" fill="url(#book)" stroke="#582cac" stroke-width="4" stroke-linejoin="round"/>
+ <path d="M140 200v33m-41-25 27 4m-27 8 27 4m27-12 26-4m-26 16 26-4" stroke="#eee3ff" stroke-width="4" stroke-linecap="round"/>
+ <path d="m224 47 5 13 14 4-14 5-5 14-5-14-14-5 14-4 5-13Z" fill="#ffce50"/><circle cx="48" cy="164" r="7" fill="#55d7bb"/><circle cx="238" cy="125" r="5" fill="#ab8ae8"/>
+</svg>
