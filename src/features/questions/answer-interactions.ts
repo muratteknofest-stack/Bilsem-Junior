@@ -1,5 +1,6 @@
 import type { BaseQuestion } from '../../types';
 import type { Board } from './professional-engine';
+import { orderSatisfies } from './professional-engine';
 import { independentlySolveBoard } from './independent-board-solver';
 import { isQuestionReadyForStudents } from './quality';
 
@@ -61,7 +62,7 @@ export function evaluateResponse(q: BaseQuestion, response: QuestionResponse | n
     const slots = response.slots;
     const complete = Array.isArray(slots) && slots.length === b.names!.length &&
       slots.every(n => typeof n === 'string' && b.names!.includes(n)) && new Set(slots).size === slots.length;
-    return { complete, correct: complete && b.clues!.every(([a, c]) => slots.indexOf(c) === slots.indexOf(a) + 1) };
+    return { complete, correct: complete && orderSatisfies(b, slots as string[]) };
   }
   if (!('textNumber' in expected)) return invalid;
   if (response.mode === 'number') {

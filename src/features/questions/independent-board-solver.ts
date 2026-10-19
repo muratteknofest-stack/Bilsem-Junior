@@ -65,6 +65,11 @@ export function independentlySolveBoard(b: Board): Tile | { textNumber: number |
   }
   if (b.kind === 'numbers') {
     const v = b.values!, d = v.slice(1).map((n, i) => n - v[i]);
+    if (b.rule === 'interleaved') {
+      // Verify constant two-position gaps instead of splitting into two arrays.
+      if (v.length !== 6 || [2, 3].some(i => v[i + 2] - v[i] !== v[i] - v[i - 2])) throw new Error('Bağımsız iç içe örüntü denetimi başarısız.');
+      return { textNumber: 2 * v[4] - v[2] };
+    }
     const predictions: number[] = [];
     if (d.every(x => x === d[0])) predictions.push(v.at(-1)! + d[0]);
     if (d.every((x, i) => x === d[0] + i * (d[1] - d[0]))) predictions.push(v.at(-1)! + d.at(-1)! + d[1] - d[0]);
@@ -97,6 +102,28 @@ export function independentlySolveBoard(b: Board): Tile | { textNumber: number |
     return { textNumber: count };
   }
   if (b.kind === 'order') {
+    if(b.constraints) {
+      // Assign positions to people, independently of the primary permutation solver.
+      const names=b.names!,assigned=new Map<string,number>(),solutions:string[]=[];
+      const visit=(i:number)=>{
+        if(solutions.length>1)return;
+        if(i===names.length){solutions.push(names.find(n=>assigned.get(n)===b.position)!);return;}
+        const name=names[i];
+        for(let pos=1;pos<=names.length;pos++) {
+          if([...assigned.values()].includes(pos))continue;
+          assigned.set(name,pos);
+          const valid=b.constraints!.every(c=>{
+            if(c.kind==='position')return !assigned.has(c.name)||assigned.get(c.name)===c.position;
+            const a=assigned.get(c.left),z=assigned.get(c.right);
+            return a===undefined||z===undefined||(c.kind==='before'?a<z:z-a===c.distance);
+          })&&(b.clues||[]).every(([a,z])=>!assigned.has(a)||!assigned.has(z)||assigned.get(z)===assigned.get(a)!+1);
+          if(valid)visit(i+1);
+          assigned.delete(name);
+        }
+      };visit(0);
+      if(solutions.length!==1||!solutions[0])throw Error('Bağımsız konum kısıtları tek sıra vermiyor.');
+      return {textNumber:solutions[0]};
+    }
     // Solve relative positions as constraints, independently of permutation search.
     const positions = new Map<string, number>([[b.names![0], 0]]);
     for (let pass = 0; pass < b.names!.length; pass++) for (const [a, c] of b.clues!) {

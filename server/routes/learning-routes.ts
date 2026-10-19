@@ -14,10 +14,10 @@ import { generateQuestion } from '../../src/features/questions/generators';
 import { EDUCATION_PROFILES, isSchoolGrade } from '../../src/features/questions/quality-policy';
 import { DEFAULT_ADAPTIVE_COUNT, fitsLearningSelection, learningStartSchema, sameLearningSelection, selectSessionCategory, type LearningDifficulty, type LearningSelection } from '../../src/features/student/learning-selection';
 import { topicCategory, topicQuestionCount } from '../../src/features/student/learning-topics';
-import { questionVisualKey } from '../../src/features/questions/quality';
+import { questionStimulusKey } from '../../src/features/questions/quality';
 import { loadPublishedLearningBank } from '../learning-bank';
 import { isQuestionReadyForStudents } from '../../src/features/questions/quality';
-import { loadRecentQuestionExposure, selectLearningQuestions } from '../learning-question-selection';
+import { loadRecentQuestionExposure, selectLearningQuestions, generateVariedLearningQuestion } from '../learning-question-selection';
 import { AVAILABLE_CATEGORIES } from '../../src/features/student/available-categories';
 import { QUESTION_TYPE_LABELS, COGNITIVE_CATEGORY_LABELS, type BaseQuestion, type SkillMastery } from '../../src/types';
 import { prepareQuestionReport } from '../support-validation';
@@ -98,7 +98,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const seen = new Set<string>();
     const topicCandidates = topic === 'mixed' ? bank.questions : bank.questions.filter(q => {
       if (q.type !== topic || q.targetGrade !== grade || q.category !== category || q.difficulty > EDUCATION_PROFILES[grade].maxDifficulty || (difficulty !== 'mixed' && q.difficulty !== difficulty) || !isQuestionReadyForStudents(q)) return false;
-      const key = questionVisualKey(q);
+      const key = questionStimulusKey(q);
       if (seen.has(key)) return false;
       seen.add(key); return true;
     });
@@ -112,12 +112,16 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const candidates = topicCandidates.filter(q => fitsLearningSelection(q, selection) && (locale !== 'en' || englishReady(q)));
     if (locale === 'en' && candidates.length < count) throw new LearningError('This activity is not available in English at this level. Try mixed practice.', 422);
     const exposure = await loadRecentQuestionExposure(student);
-    const questions = selectLearningQuestions({ count, allowGeneration: topic === 'mixed', category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number],
+    const questions = selectLearningQuestions({ count, preferDiverseTypes:parsed.data.mixCategories, allowGeneration: topic === 'mixed', category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number],
       ...(locale === 'en' ? {categories:[...new Set(candidates.map(q=>q.category))]} : {}),
       candidates, exposure, canUse: q => fitsLearningSelection(q, selection) && isQuestionReadyForStudents(q) && (locale !== 'en' || englishReady(q)),
-      generate: nextCategory => { if (topic !== 'mixed') throw new LearningError('Seçilen konunun yayımlanmış soruları kullanılmalı.'); if (locale === 'en') throw new LearningError('English practice is temporarily unavailable. Please try again.', 503); return generateQuestion({ profile: 'professional', targetGrade: grade,
-        difficulty: difficulty === 'mixed' ? randomInt(1, EDUCATION_PROFILES[grade].maxDifficulty + 1) as import('../../src/types').DifficultyLevel : difficulty,
-        category: nextCategory, seed: randomInt(1, 2147483647) }); },
+      generate: (nextCategory,typeCounts) => {
+        if (topic !== 'mixed') throw new LearningError('Seçilen konunun yayımlanmış soruları kullanılmalı.');
+        if (locale === 'en') throw new LearningError('English practice is temporarily unavailable. Please try again.', 503);
+        const nextDifficulty=difficulty === 'mixed' ? randomInt(1, EDUCATION_PROFILES[grade].maxDifficulty + 1) as import('../../src/types').DifficultyLevel : difficulty;
+        const seed=randomInt(1,2147483647);
+        return parsed.data.mixCategories ? generateVariedLearningQuestion({grade,category:nextCategory,difficulty:nextDifficulty,seed,typeCounts}) : generateQuestion({profile:'professional',targetGrade:grade,difficulty:nextDifficulty,category:nextCategory,seed});
+      },
     });
     const latestProfile = await client.from('profiles').select('grade').eq('id', student).single();
     if (latestProfile.error) throw latestProfile.error;

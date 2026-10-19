@@ -1,3 +1,5 @@
+import { StoryAdventure } from './student/StoryAdventure';
+import type { StoryProgress, StoryStage } from '../features/student/story-adventure';
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'motion/react';
 import { Activity, ArrowLeft, BarChart3, Brain, Compass, Layers, Lightbulb, Shapes, Sparkles, Target, Trophy, Zap, ArrowUpRight, BookOpen, Flame } from 'lucide-react';
@@ -35,6 +37,7 @@ import './student/student-quest-world.css';
 import { StudentMotionToggle, useStudentMotionSurface } from './student/StudentMotion';
 export type StudentSection = typeof SECTIONS[number]['id'];
 interface StudentDashboardProps {
+  storyProgress?: StoryProgress; storySaveError?: string; onStartStory?: (stage:StoryStage)=>void; onSelectStory?: (id:string)=>void;
   initialSection?: StudentSection;
   isLoading?: boolean; user?: UserProfile | null; dailyPlan?: DailyStudyPlan | null;
   masteries?: SkillMastery[]; mistakes?: any[];
@@ -45,6 +48,7 @@ interface StudentDashboardProps {
 }
 const EMPTY_MASTERIES: SkillMastery[] = [];
 const SECTIONS = [
+  { id: 'adventure', label: 'Maceram', icon: Compass },
   { id: 'modes', label: 'Çalışma alanım', icon: BookOpen },
   { id: 'tests', label: 'Zeka Testleri', icon: Shapes },
   { id: 'plan', label: 'Kişisel planım', icon: Compass },
@@ -118,7 +122,7 @@ const CATEGORY_STYLE_CONFIG: Record<string, {
   },
 };
 
-export function StudentDashboard({ initialSection = 'modes', isLoading = false, user, dailyPlan, masteries = EMPTY_MASTERIES, mistakes,
+export function StudentDashboard({ storyProgress, storySaveError, onStartStory, onSelectStory, initialSection = 'modes', isLoading = false, user, dailyPlan, masteries = EMPTY_MASTERIES, mistakes,
   onUserUpdate, onStartPractice, onStartTopicPractice, onStartAdaptive, onStartExam, onOpenMistakes, onNavigate }: StudentDashboardProps) {
   const activeUser = user || dataService.getCurrentUser();
   const activeMistakes = mistakes ?? dataService.getMistakes();
@@ -144,11 +148,11 @@ export function StudentDashboard({ initialSection = 'modes', isLoading = false, 
   if (isLoading) return <main id="student-dashboard" aria-busy="true" className="zp-dashboard-page zp-student-dashboard zp-student-pro"><div className="zp-student-shell"><ProfileBannerSkeleton /><div className="zp-mode-grid"><ModeCardSkeleton /><ModeCardSkeleton /></div></div></main>;
   return <MotionConfig reducedMotion={reduced ? 'always' : 'user'}>
     <div ref={motionSurface} className="zp-dashboard-page zp-student-dashboard zp-student-pro bj-student-game bj-motion-world" data-reduced-motion={reduced}>
-      <main id="student-dashboard" className="zp-student-shell">
+      <main id="student-dashboard" className="zp-student-shell" data-adventure={activeTab==='adventure'}>
         <div className="zp-student-topline"><span><span className="zp-brand-dot" /> Bilsem Junior <span className="zp-topline-divider">/</span> Çalışma masam</span><StudentExperienceControls /></div>
-        <StudentMotionToggle />
-        {activeTab !== 'tests' && <StudentHeroBanner user={activeUser} greeting={greeting} xpProgress={xpProgress} onUserUpdate={onUserUpdate} onNavigate={onNavigate} prefersReducedMotion={reduced} />}
-        <nav className="zp-study-navigation" aria-label="Öğrenci paneli bölümleri">{SECTIONS.map(({ id, label, icon: Icon }) =>
+        {activeTab!=='adventure'&&<StudentMotionToggle />}
+        {activeTab !== 'tests' && activeTab !== 'adventure' && <StudentHeroBanner user={activeUser} greeting={greeting} xpProgress={xpProgress} onUserUpdate={onUserUpdate} onNavigate={onNavigate} prefersReducedMotion={reduced} />}
+        <nav className="zp-study-navigation" aria-label="Öğrenci paneli bölümleri">{SECTIONS.filter(section=>section.id!=='adventure'||!!onStartStory).map(({ id, label, icon: Icon }) =>
           <button type="button" key={id} aria-pressed={activeTab === id} aria-controls="zp-student-section" onClick={() => switchSection(id)}>
             <Icon size={18} aria-hidden="true" /><span>{label}</span>{activeTab === id && <span className="zp-nav-indicator" aria-hidden="true" />}
           </button>)}</nav>
@@ -156,6 +160,7 @@ export function StudentDashboard({ initialSection = 'modes', isLoading = false, 
           <section id="zp-student-section" className="zp-student-section" aria-label={SECTIONS.find(section => section.id === activeTab)!.label}>
             <AnimatePresence mode="wait" initial={false}>
               <motion.div key={activeTab} initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: reduced ? 0 : .18 }} className="zp-student-section-stack">
+                {activeTab === 'adventure' && storyProgress && onStartStory && <StoryAdventure key={`${activeUser.id}-${activeUser.grade}`} user={activeUser} progress={storyProgress} saveError={storySaveError} onStartStory={onStartStory} onSelectStory={onSelectStory} onStudy={()=>switchSection('modes')}/>}
                 {activeTab === 'modes' && <>
                   <StudentMissionStrip user={activeUser} weeklyQuestions={weekly.thisWeekTotal} />
                   <StudentModesGrid unresolvedMistakesCount={unresolved} onStartAdaptive={onStartAdaptive} onStartExam={onStartExam} onStartPractice={onStartPractice} onOpenMistakes={onOpenMistakes} onNavigate={onNavigate} onOpenChallenges={() => switchSection('challenges')} />
@@ -174,7 +179,7 @@ export function StudentDashboard({ initialSection = 'modes', isLoading = false, 
               </motion.div>
             </AnimatePresence>
           </section>
-          {activeTab !== 'tests' && <aside className="zp-student-aside" aria-label="Günlük ilerlemem">
+          {activeTab !== 'tests' && activeTab !== 'adventure' && <aside className="zp-student-aside" aria-label="Günlük ilerlemem">
             <article className="zp-daily-snapshot" aria-labelledby="zp-daily-snapshot-title">
               <div className="zp-panel-eyebrow"><Target size={16} aria-hidden="true" /> BUGÜNKÜ HEDEFİN</div>
               <h2 id="zp-daily-snapshot-title">{dailyGoal.completed ? 'Hedefini tamamladın!' : 'Her soru bir adım.'}</h2>

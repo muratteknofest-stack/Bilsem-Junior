@@ -19,9 +19,17 @@ export function englishPuzzle(source:BaseQuestion,level:EnglishLevel):EnglishPuz
     case 'mirror_reflection':
       prompt='The mirror is on the right. Which choice shows the reflected pattern?';
       steps=['A vertical mirror swaps left and right. It does not swap top and bottom.','Reverse the order of the tiles in each row. Compare every tile before choosing.'];break;
-    case 'figure_completion':
-      prompt=source.difficulty>=3?'Look at how the pattern changes from row to row. Which tile belongs in the missing square?':'Every row follows the same pattern. Which tile belongs in the missing square?';
-      steps=source.difficulty>=3?['Each new row shifts the pattern one place to the left. The first tile moves to the end.','Compare the complete rows, then apply the same shift to the row with the missing square.']:['Look at the tile order in a complete row.','Find the same column in the other row and compare the geometric marks.'];break;
+    case 'figure_completion': {
+      const rule=b.mosaicRule||(source.difficulty>=3?'shift-row':'repeat-row');
+      const descriptions={
+        'repeat-row':['Every row follows the same tile order.','Copy the order from a complete row into the row with the missing square.'],
+        'repeat-column':['Every column follows the same tile order.','Copy the order from a complete column into the column with the missing square.'],
+        'shift-row':['Each new row shifts the tiles one place to the left.','The first tile moves to the end; all other tiles move one place left.'],
+        'shift-column':['Each new column shifts the tiles one place down.','The last tile moves to the top; all other tiles move one place down.'],
+      };
+      prompt=descriptions[rule][0]+' Which tile belongs in the missing square?';
+      steps=[descriptions[rule][1],'Check the missing position against both its row and its column.'];break;
+    }
     case 'visual_memory':
       prompt='Remember the pattern. When you are ready, hide it and choose the exact match.';
       steps=['Study the pattern row by row. Remember the positions of the corner tiles.','The matching choice must keep every geometric mark and colour in the same position.'];break;

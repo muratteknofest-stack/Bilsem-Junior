@@ -1,5 +1,6 @@
 import React, { useId } from 'react';
 import type { ColorfulValue, ObjectArt } from '../colorful-engine';
+import { MOSAIC_MARKS } from '../colorful-engine';
 import type { DisplayColorfulBoard as Board, DisplayMosaic } from '../public-visual';
 import { PUZZLE_COLORS as colors, materialFor } from '../question-materials';
 import { objectSilhouette } from '../object-geometry';
@@ -33,14 +34,16 @@ function Crayon({color}:{color:number}) {
   </g>;
 }
 export function ColorfulArt({value,shadow=false,locale='tr'}:{value:ColorfulValue | DisplayMosaic;shadow?:boolean;locale?:'tr'|'en'}) {
-  return <svg viewBox={value.art==='crayon'?'-95 -30 190 60':'0 0 100 100'} shapeRendering="geometricPrecision" role="img" aria-label={value.art==='object'?(locale==='en'?'Object drawing':'Nesne çizimi'):value.art==='crayon'?(locale==='en'?`Crayon number ${value.color+1}`:`${value.color+1} numaralı kalem`):(locale==='en'?'Colourful geometric pattern':'Renkli geometrik desen')} className="zp-colorful-art" style={{width:'100%',height:'100%',maxHeight:'100%',display:'block'}}>
+  const marks = locale==='en' ? ['circle','triangle','diamond','plus','two circles','frame'] : MOSAIC_MARKS;
+  const description=value.art==='mosaic'?Array.from({length:value.size},(_,row)=>`${locale==='en'?'Row':'Satır'} ${row+1}: ${value.cells.slice(row*value.size,(row+1)*value.size).map(color=>color===null?(locale==='en'?'missing': 'eksik'):marks[color]).join(', ')}`).join('; '):value.art==='swatch'?marks[value.color]:value.art==='crayon'?(locale==='en'?`Crayon number ${value.color+1}`:`${value.color+1} numaralı kalem`):(locale==='en'?'Object drawing':'Nesne çizimi');
+  return <svg viewBox={value.art==='crayon'?'-95 -30 190 60':'0 0 100 100'} shapeRendering="geometricPrecision" role="img" aria-label={description} className="zp-colorful-art" style={{width:'100%',height:'100%',maxHeight:'100%',display:'block'}}>
     {value.art==='mosaic'?value.cells.map((color,i)=><g key={i} data-mosaic-cell={i} transform={`translate(${i%value.size*100/value.size} ${Math.floor(i/value.size)*100/value.size}) scale(${.96/value.size})`}>{color===null?<g aria-label={locale==='en'?'Missing tile':'Eksik kare'}><rect width="100" height="100" rx="9" fill="#f1f5f9" stroke="#64748b" strokeWidth="3" strokeDasharray="8 5"/><text x="50" y="67" textAnchor="middle" fontSize="55" fontWeight="800" fill="#172033">?</text></g>:<Motif color={color}/>}</g>):value.art==='swatch'?<Motif color={value.color}/>:value.art==='object'?<g transform={`rotate(${value.tilt*90} 50 50)`}><ObjectShape value={value} shadow={shadow}/></g>:<Crayon color={value.color}/>}
   </svg>;
 }
 export function ColorfulBoard({board:b,locale='tr'}:{board:Board;locale?:'tr'|'en'}) {
-  return <div data-colorful-kind={b.kind} style={{width:360,maxWidth:'100%',aspectRatio:'1.45',display:'flex',alignItems:'center',justifyContent:'center',gap:14}}>
+  return <div className="zp-colorful-stage" data-colorful-kind={b.kind} style={{width:432,maxWidth:'100%',aspectRatio:'1.45',display:'flex',alignItems:'center',justifyContent:'center',gap:14}}>
     {b.kind==='spatial_relationship'?<svg viewBox="-110 -110 220 220" role="img" aria-label={locale==='en'?'Four overlapping numbered crayons':'Üst üste duran dört numaralı kalem'} style={{height:'100%',maxWidth:'100%'}}>{b.layers!.map((color,i)=><g key={color} transform={`rotate(${b.angles![i]})`}><Crayon color={color}/></g>)}</svg>:<>
-      <div style={{height:'100%',aspectRatio:'1'}}><ColorfulArt locale={locale} value={b.source?.art==='mosaic'&&b.missing!==undefined?{...b.source,cells:b.source.cells.map((color,i)=>i===b.missing?null:color)}:b.source!}/></div>
+      <div className="zp-colorful-source" style={{height:'100%',aspectRatio:'1'}}><ColorfulArt locale={locale} value={b.source?.art==='mosaic'&&b.missing!==undefined?{...b.source,cells:b.source.cells.map((color,i)=>i===b.missing?null:color)}:b.source!}/></div>
       {b.kind==='mirror_reflection'&&<svg viewBox="0 0 36 180" style={{height:'90%',width:36}} role="img" aria-label={locale==='en'?'Vertical mirror on the right':'Sağda dikey ayna'}><rect x="4" y="4" width="28" height="172" rx="10" fill="#dbf4ff" stroke="#367e9c" strokeWidth="3"/><path d="M10 40L26 20M10 85L26 65M10 130L26 110" stroke="white" strokeWidth="5"/></svg>}
     </>}
   </div>;

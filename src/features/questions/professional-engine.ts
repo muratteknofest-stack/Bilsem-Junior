@@ -3,13 +3,28 @@ import { SeededRNG } from '../../lib/rng';
 import { generateVisualFingerprint as fingerprint } from './fingerprint';
 import { VISUAL_SYMBOL_IDS, symbolLabel } from './visual-vocabulary';
 import { ALL_TOPIC_TYPES } from './topic-catalog';
+import { generateProfessionalQuestion as generateLegacyProfessional } from './professional-engine-v5';
 
-export const ENGINE_VERSION = 'verified-5';
+export const ENGINE_VERSION = 'verified-7';
 export const VERIFIED_TYPES: QuestionType[] = ['matrix_2x2', 'matrix_3x3', 'raven_matrix', 'visual_sequence', 'figure_rotation', 'mirror_reflection', 'number_pattern', 'operation_machine', 'symbol_coding', 'shape_counting', 'logic_grid'];
 export const RECOVERED_TYPES: QuestionType[] = ['symmetry_completion', 'shape_combination', 'direction_path', 'number_pyramid'];
 export const STUDENT_TYPES: QuestionType[] = [...ALL_TOPIC_TYPES];
 export type Tile = { cells: number[]; size: number };
 type Value = Tile | { textNumber: number | string };
+export type OrderConstraint = { kind: 'position'; name: string; position: number } |
+  { kind: 'before'; left: string; right: string } |
+  { kind: 'distance'; left: string; right: string; distance: number };
+export function orderSatisfies(board: Board, order: string[]): boolean {
+  return (board.clues || []).every(([a,b])=>order.indexOf(b)===order.indexOf(a)+1) &&
+    (board.constraints || []).every(c=>c.kind==='position'?order.indexOf(c.name)===c.position-1:
+      c.kind==='before'?order.indexOf(c.left)<order.indexOf(c.right):order.indexOf(c.right)-order.indexOf(c.left)===c.distance);
+}
+export function orderClueText(c: OrderConstraint): string {
+  return c.kind==='position'?`${c.name}, soldan ${c.position}. sıradadır.`:
+    c.kind==='before'?`${c.left}, ${c.right} adlı kişinin solundadır; yan yana olmaları gerekmez.`:
+    c.distance===1?`${c.right}, ${c.left} adlı kişinin hemen sağındadır.`:
+    `${c.left} ile ${c.right} arasında ${c.distance-1} kişi vardır. ${c.left} soldadır.`;
+}
 export type Board = {
   displayMode: 'verified_board';
   kind: 'transform' | 'matrix' | 'numbers' | 'machine' | 'symbols' | 'count' | 'order' | 'symmetry' | 'overlay' | 'path' | 'pyramid';
@@ -23,7 +38,7 @@ export type Board = {
   turns?: number;
   sequence?: boolean;
   values?: number[];
-  rule?: 'add' | 'growing' | 'alternate';
+  rule?: 'add' | 'growing' | 'alternate' | 'interleaved';
   examples?: number[][];
   input?: number;
   key?: { symbol: string; value: number }[];
@@ -32,6 +47,7 @@ export type Board = {
   target?: string;
   names?: string[];
   clues?: [string, string][];
+  constraints?: OrderConstraint[];
   position?: number;
 };
 
@@ -53,12 +69,22 @@ function combine(a: Tile, b: Tile, op: number): Tile {
 }
 const same = (a: unknown, b: unknown) => fingerprint(a) === fingerprint(b);
 function randomTile(rng: SeededRNG, size: number): Tile {
-  for (let attempt = 0; attempt < 64; attempt++) {
-    const cells = Array.from({ length: size * size }, () => Number(rng.nextBool(0.45)));
-    const count = cells.reduce((sum, v) => sum + v, 0);
-    if (count >= 2 && count <= cells.length - 2) return { size, cells };
+  // A connected piece and, in some compositions, one detached corner marker.
+  const cells=Array(size*size).fill(0), count=rng.nextInt(3,size===3?7:8);
+  cells[rng.nextInt(0,cells.length-1)]=1;
+  for(let filled=1;filled<count;filled++) {
+    const frontier=cells.flatMap((v,i)=>!v&&[
+      ...(i%size>0?[i-1]:[]),...(i%size<size-1?[i+1]:[]),i-size,i+size,
+    ].some(j=>j>=0&&j<cells.length&&cells[j])?[i]:[]);
+    if(!frontier.length)throw Error('Desen sınırı geçersiz.');
+    cells[rng.pick(frontier)]=1;
   }
-  throw new Error('Okunabilir desen üretilemedi.');
+  if(count<size*size-2&&rng.nextBool(.55)) {
+    const corners=[0,size-1,size*(size-1),size*size-1].filter(i=>!cells[i]&&
+      ![...(i%size>0?[i-1]:[]),...(i%size<size-1?[i+1]:[]),i-size,i+size].some(j=>j>=0&&j<cells.length&&cells[j]));
+    if(corners.length)cells[rng.pick(corners)]=1;
+  }
+  return {size,cells};
 }
 function asymmetricTile(rng: SeededRNG, size: number): Tile {
   for (let i = 0; i < 100; i++) {
@@ -128,7 +154,13 @@ export function solveBoard(board: Board): Value {
   }
   if (board.kind === 'numbers') {
     const v = board.values!;
-    if (!Array.isArray(v) || v.length < 5 || v.length > 8 || v.some(n => !Number.isFinite(n))) throw new Error('Sayı dizisi eksik.');
+    if (!Array.isArray(v) || v.length < 5 || v.length > 8 || v.some(n => !Number.isSafeInteger(n) || n < 0)) throw new Error('Sayı dizisi eksik.');
+    if (board.rule === 'interleaved') {
+      if (v.length !== 6) throw new Error('İç içe örüntüde her sıra için üç örnek gerekli.');
+      const odd = [v[0], v[2], v[4]], even = [v[1], v[3], v[5]];
+      if (odd[2] - odd[1] !== odd[1] - odd[0] || even[2] - even[1] !== even[1] - even[0]) throw new Error('İç içe örüntünün sıraları tutarsız.');
+      return { textNumber: odd[2] + odd[1] - odd[0] };
+    }
     const diffs = v.slice(1).map((n, i) => n - v[i]);
     const step = diffs[1] - diffs[0];
     if (board.rule === 'add' && diffs.every(d => d === diffs[0])) return { textNumber: v.at(-1)! + diffs[0] };
@@ -156,10 +188,13 @@ export function solveBoard(board: Board): Value {
   if (board.kind === 'order') {
     const names = board.names!;
     if (!Array.isArray(names) || names.length < 3 || names.length > 6 || names.some(n => typeof n !== 'string') || new Set(names).size !== names.length || !Number.isInteger(board.position) || board.position! < 1 || board.position! > names.length || !Array.isArray(board.clues) || board.clues.length > 10 || board.clues.some(p => !Array.isArray(p) || p.length !== 2 || p.some(n => !names.includes(n)))) throw new Error('Sıralama verisi geçersiz.');
+    if(board.constraints!==undefined && (!Array.isArray(board.constraints)||board.constraints.length<2||board.constraints.length>8||board.constraints.some(c=>!c||
+      (c.kind==='position'? !names.includes(c.name)||!Number.isInteger(c.position)||c.position<1||c.position>names.length:
+       c.kind==='before'||c.kind==='distance'? !names.includes(c.left)||!names.includes(c.right)||c.left===c.right||c.kind==='distance'&&(!Number.isInteger(c.distance)||c.distance<1||c.distance>=names.length):true))))throw Error('Sıralama kısıtları geçersiz.');
     const solutions: string[][] = [];
     const visit = (order: string[]) => {
       if (order.length === names.length) {
-        if (board.clues!.every(([a, b]) => order.indexOf(b) === order.indexOf(a) + 1)) solutions.push(order);
+        if (orderSatisfies(board,order)) solutions.push(order);
       } else for (const name of names) if (!order.includes(name)) visit([...order, name]);
     };
     visit([]);
@@ -170,6 +205,7 @@ export function solveBoard(board: Board): Value {
 }
 
 export function generateProfessionalQuestion(type: QuestionType, seed: number, difficulty: DifficultyLevel, legacyV3 = false): BaseQuestion {
+  if(legacyV3)return generateLegacyProfessional(type,seed,difficulty,true);
   if (!VERIFIED_TYPES.includes(type) || !Number.isSafeInteger(seed) || seed < 1 || !Number.isInteger(difficulty) || difficulty < 1 || difficulty > 6) throw new Error('Soru parametreleri geçersiz.');
   const rng = new SeededRNG(seed);
   const size = difficulty >= 4 ? 4 : 3;
@@ -177,7 +213,9 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
   let prompt: string, ruleTitle: string, summary: string, steps: string[], objective: string, category: CognitiveCategory;
   if (['matrix_2x2', 'visual_sequence', 'figure_rotation', 'mirror_reflection'].includes(type)) {
     const turns = rng.pick(difficulty <= 2 ? [1] : [1, 2, 3]);
-    const operation = type === 'mirror_reflection' ? rng.pick(['mirrorX', 'mirrorY'] as const) : 'rotate';
+    const operation = type === 'mirror_reflection' ? rng.pick(['mirrorX', 'mirrorY'] as const) :
+      type === 'matrix_2x2' && difficulty >= 3 ? rng.pick(['rotate', 'mirrorX', 'mirrorY'] as const) :
+      type==='visual_sequence'&&difficulty>=3?rng.pick(['rotate','rotate','mirrorX','mirrorY'] as const):'rotate';
     const first = asymmetricTile(rng, size);
     const direction = operation === 'mirrorX' ? 'soldan sağa' : 'yukarıdan aşağıya';
     const transform = (tile: Tile) => transformTile(tile, operation, turns);
@@ -185,7 +223,7 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
     if (type === 'matrix_2x2') board.tiles = [first, transform(first), asymmetricTile(rng, size), null];
     if (type === 'visual_sequence') { board.tiles = [first, transform(first), transform(transform(first)), null]; board.sequence = true; }
     prompt = type === 'matrix_2x2' ? 'Üst satırdaki dönüşümü alt satıra uygula. Eksik kare hangisidir?' :
-      type === 'visual_sequence' ? 'Her adımda aynı miktarda dönen örüntüyü hangi kare tamamlar?' :
+      type === 'visual_sequence' ? 'Her adımda aynı dönüşüm uygulanıyor. Örüntüyü hangi kare tamamlar?' :
       type === 'figure_rotation' ? 'Şekil saat yönünde ' + turns * 90 + '° döndürülürse hangisi oluşur?' :
       'Şeklin ' + direction + ' ayna görüntüsü hangisidir?';
     category = type === 'matrix_2x2' ? 'matrix' : type === 'visual_sequence' ? 'pattern' : 'spatial';
@@ -222,21 +260,30 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
     objective = 'İki örnekten ortak görsel kuralı çıkarma ve yeni bir duruma aktarma.';
     category = 'matrix';
   } else if (type === 'number_pattern') {
-    const rule = difficulty <= 2 ? 'add' : rng.pick(['growing', 'alternate'] as const);
+    const rule = difficulty <= 2 ? 'add' : rng.pick(difficulty >= 4 ? ['growing', 'alternate', 'interleaved'] as const : ['growing', 'alternate'] as const);
     const start = rng.nextInt(1, difficulty <= 2 ? 8 : 15), a = rng.nextInt(2, difficulty <= 2 ? 4 : 7), b = rng.nextInt(1, difficulty <= 4 ? 3 : 4);
-    const values = [start];
-    for (let i = 0; i < 5; i++) values.push(values.at(-1)! + (rule === 'add' ? a : rule === 'growing' ? a + i * b : i % 2 === 0 ? a : a + b));
+    const descending = rule === 'add' && difficulty >= 2 && rng.nextBool(.4);
+    // Six decrements, including the missing term, must remain non-negative and
+    // within the first-grade limit of 30 when this level is used by grade one.
+    const values = [descending ? 6 * a + rng.nextInt(0, 6) : start];
+    if (rule === 'interleaved') {
+      const second = start + a + b;
+      values.splice(0, 1, start, second, start + a, second + a + b, start + 2 * a, second + 2 * (a + b));
+    } else for (let i = 0; i < 5; i++) values.push(values.at(-1)! + (rule === 'add' ? (descending ? -a : a) : rule === 'growing' ? a + i * b : i % 2 === 0 ? a : a + b));
     board = { displayMode: 'verified_board', kind: 'numbers', values, rule };
-    prompt = 'Artışların düzenini incele. Aynı düzen devam ederse sıradaki sayı kaç olur?';
-    summary = rule === 'add' ? 'Her adımda ' + a + ' eklenir.' : rule === 'growing' ? 'Artış miktarı ' + a + ' ile başlar ve her adımda ' + b + ' büyür.' : 'Artışlar sırayla ' + a + ' ve ' + (a + b) + ' olarak tekrar eder.';
-    ruleTitle = 'Artışları karşılaştır'; steps = ['Yan yana iki sayının farkını bul.', summary, 'Son sayıya sıradaki artışı ekle.'];
-    category = 'numerical'; objective = 'Sabit, dönüşümlü ve ikinci dereceden artış örüntülerini ayırt etme.';
+    prompt = rule === 'interleaved' ? 'Birer sayı atlayarak iki ayrı sıra oluştur. Her sıra kendi içinde aynı miktarda artıyor. Sıradaki sayı kaçtır?' : 'Sayılar arasındaki değişimi incele. Aynı düzen devam ederse sıradaki sayı kaç olur?';
+    summary = rule === 'interleaved' ? 'Tek numaralı adımlar ' + a + ', çift numaralı adımlar ' + (a + b) + ' artar.' : rule === 'add' ? 'Her adımda ' + a + (descending ? ' çıkarılır.' : ' eklenir.') : rule === 'growing' ? 'Artış miktarı ' + a + ' ile başlar ve her adımda ' + b + ' büyür.' : 'Artışlar sırayla ' + a + ' ve ' + (a + b) + ' olarak tekrar eder.';
+    ruleTitle = rule === 'interleaved' ? 'İç içe iki örüntü' : 'Değişimleri karşılaştır'; steps = ['Sayıların yerlerini ve değişimlerini incele.', summary, 'Bulduğun kuralı bütün verilen sayılarda denetle.'];
+    category = 'numerical'; objective = 'Sabit, azalan, dönüşümlü ve iç içe sayı örüntülerini ayırt etme.';
   } else if (type === 'operation_machine') {
-    const m = rng.nextInt(2, difficulty < 3 ? 3 : 7), b = difficulty <= 2 ? 0 : rng.nextInt(1, 12);
-    const xs = rng.pickUnique([1, 2, 3, 4, 5, 6, 7, 8, 9], 4);
+    const m = rng.nextInt(2, difficulty < 3 ? 3 : 7);
+    const subtract = difficulty >= 4 && rng.nextBool();
+    const rawOffset = difficulty <= 2 ? 0 : subtract ? -rng.nextInt(1, m * 2) : rng.nextInt(1, 12);
+    const xs = rng.pickUnique(subtract ? [3, 4, 5, 6, 7, 8, 9] : [1, 2, 3, 4, 5, 6, 7, 8, 9], 4).sort((x, y) => x - y);
+    const b = subtract ? Math.max(rawOffset, -xs[3]) : rawOffset;
     board = { displayMode: 'verified_board', kind: 'machine', examples: xs.slice(0, 3).map(x => [x, m * x + b]), input: xs[3] };
-    prompt = 'Makine her sayıyı aynı sayıyla çarpıp aynı miktarı ekliyor. Son çıktı kaçtır?';
-    ruleTitle = 'Girdi–çıktı ilişkisi'; summary = 'Girdi ' + m + ' ile çarpılır' + (b ? ', sonuca ' + b + ' eklenir.' : '. Eklenen miktar sıfırdır.');
+    prompt = 'Makine her girdiye aynı işlemi uyguluyor: önce aynı sayıyla çarpıyor, sonra aynı miktarı ' + (subtract ? 'çıkarıyor.' : 'ekliyor.') + ' Son çıktı kaçtır?';
+    ruleTitle = 'Girdi–çıktı ilişkisi'; summary = 'Girdi ' + m + ' ile çarpılır' + (b ? (subtract ? ', sonuçtan ' : ', sonuca ') + Math.abs(b) + (subtract ? ' çıkarılır.' : ' eklenir.') : '. Eklenen miktar sıfırdır.');
     steps = ['İki örneğin girdi ve çıktı farklarını karşılaştır.', summary, 'Bu işlemi son girdiye uygula ve diğer örneklerle denetle.'];
     category = 'numerical'; objective = 'Örneklerden doğrusal bir işlem kuralı çıkarma.';
   } else if (type === 'symbol_coding' || type === 'shape_counting') {
@@ -261,10 +308,18 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
   } else {
     const names = rng.pickUnique(['Ada', 'Ece', 'Can', 'Efe', 'Duru', 'Mert', 'Oya', 'Deniz'], difficulty <= 2 ? 4 : difficulty <= 4 ? 5 : 6);
     const order = rng.shuffle(names), position = rng.nextInt(1, names.length);
-    board = { displayMode: 'verified_board', kind: 'order', names, clues: rng.shuffle(order.slice(1).map((n, i) => [order[i], n] as [string, string])), position };
+    board = { displayMode: 'verified_board', kind: 'order', names, clues: [], position };
+    if(difficulty<=2)board.clues=rng.shuffle(order.slice(1).map((n,i)=>[order[i],n] as [string,string]));
+    else {
+      board.constraints=rng.shuffle<OrderConstraint>([
+        {kind:'position',name:order[0],position:1},
+        {kind:'distance',left:order[1],right:order.at(-1)!,distance:names.length-2},
+        ...order.slice(2,-2).map((name,i):OrderConstraint=>({kind:'before',left:name,right:order[i+3]})),
+      ]);
+    }
     prompt = 'İpuçlarına göre soldan ' + position + '. sırada kim vardır?';
-    ruleTitle = 'Komşuluk ipuçlarını birleştir'; summary = 'Soldan sağa sıra: ' + order.join(' → ') + '.';
-    steps = ['Her ipucundaki iki kişiyi yan yana düşün.', 'Ortak isimleri kullanarak parçaları tek sırada birleştir.', summary];
+    ruleTitle = 'Konum ve sıra ipuçlarını birleştir'; summary = 'Soldan sağa sıra: ' + order.join(' → ') + '.';
+    steps = board.constraints?['Önce kesin konumu verilen kişiyi yerleştir.','Arada kaç kişi olduğunu belirten ipucuyla iki kişinin yerini bul.','Solunda olmak, hemen yanında olmak anlamına gelmez; kalan kişileri sırala.',summary]:['Her ipucundaki iki kişiyi yan yana düşün.', 'Ortak isimleri kullanarak parçaları tek sırada birleştir.', summary];
     category = 'logic'; objective = 'Birden çok sıralama kısıtından tek çözüm üretme.';
   }
   const answer = solveBoard(board);
@@ -272,15 +327,20 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
   if ('textNumber' in answer && typeof answer.textNumber === 'number') {
     if (board.kind === 'numbers') {
       const diffs = board.values!.slice(1).map((v, i) => v - board.values![i]);
-      steps = ['Komşu sayıları çıkar: artışlar ' + diffs.join(', ') + '.', summary,
-        'Sıradaki artış ' + (answer.textNumber - board.values!.at(-1)!) + ' olur.',
-        board.values!.at(-1) + ' + ' + (answer.textNumber - board.values!.at(-1)!) + ' = ' + answer.textNumber + '.'];
+      const nextChange = answer.textNumber - board.values!.at(-1)!;
+      steps = board.rule === 'interleaved' ? [
+        '1., 3. ve 5. adımlar: ' + board.values!.filter((_, i) => i % 2 === 0).join(' → ') + '.',
+        '2., 4. ve 6. adımlar: ' + board.values!.filter((_, i) => i % 2 === 1).join(' → ') + '.',
+        summary, '7. adım birinci sırayı sürdürür: ' + board.values![4] + ' + ' + (board.values![2] - board.values![0]) + ' = ' + answer.textNumber + '.',
+      ] : ['Komşu sayıların farkları: ' + diffs.join(', ') + '.', summary,
+        'Sıradaki değişim ' + nextChange + ' olur.',
+        board.values!.at(-1) + (nextChange < 0 ? ' − ' : ' + ') + Math.abs(nextChange) + ' = ' + answer.textNumber + '.'];
     } else if (board.kind === 'machine') {
       const [[x1, y1], [x2, y2]] = board.examples!;
       const m = (y2 - y1) / (x2 - x1), offset = y1 - m * x1;
       steps = ['Girdi farkı ' + (x2 - x1) + ', çıktı farkı ' + (y2 - y1) + ': çarpan ' + m + '.',
-        'Bir örnekle ekleneni bul: ' + y1 + ' − ' + x1 + ' × ' + m + ' = ' + offset + '.',
-        board.input + ' × ' + m + ' + ' + offset + ' = ' + answer.textNumber + '.',
+        offset < 0 ? 'Bir örnekle çıkarılanı bul: ' + x1 + ' × ' + m + ' − ' + y1 + ' = ' + Math.abs(offset) + '.' : 'Bir örnekle ekleneni bul: ' + y1 + ' − ' + x1 + ' × ' + m + ' = ' + offset + '.',
+        board.input + ' × ' + m + (offset < 0 ? ' − ' : ' + ') + Math.abs(offset) + ' = ' + answer.textNumber + '.',
         'Aynı işlemi verilen üç örnekte de kontrol et.'];
     } else if (board.kind === 'symbols') {
       const values = board.symbols!.map(s => board.key!.find(k => k.symbol === s)!.value);
@@ -300,6 +360,12 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
     if (!choices.some(c => same(c.value, value))) choices.push({ value, note });
   };
   if ('cells' in answer) {
+    if(board.kind==='transform' || board.kind==='matrix') {
+      const filled=rng.pick(answer.cells.flatMap((v,i)=>v?[i]:[]));
+      const empty=rng.pick(answer.cells.flatMap((v,i)=>!v?[i]:[]));
+      const cells=[...answer.cells];cells[filled]=0;cells[empty]=1;
+      add({size:answer.size,cells},`Dolu hücre sayısı korunmuş; ancak ${Math.floor(filled/size)+1}. satırın ${filled%size+1}. sütunundaki işaret yanlış konuma taşınmış.`);
+    }
     if (board.kind === 'matrix') for (const op of [0, 1, 2]) add(combine(board.tiles![6]!, board.tiles![7]!, op), 'Örneklerle uyuşmayan bir hücre birleştirme kuralı uygulanmış.');
     const source = board.tiles!.filter((t): t is Tile => t !== null).at(-1)!;
     add(source, 'Dönüşüm uygulanmamış; başlangıç deseni aynen bırakılmış.');
@@ -315,6 +381,11 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
     const number = (n: number, note: string) => add({ textNumber: n }, note);
     if (board.kind === 'numbers') {
       const v = board.values!, last = v.at(-1)!, firstDiff = v[1] - v[0], lastDiff = last - v.at(-2)!;
+      if (board.rule === 'interleaved') {
+        number(v[5] + v[3] - v[1], '7. adım yerine çift numaralı sıranın bir sonraki sayısı bulunmuş.');
+        number(v[4] + v[3] - v[1], 'Tek numaralı sıraya diğer sıranın artışı uygulanmış.');
+        number(v[4], 'Tek numaralı sıradaki son sayı tekrar edilmiş; kendi artışı eklenmemiş.');
+      }
       number(last + lastDiff, 'Son artış aynen tekrar edilmiş; artışların düzeni kontrol edilmemiş.');
       number(last + firstDiff, 'Yalnızca ilk artış kullanılmış; sonraki artışların değişimi atlanmış.');
       number(last, 'Son sayı yeniden yazılmış; sıradaki artış uygulanmamış.');
@@ -323,8 +394,8 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
     } else if (board.kind === 'machine') {
       const [[x1, y1], [x2, y2]] = board.examples!;
       const m = (y2 - y1) / (x2 - x1), offset = y1 - m * x1, x = board.input!;
-      number(x * m, 'Çarpma yapılmış ancak eklenen sabit miktar unutulmuş.');
-      number((x + offset) * m, 'Önce çarpıp sonra eklemek yerine önce ekleyip sonra çarpılmış.');
+      number(x * m, 'Çarpma yapılmış ancak sabit miktarla yapılacak son işlem unutulmuş.');
+      number((x + offset) * m, 'İşlem sırası ters uygulanmış; sabit miktarla işlem çarpmadan önce yapılmış.');
       number(x + m + offset, 'Çarpma yerine toplama yapılmış.');
       number(x * (m + 1) + offset, 'Çarpan bir fazla alınmış.');
       number(x * m + offset + m, 'Çarpan ayrıca sonuca eklenmiş.');
@@ -350,7 +421,7 @@ export function generateProfessionalQuestion(type: QuestionType, seed: number, d
     const id = 'ABCD'[i]; if (same(c.value, answer)) correctOptionId = id; notes[id] = c.note;
     return { id, label: id, fingerprint: fingerprint(c.value), visualData: c.value };
   });
-  const version = legacyV3 ? 3 : 5;
+  const version = 7;
   return { id: type + '-v' + version + '-d' + difficulty + '-s' + seed, version, type, category, difficulty,
     ageGroup: difficulty <= 2 ? '1-2' : '3-4', prompt, options, correctOptionId,
     explanation: { ruleTitle, summary, steps: [...steps, 'Bu kurala uyan seçenek: ' + correctOptionId + '.'] },

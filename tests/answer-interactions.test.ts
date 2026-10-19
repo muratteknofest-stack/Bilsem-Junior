@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { generateProfessionalQuestion, type Board, VERIFIED_TYPES } from '../src/features/questions/professional-engine';
+import { generateProfessionalQuestion as generateLegacyQuestion } from '../src/features/questions/professional-engine-v5';
 import { independentlySolveBoard } from '../src/features/questions/independent-board-solver';
 import { emptyResponse, evaluateResponse, interactionModes, placeInOrder } from '../src/features/questions/answer-interactions';
 
@@ -29,7 +30,7 @@ test('numeric answers require a complete integer and use an independent solution
 });
 
 test('every ordering constraint matters, even if the originally requested person is correct', () => {
-  const q = generateProfessionalQuestion('logic_grid', 61, 4), b = q.visualConfig as Board;
+  const q = generateLegacyQuestion('logic_grid', 61, 4), b = q.visualConfig as Board;
   const order = [b.names!.find(n => !b.clues!.some(([, right]) => right === n))!];
   while (order.length < b.names!.length) order.push(b.clues!.find(([left]) => left === order.at(-1))![1]);
   assert.equal(evaluateResponse(q, { mode: 'order', slots: order }).correct, true);
