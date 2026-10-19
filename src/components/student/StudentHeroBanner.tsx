@@ -13,9 +13,10 @@ export interface StudentHeroBannerProps {
   onUserUpdate: (u: UserProfile) => void;
   onNavigate: (view: string) => void;
   prefersReducedMotion?: boolean | null;
+  avatarImageSrc?: string;
 }
 
-export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({ user, greeting, xpProgress, onUserUpdate, onNavigate, prefersReducedMotion }) => {
+export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({ user, greeting, xpProgress, onUserUpdate, onNavigate, prefersReducedMotion, avatarImageSrc }) => {
   const [copiedStudentCode, setCopiedStudentCode] = useState(false);
   const [copyError, setCopyError] = useState('');
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -38,7 +39,7 @@ export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({ user, gree
     <div className="zp-pro-hero-content">
       <div className="zp-student-profile">
         <button type="button" className="zp-student-avatar" aria-label="Avatar kutlaması" onClick={celebrate}>
-          <span>{user.avatar || '🦊'}</span><small>SEVİYE {xpProgress.level}</small>
+          {avatarImageSrc ? <img src={avatarImageSrc} alt="" width={46} height={53} /> : <span>{user.avatar || '🦊'}</span>}<small>SEVİYE {xpProgress.level}</small>
         </button>
         <div className="zp-student-profile-copy">
           <p className="zp-dashboard-kicker">BUGÜN DE HARİKALAR KEŞFEDELİM</p>

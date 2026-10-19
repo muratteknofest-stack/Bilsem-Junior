@@ -1,6 +1,6 @@
 # Android ve Google Play yayını
 
-Uygulama kimliği `com.zekapark.app`, bu sürüm `1.0.26` / versionCode `27`.
+Uygulama kimliği `com.zekapark.app`, bu sürüm `1.0.27` / versionCode `28`.
 
 1. `.env.android` içinde yalnız açık bağlantı ayarlarını tanımlayın: VITE_API_BASE_URL ve VITE_PUBLIC_SITE_URL `https://zekapark.vercel.app`; VITE_SUPABASE_URL ve VITE_SUPABASE_PUBLISHABLE_KEY mevcut açık proje değerleri olmalı. Sunucu sırlarını Android paketine koymayın.
 2. `npm ci`, `npm run lint`, `npm run test:google-play`, `npm run android:sync` çalıştırın.
@@ -58,3 +58,9 @@ Doğrulama: 380 test ve 7 öğrenci çalışma alanı testi, TypeScript ve üret
 - Sonuçtan ve haritadan yeniden oynanabilir. Her deneme taze sunucu oturumu açar; en iyi yıldız sonucu korunur. Yeniden oynamak yeni durak açmaz, macera puanını ve ilk tamamlama alıştırma sayaçlarını çoğaltmaz; soru XP’si sunucudan gelir.
 - Eski durak ve hikâye ilerlemesi korunur. Eski görevlerin yıldızları 20 soruluk tekrar oynandıktan sonra kaydedilir. Yıldızlar cihazda hesap/sınıf ayrımıyla saklanır.
 - Sonuç ekranında çözümler açılır bölümden incelenir. Azaltılmış hareket tercihi açıkken süslemeler kapanır; cihaz tercihi değişince anında uygulanır.
+
+## 1.0.27 — üç boyutlu kaşif profili
+
+- Profilde mor kaşif pasaportu, kabartmalı avatar, ışık geçişli gerçek XP çubuğu ve renkli 3B ayar tuşları. Basılı tuşlar fiziksel derinlik hissi verir; hatırlatıcı, veli alanı, rehber, İngilizce alanı ve çıkış işlemleri mevcut akışlarını kullanır.
+- Görünüm ve ses ayarları profil içinde açılır. Hareket düğmesi, cihazın azaltılmış hareket tercihi ve arka plan/ekran dışı duraklatma desteği bütün dekoratif CSS animasyonlarına uygulanır.
+- Seviye, XP, seri kalkanı, keşif ve biten hikâye sayıları mevcut hesap/ilerleme verilerinden gelir. Profil etkileşimleri ek XP veya rozet vermez. Açık/koyu tema ve 320–820 px ekranlar kontrol edilir.
