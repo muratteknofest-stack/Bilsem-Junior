@@ -1,6 +1,7 @@
 import { randomInt } from 'node:crypto';
 import { generateQuestion, STUDENT_CATEGORY_TYPES } from '../src/features/questions/generators';
 import { professionalGradeTypes } from '../src/features/questions/reasoning-profile';
+import { EDUCATION_PROFILES } from '../src/features/questions/quality-policy';
 import type { SchoolGrade } from '../src/features/questions/quality-policy';
 import type { BaseQuestion, CognitiveCategory, DifficultyLevel, QuestionType } from '../src/types';
 import { questionVisualKey, questionStimulusKey } from '../src/features/questions/quality';
@@ -44,6 +45,20 @@ function shuffle<T>(items: T[], randomIndex: (max: number) => number) {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
+}
+
+/** A mixed-difficulty test should challenge the student's grade rather than
+ * randomly presenting first-grade-level items to fourth graders.
+ * An explicitly selected easy difficulty remains unaffected. */
+export function gradeChallengeFloor(grade: SchoolGrade): DifficultyLevel {
+  const max = EDUCATION_PROFILES[grade].maxDifficulty;
+  return Math.max(1, max - (grade === 4 ? 2 : 1)) as DifficultyLevel;
+}
+
+export function pickGradeChallenge(grade: SchoolGrade, randomIndex = randomInt): DifficultyLevel {
+  const min = gradeChallengeFloor(grade);
+  const max = EDUCATION_PROFILES[grade].maxDifficulty;
+  return (min + randomIndex(max - min + 1)) as DifficultyLevel;
 }
 
 /** Equal category quotas avoid inheriting the bank's 25% spatial / 3% verbal bias. */
