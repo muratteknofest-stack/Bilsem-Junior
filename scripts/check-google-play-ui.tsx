@@ -8,29 +8,36 @@ import { resolve } from 'node:path';
 import express from 'express';
 import { once } from 'node:events';
 import type { AddressInfo } from 'node:net';
-const output=resolve('test-artifacts/google-play-ui');await mkdir(output,{recursive:true});
-const cssNames=(await readdir('dist-android/assets')).filter(name=>/^main-.*\.css$/.test(name));
+const output=resolve(process.env.PLAY_UI_OUTPUT||'test-artifacts/google-play-ui');await mkdir(output,{recursive:true});
+const assets=process.env.PLAY_UI_ASSETS||'dist-android/assets';
+const cssNames=(await readdir(assets)).filter(name=>/^main-.*\.css$/.test(name));
 if(cssNames.length!==1)throw Error('Run npm run android:build:web before this layout check.');
-const css=await readFile('dist-android/assets/'+cssNames[0],'utf8');
+const css=await readFile(assets+'/'+cssNames[0],'utf8');
 const fixture=`
 import React,{useState} from 'react';import{createRoot}from'react-dom/client';
-import{PlayBillingPanel}from'./src/components/PlayBillingPanel';
+import{PlayBillingPanel}from'./src/components/PlayBillingPanel';import{WebPlayMembershipPanel}from'./src/components/WebPlayMembershipPanel';
 import{initialPlayBillingState}from'./src/lib/google-play-flow';
 const ready={...initialPlayBillingState(),phase:'idle',fresh:true,storeChecked:true,
 config:{ready:true,enforced:true,productId:'zekapark_uyelik',binding:{accountId:'a'.repeat(64),profileId:'b'.repeat(64)},access:{active:false,expiresAt:null}},
 offers:[{basePlanId:'monthly',price:'₺299,00',period:'P1M'},{basePlanId:'quarterly',price:'₺699,00',period:'P3M'},{basePlanId:'annual',price:'₺1.499,00',period:'P1Y'}],notice:{kind:'info',text:'Döneminizi seçip Google Play ile devam edin.'}};
 window.__billingActions=[];
-function Fixture(){const[state,setState]=useState(ready);window.__billingShow=kind=>{
- const s=structuredClone(ready);
+function Fixture(){const[state,setState]=useState(ready),[web,setWeb]=useState(false);window.__billingShow=kind=>{
+ setWeb(kind.startsWith('web-'));kind=kind.replace('web-','');
+ const s=structuredClone(ready);s.config.storeUrl='https://play.google.com/store/apps/details?id=com.zekapark.app';
+ if(kind==='only-annual')s.offers=[s.offers[2]];
+ if(kind==='empty')s.offers=[];
+ if(kind==='other-student'){s.otherStudent=true;s.notice={kind:'warning',text:'Bu abonelik başka bir öğrenciye bağlı.'};}
+ if(kind==='opening')s.phase='opening';
+ if(kind==='verifying')s.phase='verifying';
  if(kind==='pending'){s.pending=true;s.notice={kind:'warning',text:'Ödemeniz Google Play’de beklemede.'};}
  if(kind==='active'){s.config.access={active:true,expiresAt:'2027-01-16T12:00:00Z',autoRenewing:false};s.notice={kind:'success',text:'Aboneliğiniz doğrulandı.'};}
  if(kind==='error'){s.fresh=false;s.notice={kind:'error',text:'Bağlantı kesildi. Yeniden deneyin.'};}
  if(kind==='api-error'){s.config=null;s.fresh=false;s.offers=[];s.notice={kind:'error',text:'API uç noktası bulunamadı.'};}
  if(kind==='stale'){s.config.access={active:true,expiresAt:'2027-01-16T12:00:00Z'};s.fresh=false;s.notice={kind:'error',text:'Güncel durum doğrulanamadı.'};}
- if(kind==='closed'){s.config.ready=false;s.offers=[];s.notice={kind:'info',text:'Google Play abonelikleri henüz satışa açılmadı.'};}
+ if(kind==='closed'){s.config.ready=false;s.config.storeUrl=null;s.offers=[];s.notice={kind:'info',text:'Google Play abonelikleri henüz satışa açılmadı.'};}
  if(kind==='loading')return setState(initialPlayBillingState());
  setState(s);
-};return <PlayBillingPanel studentName="Deniz Örnek" state={state} onPurchase={plan=>window.__billingActions.push(plan)} onRestore={()=>window.__billingActions.push('restore')} onRefresh={()=>window.__billingActions.push('refresh')}/>;}
+};return web?<WebPlayMembershipPanel studentName="Deniz Örnek" state={state} onRefresh={()=>window.__billingActions.push('refresh')}/>:<PlayBillingPanel studentName="Deniz Örnek" state={state} onPurchase={plan=>window.__billingActions.push(plan)} onRestore={()=>window.__billingActions.push('restore')} onRefresh={()=>window.__billingActions.push('refresh')}/>;}
 createRoot(document.getElementById('root')).render(<Fixture/>);`;
 await build({stdin:{contents:fixture,resolveDir:process.cwd(),loader:'tsx'},bundle:true,platform:'browser',format:'iife',outfile:resolve(output,'fixture.js'),logLevel:'silent'});
 const html='<!doctype html>'+renderToStaticMarkup(<html lang="tr" data-native-app="android"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Bilsem Junior yerel abonelik testi</title><style>{css}</style></head><body style={{background:'#f1f5f9'}}><main style={{maxWidth:760,margin:'0 auto',padding:12}}><p style={{fontSize:12,padding:4}}>Yerel arayüz testi · Örnek fiyatlar · Gerçek ödeme alınmaz</p><div id="root"/></main><script src="./fixture.js"/></body></html>);
@@ -55,11 +62,11 @@ try{
  let cases=0;
  for(const width of [320,360,390,430,768]){
   await page.setViewportSize({width,height:width<700?800:1024});
-  for(const state of ['ready','pending','active','error','api-error','stale','closed','loading']){
+  for(const state of ['ready','pending','active','error','api-error','stale','closed','loading','only-annual','empty','other-student','opening','verifying','web-ready','web-active','web-error','web-closed']){
    await page.evaluate(state=>(window as any).__billingShow(state),state);
    await page.evaluate(()=>new Promise<void>(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>r()))));
    const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);if(overflow)throw Error('Horizontal overflow '+width+' '+state);
-   if(['pending','active','stale','closed','loading','error','api-error'].includes(state)){
+   if(['pending','active','stale','closed','loading','error','api-error','empty','other-student','opening','verifying'].includes(state)){
     const checkout=page.getByRole('button',{name:'Google Play ile devam et',exact:true});
     if(await checkout.count()&&await checkout.isEnabled())throw Error('Unsafe checkout '+state);
    }
@@ -75,6 +82,12 @@ try{
     const small=await page.getByRole('button').evaluateAll(nodes=>nodes.some(n=>n.getBoundingClientRect().height<44));if(small)throw Error('Touch target below 44px');
     await page.screenshot({path:resolve(output,`${state}-${width}.png`),fullPage:true});
    }
+   if(state==='only-annual'){
+    if(!(await page.getByRole('radio',{name:/Yıllık/}).isChecked()))throw Error('Eligible plan was not selected');
+    if(!(await page.getByRole('button',{name:'Google Play ile devam et',exact:true}).isEnabled()))throw Error('Eligible annual checkout unavailable');
+   }
+   if(state.startsWith('web-')&&await page.getByRole('button',{name:'Google Play ile devam et',exact:true}).count())throw Error('Web exposed native checkout');
+   if(state==='web-closed'&&await page.getByRole('link',{name:/Android uygulamasını/}).count())throw Error('Unpublished store link exposed');
    cases++;
   }
  }
@@ -82,6 +95,8 @@ try{
  // Native radio controls provide keyboard selection without custom key handlers.
  await page.getByRole('radio',{name:/Aylık/}).evaluate(node=>(node as HTMLElement).focus());await page.keyboard.press('ArrowDown');
  if(await page.getByRole('radio',{name:/3 aylık/}).isChecked()!==true)throw Error('Radio keyboard navigation failed');
+ await page.emulateMedia({reducedMotion:'reduce'});
+ if(await page.locator('.zp-play-hero-sticker').evaluate(node=>getComputedStyle(node).animationName)!=='none')throw Error('Reduced motion ignored');
  if(pageErrors.length)throw Error(pageErrors.join('; '));
  console.log(JSON.stringify({layoutCases:cases,interactions:5,pageErrors:pageErrors.length,screenshots:output}));
 }finally{await browser?.close();await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()));}

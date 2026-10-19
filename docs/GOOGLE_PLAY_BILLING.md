@@ -74,3 +74,16 @@ Android ilk açılışta web ile aynı LandingPage bileşenini kullanır. Öğre
 `/paketler` ve web veli paneli Google Play üyeliğini açıklar. Tarayıcıda BillingClient başlatılmaz; satın alma Android uygulamasındaki veli panelinde yapılır. Sunucunun doğruladığı erişim aynı öğrenci için webde de geçerlidir. Fiyatlar yalnızca Play Billing kataloğundan alınır.
 
 `GOOGLE_PLAY_STORE_PUBLISHED=true` yalnızca gerçek mağaza sayfası erişilebilir olduktan sonra ayarlanmalıdır. Varsayılan false iken çalışmayan mağaza bağlantısı gösterilmez. Bu bayrak satın alma veya ücretli erişim açmaz; mevcut doğrulama ve yayın kontrolleri korunur.
+
+## 1.0.20 — abonelik ekranı ve kurtarma akışı
+
+- Android ve web veli üyelik kartları renkli, üç boyutlu yüzeylerle güncellendi. Roket ve yıldız animasyonları cihazın hareketi azalt tercihini izler. Paket kartları telefonda daha kısa tutulur; mevcut robot görselleri kullanılır.
+- Yalnızca sunulan ve doğru dönemi taşıyan paket seçilir. Aylık sunulmadığında, örneğin yalnız yıllık sunuluyorsa, kullanılabilir dönem otomatik seçilir. Paket seçmek ödeme başlatmaz.
+- Geçici katalog hatası sonrasında geri yükleme, gerçek fiyatları da yeniden yükler. İnternet bağlantısı geri geldiğinde üyelik yeniden sorgulanır.
+- Google ödeme ekranından dönüldüğünde normal callback gelmezse Android eklentisi satın alınmış/bekleyen işlemleri Google Play'den sorgular ve açık çağrıyı tamamlar. Gelen normal callback önceliklidir; geç sonuçlar ikinci kez işlem başlatmaz. `ITEM_ALREADY_OWNED` sonucunda yeni ödeme yerine sahip olunan işlemler okunur. Yerel sonuç erişim açmaz; sunucu doğrulaması korunur.
+
+19 Ekim 2026 kurulum kontrolünde üretim ortamında `GOOGLE_PLAY_*` ayarları bulunmadı. Gerçek satış bu nedenle açık değildir. Gerekli bağlantılar: Android Publisher hizmet hesabı (`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`), kalıcı hesap bağlama sırrı (`GOOGLE_PLAY_BINDING_SECRET`), token şifreleme anahtarı (`GOOGLE_PLAY_TOKEN_KEY`), doğrulanmış RTDN hedefi ve hizmet hesabı (`GOOGLE_PLAY_RTDN_AUDIENCE`, `GOOGLE_PLAY_RTDN_EMAIL`). Bunlar sunucuya güvenli şekilde tanımlanmalıdır; sohbet veya APK içine konulmaz. `GOOGLE_PLAY_BILLING_ENABLED` ve ücretli erişim bayrakları kabul testinden önce açılmaz.
+
+Play Console'da `com.zekapark.app` uygulamasının `zekapark_uyelik` ürünü ile `monthly` / P1M, `quarterly` / P3M, `annual` / P1Y otomatik yenilenen temel planları etkin olmalıdır. Ürünlerin mevcut Console durumu bu kod çalışmasıyla doğrulanmış değildir. Gerçek fiyat, satın alma ve yenileme testleri lisans testçisi ve Google Play kurulumu üzerinden tamamlanmalıdır.
+
+Bu sürümün APK'sı geliştirme test anahtarıyla imzalanmış test dağıtımıdır. Google Play'e yayımlama ve gerçek ödeme kabul testi yapılmış sayılmaz.

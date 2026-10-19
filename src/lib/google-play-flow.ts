@@ -154,6 +154,11 @@ export class PlayBillingFlow {
     const config = await this.load();
     if (!config.binding) throw Error('Google Play hesap bağlantısı henüz hazır değil.');
     await this.process(await withRequestDeadline(() => this.deps.store.restore(), this.deps.deadlineMs ?? 20000), config, 'restore');
+    // Recovery after a catalog outage should expose real plans again without a second tap on Refresh.
+    if (this.current() && config.ready && !this.state.config?.access.active && !this.state.pending && !this.state.otherStudent && !this.state.offers.length) {
+      try { await this.loadCatalog(config); }
+      catch { this.notice('warning', 'Satın alımlar kontrol edildi; fiyatlar yüklenemedi. Yenile’ye dokunarak tekrar deneyin.'); }
+    }
   });
   purchase = (plan: PlayPlanId) => {
     if (!this.deps.native || !canBuyPlay(this.state, plan)) return Promise.resolve();
