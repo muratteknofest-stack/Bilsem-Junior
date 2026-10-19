@@ -5,7 +5,8 @@ import { TOPIC_CATEGORY } from './topic-catalog';
 import { generateVisualFingerprint as fp } from './fingerprint';
 import { generateColorfulQuestion as generateLegacyColorful } from './colorful-engine-v1';
 
-export const COLORFUL_ENGINE = 'colorful-2';
+export const COLORFUL_ENGINE = 'colorful-3';
+export const MOSAIC_MARKS = ['daire', 'üçgen', 'baklava', 'artı', 'iki daire', 'çerçeve'] as const;
 export type MosaicRule = 'repeat-row' | 'repeat-column' | 'shift-row' | 'shift-column';
 
 export const COLORFUL_TYPES: QuestionType[] = ['mirror_reflection','figure_completion','visual_memory','shadow_matching','spatial_relationship'];
@@ -148,11 +149,24 @@ export function generateColorfulQuestion(type:QuestionType,seed:number,difficult
     }
   }
   const answer=solveColorful(b);
-  if(answer.art==='swatch')choices=[answer,...rng.shuffle([0,1,2,3,4,5].filter(n=>n!==answer.color)).slice(0,3).map(color=>({art:'swatch' as const,color}))];
+  if(answer.art==='swatch') {
+    const source=b.source as Mosaic, n=source.size, at=b.missing!;
+    const group=(i:number)=>b.mosaicRule==='repeat-column'?Math.floor(i/n):b.mosaicRule==='shift-column'?(Math.floor(i/n)-i%n+n)%n:b.mosaicRule==='shift-row'?(Math.floor(i/n)+i%n)%n:i%n;
+    const reference=source.cells.findIndex((_,i)=>i!==at&&group(i)===group(at));
+    if(reference<0)throw Error('Eksik parçanın görünür referansı yok.');
+    steps.push(`Eksik yer ${Math.floor(at/n)+1}. satır, ${at%n+1}. sütundur.`,
+      `${Math.floor(reference/n)+1}. satır, ${reference%n+1}. sütundaki ${MOSAIC_MARKS[answer.color]} deseni aynı düzen konumundadır.`);
+    const wrong=[...new Set([...rng.shuffle(source.cells.filter((_,i)=>i!==at)),...rng.shuffle([0,1,2,3,4,5])])].filter(color=>color!==answer.color);
+    choices=[answer,...wrong.slice(0,3).map(color=>({art:'swatch' as const,color}))];
+  }
   if(answer.art==='mosaic') {
     choices=[answer];
     const source=b.source as Mosaic,n=source.size;
     const add=(cells:number[])=>{const value={...answer,cells};if(!choices.some(c=>fp(c)===fp(value)))choices.push(value);};
+    // A local transposition makes at least one plausible near miss. It preserves
+    // every colour count, so colour inventory alone cannot reveal the answer.
+    const from=rng.pick(answer.cells.map((_,i)=>i)), to=rng.pick(answer.cells.flatMap((color,i)=>color!==answer.cells[from]?[i]:[]));
+    const swapped=[...answer.cells];[swapped[from],swapped[to]]=[swapped[to],swapped[from]];add(swapped);
     // Common reasoning errors retain the same palette and visual density.
     for(const cells of [source.cells,source.cells.map((_,i)=>source.cells[(n-1-Math.floor(i/n))*n+i%n]),source.cells.map((_,i)=>source.cells[(i%n)*n+Math.floor(i/n)]),source.cells.map((_,i)=>source.cells[n*n-1-i])]) {
       if(choices.length<4)add([...cells]);
@@ -166,7 +180,15 @@ export function generateColorfulQuestion(type:QuestionType,seed:number,difficult
   }
   if(choices.filter(v=>independentlyMatchesColorful(b,v)).length!==1)throw Error('Tek cevap kanıtlanamadı.');
   let correctOptionId='';const notes:Record<string,string>={};
-  const options=rng.shuffle(choices).map((visualData,i)=>{const id='ABCD'[i],correct=fp(visualData)===fp(answer);if(correct)correctOptionId=id;notes[id]=correct?'Bütün konumlar ve özellikler verilen kurala uyuyor.':type==='shadow_matching'?'Dış çizgi veya iç boşluk verilen nesneden farklı.':type==='spatial_relationship'?'Bu kalemin üstündeki katman sayısı istenen sıraya uymuyor.':'En az bir karenin deseni veya konumu verilen kuralla uyuşmuyor.';return {id,label:id,visualData,fingerprint:fp(visualData)};});
+  const options=rng.shuffle(choices).map((visualData,i)=>{
+    const id='ABCD'[i],correct=fp(visualData)===fp(answer);if(correct)correctOptionId=id;
+    let note=correct?'Bütün konumlar ve özellikler verilen kurala uyuyor.':type==='shadow_matching'?'Dış çizgi veya iç boşluk verilen nesneden farklı.':type==='spatial_relationship'?'Bu kalemin üstündeki katman sayısı istenen sıraya uymuyor.':'Bu desen eksik karenin satır ve sütun düzenine uymuyor.';
+    if(!correct&&answer.art==='mosaic'&&visualData.art==='mosaic') {
+      const at=answer.cells.findIndex((color,j)=>color!==visualData.cells[j]);
+      note=`${Math.floor(at/answer.size)+1}. satır, ${at%answer.size+1}. sütunda ${MOSAIC_MARKS[answer.cells[at]]} yerine ${MOSAIC_MARKS[visualData.cells[at]]} deseni var. Bu konum verilen kurala uymuyor.`;
+    }
+    notes[id]=note;return {id,label:id,visualData,fingerprint:fp(visualData)};
+  });
   const finalSteps=[...steps,`Kurala uyan tek seçenek ${correctOptionId}.`];
-  return {id:`${type}-color2-d${difficulty}-s${seed}`,version:2,type,category:TOPIC_CATEGORY[type],seed,difficulty,ageGroup:difficulty<=2?'1-2':'3-4',prompt,options,correctOptionId,explanation:{ruleTitle:QUESTION_TYPE_LABELS[type],summary:finalSteps.join(' '),steps:finalSteps},visualConfig:b,skills:[type],estimatedSeconds:30+difficulty*8,status:'draft',authoring:{engine:COLORFUL_ENGINE,objective:prompt,distractorNotes:notes}};
+  return {id:`${type}-color3-d${difficulty}-s${seed}`,version:3,type,category:TOPIC_CATEGORY[type],seed,difficulty,ageGroup:difficulty<=2?'1-2':'3-4',prompt,options,correctOptionId,explanation:{ruleTitle:QUESTION_TYPE_LABELS[type],summary:finalSteps.join(' '),steps:finalSteps},visualConfig:b,skills:[type],estimatedSeconds:30+difficulty*8,status:'draft',authoring:{engine:COLORFUL_ENGINE,objective:prompt,distractorNotes:notes}};
 }

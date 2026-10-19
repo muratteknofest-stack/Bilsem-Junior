@@ -1,6 +1,6 @@
 # Android ve Google Play yayını
 
-Uygulama kimliği `com.zekapark.app`, bu sürüm `1.0.23` / versionCode `24`.
+Uygulama kimliği `com.zekapark.app`, bu sürüm `1.0.24` / versionCode `25`.
 
 1. `.env.android` içinde yalnız açık bağlantı ayarlarını tanımlayın: VITE_API_BASE_URL ve VITE_PUBLIC_SITE_URL `https://zekapark.vercel.app`; VITE_SUPABASE_URL ve VITE_SUPABASE_PUBLISHABLE_KEY mevcut açık proje değerleri olmalı. Sunucu sırlarını Android paketine koymayın.
 2. `npm ci`, `npm run lint`, `npm run test:google-play`, `npm run android:sync` çalıştırın.
@@ -33,3 +33,13 @@ Eksik mozaikte kayıtlı gizli renk çözüm kanıtı değildir. Cevap görünen
 Dönüşüm desenleri okunabilir bağlı parçalar ve isteğe bağlı köşe işaretinden oluşur. Orta ve ileri sıralama soruları kesin konum, kişi aralığı ve göreli sıra ipuçlarını birleştirir. Bağımsız çözücü bütün yerleşimin tekliğini kanıtlar; sürükle-bırak da tüm ipuçlarını denetler. Çözüm metinlerindeki açık tam sayılı toplama, çıkarma ve çarpma eşitlikleri yayın kapısında işlem önceliğiyle hesaplanır.
 
 Renkli görsel alanları büyütüldü; kabartmalı kart tabanları, sayı taşları ve yüksek kontrastlı çerçeveler eklendi. Keskin SVG geometrisi, renk dışında desen ipuçları ve hafıza sorusunu gizleme korunur. Bunlar özgün hazırlık alıştırmalarıdır; resmî MEB sorusu veya insan editör onayı olduğu iddia edilmez. Test APK’sı Google Play mağazası yayını değildir.
+
+## 1.0.24 — gerekçeli çeldiriciler ve görünür soruya göre tekrar denetimi
+
+Yeni üretim `verified-7` ve `colorful-3` kullanır. Sınıfa uygun azalan ve iç içe sayı dizileri, iki yansıma ekseni kullanan şekil analojileri ve çarpma ardından çıkarma yapan işlem makineleri eklendi. Dört şık yine tek sonuç ve iki bağımsız çözücüyle denetlenir. Yanlış seçenekler bir işlem veya konum hatasını temsil eder; mozaiklerde en az bir yakın çeldirici yalnız iki hücrenin yerini değiştirir ve tüm renk adetlerini korur. Eksik mozaik açıklaması görünür bir referans hücresine dayanır.
+
+Çalışma geçmişi ve oturum seçimi artık yalnız yanlış şıkları değiştirilmiş aynı verilenleri yeni soru saymaz. Gizli mozaik hücresi tekrar kimliğine katılmaz. Dar konu havuzunun soru sayısı aynı verilenlere göre sınırlanır. Eski `verified-6` ve `colorful-2` kayıtları özgün şablonları ve cevap anahtarlarıyla doğrulanır.
+
+SVG hücreleri girintili, işaretler kabartmalı olarak çizilir. Düz görünüm ve renk dışındaki motifler korunur; mozaiklerin ekran okuyucu açıklamaları satır ve desen sırasını aktarır. Yeni motor otomatik üretilen veya editörde hazırlanacak yeni sorularda çalışır; mevcut yayımlanmış bankayı sessizce yeniden yazmaz. Sunucu değişikliği web/API dağıtımıyla etkinleşir. APK test dağıtımıdır; Google Play yayını veya öğretmen onayı anlamına gelmez.
+
+Doğrulama: 380 test ve 7 öğrenci çalışma alanı testi, TypeScript ve üretim derlemesi başarılı. Testlerin içinde 3.490 sınıf profilli örnek ve 3.300 profesyonel motor örneği denetlendi. Chromium ile 11 ekran ölçüsünde toplam 771 yerleşim/etkileşim kontrolü ve 48 ayrı, kırpılmamış gölge çizimi geçti. Android APK/AAB derlendi; APK'nın 110 web dosyası son Android web derlemesiyle birebir karşılaştırıldı. Paket kimliği, sürüm, kapalı hata ayıklama/yedekleme/açık HTTP ayarları ve önceki test imzası doğrulandı. Bu kontroller canlı öğrenci hesabı veya gerçek Play ödemesi testi değildir.

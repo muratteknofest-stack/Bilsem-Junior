@@ -65,6 +65,11 @@ export function independentlySolveBoard(b: Board): Tile | { textNumber: number |
   }
   if (b.kind === 'numbers') {
     const v = b.values!, d = v.slice(1).map((n, i) => n - v[i]);
+    if (b.rule === 'interleaved') {
+      // Verify constant two-position gaps instead of splitting into two arrays.
+      if (v.length !== 6 || [2, 3].some(i => v[i + 2] - v[i] !== v[i] - v[i - 2])) throw new Error('Bağımsız iç içe örüntü denetimi başarısız.');
+      return { textNumber: 2 * v[4] - v[2] };
+    }
     const predictions: number[] = [];
     if (d.every(x => x === d[0])) predictions.push(v.at(-1)! + d[0]);
     if (d.every((x, i) => x === d[0] + i * (d[1] - d[0]))) predictions.push(v.at(-1)! + d.at(-1)! + d[1] - d[0]);

@@ -14,7 +14,7 @@ import { generateQuestion } from '../../src/features/questions/generators';
 import { EDUCATION_PROFILES, isSchoolGrade } from '../../src/features/questions/quality-policy';
 import { DEFAULT_ADAPTIVE_COUNT, fitsLearningSelection, learningStartSchema, sameLearningSelection, selectSessionCategory, type LearningDifficulty, type LearningSelection } from '../../src/features/student/learning-selection';
 import { topicCategory, topicQuestionCount } from '../../src/features/student/learning-topics';
-import { questionVisualKey } from '../../src/features/questions/quality';
+import { questionStimulusKey } from '../../src/features/questions/quality';
 import { loadPublishedLearningBank } from '../learning-bank';
 import { isQuestionReadyForStudents } from '../../src/features/questions/quality';
 import { loadRecentQuestionExposure, selectLearningQuestions } from '../learning-question-selection';
@@ -98,7 +98,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const seen = new Set<string>();
     const topicCandidates = topic === 'mixed' ? bank.questions : bank.questions.filter(q => {
       if (q.type !== topic || q.targetGrade !== grade || q.category !== category || q.difficulty > EDUCATION_PROFILES[grade].maxDifficulty || (difficulty !== 'mixed' && q.difficulty !== difficulty) || !isQuestionReadyForStudents(q)) return false;
-      const key = questionVisualKey(q);
+      const key = questionStimulusKey(q);
       if (seen.has(key)) return false;
       seen.add(key); return true;
     });

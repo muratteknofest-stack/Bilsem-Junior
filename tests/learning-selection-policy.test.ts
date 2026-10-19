@@ -4,7 +4,7 @@ import { balancedCategoryPlan, recentQuestionExposure, selectLearningQuestions }
 import { AVAILABLE_CATEGORIES } from '../src/features/student/available-categories';
 import { DeadlineFinishGate } from '../src/features/student/answer-progression';
 import { generateQuestion } from '../src/features/questions/generators';
-import { isQuestionReadyForStudents, questionVisualKey } from '../src/features/questions/quality';
+import { isQuestionReadyForStudents, questionVisualKey, questionStimulusKey } from '../src/features/questions/quality';
 import { LearningError } from '../server/learning-model';
 import { EDUCATION_PROFILES } from '../src/features/questions/quality-policy';
 
@@ -31,7 +31,7 @@ test('exposure survives opaque session IDs and choice shuffling and retains the 
     { created_at: 'invalid', questions: [q] },
   ]);
   assert.equal(history.size, 1);
-  assert.equal(history.get(questionVisualKey(q)), Date.parse('2026-10-13T09:00:00Z'));
+  assert.equal(history.get(questionStimulusKey(q)), Date.parse('2026-10-13T09:00:00Z'));
 });
 
 test('unassigned questions are selected first; finite pools reuse the oldest assignment before a newer one', () => {

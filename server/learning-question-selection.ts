@@ -1,6 +1,6 @@
 import { randomInt } from 'node:crypto';
 import type { BaseQuestion, CognitiveCategory } from '../src/types';
-import { questionVisualKey } from '../src/features/questions/quality';
+import { questionVisualKey, questionStimulusKey } from '../src/features/questions/quality';
 import { AVAILABLE_CATEGORIES } from '../src/features/student/available-categories';
 import { getServiceClient } from './supabase-admin';
 import { LearningError } from './learning-model';
@@ -18,7 +18,7 @@ export function recentQuestionExposure(sessions: RecentSession[]) {
     for (const question of session.questions) {
       try {
         if (!question?.type || !question.visualConfig || !Array.isArray(question.options)) continue;
-        const key = questionVisualKey(question);
+        const key = questionStimulusKey(question);
         exposure.set(key, Math.max(exposure.get(key) || 0, assignedAt));
       } catch { /* A damaged historical snapshot cannot establish exposure. */ }
     }
@@ -61,8 +61,8 @@ export function selectLearningQuestions(options: {
   const groups = new Map<CognitiveCategory, Array<{ question: BaseQuestion; key: string; lastAssigned: number }>>();
   for (const question of shuffle(options.candidates, randomIndex)) {
     try {
-      const key = questionVisualKey(question), group = groups.get(question.category) || [];
-      group.push({ question, key, lastAssigned: options.exposure.get(key) || 0 });
+      const key = questionStimulusKey(question), group = groups.get(question.category) || [];
+      group.push({ question, key, lastAssigned: options.exposure.get(key) || options.exposure.get(questionVisualKey(question)) || 0 });
       groups.set(question.category, group);
     } catch { /* Invalid candidates still cannot bypass canUse during selection. */ }
   }
@@ -91,8 +91,8 @@ export function selectLearningQuestions(options: {
       try {
         const question = options.generate(category);
         if (question.category !== category || !options.canUse(question)) continue;
-        const key = questionVisualKey(question);
-        if (seen.has(key) || options.exposure.has(key)) continue;
+        const key = questionStimulusKey(question);
+        if (seen.has(key) || options.exposure.has(key) || options.exposure.has(questionVisualKey(question))) continue;
         seen.add(key); chosen = question;
       } catch { /* Try another seed; no answer correction or quality gate relaxation. */ }
     }

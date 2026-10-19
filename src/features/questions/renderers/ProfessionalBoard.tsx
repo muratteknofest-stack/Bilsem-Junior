@@ -12,14 +12,17 @@ export function TileDiagram({ tile, flat = false, hideRight = false, theme = DEF
   const motif = TILE_MOTIFS[theme.motif];
   const rows = Array.from({ length: tile.size }, (_, r) => `${r + 1}. satır: ${tile.cells.slice(r * tile.size, (r + 1) * tile.size).map((v, c) => hideRight && c >= Math.ceil(tile.size / 2) ? 'tamamlanacak' : v ? 'dolu' : 'boş').join(', ')}`).join('; ');
   return <svg viewBox="0 0 240 246" role="img" aria-label={`${tile.size} çarpı ${tile.size} desen; ${motif.label} işaretleri. ${rows}`} className="qb-tile-svg" data-motif={theme.motif} shapeRendering="geometricPrecision">
-    <defs><linearGradient id={`${id}-frame`} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#fff" /><stop offset="1" stopColor={theme.tint} /></linearGradient></defs>
+    <defs><linearGradient id={`${id}-frame`} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#fff" /><stop offset="1" stopColor={theme.tint} /></linearGradient>
+      <linearGradient id={`${id}-well`} x1="0" y1="0" x2="0" y2="1"><stop stopColor="#d1dce9"/><stop offset=".18" stopColor="#f4f7fb"/><stop offset="1" stopColor="#fff"/></linearGradient>
+    </defs>
     {!flat && <rect x="4" y="9" width="232" height="232" rx="22" fill="#c7d0de" />}
     <rect x="4" y="4" width="232" height="232" rx="22" fill={flat ? '#fff' : `url(#${id}-frame)`} stroke="#c6cce0" strokeWidth="1.5" />
     {tile.cells.map((filled, i) => {
       const x = 16 + (i % tile.size) * (cell + 9), y = 16 + Math.floor(i / tile.size) * (cell + 9);
       if (hideRight && i % tile.size >= Math.ceil(tile.size / 2)) return <g key={i}><rect x={x} y={y} width={cell} height={cell} rx="9" fill="#f3f0ff" stroke="#9381ca" strokeDasharray="4 3" /><text x={x + cell / 2} y={y + cell / 2} textAnchor="middle" dominantBaseline="central" fontSize="24" fill="#68539c">?</text></g>;
-      return <g key={i} data-cell={filled ? 'filled' : 'empty'}>
-        <rect x={x} y={y} width={cell} height={cell} rx="9" fill={filled ? theme.tint : '#fff'} stroke={filled ? '#bdc8d8' : '#d7dfe9'} strokeWidth="1.3" />
+      return <g key={i} data-cell={filled ? 'filled' : 'empty'} data-puzzle-surface={flat ? 'flat' : 'inset'}>
+        <rect x={x} y={y} width={cell} height={cell} rx="9" fill={flat ? '#fff' : `url(#${id}-well)`} stroke={filled ? '#a8bbcf' : '#c7d3df'} strokeWidth="1.3" />
+        {!flat && <path d={`M${x+4} ${y+cell-5}H${x+cell-4}`} stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/>}
         {filled === 1 && <svg x={x + cell * .07} y={y + cell * .05} width={cell * .86} height={cell * .88} viewBox="0 0 64 68" aria-hidden="true"><GlyphBody path={motif.path} color={theme.color} flat={flat} /></svg>}
       </g>;
     })}
