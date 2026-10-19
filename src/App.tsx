@@ -1,7 +1,7 @@
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { isAndroidApp } from './lib/native-app';
-import { advanceStory, storyStageAt, isStoryStageComplete, type StoryStage, type StoryProgress } from './features/student/story-adventure';
+import { advanceStory, storyCollection, storyBadges, nextCampaignStage, isStoryStageComplete, type StoryStage, type StoryProgress } from './features/student/story-adventure';
 import { readStoryProgress, saveStoryProgress } from './services/story-progress-service';
 import type { LearningSessionView } from './features/student/learning-contract';
 import type { StudentSection } from './components/StudentDashboard';
@@ -65,12 +65,28 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => dataService.getCurrentUser());
   const [storyProgress,setStoryProgress] = useState<StoryProgress>(()=>readStoryProgress(currentUser.id,currentUser.grade||1));
   const [storySaveError,setStorySaveError] = useState('');
+  const [storyReward,setStoryReward]=useState<{sessionId:string;points:number;badges:string[]}|undefined>();
+  const selectStory=(id:string)=>{
+    const next={...storyProgress,selectedStoryId:id};
+    const saved=saveStoryProgress(currentUser.id,currentUser.grade||1,next);
+    setStoryProgress(next);
+    setStorySaveError(saved?'':'Hikâye seçimin bu cihazda kaydedilemedi.');
+  };
   const [activeStory,setActiveStory] = useState<{stage:StoryStage;userId:string;grade:number}|null>(null);
-  useEffect(()=>{setStoryProgress(readStoryProgress(currentUser.id,currentUser.grade||1));setStorySaveError('');setActiveStory(null);},[currentUser.id,currentUser.grade]);
+  useEffect(()=>{setStoryProgress(readStoryProgress(currentUser.id,currentUser.grade||1));setStorySaveError('');setActiveStory(null);setStoryReward(undefined);},[currentUser.id,currentUser.grade]);
   const completeStory = (session:LearningSessionView) => {
-    if(!isAndroidApp || !activeStory || dataService.getCurrentUser().id!==activeStory.userId || currentUser.grade!==activeStory.grade)return;
+    if(!activeStory || dataService.getCurrentUser().id!==activeStory.userId || currentUser.grade!==activeStory.grade)return;
     const next=advanceStory(storyProgress,activeStory.stage.id,session,activeStory.grade);
-    if(next!==storyProgress){const saved=saveStoryProgress(activeStory.userId,activeStory.grade,next);setStorySaveError(saved?'':'Hikâye ilerlemesi cihazına kaydedilemedi. Bu oturumda devam edebilirsin; uygulamayı kapatınca son durak korunmayabilir.');setStoryProgress(next);}
+    if(next===storyProgress)return;
+    const previousBadges=storyBadges(storyProgress,activeStory.grade);
+    setStoryReward({
+      sessionId:session.id,
+      points:storyCollection(next,activeStory.grade).points-storyCollection(storyProgress,activeStory.grade).points,
+      badges:storyBadges(next,activeStory.grade).filter(b=>b.unlocked&&!previousBadges.some(old=>old.id===b.id&&old.unlocked)).map(b=>b.title),
+    });
+    const saved=saveStoryProgress(activeStory.userId,activeStory.grade,next);
+    setStorySaveError(saved?'':'Hikâye ilerlemesi cihazına kaydedilemedi. Bu oturumda devam edebilirsin; uygulamayı kapatınca son durak korunmayabilir.');
+    setStoryProgress(next);
   };
   const [isSwitchingStudent, setIsSwitchingStudent] = useState(false);
   const [studentSwitchError, setStudentSwitchError] = useState<string | null>(null);
@@ -275,7 +291,7 @@ export default function App() {
   };
 
   const navigateTo = (targetRoute: string, practiceTopic: LearningTopic = 'mixed', story?: StoryStage) => {
-    if(targetRoute==='adaptive')setActiveStory(story?{stage:story,userId:currentUser.id,grade:currentUser.grade||1}:null);
+    if(targetRoute==='adaptive'){setStoryReward(undefined);setActiveStory(story?{stage:story,userId:currentUser.id,grade:currentUser.grade||1}:null);}
     if (targetRoute === 'practice') setSelectedPracticeTopic(practiceTopic);
     window.scrollTo({ top: 0, behavior: isAndroidApp ? 'instant' : 'smooth' });
 
@@ -480,13 +496,14 @@ export default function App() {
               />
             )}
 
-            {isAndroidApp && currentUser.role==='student' && ['dashboard','student-study','student-rewards','student-profile'].includes(currentRoute) && <AndroidStudentHub key={`${currentUser.id}-${currentUser.grade}-${currentRoute}`} route={currentRoute} user={currentUser} progress={storyProgress} saveError={storySaveError} onNavigate={navigateTo} onStartStory={stage=>navigateTo('adaptive','mixed',stage)} onUserUpdate={setCurrentUser} onReminder={()=>setShowGlobalReminderModal(true)} onLogout={()=>void handleLogout()} />}
+            {isAndroidApp && currentUser.role==='student' && ['dashboard','student-study','student-rewards','student-profile'].includes(currentRoute) && <AndroidStudentHub key={`${currentUser.id}-${currentUser.grade}-${currentRoute}`} route={currentRoute} user={currentUser} progress={storyProgress} saveError={storySaveError} onNavigate={navigateTo} onStartStory={stage=>navigateTo('adaptive','mixed',stage)} onSelectStory={selectStory} onUserUpdate={setCurrentUser} onReminder={()=>setShowGlobalReminderModal(true)} onLogout={()=>void handleLogout()} />}
             {((currentRoute === 'dashboard' && !isAndroidApp) || (isAndroidApp && !!nativeSections[currentRoute])) && (
               <div className={isAndroidApp?'bj-native-detail':undefined}>
               {isAndroidApp&&<button type="button" className="bj-native-back" onClick={()=>navigateTo(['student-challenges','student-progress'].includes(currentRoute)?'student-rewards':'student-study')}>← Geri dön</button>}
               <StudentDashboard
                 key={currentRoute}
-                initialSection={nativeSections[currentRoute]}
+                initialSection={!isAndroidApp&&currentRoute==='dashboard'?'adventure':nativeSections[currentRoute]}
+                storyProgress={storyProgress} storySaveError={storySaveError} onStartStory={stage=>navigateTo('adaptive','mixed',stage)} onSelectStory={selectStory}
                 isLoading={authLoading}
                 user={currentUser}
                 dailyPlan={dailyPlan}
@@ -529,7 +546,7 @@ export default function App() {
             ) : <VerifiedLearningView key={`verified-${selectedPracticeCategory}-${selectedPracticeTopic}`} mode="practice" initialCategory={selectedPracticeCategory} initialTopic={selectedPracticeTopic} onNavigateHome={leaveTest} />)}
 
             {currentRoute === 'adaptive' && (
-              <VerifiedLearningView key={activeStory?.stage.id || 'free-adaptive'} mode="adaptive" storyStage={isAndroidApp?activeStory?.stage:undefined} onStoryComplete={completeStory} onContinueStory={isAndroidApp&&activeStory&&isStoryStageComplete(storyProgress,activeStory.stage)?()=>navigateTo('adaptive','mixed',storyStageAt(storyProgress.completedCount)):undefined} onNavigateHome={leaveTest} />
+              <VerifiedLearningView key={activeStory?.stage.id || 'free-adaptive'} mode="adaptive" storyStage={activeStory?.stage} storyReward={storyReward} onStoryComplete={completeStory} onContinueStory={activeStory&&isStoryStageComplete(storyProgress,activeStory.stage)&&nextCampaignStage(storyProgress,activeStory.stage.campaignId||'')?()=>navigateTo('adaptive','mixed',nextCampaignStage(storyProgress,activeStory.stage.campaignId||'')):undefined} onNavigateHome={leaveTest} />
             )}
 
             {currentRoute === 'exams' && (

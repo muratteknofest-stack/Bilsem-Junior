@@ -1,6 +1,6 @@
 # Android ve Google Play yayını
 
-Uygulama kimliği `com.zekapark.app`, bu sürüm `1.0.24` / versionCode `25`.
+Uygulama kimliği `com.zekapark.app`, bu sürüm `1.0.25` / versionCode `26`.
 
 1. `.env.android` içinde yalnız açık bağlantı ayarlarını tanımlayın: VITE_API_BASE_URL ve VITE_PUBLIC_SITE_URL `https://zekapark.vercel.app`; VITE_SUPABASE_URL ve VITE_SUPABASE_PUBLISHABLE_KEY mevcut açık proje değerleri olmalı. Sunucu sırlarını Android paketine koymayın.
 2. `npm ci`, `npm run lint`, `npm run test:google-play`, `npm run android:sync` çalıştırın.
@@ -43,3 +43,10 @@ Yeni üretim `verified-7` ve `colorful-3` kullanır. Sınıfa uygun azalan ve i�
 SVG hücreleri girintili, işaretler kabartmalı olarak çizilir. Düz görünüm ve renk dışındaki motifler korunur; mozaiklerin ekran okuyucu açıklamaları satır ve desen sırasını aktarır. Yeni motor otomatik üretilen veya editörde hazırlanacak yeni sorularda çalışır; mevcut yayımlanmış bankayı sessizce yeniden yazmaz. Sunucu değişikliği web/API dağıtımıyla etkinleşir. APK test dağıtımıdır; Google Play yayını veya öğretmen onayı anlamına gelmez.
 
 Doğrulama: 380 test ve 7 öğrenci çalışma alanı testi, TypeScript ve üretim derlemesi başarılı. Testlerin içinde 3.490 sınıf profilli örnek ve 3.300 profesyonel motor örneği denetlendi. Chromium ile 11 ekran ölçüsünde toplam 771 yerleşim/etkileşim kontrolü ve 48 ayrı, kırpılmamış gölge çizimi geçti. Android APK/AAB derlendi; APK'nın 110 web dosyası son Android web derlemesiyle birebir karşılaştırıldı. Paket kimliği, sürüm, kapalı hata ayıklama/yedekleme/açık HTTP ayarları ve önceki test imzası doğrulandı. Bu kontroller canlı öğrenci hesabı veya gerçek Play ödemesi testi değildir.
+
+## 1.0.25 — sınıfa göre uzun hikâyeli macera parkuru
+
+- 1–4. sınıfların her birinde dört ayrı hikâye; toplam 16 hikâye ve 128 bölüm. Her hikâye 48 görev / 144 karışık alan sorusuyla tamamlanır.
+- Açılan duraklar, bölüm sandıkları, hikâye sonu eşyaları, sekiz rozet ve on alıştırma alanında birikim seviyeleri. Görev tekrarı ek macera puanı vermez. XP mevcut sunucu sonuçlarından gelir.
+- Android ve web aynı parkuru kullanır. Hikâye seçimi, görevler ve koleksiyon cihazda hesap/sınıf ayrımıyla korunur; eski rota sayacı kaybolmaz. Cihazlar arası hikâye eşitlemesi yoktur.
+- 320/390/820 px yerleşim, kayıt kesintisi, tekrar yükleme, bölüm geçişi, hikâye değiştirme ve final ödülü yalıtılmış gerçek uygulama akışlarıyla doğrulanır. Final ekranı testi son göreve hazırlanmış yerel veri kullanır; tüm 48 görevin ilerlemesi dört sınıfta gerçek soru üretimi ve sunucu değerlendirme modeliyle ayrıca sınanır.

@@ -17,6 +17,7 @@ import {prepareLearningQuestions,learningView,answerLearningSession,finishLearni
 import {prepareEditorialQuestion} from '../server/editorial-validation.ts';
 process.env.VITE_SUPABASE_URL='https://turkish-fixture.invalid';process.env.VITE_SUPABASE_PUBLISHABLE_KEY='sb_publishable_isolated_fixture';
 const androidStory=process.env.BILSEM_ANDROID_STORY_CHECK==='1';
+const webStory=process.env.BILSEM_WEB_STORY_CHECK==='1';
 if(androidStory){process.env.VITE_API_BASE_URL='https://turkish-fixture.invalid';process.env.VITE_PUBLIC_SITE_URL='https://zekapark.vercel.app';}
 const server=await createServer({cacheDir:androidStory?'/tmp/bilsem-android-story-vite-cache':'/tmp/bilsem-turkish-accounts-vite-cache',...(androidStory?{mode:'android'}:{}),server:{host:'127.0.0.1',port:5186,strictPort:true}});await server.listen();let browser,page;
 const parentId='11111111-1111-4111-8111-111111111111',studentId='22222222-2222-4222-8222-222222222222';
@@ -71,13 +72,13 @@ try{
   else if(u.pathname==='/api/learning/grade'){student.grade=body.grade;value={profile:{...student}};}
   else if(u.pathname==='/api/learning/start'){
    assert.equal(activeRole,'student');assert.equal(body.expectedGrade,student.grade);
-   if(!androidStory){assert.ok(LEARNING_TOPICS.includes(body.topic));assert.equal(body.category,topicCategory(body.topic,'mixed'));}
+   if(!androidStory&&!webStory){assert.ok(LEARNING_TOPICS.includes(body.topic));assert.equal(body.category,topicCategory(body.topic,'mixed'));}
    topicRequests.push(body);
    const level=body.difficulty==='mixed'?1:body.difficulty;
    const count=body.mode==='adaptive'?body.questionCount:2;
    const category=body.mode==='adaptive'&&!body.topic?selectSessionCategory(body.category,AVAILABLE_CATEGORIES.map(category=>({category,mastery:category==='numerical'?0:100})),body.mixCategories):body.category;
    const categoryPlan=category==='mixed'?balancedCategoryPlan(count,'mixed'):Array(count).fill(category);
-   const questions=Array.from({length:count},(_,i)=>generateQuestion({profile:androidStory?'professional':'complete',targetGrade:student.grade,...(androidStory&&!body.topic?{category:categoryPlan[i]}:{type:body.topic}),difficulty:level,seed:90000+topicRequests.length*997+i*37}));
+   const questions=Array.from({length:count},(_,i)=>generateQuestion({profile:(androidStory||webStory)?'professional':'complete',targetGrade:student.grade,...((androidStory||webStory)&&!body.topic?{category:categoryPlan[i]}:{type:body.topic}),difficulty:level,seed:90000+topicRequests.length*997+i*37}));
    const s={id:crypto.randomUUID(),student_id:studentId,mode:body.mode,title:body.topic+' konu testi',questions:prepareLearningQuestions(questions),answers:{},created_at:new Date().toISOString(),expires_at:new Date(Date.now()+3600000).toISOString(),finished_at:null,result:null,revision:0,rewarded_xp:0};topicSessions.set(s.id,s);value=learningView(s);
   }
   else if(/^\/api\/learning\/[^/]+\/(answer|finish)$/.test(u.pathname)){
@@ -104,7 +105,7 @@ try{
   else if(u.pathname.endsWith('/complete-deletion')){assert.deepEqual(body,{confirmed:true,retentionReviewed:true,members:[parentId,studentId]});deleteAttempts++;if(deleteAttempts===1){await route.fulfill({status:503,contentType:'application/json',body:'{"error":"Kesinti; aynı talep tekrar denenebilir."}'});return;}if(deleteAttempts===3){await route.fulfill({status:200,contentType:'application/json',body:'not-json'});return;}value=deleteAttempts===2?{completed:true,deletedAccounts:1}:{completed:true,deletedAccounts:2};if(deleteAttempts>3)successfulCompletion=true;}
   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(value)});
  });
- if(androidStory){activeRole='student';unconfirmed=false;await (await import('./check-android-story-flow.mjs')).checkAndroidStory(page,{student,topicSessions,requests:topicRequests,failAnswer:()=>{failNextLearningAnswer=true;}});assert.deepEqual(errors,[]);}
+ if(androidStory||webStory){activeRole='student';unconfirmed=false;await (await import('./check-android-story-flow.mjs')).checkAndroidStory(page,{student,topicSessions,native:androidStory,requests:topicRequests,failAnswer:()=>{failNextLearningAnswer=true;}});assert.deepEqual(errors,[]);}
  else {
  await page.goto('http://127.0.0.1:5186/tests/browser/turkish-accounts.html');await page.getByRole('heading',{name:'Bilsem Junior yolculuğun başlasın.'}).waitFor();
  await page.locator('#parent-email').fill('parent@example.invalid');await page.getByLabel('Veli şifresi',{exact:true}).fill('ExampleOnly123');await page.getByLabel('Veli şifresi tekrar',{exact:true}).fill('ExampleOnly123');await page.getByRole('button',{name:'Devam et',exact:true}).click();
@@ -228,14 +229,14 @@ try{
  await page.locator('.bj-parent-overview').screenshot({path:'test-artifacts/student/parent-overview-dark.png',animations:'disabled'});
  await page.evaluate(()=>document.documentElement.classList.remove('dark'));
  await page.getByRole('button',{name:'Öğrenci Paneline Geç',exact:true}).click();
- await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Çalışma alanım',exact:true}).click();await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
  // The actual App must hand the dashboard's exact topic to the verified learning API.
  activeRole='student';
  for(const grade of [1,2,3,4]){
   student.grade=grade;
   await page.setViewportSize({width:390,height:844});
   await page.goto('http://127.0.0.1:5186/tests/browser/turkish-accounts.html?mode=student-app');
-  await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Çalışma alanım',exact:true}).click();await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
   if(grade===1){
    await fs.mkdir('test-artifacts/student',{recursive:true});
    await page.getByText('Görünüm ve ses',{exact:true}).click();
@@ -247,7 +248,7 @@ try{
    assert.equal(await page.evaluate(()=>localStorage.getItem('zekapark-motion-enabled-v1')),'false');
    assert.equal(await page.evaluate(()=>localStorage.getItem('zekapark-sound-volume-v1')),'0.25');
    await page.reload();
-   await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
+   await page.getByRole('button',{name:'Çalışma alanım',exact:true}).click();await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
    assert.equal(await page.locator('.zp-student-pro').getAttribute('data-reduced-motion'),'true');
    await page.getByText('Görünüm ve ses',{exact:true}).click();
    assert.equal(await page.getByRole('slider',{name:'Ses düzeyi',exact:true}).inputValue(),'25');
@@ -329,7 +330,7 @@ try{
   await page.getByRole('main',{name:'Soru çözme ekranı',exact:true}).waitFor();
   assert.equal(topicRequests.at(-1).topic,chosen);assert.equal(topicRequests.at(-1).expectedGrade,grade);assert.equal(topicRequests.at(-1).difficulty,1);
   await page.getByRole('button',{name:'Çalışmadan çık',exact:true}).click();
-  await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Çalışma alanım',exact:true}).click();await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
   await page.getByRole('button').filter({hasText:'Karışık Pratik'}).first().click();
   await page.getByRole('heading',{name:'Bugün hangi alanda çalışalım?',exact:true}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Konu seç',exact:true}).getAttribute('data-current-topic'),'mixed');
@@ -367,7 +368,7 @@ try{
  // Mute survives a reload; reduced-motion turns off movement while keeping the message.
  await page.emulateMedia({reducedMotion:'reduce'});
  await page.goto('http://127.0.0.1:5186/tests/browser/turkish-accounts.html?mode=student-app');
- await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Çalışma alanım',exact:true}).click();await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
  await page.getByRole('button',{name:'Menüyü aç',exact:true}).click();await page.getByRole('button',{name:'Sesi aç',exact:true}).waitFor();
  await page.getByRole('button',{name:'Sesi aç',exact:true}).click();await page.getByRole('button',{name:'Menüyü kapat',exact:true}).click();
  await page.getByRole('button',{name:'Konu testini aç',exact:true}).click();await page.getByRole('button',{name:'Yeni testi başlat',exact:true}).click();
@@ -377,7 +378,7 @@ try{
  assert.equal(await page.locator('.zp-feedback-card').evaluate(e=>getComputedStyle(e).animationName),'none');
  assert.equal(await page.locator('.zp-feedback-particles').evaluate(e=>getComputedStyle(e).display),'none');
  await page.locator('.zp-focus-footer').getByText('2 / 2',{exact:true}).waitFor();await page.getByRole('button',{name:'Çalışmadan çık',exact:true}).click();
- await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Çalışma alanım',exact:true}).click();await page.getByRole('heading',{name:'Konuya göre test çöz',exact:true}).waitFor();
  await page.getByRole('button').filter({hasText:'Deneme Sınavı'}).first().click();await page.getByRole('heading',{name:'Denemeni seç',exact:true}).waitFor();
  await chooseLearningTopic(page,'paper_folding');await page.getByRole('button',{name:'Yeni testi başlat',exact:true}).click();
  await page.getByRole('main',{name:'Soru çözme ekranı',exact:true}).waitFor();

@@ -22,7 +22,7 @@ try {
     const active=await root.evaluate(el=>[el,...el.querySelectorAll('*')].flatMap(node=>[null,'::before','::after'].map(p=>getComputedStyle(node,p).animationName)).filter(name=>name!=='none'));
     assert.deepEqual(active,[],'Pausing must stop decorations, cards and pseudo-element beacons');
   };
-  await page.goto(base);await page.getByRole('heading',{name:'Merak Ormanı',exact:true}).waitFor();
+  await page.goto(base);await page.getByRole('heading',{name:'Fısıldayan Orman',exact:true}).waitFor();
   assert.equal((await style('.bj-story-dialogue img')).name,'bj-guide-float');
   assert.equal((await style('.bj-expedition-cover>img')).name,'bj-photo-breathe');
   assert.equal((await style('.bj-story-node','::after')).name,'bj-beacon');
@@ -50,10 +50,10 @@ try {
     await page.screenshot({path:`test-artifacts/student-motion/story-${width}.png`,fullPage:true});shots.push(width);
   }
   // Each photographic chapter keeps the motion layer and its actual navigation.
-  for(const chapter of ['Bulut Adası','Renkli Vadi','Kristal Mağara','Keşif Limanı','Yıldız Bahçesi']){
+  for(const chapter of ['Duran Değirmen','Bulut Gözlemevi','Kristal Geçit','Unutulan Liman','Rüzgârın Kütüphanesi','Yıldızların Şifresi','Atlasın Kalbi']){
     await page.getByRole('button',{name:'Sonraki hikâye bölümü',exact:true}).click();
     await page.getByRole('heading',{name:chapter,exact:true}).waitFor();
-    assert.equal(await page.locator('.bj-story-stages button:disabled').count(),3);
+    assert.equal(await page.locator('.bj-story-stages button:disabled').count(),6);
   }
   const nav=page.getByRole('navigation',{name:'Yerel kontrol'});
   await nav.getByRole('button',{name:'Çalış',exact:true}).click();
@@ -117,5 +117,5 @@ try {
   await page.evaluate(()=>document.documentElement.classList.add('dark'));
   await page.screenshot({path:'test-artifacts/student-motion/web-dark.png',fullPage:true});
   assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({viewports:shots,chapters:6,studyGroups:3,pausedPreferencePersists:true,backgroundPauses:true,offscreenPauses:true,deviceReducedMotion:true,pageErrors:errors.length}));
+  console.log(JSON.stringify({viewports:shots,chapters:8,studyGroups:3,pausedPreferencePersists:true,backgroundPauses:true,offscreenPauses:true,deviceReducedMotion:true,pageErrors:errors.length}));
 } finally {await browser?.close();await server.close();}

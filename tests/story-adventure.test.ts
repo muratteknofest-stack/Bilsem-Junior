@@ -55,3 +55,75 @@ test('two full tours and the next tour unlock for every grade using real balance
   }
  }
 });
+
+test('four age groups each have four distinct complete story arcs with 48 sequential missions',async()=>{
+ const {STORY_CAMPAIGNS,campaignsForGrade,campaignLength}=await import('../src/features/student/story-catalog');
+ const {campaignStageAt}=await import('../src/features/student/story-adventure');
+ assert.equal(STORY_CAMPAIGNS.length,16);
+ assert.equal(new Set(STORY_CAMPAIGNS.map(s=>s.id)).size,16);
+ const openings=new Set<string>(),ids=new Set<string>();
+ for(const grade of [1,2,3,4]) {
+  const stories=campaignsForGrade(grade);assert.equal(stories.length,4);
+  for(const story of stories) {
+   assert.equal(story.chapters.length,8);assert.equal(campaignLength(story),48);assert.ok(story.premise.length>90);assert.ok(story.ending.length>70);
+   for(const chapter of story.chapters){assert.ok(chapter.opening.length>65);assert.ok(chapter.discovery.length>40);assert.ok(!openings.has(chapter.opening));openings.add(chapter.opening);}
+   for(let i=0;i<48;i++){const stage=campaignStageAt(story.id,i);assert.equal(stage.chapter,Math.floor(i/6));assert.ok(stage.narrative!.startsWith(story.chapters[stage.chapter].opening));assert.ok(!ids.has(stage.id));ids.add(stage.id);}
+   for(const i of [-1,48,NaN,1.5])assert.throws(()=>campaignStageAt(story.id,i));
+  }
+ }
+ assert.equal(ids.size,768);assert.equal(openings.size,128);assert.equal(campaignsForGrade(5).length,0);
+});
+
+test('campaign rewards, story skills, replay and persistence remain isolated and idempotent',async()=>{
+ const {campaignStageAt,campaignCompleted,storyCollection,storyBadges,nextCampaignStage,storyPracticeLevel}=await import('../src/features/student/story-adventure');
+ const {campaignsForGrade}=await import('../src/features/student/story-catalog');
+ const [story,other]=campaignsForGrade(2);
+ let progress=emptyStoryProgress();
+ const first=campaignStageAt(story.id,0);
+ assert.strictEqual(advanceStory(progress,campaignStageAt(story.id,1).id,session,2),progress);
+ assert.strictEqual(advanceStory(progress,first.id,session,1),progress);
+ assert.strictEqual(advanceStory(progress,first.id,{...session,result:null},2),progress);
+ for(let i=0;i<48;i++) {
+  const stage=campaignStageAt(story.id,i),saved={...session,id:`campaign-${i}`};
+  const before=storyCollection(progress,2).points;
+  const next=advanceStory(progress,stage.id,saved,2);
+  assert.equal(campaignCompleted(next,story.id),i+1);
+  assert.equal(storyCollection(next,2).points-before,20+(i%6===5?60:0)+(i===47?240:0));
+  assert.equal(isStoryStageComplete(next,stage),true);
+  assert.strictEqual(advanceStory(next,stage.id,saved,2),next);
+  assert.deepEqual(parseStoryProgress(JSON.stringify(next)),next);progress=next;
+ }
+ assert.equal(progress.completedCount,0);assert.equal(campaignCompleted(progress,other.id),0);
+ assert.equal(Object.values(progress.skillPractice!).reduce((sum,n)=>sum+n,0),144);
+ assert.equal(storyCollection(progress,2).points,1680);assert.equal(storyCollection(progress,2).finished.length,1);
+ assert.equal(storyBadges(progress,2).filter(b=>b.unlocked).length,5);assert.equal(nextCampaignStage(progress,story.id),undefined);
+ const otherFirst=campaignStageAt(other.id,0);
+ assert.strictEqual(advanceStory(progress,otherFirst.id,{...session,id:'campaign-47'},2),progress);
+ progress=advanceStory(progress,otherFirst.id,{...session,id:'new-story'},2);
+ assert.equal(campaignCompleted(progress,other.id),1);assert.equal(campaignCompleted(progress,story.id),48);
+ assert.equal(storyCollection(progress,3).points,0);
+ assert.equal(storyPracticeLevel(0).level,0);assert.equal(storyPracticeLevel(12).level,2);assert.equal(storyPracticeLevel(120).next,null);
+ const old=parseStoryProgress(JSON.stringify({version:2,completedCount:999,sessions:[]}));
+ const migrated=advanceStory(old,first.id,session,2);assert.equal(migrated.completedCount,999);assert.equal(campaignCompleted(migrated,story.id),1);
+ const bad=parseStoryProgress(JSON.stringify({...migrated,campaigns:{[story.id]:49,[other.id]:-1,unknown:100},skillPractice:{pattern:Infinity,logic:-1,unknown:999},selectedStoryId:'unknown'}));
+ assert.deepEqual(bad.campaigns,{});assert.deepEqual(bad.skillPractice,{});assert.equal(bad.selectedStoryId,undefined);
+ assert.ok(JSON.stringify(progress).length<4000);
+});
+
+test('real acknowledged sessions advance across every chapter and finale for each age group',async()=>{
+ const {campaignStageAt,campaignCompleted,storyCollection}=await import('../src/features/student/story-adventure');
+ const {campaignsForGrade}=await import('../src/features/student/story-catalog');
+ for(const grade of [1,2,3,4] as const) {
+  const story=campaignsForGrade(grade)[0];let progress=emptyStoryProgress(),seed=grade*1000000;
+  for(let index=0;index<48;index++) {
+   const stage=campaignStageAt(story.id,index);
+   const questions=selectLearningQuestions({count:3,category:'mixed',candidates:[],exposure:new Map(),canUse:isQuestionReadyForStudents,generate:category=>generateQuestion({profile:'professional',category,targetGrade:grade,difficulty:1,seed:++seed})});
+   const now=Date.now();let saved:LearningSession={id:crypto.randomUUID(),student_id:'story-student',mode:'adaptive',title:stage.title,questions:prepareLearningQuestions(questions),answers:{},created_at:new Date(now).toISOString(),expires_at:new Date(now+3600000).toISOString(),finished_at:null,result:null,revision:0,rewarded_xp:0};
+   for(let i=0;i<3;i++)saved=answerLearningSession(saved,i,{mode:'choice',optionId:saved.questions[i].correctOptionId},now+1000+i);
+   assert.strictEqual(advanceStory(progress,stage.id,learningView(saved),grade),progress);
+   saved=finishLearningSession(saved,now+4000);progress=advanceStory(progress,stage.id,learningView(saved),grade);
+   assert.equal(campaignCompleted(progress,story.id),index+1);
+  }
+  assert.equal(storyCollection(progress,grade).finished.length,1);
+ }
+});
