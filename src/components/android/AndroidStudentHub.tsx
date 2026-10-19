@@ -1,22 +1,19 @@
 import { StoryAdventure } from '../student/StoryAdventure';
 import { ADVENTURE_PHOTOS, FEATURE_PHOTOS, STUDY_GROUPS } from '../../features/student/adventure-art';
 import { useState } from 'react';
-import { Bell, BookOpen, Brain, ChevronRight, Clock3, Compass, Flame, GraduationCap, LogOut, RotateCcw, Shapes, ShieldCheck, Sparkles, Star, Target, Trophy, UserRound, type LucideIcon } from 'lucide-react';
+import { BookOpen, Brain, ChevronRight, Clock3, Compass, Flame, GraduationCap, RotateCcw, Shapes, Sparkles, Star, Target, Trophy, type LucideIcon } from 'lucide-react';
 import type { UserProfile } from '../../types';
-import { levelProgress } from '../../features/student/study-hub-model';
 import { type StoryProgress, type StoryStage } from '../../features/student/story-adventure';
 import { useStudentReducedMotion } from '../../features/student/experience-preferences';
 import { sound } from '../../lib/sound';
-import { publicPageUrl } from '../../lib/native-app';
-import { StudentHeroBanner } from '../student/StudentHeroBanner';
-import { StudentExperienceControls } from '../student/StudentExperienceControls';
 import { StudentMissionStrip } from '../student/StudentMissionStrip';
 import { dataService } from '../../services/data-service';
 import './android-student.css';
 import './android-expedition.css';
 import { StudentAdventureAtmosphere, StudentMotionToggle, useStudentMotionSurface } from '../student/StudentMotion';
-import { StudentPassport, StudentTreasure } from './StudentTreasure';
+import { StudentTreasure } from './StudentTreasure';
 import './student-treasure.css';
+import { StudentProfileWorld } from './StudentProfileWorld';
 
 const studyLinks: Array<{route:string;title:string;detail:string;icon:LucideIcon; tone:string}> = [
   {route:'adaptive',title:'Adaptif Test',detail:'Kendi hızında, sana uygun sorular',icon:Sparkles,tone:'purple'},
@@ -44,13 +41,7 @@ export function AndroidStudentHub({route,user,progress,saveError,onNavigate,onSt
   const visibleRoutes:readonly string[]=STUDY_GROUPS.find(group=>group.id===studyGroup)!.routes;
   const isRewards=route==='student-rewards';
   const links=isRewards?rewardLinks:studyLinks.filter(item=>visibleRoutes.includes(item.route));
-  if(route==='student-profile')return <main ref={motionSurface} className="bj-native-hub bj-student-game bj-motion-world bj-native-profile" data-reduced-motion={reduced}>
-    <StudentMotionToggle/>
-    <div className="bj-native-page-title"><UserRound aria-hidden="true"/><div><p>KAŞİF KARTIN</p><h1>Profilim</h1></div></div>
-    <StudentPassport progress={progress}/>
-    <StudentHeroBanner user={user} greeting={{text:'Merhaba',emoji:'✦'}} xpProgress={levelProgress(user.xp)} onUserUpdate={onUserUpdate} onNavigate={onNavigate} prefersReducedMotion={reduced}/>
-    <section className="bj-native-settings" aria-label="Profil ayarları"><StudentExperienceControls/><button onClick={onReminder}><Bell aria-hidden="true"/>Çalışma hatırlatıcısı<ChevronRight aria-hidden="true"/></button><button onClick={()=>go('parent')}><ShieldCheck aria-hidden="true"/>Veli alanı ve Google Play üyeliği<ChevronRight aria-hidden="true"/></button><a href={publicPageUrl('/bilgi/hesap-ve-veli-rehberi')}><BookOpen aria-hidden="true"/>Hesap ve veli rehberi<ChevronRight aria-hidden="true"/></a><a href={publicPageUrl('/en/')} lang="en">English · Thinking games<ChevronRight aria-hidden="true"/></a><button onClick={onLogout}><LogOut aria-hidden="true"/>Çıkış yap</button></section><details className="bj-photo-credits"><summary>Görsel künyesi</summary><p>Gerçek doğa ve nesne fotoğrafları · Unsplash</p><ul>{Object.entries(ADVENTURE_PHOTOS).map(([id,photo])=><li key={id}><a href={photo.url} target="_blank" rel="noopener noreferrer">{photo.author}</a></li>)}</ul><a href="https://unsplash.com/license" target="_blank" rel="noopener noreferrer">Fotoğraf lisansı</a></details>
-  </main>;
+  if(route==='student-profile')return <StudentProfileWorld user={user} progress={progress} onNavigate={onNavigate} onUserUpdate={onUserUpdate} onReminder={onReminder} onLogout={onLogout}/>;
   if(route==='student-study'||route==='student-rewards')return <main ref={motionSurface} className={`bj-native-hub bj-student-game bj-motion-world ${route==='student-rewards'?'bj-native-rewards':''}`} data-reduced-motion={reduced}>
     <StudentMotionToggle/>
     <div className="bj-native-page-title">{route==='student-rewards'?<Trophy aria-hidden="true"/>:<Shapes aria-hidden="true"/>}<div><p>{route==='student-rewards'?'HER ADIMIN DEĞERLİ':'BİLSEM HAZIRLIK ALANIN'}</p><h1>{route==='student-rewards'?'Ödüller ve gelişim':'Bugün ne keşfedelim?'}</h1></div></div>
