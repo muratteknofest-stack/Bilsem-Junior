@@ -49,7 +49,8 @@
     "test:google-play": "node --import tsx --test tests/google-play.test.ts tests/google-play-ui.test.tsx tests/play-membership.test.tsx tests/android-network.test.ts tests/google-play-migration.test.ts",
     "test:google-play:browser": "npm run android:build:web && node --import tsx scripts/check-google-play-ui.tsx",
     "test:play-layout": "node --import tsx scripts/check-play-layout.mjs",
-    "test:android-story": "BILSEM_ANDROID_STORY_CHECK=1 node --import tsx scripts/check-turkish-accounts.mjs"
+    "test:android-story": "BILSEM_ANDROID_STORY_CHECK=1 node --import tsx scripts/check-turkish-accounts.mjs",
+    "test:student-motion": "node --import tsx scripts/check-student-motion.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

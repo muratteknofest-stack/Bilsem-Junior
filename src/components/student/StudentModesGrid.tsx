@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { ArrowRight, ArrowUpRight, Clock3, Target, RotateCcw, BookOpen, Trophy, Star, Sparkles } from 'lucide-react';
+import { StudentAdventureAtmosphere } from './StudentMotion';
 import { sound } from '../../lib/sound';
 import { useStudentReducedMotion } from '../../features/student/experience-preferences';
 
@@ -20,15 +21,15 @@ export function StudentModesGrid(p: StudentModesGridProps) {
   ];
 
   return <section className="zp-modes-section bj-quest-world" aria-labelledby="zp-mode-title">
-    <div className="zp-mode-section-heading bj-chapter-heading">
+    <div className="zp-mode-section-heading bj-chapter-heading" data-motion-zone><StudentAdventureAtmosphere />
       <div><p className="zp-panel-eyebrow">KEŞİF YOLU · BİLSEM HAZIRLIK</p><h2 id="zp-mode-title">Bugün nasıl çalışmak istersin?</h2></div>
       <span className="bj-chapter-star" aria-hidden="true"><Sparkles size={38} /></span>
     </div>
-    <div className="bj-fox-welcome">
+    <div className="bj-fox-welcome" data-motion-zone>
       <span className="zp-feature-art" aria-hidden="true"><img src="/brand/junior-fox.svg" alt="" width={160} height={160} decoding="async" /></span>
       <div className="bj-fox-bubble"><strong>Haydi, keşfedelim!</strong><p>Bir durak seç, zihnini oyuna davet et.</p><span><Sparkles size={14} aria-hidden="true" /> Her soru yeni bir keşif!</span></div>
     </div>
-    <div className="bj-quest-path">
+    <div className="bj-quest-path" data-motion-zone>
       <svg className="bj-quest-connector" viewBox="0 0 520 650" preserveAspectRatio="none" aria-hidden="true"><path d="M70 65 C70 170 175 110 175 230 S70 300 70 395 S175 470 175 580" /></svg>
       <span className="bj-world-cloud bj-world-cloud-one" aria-hidden="true" /><span className="bj-world-cloud bj-world-cloud-two" aria-hidden="true" />
       <span className="bj-world-spark bj-world-spark-one" aria-hidden="true">✦</span><span className="bj-world-spark bj-world-spark-two" aria-hidden="true">✧</span>
