@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { balancedCategoryPlan, recentQuestionExposure, selectLearningQuestions } from '../server/learning-question-selection';
+import { balancedCategoryPlan, recentQuestionExposure, selectLearningQuestions, gradeChallengeFloor, pickGradeChallenge, generateVariedLearningQuestion } from '../server/learning-question-selection';
 import { AVAILABLE_CATEGORIES } from '../src/features/student/available-categories';
 import { DeadlineFinishGate } from '../src/features/student/answer-progression';
 import { generateQuestion } from '../src/features/questions/generators';
@@ -94,4 +94,35 @@ test('deadline completion waits for expiry and active answer saves, retries with
   assert.equal(gate.take('exam-a', deadline, 99_000, false), false);
   assert.equal(gate.take('exam-b', deadline, 99_000, false), true);
   assert.equal(new DeadlineFinishGate().take('invalid', NaN, 99_000, false), false);
+});
+
+test('mixed-difficulty questions honor the class challenge floor without overriding a chosen easy level', () => {
+  const expected: Record<1 | 2 | 3 | 4, number[]> = {
+    1: [1, 2], 2: [2, 3], 3: [3, 4], 4: [4, 5, 6],
+  };
+  for (const grade of [1, 2, 3, 4] as const) {
+    assert.equal(gradeChallengeFloor(grade), expected[grade][0]);
+    const actual = expected[grade].map((_, index) => pickGradeChallenge(grade, () => index));
+    assert.deepEqual(actual, expected[grade]);
+    assert.ok(actual.every(level => level <= EDUCATION_PROFILES[grade].maxDifficulty));
+  }
+  // Level 1 remains valid for 4th grade when the student deliberately requests it.
+  assert.equal(generateQuestion({ targetGrade: 4, type: 'number_pattern', difficulty: 1, seed: 9941 }).difficulty, 1);
+});
+
+test('unseen grade-level content replaces easy bank filler in a mixed fourth-grade test', () => {
+  const easy = generateQuestion({ targetGrade: 4, type: 'number_pattern', difficulty: 1, seed: 99313 });
+  let seed = 192000;
+  const chosen = selectLearningQuestions({
+    count: 3, category: 'numerical', candidates: [easy], exposure: new Map(),
+    canUse: q => q.targetGrade === 4 && q.difficulty >= gradeChallengeFloor(4) && isQuestionReadyForStudents(q),
+    generate: (category, typeCounts) => generateVariedLearningQuestion({
+      grade: 4, category, difficulty: pickGradeChallenge(4, () => 1), seed: ++seed, typeCounts, randomIndex: () => 0,
+    }),
+    preferDiverseTypes: true, randomIndex: () => 0,
+  });
+  assert.equal(chosen.length, 3);
+  assert.ok(chosen.every(q => q.difficulty === 5 && q.targetGrade === 4));
+  assert.ok(new Set(chosen.map(questionStimulusKey)).size === 3);
+  assert.ok(new Set(chosen.map(q => q.type)).size >= 2);
 });
