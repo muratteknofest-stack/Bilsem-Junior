@@ -16,7 +16,7 @@ test('300 English puzzles have balanced levels, unique source pictures and indep
   assert.equal(bank.length,300);assert.equal(new Set(bank.map(q=>q.id)).size,300);
   const sourceVisuals=new Set<string>();
   for(const q of bank){
-    const match=q.id.match(/-color1-d(\d)-s(\d+)$/)!;const source=generateColorfulQuestion(q.area,Number(match[2]),Number(match[1]) as any);
+    const match=q.id.match(/-color[12]-d(\d)-s(\d+)$/)!;const source=generateColorfulQuestion(q.area,Number(match[2]),Number(match[1]) as any);
     assert.equal(auditQuestion(source).solverVerified,true,q.id);
     assert.equal(source.options.filter(o=>independentlyMatchesColorful(source.visualConfig as any,o.visualData as any)).length,1);
     assert.equal(source.correctOptionId,q.correctOptionId);

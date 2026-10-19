@@ -30,7 +30,7 @@ export function CompleteOption({value}:{value:CompleteValue}){
   if(value.curriculum==='token')return <CompleteToken shape={value.shape} color={value.color}/>;
   return <CompletePiece points={value.points}/>;
 }
-const Badge=({children}:{children:React.ReactNode})=><span className="rounded-xl border-2 border-indigo-200 bg-white px-3 py-2 font-bold text-indigo-950 text-base sm:text-xl">{typeof children==='number'&&!Number.isFinite(children)?'?':children}</span>;
+const Badge=({children}:{children:React.ReactNode})=><span className="zp-curriculum-number rounded-xl border-2 border-indigo-200 bg-white px-3 py-2 font-bold text-indigo-950 text-base sm:text-xl">{typeof children==='number'&&!Number.isFinite(children)?'?':children}</span>;
 function Equation({row,scale=false}:{row:number[];scale?:boolean}){
   return <div className={`flex flex-wrap justify-center items-center gap-2 ${scale?'border-b-4 border-amber-500 pb-2':''}`}>
     {Array.from({length:row[0]},(_,i)=><CompleteToken key={`s${i}`} shape={2} color={0}/>)}

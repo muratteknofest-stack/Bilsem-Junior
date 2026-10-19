@@ -38,9 +38,9 @@ export function ColorfulArt({value,shadow=false,locale='tr'}:{value:ColorfulValu
   </svg>;
 }
 export function ColorfulBoard({board:b,locale='tr'}:{board:Board;locale?:'tr'|'en'}) {
-  return <div data-colorful-kind={b.kind} style={{width:360,maxWidth:'100%',aspectRatio:'1.45',display:'flex',alignItems:'center',justifyContent:'center',gap:14}}>
+  return <div className="zp-colorful-stage" data-colorful-kind={b.kind} style={{width:432,maxWidth:'100%',aspectRatio:'1.45',display:'flex',alignItems:'center',justifyContent:'center',gap:14}}>
     {b.kind==='spatial_relationship'?<svg viewBox="-110 -110 220 220" role="img" aria-label={locale==='en'?'Four overlapping numbered crayons':'Üst üste duran dört numaralı kalem'} style={{height:'100%',maxWidth:'100%'}}>{b.layers!.map((color,i)=><g key={color} transform={`rotate(${b.angles![i]})`}><Crayon color={color}/></g>)}</svg>:<>
-      <div style={{height:'100%',aspectRatio:'1'}}><ColorfulArt locale={locale} value={b.source?.art==='mosaic'&&b.missing!==undefined?{...b.source,cells:b.source.cells.map((color,i)=>i===b.missing?null:color)}:b.source!}/></div>
+      <div className="zp-colorful-source" style={{height:'100%',aspectRatio:'1'}}><ColorfulArt locale={locale} value={b.source?.art==='mosaic'&&b.missing!==undefined?{...b.source,cells:b.source.cells.map((color,i)=>i===b.missing?null:color)}:b.source!}/></div>
       {b.kind==='mirror_reflection'&&<svg viewBox="0 0 36 180" style={{height:'90%',width:36}} role="img" aria-label={locale==='en'?'Vertical mirror on the right':'Sağda dikey ayna'}><rect x="4" y="4" width="28" height="172" rx="10" fill="#dbf4ff" stroke="#367e9c" strokeWidth="3"/><path d="M10 40L26 20M10 85L26 65M10 130L26 110" stroke="white" strokeWidth="5"/></svg>}
     </>}
   </div>;

@@ -97,6 +97,28 @@ export function independentlySolveBoard(b: Board): Tile | { textNumber: number |
     return { textNumber: count };
   }
   if (b.kind === 'order') {
+    if(b.constraints) {
+      // Assign positions to people, independently of the primary permutation solver.
+      const names=b.names!,assigned=new Map<string,number>(),solutions:string[]=[];
+      const visit=(i:number)=>{
+        if(solutions.length>1)return;
+        if(i===names.length){solutions.push(names.find(n=>assigned.get(n)===b.position)!);return;}
+        const name=names[i];
+        for(let pos=1;pos<=names.length;pos++) {
+          if([...assigned.values()].includes(pos))continue;
+          assigned.set(name,pos);
+          const valid=b.constraints!.every(c=>{
+            if(c.kind==='position')return !assigned.has(c.name)||assigned.get(c.name)===c.position;
+            const a=assigned.get(c.left),z=assigned.get(c.right);
+            return a===undefined||z===undefined||(c.kind==='before'?a<z:z-a===c.distance);
+          })&&(b.clues||[]).every(([a,z])=>!assigned.has(a)||!assigned.has(z)||assigned.get(z)===assigned.get(a)!+1);
+          if(valid)visit(i+1);
+          assigned.delete(name);
+        }
+      };visit(0);
+      if(solutions.length!==1||!solutions[0])throw Error('Bağımsız konum kısıtları tek sıra vermiyor.');
+      return {textNumber:solutions[0]};
+    }
     // Solve relative positions as constraints, independently of permutation search.
     const positions = new Map<string, number>([[b.names![0], 0]]);
     for (let pass = 0; pass < b.names!.length; pass++) for (const [a, c] of b.clues!) {

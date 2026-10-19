@@ -3,6 +3,10 @@ import { QUESTION_TYPE_LABELS } from '../../types';
 import { SeededRNG } from '../../lib/rng';
 import { TOPIC_CATEGORY } from './topic-catalog';
 import { generateVisualFingerprint as fp } from './fingerprint';
+import { generateColorfulQuestion as generateLegacyColorful } from './colorful-engine-v1';
+
+export const COLORFUL_ENGINE = 'colorful-2';
+export type MosaicRule = 'repeat-row' | 'repeat-column' | 'shift-row' | 'shift-column';
 
 export const COLORFUL_TYPES: QuestionType[] = ['mirror_reflection','figure_completion','visual_memory','shadow_matching','spatial_relationship'];
 export type Mosaic = { art: 'mosaic'; size: number; cells: number[] };
@@ -13,6 +17,32 @@ export interface ColorfulBoard {
   [key: string]: unknown;
   displayMode: 'colorful_board'; kind: QuestionType; source?: Mosaic | ObjectArt;
   missing?: number; layers?: number[]; angles?: number[]; targetDepth?: number;
+  mosaicRule?: MosaicRule;
+}
+const MOSAIC_RULES: MosaicRule[] = ['repeat-row', 'repeat-column', 'shift-row', 'shift-column'];
+/** A hidden cell is never evidence. Every visible member of a group must agree. */
+export function inferMissingMosaic(b: ColorfulBoard): number {
+  if (b.source?.art !== 'mosaic' || !Number.isInteger(b.missing)) throw Error('Eksik mozaik verisi geçersiz.');
+  if (b.mosaicRule !== undefined && !MOSAIC_RULES.includes(b.mosaicRule)) throw Error('Mozaik düzeni tanımsız.');
+  const { cells, size } = b.source, answers = new Set<number>();
+  for (const rule of b.mosaicRule ? [b.mosaicRule] : MOSAIC_RULES) {
+    const group = (i: number) => {
+      const row = Math.floor(i / size), col = i % size;
+      return rule === 'repeat-row' ? col : rule === 'repeat-column' ? row :
+        rule === 'shift-row' ? (col + row) % size : (row - col + size) % size;
+    };
+    const known = new Map<number, number>(); let consistent = true;
+    cells.forEach((color, i) => {
+      if (i === b.missing) return;
+      const g = group(i);
+      if (known.has(g) && known.get(g) !== color) consistent = false;
+      known.set(g, color);
+    });
+    const color = known.get(group(b.missing!));
+    if (consistent && color !== undefined) answers.add(color);
+  }
+  if (answers.size !== 1) throw Error('Görünen kareler eksik deseni tek başına belirlemiyor.');
+  return [...answers][0];
 }
 export function validColorfulValue(v: unknown): v is ColorfulValue {
   if (!v || typeof v !== 'object') return false;
@@ -39,7 +69,7 @@ export function solveColorful(b:ColorfulBoard):ColorfulValue {
   const s=b.source!;
   if(s.art==='object')return {...s};
   if(b.kind==='mirror_reflection')return {...s,cells:s.cells.map((_,i)=>s.cells[Math.floor(i/s.size)*s.size+s.size-1-i%s.size])};
-  if(b.kind==='figure_completion')return {art:'swatch',color:s.cells[b.missing!]};
+  if(b.kind==='figure_completion')return {art:'swatch',color:inferMissingMosaic(b)};
   return {...s,cells:[...s.cells]};
 }
 /** Candidate proof intentionally uses coordinate pairs, not the primary transform. */
@@ -48,7 +78,21 @@ export function independentlyMatchesColorful(b:ColorfulBoard,v:ColorfulValue):bo
   if(b.kind==='spatial_relationship')return v.art==='crayon'&&b.layers!.slice().reverse().indexOf(v.color)===b.targetDepth;
   const s=b.source!;
   if(s.art==='object')return v.art==='object'&&v.shape===s.shape&&v.variant===s.variant&&v.tilt===s.tilt;
-  if(b.kind==='figure_completion')return v.art==='swatch'&&v.color===s.cells[b.missing!];
+  if(b.kind==='figure_completion') {
+    if(v.art!=='swatch')return false;
+    // Independent candidate substitution compares pairs of visible coordinates.
+    return (b.mosaicRule ? [b.mosaicRule] : MOSAIC_RULES).some(rule => {
+      const filled=s.cells.map((color,i)=>i===b.missing?v.color:color), n=s.size;
+      for(let row=0;row<n;row++)for(let col=0;col<n;col++) {
+        const nextRow=rule==='repeat-row'||rule==='shift-row'?(row+1)%n:row;
+        const nextCol=rule==='repeat-column'||rule==='shift-column'?(col+1)%n:col;
+        const referenceRow=rule==='shift-column'?(row+1)%n:nextRow;
+        const referenceCol=rule==='shift-row'?(col+n-1)%n:nextCol;
+        if(filled[row*n+col]!==filled[referenceRow*n+referenceCol])return false;
+      }
+      return true;
+    });
+  }
   if(v.art!=='mosaic')return false;
   if(v.size!==s.size)return false;
   for(let row=0;row<s.size;row++)for(let col=0;col<s.size;col++) {
@@ -57,7 +101,8 @@ export function independentlyMatchesColorful(b:ColorfulBoard,v:ColorfulValue):bo
   }
   return true;
 }
-export function generateColorfulQuestion(type:QuestionType,seed:number,difficulty:DifficultyLevel):BaseQuestion {
+export function generateColorfulQuestion(type:QuestionType,seed:number,difficulty:DifficultyLevel,legacy=false):BaseQuestion {
+  if(legacy)return generateLegacyColorful(type,seed,difficulty);
   if(!COLORFUL_TYPES.includes(type)||!Number.isSafeInteger(seed)||seed<1||!Number.isInteger(difficulty)||difficulty<1||difficulty>6)throw Error('Renkli soru üretim girdisi geçersiz.');
   const rng=new SeededRNG(seed), size=difficulty<=2?2:difficulty<=3?3:4;
   const b:ColorfulBoard={displayMode:'colorful_board',kind:type};
@@ -79,11 +124,21 @@ export function generateColorfulQuestion(type:QuestionType,seed:number,difficult
     cells[0]=colors[0];cells[size-1]=colors[1];
     b.source={art:'mosaic',size,cells};
     if(type==='figure_completion') {
-      // Repeated or cyclic rows make the missing tile inferable; never hide random information.
+      // Four deliberately composed layouts; the prompt states the visible rule family.
       const row=rng.shuffle(colors).slice(0,size);
-      b.source.cells=Array.from({length:size**2},(_,i)=>row[(i%size+(difficulty>=3?Math.floor(i/size):0))%size]);b.missing=rng.nextInt(0,size**2-1);
-      prompt=difficulty>=3?'Mozaikte satırdan satıra değişen düzeni incele. Eksik kareye hangi desen gelmeli?':'Mozaikte her satır aynı sırayı izliyor. Eksik kareye hangi desen gelmeli?';
-      steps=difficulty>=3?['Her yeni satırda desenler bir kare sola kayar; baştaki desen sona geçer.','Tam satırları karşılaştır ve aynı kaydırmayı eksik karenin bulunduğu satıra uygula.']:['Tam olan bir satırdaki desen sırasını incele.','Eksik karenin sütunundaki diğer desenlerle karşılaştır.'];
+      b.mosaicRule=rng.pick(difficulty<=2?MOSAIC_RULES.slice(0,2):MOSAIC_RULES);
+      b.source.cells=Array.from({length:size**2},(_,i)=>{
+        const r=Math.floor(i/size),c=i%size;
+        return row[b.mosaicRule==='repeat-row'?c:b.mosaicRule==='repeat-column'?r:b.mosaicRule==='shift-row'?(r+c)%size:(r-c+size)%size];
+      });b.missing=rng.nextInt(0,size**2-1);
+      const instructions:Record<MosaicRule,[string,string]>={
+        'repeat-row':['Her satırda aynı desen sırası tekrarlanıyor.','Tam bir satırdaki sırayı eksik karenin satırına taşı.'],
+        'repeat-column':['Her sütunda aynı desen sırası tekrarlanıyor.','Tam bir sütundaki sırayı eksik karenin sütununa taşı.'],
+        'shift-row':['Her yeni satırda desenler bir kare sola kayıyor.','Bir önceki satırın ilk deseni sona geçer; diğerleri bir kare sola taşınır.'],
+        'shift-column':['Her yeni sütunda desenler bir kare aşağı kayıyor.','Bir önceki sütunun son deseni başa geçer; diğerleri bir kare aşağı taşınır.'],
+      };
+      prompt=instructions[b.mosaicRule][0]+' Eksik kareye hangi desen gelmeli?';
+      steps=[instructions[b.mosaicRule][1],'Eksik karenin yerini hem satır hem sütun üzerinden kontrol et.'];
     }else if(type==='mirror_reflection') {
       prompt='Ayna sağda. Mozaiğin aynadaki görüntüsü hangisidir?';
       steps=['Sağdaki dikey aynada sol ile sağ yer değiştirir.','Her satırın desenlerini ters sıraya koy; üst ve alt satırlar değişmez.'];
@@ -96,11 +151,22 @@ export function generateColorfulQuestion(type:QuestionType,seed:number,difficult
   if(answer.art==='swatch')choices=[answer,...rng.shuffle([0,1,2,3,4,5].filter(n=>n!==answer.color)).slice(0,3).map(color=>({art:'swatch' as const,color}))];
   if(answer.art==='mosaic') {
     choices=[answer];
-    for(const i of rng.shuffle(answer.cells.map((_,i)=>i)).slice(0,3)) {const cells=[...answer.cells];cells[i]=(cells[i]+rng.nextInt(1,5))%6;choices.push({...answer,cells});}
+    const source=b.source as Mosaic,n=source.size;
+    const add=(cells:number[])=>{const value={...answer,cells};if(!choices.some(c=>fp(c)===fp(value)))choices.push(value);};
+    // Common reasoning errors retain the same palette and visual density.
+    for(const cells of [source.cells,source.cells.map((_,i)=>source.cells[(n-1-Math.floor(i/n))*n+i%n]),source.cells.map((_,i)=>source.cells[(i%n)*n+Math.floor(i/n)]),source.cells.map((_,i)=>source.cells[n*n-1-i])]) {
+      if(choices.length<4)add([...cells]);
+    }
+    for(const i of rng.shuffle(answer.cells.map((_,i)=>i))) {
+      if(choices.length===4)break;
+      const j=answer.cells.findIndex((c,k)=>k!==i&&c!==answer.cells[i]);
+      if(j>=0){const cells=[...answer.cells];[cells[i],cells[j]]=[cells[j],cells[i]];add(cells);}
+    }
+    if(choices.length!==4)throw Error('Ayırt edilebilir dört desen üretilemedi.');
   }
   if(choices.filter(v=>independentlyMatchesColorful(b,v)).length!==1)throw Error('Tek cevap kanıtlanamadı.');
   let correctOptionId='';const notes:Record<string,string>={};
   const options=rng.shuffle(choices).map((visualData,i)=>{const id='ABCD'[i],correct=fp(visualData)===fp(answer);if(correct)correctOptionId=id;notes[id]=correct?'Bütün konumlar ve özellikler verilen kurala uyuyor.':type==='shadow_matching'?'Dış çizgi veya iç boşluk verilen nesneden farklı.':type==='spatial_relationship'?'Bu kalemin üstündeki katman sayısı istenen sıraya uymuyor.':'En az bir karenin deseni veya konumu verilen kuralla uyuşmuyor.';return {id,label:id,visualData,fingerprint:fp(visualData)};});
   const finalSteps=[...steps,`Kurala uyan tek seçenek ${correctOptionId}.`];
-  return {id:`${type}-color1-d${difficulty}-s${seed}`,version:1,type,category:TOPIC_CATEGORY[type],seed,difficulty,ageGroup:difficulty<=2?'1-2':'3-4',prompt,options,correctOptionId,explanation:{ruleTitle:QUESTION_TYPE_LABELS[type],summary:finalSteps.join(' '),steps:finalSteps},visualConfig:b,skills:[type],estimatedSeconds:30+difficulty*8,status:'draft',authoring:{engine:'colorful-1',objective:prompt,distractorNotes:notes}};
+  return {id:`${type}-color2-d${difficulty}-s${seed}`,version:2,type,category:TOPIC_CATEGORY[type],seed,difficulty,ageGroup:difficulty<=2?'1-2':'3-4',prompt,options,correctOptionId,explanation:{ruleTitle:QUESTION_TYPE_LABELS[type],summary:finalSteps.join(' '),steps:finalSteps},visualConfig:b,skills:[type],estimatedSeconds:30+difficulty*8,status:'draft',authoring:{engine:COLORFUL_ENGINE,objective:prompt,distractorNotes:notes}};
 }

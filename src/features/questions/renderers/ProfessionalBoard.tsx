@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { Expand, Layers, Shapes, X } from 'lucide-react';
 import type { Board, Tile } from '../professional-engine';
+import { orderClueText } from '../professional-engine';
 import { DEFAULT_VISUAL_THEME, TILE_MOTIFS, type VisualTheme } from '../visual-vocabulary';
 import { GlyphBody, SymbolDiagram } from './VisualGlyph';
 
@@ -50,7 +51,7 @@ function BoardContent({ board, flat, theme }: { board: Board; flat: boolean; the
     {board.kind === 'machine' && <div className="qb-machine"><div className="qb-machine-head"><span>GİRDİ</span><span>AYNI İŞLEM</span><span>ÇIKTI</span></div>{[...board.examples!, [board.input!, '?']].map(([x, y], i) => <div className="qb-machine-row" key={i}><span>{x}</span><span className="qb-machine-arrow" aria-hidden="true">→</span><span className={y === '?' ? 'qb-unknown' : ''}>{y}</span></div>)}</div>}
     {board.kind === 'symbols' && <div className="qb-symbols"><div className="qb-key" aria-label="Sembol değerleri">{board.key!.map(k => <div key={k.symbol}><SymbolDiagram symbol={k.symbol} flat={flat} /><span>=</span><strong>{k.value}</strong></div>)}</div><div className="qb-equation" aria-label="Toplanacak semboller">{board.symbols!.map((s, i) => <React.Fragment key={i}>{i > 0 && <span>+</span>}<SymbolDiagram symbol={s} flat={flat} /></React.Fragment>)}<span>=</span><strong>?</strong></div></div>}
     {board.kind === 'count' && <div className="qb-count"><div className="qb-target"><span>Aradığın şekil</span><SymbolDiagram symbol={board.target!} flat={flat} /></div><div className="qb-count-grid" aria-label="Sayılacak şekiller">{board.items!.map((s, i) => <div key={i}><SymbolDiagram symbol={s} flat={flat} /></div>)}</div></div>}
-    {board.kind === 'order' && <div className="qb-order"><div className="qb-people">{board.names!.map(n => <span key={n}>{n}</span>)}</div><ol className="qb-clues">{board.clues!.map(([a, b], i) => <li key={i}><span className="qb-clue-number">{i + 1}</span><span><strong>{b}</strong>, <strong>{a}</strong> adlı kişinin hemen sağındadır.</span></li>)}</ol><div className="qb-positions">{board.names!.map((_, i) => <span key={i} className={i + 1 === board.position ? 'qb-unknown' : ''}><small>{i + 1}. sıra</small><strong>{i + 1 === board.position ? '?' : '·'}</strong></span>)}</div></div>}
+    {board.kind === 'order' && <div className="qb-order"><div className="qb-people">{board.names!.map(n => <span key={n}>{n}</span>)}</div><ol className="qb-clues">{[...(board.clues||[]).map(([a,b])=>`${b}, ${a} adlı kişinin hemen sağındadır.`),...(board.constraints||[]).map(orderClueText)].map((text,i)=><li key={i}><span className="qb-clue-number">{i+1}</span><span>{text}</span></li>)}</ol><div className="qb-positions">{board.names!.map((_, i) => <span key={i} className={i + 1 === board.position ? 'qb-unknown' : ''}><small>{i + 1}. sıra</small><strong>{i + 1 === board.position ? '?' : '·'}</strong></span>)}</div></div>}
   </div>;
 }
 

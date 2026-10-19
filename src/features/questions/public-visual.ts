@@ -2,7 +2,7 @@ import type { BaseQuestion } from '../../types';
 import type { ColorfulBoard, Mosaic } from './colorful-engine';
 
 export type DisplayMosaic = Omit<Mosaic, 'cells'> & { cells: Array<number | null> };
-export type DisplayColorfulBoard = Pick<ColorfulBoard, 'displayMode' | 'kind' | 'missing' | 'layers' | 'angles' | 'targetDepth'> & {
+export type DisplayColorfulBoard = Pick<ColorfulBoard, 'displayMode' | 'kind' | 'missing' | 'layers' | 'angles' | 'targetDepth' | 'mosaicRule'> & {
   source?: DisplayMosaic | Exclude<ColorfulBoard['source'], Mosaic>;
 };
 
