@@ -1,6 +1,6 @@
 # Android ve Google Play yayını
 
-Uygulama kimliği `com.zekapark.app`, bu sürüm `1.0.21` / versionCode `22`.
+Uygulama kimliği `com.zekapark.app`, bu sürüm `1.0.22` / versionCode `23`.
 
 1. `.env.android` içinde yalnız açık bağlantı ayarlarını tanımlayın: VITE_API_BASE_URL ve VITE_PUBLIC_SITE_URL `https://zekapark.vercel.app`; VITE_SUPABASE_URL ve VITE_SUPABASE_PUBLISHABLE_KEY mevcut açık proje değerleri olmalı. Sunucu sırlarını Android paketine koymayın.
 2. `npm ci`, `npm run lint`, `npm run test:google-play`, `npm run android:sync` çalıştırın.
@@ -15,3 +15,11 @@ Google Play hesap/kimlik doğrulaması, mağaza içerikleri, veri güvenliği ve
 ## 1.0.21 — hareketli öğrenci macerası
 
 Mobil öğrenci ekranında fotoğrafın yavaş hareketi, bulutlar, ışık parçacıkları, Junior, keşif durağı ve görev kartları canlandırılır. Ekrandaki hareket düğmesi bütün sürekli efektleri kapatır; cihazın hareket azaltma tercihi önceliklidir. Ekran dışında kalan sahneler ve arka plana geçen uygulama CSS animasyonlarını duraklatır. Soru içeriği, puanlama ve abonelik akışı bu değişiklikten etkilenmez. Test APK’sı Play mağazası yayını değildir.
+
+## 1.0.22 — kaşif pasaportu, ödül odası ve bitmeyen turlar
+
+Profil mor pasaport, renkli kabartmalı ayar kartları ve mevcut XP alanıyla; Ödüller kupa, gerçek rozet sayısı ve dört renkli 3B menü kartıyla yenilendi. Hareket tercihi, arka plan/ekran dışı duraklama ve azaltılmış hareket desteği korunur.
+
+Hikâye son durakta kapanmaz. Her 18 keşiften sonra yeni tur başlar; sonraki görev her zaman açılabilir. Eski v1 ilerlemesi aynı hesap/sınıf anahtarından v2 sayaca taşınır. İlerleme sınırsız büyüyen dizi yerine sayaç ve son 64 oturum kimliğiyle saklanır. Geçmiş durakları yeniden oynamak ilerlemeyi geriye almaz. Yerel hikâye ilerlemesi XP veya ücretli erişim vermez.
+
+Maceranın her görevinde `mixCategories:true` ile üç ayrı bilişsel alandan, sınıfa uygun ve doğrulanmış karışık sorular seçilir. Sunucunun mevcut dengeli seçim, yakın geçmişi tekrar etmeme önceliği, yeni kanıtlanmış varyant ve seçenek karıştırma mekanikleri kullanılır. Standart adaptif çalışma, belirli konu seçimi ve sınav davranışı korunur. Yeni mobil sürümden önce bu API sürümü yayımlanmalıdır. Soru çizimleri ve cevap anahtarları değiştirilmez.

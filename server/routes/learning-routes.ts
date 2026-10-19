@@ -12,7 +12,7 @@ import { requireSupabaseAuth, requireVerifiedEmail, requireProfileRole, type Aut
 import { authenticatedRateLimitKey } from '../rate-limiters';
 import { generateQuestion } from '../../src/features/questions/generators';
 import { EDUCATION_PROFILES, isSchoolGrade } from '../../src/features/questions/quality-policy';
-import { DEFAULT_ADAPTIVE_COUNT, fitsLearningSelection, learningStartSchema, sameLearningSelection, selectAdaptiveCategory, type LearningDifficulty, type LearningSelection } from '../../src/features/student/learning-selection';
+import { DEFAULT_ADAPTIVE_COUNT, fitsLearningSelection, learningStartSchema, sameLearningSelection, selectSessionCategory, type LearningDifficulty, type LearningSelection } from '../../src/features/student/learning-selection';
 import { topicCategory, topicQuestionCount } from '../../src/features/student/learning-topics';
 import { questionVisualKey } from '../../src/features/questions/quality';
 import { loadPublishedLearningBank } from '../learning-bank';
@@ -89,7 +89,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
       if (progress.error) throw progress.error;
       let masteries: SkillMastery[] = [];
       try { masteries = JSON.parse(progress.data?.values?.yapyap_mastery || '[]'); } catch { /* Empty history. */ }
-      category = selectAdaptiveCategory(category, masteries);
+      category = selectSessionCategory(category, masteries, parsed.data.mixCategories);
     }
     const configuration = await readPlatformSettings();
     const settings = configuredExams(configuration.settings).find(e => e.id === exam)!;
@@ -104,7 +104,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     });
     const count = topicQuestionCount(topicCandidates, requestedCount, topic);
     if (!count) throw new LearningError('Seçilen sınıf, konu ve zorlukta yayımlanmış soru yok. Zorluk filtresini değiştirip yeniden dene.', 422);
-    const selection: LearningSelection = { topic, grade: profile.data.grade, difficulty, category, exam: mode === 'exam' ? exam : '', count, bankVersion: bank.bankVersion, ...(locale === 'en' ? { locale } : {}) };
+    const selection: LearningSelection = { ...(parsed.data.mixCategories ? {mixCategories:true} : {}), topic, grade: profile.data.grade, difficulty, category, exam: mode === 'exam' ? exam : '', count, bankVersion: bank.bankVersion, ...(locale === 'en' ? { locale } : {}) };
     const active = await client.from('learning_sessions').select('*').eq('student_id', student).eq('mode', mode).is('finished_at', null).maybeSingle();
     if (active.error) throw active.error;
     // Starting a test always draws a fresh shuffled set. Explicit GET/resume keeps its snapshot.

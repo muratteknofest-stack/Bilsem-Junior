@@ -10,14 +10,15 @@ import {createServer} from 'vite';
 import {chromium} from 'playwright';
 import {generateQuestion} from '../src/features/questions/generators/index.ts';
 import {LEARNING_TOPICS,topicCategory} from '../src/features/student/learning-topics.ts';
-import {selectAdaptiveCategory} from '../src/features/student/learning-selection.ts';
+import {balancedCategoryPlan} from '../server/learning-question-selection.ts';
+import {selectSessionCategory} from '../src/features/student/learning-selection.ts';
 import {AVAILABLE_CATEGORIES} from '../src/features/student/available-categories.ts';
 import {prepareLearningQuestions,learningView,answerLearningSession,finishLearningSession} from '../server/learning-model.ts';
 import {prepareEditorialQuestion} from '../server/editorial-validation.ts';
 process.env.VITE_SUPABASE_URL='https://turkish-fixture.invalid';process.env.VITE_SUPABASE_PUBLISHABLE_KEY='sb_publishable_isolated_fixture';
 const androidStory=process.env.BILSEM_ANDROID_STORY_CHECK==='1';
 if(androidStory){process.env.VITE_API_BASE_URL='https://turkish-fixture.invalid';process.env.VITE_PUBLIC_SITE_URL='https://zekapark.vercel.app';}
-const server=await createServer({...(androidStory?{mode:'android'}:{}),server:{host:'127.0.0.1',port:5186,strictPort:true}});await server.listen();let browser,page;
+const server=await createServer({cacheDir:androidStory?'/tmp/bilsem-android-story-vite-cache':'/tmp/bilsem-turkish-accounts-vite-cache',...(androidStory?{mode:'android'}:{}),server:{host:'127.0.0.1',port:5186,strictPort:true}});await server.listen();let browser,page;
 const parentId='11111111-1111-4111-8111-111111111111',studentId='22222222-2222-4222-8222-222222222222';
 const parent={id:parentId,role:'parent',name:'Pilot veli',linked_student_ids:[studentId],xp:0,level:1},student={id:studentId,role:'student',name:'Kaşif',grade:2,student_code:'EXPLORER1234',linked_parent_id:parentId,xp:0,level:1};
 const admin={...parent,role:'admin',name:'Test yöneticisi',linked_student_ids:[]};
@@ -74,8 +75,9 @@ try{
    topicRequests.push(body);
    const level=body.difficulty==='mixed'?1:body.difficulty;
    const count=body.mode==='adaptive'?body.questionCount:2;
-   const category=body.mode==='adaptive'&&!body.topic?selectAdaptiveCategory(body.category,AVAILABLE_CATEGORIES.map(category=>({category,mastery:category==='numerical'?0:100}))):body.category;
-   const questions=Array.from({length:count},(_,i)=>generateQuestion({profile:androidStory?'professional':'complete',targetGrade:student.grade,...(androidStory&&!body.topic?{category}:{type:body.topic}),difficulty:level,seed:90000+topicRequests.length*997+i*37}));
+   const category=body.mode==='adaptive'&&!body.topic?selectSessionCategory(body.category,AVAILABLE_CATEGORIES.map(category=>({category,mastery:category==='numerical'?0:100})),body.mixCategories):body.category;
+   const categoryPlan=category==='mixed'?balancedCategoryPlan(count,'mixed'):Array(count).fill(category);
+   const questions=Array.from({length:count},(_,i)=>generateQuestion({profile:androidStory?'professional':'complete',targetGrade:student.grade,...(androidStory&&!body.topic?{category:categoryPlan[i]}:{type:body.topic}),difficulty:level,seed:90000+topicRequests.length*997+i*37}));
    const s={id:crypto.randomUUID(),student_id:studentId,mode:body.mode,title:body.topic+' konu testi',questions:prepareLearningQuestions(questions),answers:{},created_at:new Date().toISOString(),expires_at:new Date(Date.now()+3600000).toISOString(),finished_at:null,result:null,revision:0,rewarded_xp:0};topicSessions.set(s.id,s);value=learningView(s);
   }
   else if(/^\/api\/learning\/[^/]+\/(answer|finish)$/.test(u.pathname)){

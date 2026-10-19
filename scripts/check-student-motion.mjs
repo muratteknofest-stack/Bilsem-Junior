@@ -5,13 +5,14 @@ import { createServer } from 'vite';
 import { chromium } from 'playwright';
 process.env.VITE_SUPABASE_URL='https://motion-fixture.invalid';
 process.env.VITE_SUPABASE_PUBLISHABLE_KEY='sb_publishable_isolated_fixture';
-const server=await createServer({server:{host:'127.0.0.1',port:5188,strictPort:true}});
+const server=await createServer({server:{host:'127.0.0.1',port:5188,strictPort:true},cacheDir:'/tmp/bilsem-student-motion-vite-cache'});
 await server.listen();
 let browser;
 try {
   browser=await chromium.launch({headless:true});
   const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[];
-  page.on('pageerror',error=>errors.push(error.message));
+  page.on('pageerror',error=>{errors.push(error.message);console.error('Fixture browser:',error.message);});
+  page.on('console',message=>{if(message.type()==='error')console.error('Fixture console:',message.text());});
   await page.route('https://motion-fixture.invalid/**',route=>route.fulfill({status:200,contentType:'application/json',body:'[]'}));
   await fs.mkdir('test-artifacts/student-motion',{recursive:true});
   const base='http://127.0.0.1:5188/tests/browser/student-motion.html';
@@ -71,8 +72,26 @@ try {
   await page.mouse.up();
   await nav.getByRole('button',{name:'Ödüller',exact:true}).click();
   assert.equal(await page.locator('.bj-native-feature-grid button').count(),4);
+  await page.getByRole('heading',{name:'Emeklerin parlıyor!',exact:true}).waitFor();
+  assert.equal(await page.locator('.bj-reward-object').count(),4);
+  for(const width of [320,360,390,430,820]){
+    await page.setViewportSize({width,height:844});
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
+    await page.screenshot({path:`test-artifacts/student-motion/rewards-${width}.png`,fullPage:true,animations:'disabled'});
+  }
+  for(const [label,route] of [['Görevlerim','student-challenges'],['Rozetlerim','achievements'],['Sıralama','leaderboard'],['İlerlemem','student-progress']]){
+    await page.locator('.bj-native-feature-grid button').filter({has:page.getByRole('heading',{name:label,exact:true})}).click();
+    assert.equal(await page.getByLabel('Son işlem').textContent(),route);
+  }
   assert.equal((await style('.bj-mission-token')).name,'bj-token-rock');
   await nav.getByRole('button',{name:'Profil',exact:true}).click();
+  await page.getByRole('region',{name:'Keşif pasaportum',exact:true}).waitFor();
+  for(const width of [320,360,390,430,820]){
+    await page.setViewportSize({width,height:844});
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
+    await page.screenshot({path:`test-artifacts/student-motion/profile-${width}.png`,fullPage:true,animations:'disabled'});
+  }
+  await page.getByRole('button',{name:'Çalışma hatırlatıcısı',exact:true}).click();assert.equal(await page.getByLabel('Son işlem').textContent(),'reminder');
   await pause.click();await assertStill();
   await nav.getByRole('button',{name:'Macera',exact:true}).click();await assertStill();
   await page.getByRole('button',{name:'Animasyonları başlat',exact:true}).click();

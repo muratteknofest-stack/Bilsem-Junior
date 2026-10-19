@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
-import { STORY_STAGES } from '../src/features/student/story-adventure.ts';
+import { storyStageAt } from '../src/features/student/story-adventure.ts';
 export async function checkAndroidStory(page,{student,topicSessions,requests,failAnswer}){
  await fs.mkdir('test-artifacts/android-story',{recursive:true});
  await page.goto('http://127.0.0.1:5186/tests/browser/turkish-accounts.html?mode=student-app');
@@ -25,34 +25,37 @@ export async function checkAndroidStory(page,{student,topicSessions,requests,fai
  await page.getByRole('button',{name:'Ana sayfaya dön',exact:true}).click();await page.getByRole('heading',{name:'Merak Ormanı',exact:true}).waitFor();assert.equal(await page.locator('.bj-story-stages li[data-state=complete]').count(),0);
  await page.locator('.bj-story-stages button').first().click();await page.getByRole('button',{name:'Maceraya başla',exact:true}).click();
  await page.getByRole('main',{name:'Soru çözme ekranı',exact:true}).waitFor();
- const active=[...topicSessions.values()].at(-1);assert.equal(requests.at(-1).questionCount,3);assert.equal(requests.at(-1).category,'pattern');
+ const active=[...topicSessions.values()].at(-1);assert.equal(requests.at(-1).questionCount,3);assert.equal(requests.at(-1).category,'mixed');assert.equal(requests.at(-1).mixCategories,true);assert.equal(new Set(active.questions.map(q=>q.category)).size,3);
+ if(await page.getByRole('button',{name:'Deseni gizle ve cevapla',exact:true}).count())await page.getByRole('button',{name:'Deseni gizle ve cevapla',exact:true}).click();
  failAnswer();await page.locator('#option-card-'+active.questions[0].correctOptionId).click();await page.getByRole('alert').filter({hasText:'Yalıtılmış cevap kayıt kesintisi'}).waitFor();
- assert.equal(await page.evaluate(()=>Object.entries(localStorage).filter(([k])=>k.startsWith('bilsem-story-v1:')).some(([,v])=>JSON.parse(v).completed.length)),false);
+ assert.equal(await page.evaluate(()=>Object.entries(localStorage).filter(([k])=>k.startsWith('bilsem-story-v1:')).some(([,v])=>JSON.parse(v).completedCount)),false);
  await page.getByRole('button',{name:'Yeniden gönder',exact:true}).click();
- for(let i=1;i<3;i++){await page.locator('.zp-focus-footer').getByText(`${i+1} / 3`,{exact:true}).waitFor();await page.locator('#option-card-'+active.questions[i].correctOptionId).click();}
+ for(let i=1;i<3;i++){await page.locator('.zp-focus-footer').getByText(`${i+1} / 3`,{exact:true}).waitFor();if(await page.getByRole('button',{name:'Deseni gizle ve cevapla',exact:true}).count())await page.getByRole('button',{name:'Deseni gizle ve cevapla',exact:true}).click();await page.locator('#option-card-'+active.questions[i].correctOptionId).click();}
  await page.getByRole('button',{name:'Maceraya dön',exact:true}).waitFor();await page.getByRole('button',{name:'Maceraya dön',exact:true}).click();await page.getByRole('heading',{name:'Merak Ormanı',exact:true}).waitFor();
  assert.equal(await page.locator('.bj-story-stages li[data-state=complete]').count(),1);assert.equal(await page.locator('.bj-story-stages li[data-state=current] strong').textContent(),'Ormanın şifresi');
  await page.reload();await page.getByRole('heading',{name:'Merak Ormanı',exact:true}).waitFor();assert.equal(await page.locator('.bj-story-stages li[data-state=complete]').count(),1);
  // Follow every real category constraint and cross all chapter boundaries, without a map detour.
  await page.locator('.bj-story-stages li[data-state=current] button').click();
- for(let stageIndex=1;stageIndex<STORY_STAGES.length;stageIndex++){
-  await page.getByRole('heading',{name:STORY_STAGES[stageIndex].title,exact:true}).waitFor();
+ for(let stageIndex=1;stageIndex<36;stageIndex++){
+  await page.getByRole('heading',{name:storyStageAt(stageIndex).title,exact:true}).waitFor();
   await page.getByRole('button',{name:'Maceraya başla',exact:true}).click();
   await page.getByRole('main',{name:'Soru çözme ekranı',exact:true}).waitFor();
   const task=[...topicSessions.values()].at(-1);
-  assert.equal(requests.at(-1).category,STORY_STAGES[stageIndex].category);
+  assert.equal(requests.at(-1).category,'mixed');assert.equal(requests.at(-1).mixCategories,true);assert.equal(new Set(task.questions.map(q=>q.category)).size,3);
   for(let i=0;i<3;i++){
    await page.locator('.zp-focus-footer').getByText(`${i+1} / 3`,{exact:true}).waitFor();
    if(await page.getByRole('button',{name:'Deseni gizle ve cevapla',exact:true}).count())await page.getByRole('button',{name:'Deseni gizle ve cevapla',exact:true}).click();
    await page.locator('#option-card-'+task.questions[i].correctOptionId).click();
   }
   await page.getByRole('button',{name:'Maceraya dön',exact:true}).waitFor();
-  if(stageIndex<STORY_STAGES.length-1)await page.getByRole('button',{name:'Sıradaki keşfe geç',exact:true}).click();
-  else {assert.equal(await page.getByRole('button',{name:'Sıradaki keşfe geç',exact:true}).count(),0);await page.getByRole('button',{name:'Maceraya dön',exact:true}).click();}
+  if(stageIndex<35)await page.getByRole('button',{name:'Sıradaki keşfe geç',exact:true}).click();
+  else {assert.equal(await page.getByRole('button',{name:'Sıradaki keşfe geç',exact:true}).count(),1);await page.getByRole('button',{name:'Maceraya dön',exact:true}).click();}
  }
- await page.getByRole('heading',{name:'Yıldız Bahçesi',exact:true}).waitFor();
- assert.equal(await page.locator('.bj-story-stages li[data-state=complete]').count(),3);
- await page.reload();await page.getByRole('heading',{name:'Yıldız Bahçesi',exact:true}).waitFor();
+ await page.getByRole('heading',{name:'Merak Ormanı',exact:true}).waitFor();
+ assert.equal(await page.locator('.bj-story-stages li[data-state=current]').count(),1);
+ await page.getByText('BÖLÜM 13 · 3. TUR',{exact:true}).waitFor();
+ await page.reload();await page.getByRole('heading',{name:'Merak Ormanı',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Keşfe devam et',exact:true}).click();await page.getByRole('heading',{name:storyStageAt(36).title,exact:true}).waitFor();await page.getByRole('button',{name:'Ana sayfaya dön',exact:true}).click();
  // Free study, library, topics and reports remain accessible without finishing the story.
  await nav.getByRole('button',{name:'Çalış',exact:true}).click();await page.getByRole('heading',{name:'Bugün ne keşfedelim?',exact:true}).waitFor();assert.equal(await page.locator('.bj-native-feature-grid button').count(),5);
  const groups=page.getByRole('navigation',{name:'Çalışma alanı grupları',exact:true});
@@ -75,5 +78,5 @@ export async function checkAndroidStory(page,{student,topicSessions,requests,fai
  for(const chapter of ['Bulut Adası','Renkli Vadi','Kristal Mağara','Keşif Limanı','Yıldız Bahçesi']){await page.getByRole('button',{name:'Sonraki hikâye bölümü',exact:true}).click();await page.getByRole('heading',{name:chapter,exact:true}).waitFor();await page.locator('.bj-expedition-cover img').evaluate(img=>img.decode());assert.equal(await page.locator('.bj-expedition-cover img').evaluate(img=>img.naturalWidth>=900),true);}
  await page.emulateMedia({reducedMotion:'reduce'});await page.reload();await page.getByRole('heading',{name:'Merak Ormanı',exact:true}).waitFor();assert.equal(await page.locator('.bj-story-dialogue img').evaluate(el=>getComputedStyle(el).animationName),'none');assert.equal(await page.locator('.bj-expedition-cover img').evaluate(el=>getComputedStyle(el).animationName),'none');
  await page.evaluate(()=>document.documentElement.classList.add('dark'));await page.screenshot({path:'test-artifacts/android-story/story-dark.png',fullPage:true,animations:'disabled'});
- console.log('Android story: four-tab navigation, 18 original story stops, first-screen launch, locked future stops, failed-save rejection, acknowledged completion, reload persistence, free-feature reachability, profile/reminder/grade isolation and reduced-motion checks passed. No live account or payment was created.');
+ console.log('Android story: four-tab navigation, 36 acknowledged mixed story stops into tour 3, with endless continuation, first-screen launch, locked future stops, failed-save rejection, acknowledged completion, reload persistence, free-feature reachability, profile/reminder/grade isolation and reduced-motion checks passed. No live account or payment was created.');
 }
