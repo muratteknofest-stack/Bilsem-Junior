@@ -1,4 +1,6 @@
-import type { StoryStage } from '../features/student/story-adventure';
+import './student/story-stars.css';
+import { STORY_QUESTION_COUNT, type StoryStage, type StoryReward } from '../features/student/story-adventure';
+import { StoryResultCelebration, StoryAnswerReview } from './student/StoryStars';
 import { apiFetch } from '../lib/api-fetch';
 import { LearningSetupPanel } from './student/LearningSetupPanel';
 import { useStudentReducedMotion } from '../features/student/experience-preferences';
@@ -28,7 +30,7 @@ import { DEFAULT_ADAPTIVE_COUNT, MAX_LEARNING_QUESTIONS, difficultyChoices, type
 import { isSchoolGrade } from '../features/questions/quality-policy';
 
 const button = 'min-h-11 rounded-xl bg-indigo-700 px-5 py-3 font-bold text-white disabled:opacity-50 focus-visible:outline-4 focus-visible:outline-indigo-300';
-interface Props { storyReward?:{sessionId:string;points:number;badges:string[]}; storyStage?:StoryStage; onStoryComplete?:(session:LearningSessionView)=>void; onContinueStory?:()=>void; mode: LearningMode; initialCategory?: LearningCategory; initialTopic?: LearningTopic; reviewMistakeId?: string; onNavigateHome: () => void; }
+interface Props { storyReward?:StoryReward; storyStage?:StoryStage; onStoryComplete?:(session:LearningSessionView)=>void; onContinueStory?:()=>void; mode: LearningMode; initialCategory?: LearningCategory; initialTopic?: LearningTopic; reviewMistakeId?: string; onNavigateHome: () => void; }
 export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete, onContinueStory, mode, initialCategory = 'mixed', initialTopic = 'mixed', reviewMistakeId, onNavigateHome }: Props) {
   const reducedMotion = useStudentReducedMotion();
   const feedbackLedger = useRef(new AnswerFeedbackLedger());
@@ -38,7 +40,7 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
   const [topic, setTopic] = useState<LearningTopic>(isLearningTopic(initialTopic) ? initialTopic : 'mixed');
   const [exam, setExam] = useState('mini');
   const [difficulty, setDifficulty] = useState<LearningDifficulty>('mixed');
-  const [questionCount, setQuestionCount] = useState(storyStage?'3':String(DEFAULT_ADAPTIVE_COUNT));
+  const [questionCount, setQuestionCount] = useState(String(storyStage?STORY_QUESTION_COUNT:DEFAULT_ADAPTIVE_COUNT));
   const validQuestionCount = /^\d+$/.test(questionCount) && Number(questionCount) >= 1 && Number(questionCount) <= MAX_LEARNING_QUESTIONS;
   const selectedGrade = dataService.getCurrentUser().grade;
   const grade = isSchoolGrade(selectedGrade) ? selectedGrade : 1;
@@ -74,7 +76,7 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
     catch (err) { if (mounted.current) setError(err instanceof Error ? err.message : 'İşlem tamamlanamadı. Yeniden dene.'); return null; }
   };
   const start = async () => { if (mode === 'adaptive' && !validQuestionCount) return; sound.unlock(); const saved = await run(() => {
-    return reviewMistakeId ? learningService.review(reviewMistakeId) : learningService.start(mode, storyStage?.category || topicCategory(topic, category), exam, difficulty, undefined, storyStage?'mixed':topic, storyStage?3:Number(questionCount), !!storyStage);
+    return reviewMistakeId ? learningService.review(reviewMistakeId) : learningService.start(mode, storyStage?.category || topicCategory(topic, category), exam, difficulty, undefined, storyStage?'mixed':topic, storyStage?STORY_QUESTION_COUNT:Number(questionCount), !!storyStage);
   }); if (saved && mounted.current) { const next = mode === 'exam' ? 0 : nextUnansweredIndex(saved); setIndex(next < 0 ? saved.questions.length - 1 : next); } };
   const savePending = async () => {
     if (!session || mode !== 'exam' || session.result || Date.now() >= Date.parse(session.expiresAt)) return true;
@@ -168,7 +170,7 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
   }, [session?.id, session?.result, mode, reviewMistakeId, storyStage, onStoryComplete]);
   if(session&&!session.result&&q&&renderQuestion) {
     const canVisit=(i:number)=>i>=0&&i<session.questions.length&&(mode==='exam'||!!session.answers[String(i)]||i===nextUnansweredIndex(session));
-    return <FocusedQuestionScreen feedback={feedback} question={renderQuestion} sessionKey={`${session.id}-${index}`} index={index} total={session.questions.length} remaining={remaining} busy={busy} submitted={submitted} expired={expired} response={response} error={error} onChange={changeResponse} onLeave={()=>void leave()} onPrevious={canVisit(index-1)?()=>void goTo(index-1):undefined} onNext={canVisit(index+1)?()=>void goTo(index+1):undefined} onRetry={needsFinish?()=>void finish():response?.mode==='choice'&&response.optionId?()=>void submit():undefined} onRetryLabel={needsFinish?'Sonuçları yükle':'Yeniden gönder'} onReloadResults={()=>void finish()} tools={<>
+    return <FocusedQuestionScreen adventureEffect={storyStage?(['burst','orbit','leaves'] as const)[Math.floor(index/5)%3]:undefined} feedback={feedback} question={renderQuestion} sessionKey={`${session.id}-${index}`} index={index} total={session.questions.length} remaining={remaining} busy={busy} submitted={submitted} expired={expired} response={response} error={error} onChange={changeResponse} onLeave={()=>void leave()} onPrevious={canVisit(index-1)?()=>void goTo(index-1):undefined} onNext={canVisit(index+1)?()=>void goTo(index+1):undefined} onRetry={needsFinish?()=>void finish():response?.mode==='choice'&&response.optionId?()=>void submit():undefined} onRetryLabel={needsFinish?'Sonuçları yükle':'Yeniden gönder'} onReloadResults={()=>void finish()} tools={<>
       <LearningRefreshNotice/>
       <p>Şıkkı seçince cevabın kaydedilir ve sonraki soru açılır. {isExam?'Çözümler deneme bitince gösterilir.':'Önceki soruların çözümlerini buradan inceleyebilirsin.'}</p>
       <nav aria-label="Soru seçimi">{session.questions.map((item,i)=>{const saved=session.answers[String(i)];const label=saved?.correct===undefined?(saved?'Yanıtlandı':'Boş'):(saved.correct?'Doğru':'Yanlış');return <button key={item.id} disabled={busy||!canVisit(i)} aria-current={i===index?'step':undefined} onClick={()=>void goTo(i)} aria-label={`${i+1}. soru, ${label}`}>{i+1} · {label}</button>;})}</nav>
@@ -193,13 +195,14 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
     <div className="zp-screen-bar"><span>{isExam ? <Tablet size={17} aria-hidden="true" /> : <Gamepad2 size={19} aria-hidden="true" />} {isExam ? 'BİLSEM JUNIOR / DENEME' : 'KEŞFET · DÜŞÜN · ÇÖZ'}</span><span>{grade}. SINIF</span></div>
     {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{error}</div>}
     <AnswerHistory items={history} />
-    {!session && storyStage ? <section className="bj-story-setup" aria-label="Hikâye görevi"><img src="/brand/junior-fox.svg" alt="Junior rehber"/><p>HİKÂYE MODU · {grade}. SINIF</p><h2>{storyStage.title}</h2>{storyStage.narrative&&<p>{storyStage.narrative}</p>}<p>{storyStage.task} Üç soruyu tamamla, sıradaki durağı aç. Cevaplarını birlikte inceleyelim.</p><button type="button" className={button} disabled={busy} onClick={()=>void start()}>{busy?'Görev hazırlanıyor…':'Maceraya başla'}</button></section> : !session ? <LearningSetupPanel mode={mode} grade={grade} review={!!reviewMistakeId} busy={busy} topic={topic} onTopic={setTopic} category={category} onCategory={setCategory} difficulty={difficulty} onDifficulty={setDifficulty} questionCount={questionCount} onCount={setQuestionCount} validCount={validQuestionCount} exam={exam} onExam={setExam} exams={exams} onStart={() => void start()} /> : <>
-      {session.result && <section aria-label="Çalışma sonucu" className="zp-result space-y-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
-        <Trophy size={38} aria-hidden="true" />
-        <h2 className="text-xl font-extrabold">Çalışman tamamlandı</h2><p>{session.result.correctAnswers} doğru · {session.result.wrongAnswers} yanlış · {session.result.blankAnswers} boş · %{session.result.scorePercentage} başarı</p><p className="font-bold text-emerald-800">{session.result.xp} XP kazandın</p>
-        {storyStage&&session.result.blankAnswers===0&&<div className="bj-story-discovery"><BookOpen size={22} aria-hidden="true"/><h3>Hikâyede yeni bir adım</h3><p>{storyStage.discovery}</p>{storyReward?.sessionId===session.id&&<><strong>+{storyReward.points} macera puanı</strong>{storyReward.badges.map(badge=><p key={badge}>Yeni rozet: {badge}</p>)}</>}</div>}<p className="text-sm">Sorular arasında geçerek çözüm açıklamalarını inceleyebilirsin.</p>{storyStage&&onContinueStory&&<button type="button" disabled={busy} onClick={onContinueStory} className={button}>Sıradaki keşfe geç</button>}<button type="button" disabled={busy} onClick={storyStage?onNavigateHome:restart} className={button}>{storyStage?'Maceraya dön':'Yeni çalışma'}</button>
+    {!session && storyStage ? <section className="bj-story-setup" aria-label="Hikâye görevi"><img src="/brand/junior-fox.svg" alt="Junior rehber"/><p>HİKÂYE MODU · {grade}. SINIF</p><h2>{storyStage.title}</h2>{storyStage.narrative&&<p>{storyStage.narrative}</p>}<p>{storyStage.task} {STORY_QUESTION_COUNT} soruyu tamamla, yıldızlarını kazan ve sıradaki durağı aç. Cevaplarını birlikte inceleyelim.</p><button type="button" className={button} disabled={busy} onClick={()=>void start()}>{busy?'Görev hazırlanıyor…':'Maceraya başla'}</button></section> : !session ? <LearningSetupPanel mode={mode} grade={grade} review={!!reviewMistakeId} busy={busy} topic={topic} onTopic={setTopic} category={category} onCategory={setCategory} difficulty={difficulty} onDifficulty={setDifficulty} questionCount={questionCount} onCount={setQuestionCount} validCount={validQuestionCount} exam={exam} onExam={setExam} exams={exams} onStart={() => void start()} /> : <>
+      {session.result && <section aria-label="Çalışma sonucu" className={`zp-result ${storyStage?'bj-story-result':''} space-y-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-5`}>
+        {!storyStage&&<Trophy size={38} aria-hidden="true" />}
+        <h2 className="text-xl font-extrabold">Çalışman tamamlandı</h2><p>{session.result.correctAnswers} doğru · {session.result.wrongAnswers} yanlış · {session.result.blankAnswers} boş · %{session.result.scorePercentage} başarı</p><p className="font-bold text-emerald-800">{session.result.xp} XP kazandın</p>{storyStage&&<StoryResultCelebration key={session.id} correct={session.result.correctAnswers} total={session.result.totalQuestions} bestCorrect={storyReward?.sessionId===session.id?storyReward.bestCorrect:undefined}/>}
+<p className="text-sm">Sorular arasında geçerek çözüm açıklamalarını inceleyebilirsin.</p>{storyStage&&<button type="button" disabled={busy} onClick={()=>{restart();void start();}} className="bj-story-replay">Tekrar oyna · 20 yeni soru</button>}{storyStage&&onContinueStory&&<button type="button" disabled={busy} onClick={onContinueStory} className={button}>Sıradaki keşfe geç</button>}<button type="button" disabled={busy} onClick={storyStage?onNavigateHome:restart} className={button}>{storyStage?'Maceraya dön':'Yeni çalışma'}</button>
+        {storyStage&&session.result.blankAnswers===0&&<div className="bj-story-discovery"><BookOpen size={22} aria-hidden="true"/><h3>Hikâyede yeni bir adım</h3><p>{storyStage.discovery}</p>{storyReward?.sessionId===session.id&&<>{storyReward.points>0&&<strong>+{storyReward.points} macera puanı</strong>}{storyReward.replay&&<strong>{storyReward.improved?'En iyi sonucunu geliştirdin!':'Tekrar maceran tamamlandı. En iyi yıldızların korundu.'}</strong>}{storyReward.badges.map(badge=><p key={badge}>Yeni rozet: {badge}</p>)}</>}</div>}
       </section>}
-      {q && renderQuestion && <section className="zp-session space-y-5 p-4 sm:p-7">
+      {q && renderQuestion && <StoryAnswerReview enabled={!!storyStage&&!!session.result} count={session.questions.length}><section className="zp-session space-y-5 p-4 sm:p-7">
         <div className="zp-round-header"><div><p className="zp-eyebrow">{COGNITIVE_CATEGORY_LABELS[q.category]}</p><p className="zp-round-title">{isExam ? 'Soru' : 'Sıradaki keşfin'} <span>{index + 1} / {session.questions.length}</span></p><p className="zp-round-detail">{q.targetGrade}. sınıf · Zorluk {q.difficulty}</p></div>{!session.result && <div className={`zp-timer ${remaining <= 60 ? 'zp-timer-low' : ''}`} role="timer" aria-label="Kalan süre"><Clock3 size={21} aria-hidden="true" /><span><small>Kalan süre</small>{Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}</span></div>}</div>
         <div className="zp-progress-row"><span><CheckCircle2 size={16} aria-hidden="true" /> {answeredCount} / {session.questions.length} cevaplandı</span><progress aria-label="Çalışma ilerlemesi" max={session.questions.length} value={answeredCount} /></div>
         <nav aria-label="Soru seçimi" className="zp-question-nav flex flex-wrap gap-2">{session.questions.map((item, i) => {
@@ -227,7 +230,7 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
           {!session.result && <button type="button" disabled={busy} onClick={() => void finish()} className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 font-semibold">{remaining===0?'Sonuçları yeniden yükle':mode === 'exam' ? 'Denemeyi bitir' : 'Çalışmayı bitir'}</button>}
         </div>
         <details className="border-t border-slate-100 pt-4"><summary className="min-h-11 cursor-pointer text-sm font-semibold text-slate-600">Soruyla ilgili sorun bildir</summary><div className="flex flex-wrap gap-2">{([['answer', 'Cevap'], ['unclear', 'Anlatım'], ['visual', 'Görsel'], ['level', 'Seviye']] as const).map(([reason, label]) => <button key={reason} type="button" disabled={reportBusy} onClick={async () => { setReportBusy(true); try { await learningService.report(session.id, index, reason); setReportStatus('Bildirimin alındı. Teşekkür ederiz.'); } catch (err) { setReportStatus(err instanceof Error ? err.message : 'Bildirim gönderilemedi.'); } finally { setReportBusy(false); } }} className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm">{label}</button>)}</div><p role="status" className="mt-2 text-sm">{reportStatus}</p></details>
-      </section>}
+      </section></StoryAnswerReview>}
     </>}
     </div>
     {isExam && <div className="zp-tablet-home" aria-hidden="true"><span /></div>}

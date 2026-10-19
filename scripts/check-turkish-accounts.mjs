@@ -10,7 +10,8 @@ import {createServer} from 'vite';
 import {chromium} from 'playwright';
 import {generateQuestion} from '../src/features/questions/generators/index.ts';
 import {LEARNING_TOPICS,topicCategory} from '../src/features/student/learning-topics.ts';
-import {balancedCategoryPlan} from '../server/learning-question-selection.ts';
+import {balancedCategoryPlan,selectLearningQuestions,generateVariedLearningQuestion,recentQuestionExposure} from '../server/learning-question-selection.ts';
+import {isQuestionReadyForStudents} from '../src/features/questions/quality.ts';
 import {selectSessionCategory} from '../src/features/student/learning-selection.ts';
 import {AVAILABLE_CATEGORIES} from '../src/features/student/available-categories.ts';
 import {prepareLearningQuestions,learningView,answerLearningSession,finishLearningSession} from '../server/learning-model.ts';
@@ -78,8 +79,9 @@ try{
    const count=body.mode==='adaptive'?body.questionCount:2;
    const category=body.mode==='adaptive'&&!body.topic?selectSessionCategory(body.category,AVAILABLE_CATEGORIES.map(category=>({category,mastery:category==='numerical'?0:100})),body.mixCategories):body.category;
    const categoryPlan=category==='mixed'?balancedCategoryPlan(count,'mixed'):Array(count).fill(category);
-   const questions=Array.from({length:count},(_,i)=>generateQuestion({profile:(androidStory||webStory)?'professional':'complete',targetGrade:student.grade,...((androidStory||webStory)&&!body.topic?{category:categoryPlan[i]}:{type:body.topic}),difficulty:level,seed:90000+topicRequests.length*997+i*37}));
-   const s={id:crypto.randomUUID(),student_id:studentId,mode:body.mode,title:body.topic+' konu testi',questions:prepareLearningQuestions(questions),answers:{},created_at:new Date().toISOString(),expires_at:new Date(Date.now()+3600000).toISOString(),finished_at:null,result:null,revision:0,rewarded_xp:0};topicSessions.set(s.id,s);value=learningView(s);
+   let storySeed=90000+topicRequests.length*200003;
+   const questions=(androidStory||webStory)&&body.mixCategories?selectLearningQuestions({count,category:'mixed',preferDiverseTypes:true,candidates:[...topicSessions.values()].flatMap(session=>session.questions),exposure:recentQuestionExposure([...topicSessions.values()]),canUse:q=>q.targetGrade===student.grade&&isQuestionReadyForStudents(q),generate:(category,typeCounts)=>generateVariedLearningQuestion({grade:student.grade,category,difficulty:level,seed:++storySeed,typeCounts})}):Array.from({length:count},(_,i)=>generateQuestion({profile:(androidStory||webStory)?'professional':'complete',targetGrade:student.grade,...((androidStory||webStory)&&!body.topic?{category:categoryPlan[i]}:{type:body.topic}),difficulty:level,seed:90000+topicRequests.length*997+i*37}));
+   const s={id:crypto.randomUUID(),student_id:studentId,mode:body.mode,title:body.topic?body.topic+' konu testi':body.mixCategories?'Hikâyeli macera':'Adaptif çalışma',questions:prepareLearningQuestions(questions),answers:{},created_at:new Date().toISOString(),expires_at:new Date(Date.now()+3600000).toISOString(),finished_at:null,result:null,revision:0,rewarded_xp:0};topicSessions.set(s.id,s);value=learningView(s);
   }
   else if(/^\/api\/learning\/[^/]+\/(answer|finish)$/.test(u.pathname)){
    const [,id,action]=u.pathname.match(/\/api\/learning\/([^/]+)\/(answer|finish)/);

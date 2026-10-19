@@ -5,7 +5,7 @@ import type { LearningSessionView } from '../src/features/student/learning-contr
 import { generateQuestion } from '../src/features/questions/generators';
 import { selectSessionCategory, learningStartSchema, sameLearningSelection, type LearningSelection } from '../src/features/student/learning-selection';
 import { AVAILABLE_CATEGORIES } from '../src/features/student/available-categories';
-import { selectLearningQuestions } from '../server/learning-question-selection';
+import { selectLearningQuestions, generateVariedLearningQuestion } from '../server/learning-question-selection';
 import { isQuestionReadyForStudents } from '../src/features/questions/quality';
 import { answerLearningSession, finishLearningSession, learningView, prepareLearningQuestions, type LearningSession } from '../server/learning-model';
 const questions=['visual_sequence','number_pattern','mirror_reflection'].map((type,i)=>generateQuestion({type:type as 'visual_sequence'|'number_pattern'|'mirror_reflection',targetGrade:2,difficulty:1,seed:1234+i*997}));
@@ -80,6 +80,7 @@ test('campaign rewards, story skills, replay and persistence remain isolated and
  const [story,other]=campaignsForGrade(2);
  let progress=emptyStoryProgress();
  const first=campaignStageAt(story.id,0);
+ const session=campaignSession();
  assert.strictEqual(advanceStory(progress,campaignStageAt(story.id,1).id,session,2),progress);
  assert.strictEqual(advanceStory(progress,first.id,session,1),progress);
  assert.strictEqual(advanceStory(progress,first.id,{...session,result:null},2),progress);
@@ -94,7 +95,7 @@ test('campaign rewards, story skills, replay and persistence remain isolated and
   assert.deepEqual(parseStoryProgress(JSON.stringify(next)),next);progress=next;
  }
  assert.equal(progress.completedCount,0);assert.equal(campaignCompleted(progress,other.id),0);
- assert.equal(Object.values(progress.skillPractice!).reduce((sum,n)=>sum+n,0),144);
+ assert.equal(Object.values(progress.skillPractice!).reduce((sum,n)=>sum+n,0),960);
  assert.equal(storyCollection(progress,2).points,1680);assert.equal(storyCollection(progress,2).finished.length,1);
  assert.equal(storyBadges(progress,2).filter(b=>b.unlocked).length,5);assert.equal(nextCampaignStage(progress,story.id),undefined);
  const otherFirst=campaignStageAt(other.id,0);
@@ -107,7 +108,7 @@ test('campaign rewards, story skills, replay and persistence remain isolated and
  const migrated=advanceStory(old,first.id,session,2);assert.equal(migrated.completedCount,999);assert.equal(campaignCompleted(migrated,story.id),1);
  const bad=parseStoryProgress(JSON.stringify({...migrated,campaigns:{[story.id]:49,[other.id]:-1,unknown:100},skillPractice:{pattern:Infinity,logic:-1,unknown:999},selectedStoryId:'unknown'}));
  assert.deepEqual(bad.campaigns,{});assert.deepEqual(bad.skillPractice,{});assert.equal(bad.selectedStoryId,undefined);
- assert.ok(JSON.stringify(progress).length<4000);
+ assert.ok(JSON.stringify(progress).length<15000);
 });
 
 test('real acknowledged sessions advance across every chapter and finale for each age group',async()=>{
@@ -117,13 +118,56 @@ test('real acknowledged sessions advance across every chapter and finale for eac
   const story=campaignsForGrade(grade)[0];let progress=emptyStoryProgress(),seed=grade*1000000;
   for(let index=0;index<48;index++) {
    const stage=campaignStageAt(story.id,index);
-   const questions=selectLearningQuestions({count:3,category:'mixed',candidates:[],exposure:new Map(),canUse:isQuestionReadyForStudents,generate:category=>generateQuestion({profile:'professional',category,targetGrade:grade,difficulty:1,seed:++seed})});
+   const questions=selectLearningQuestions({count:20,preferDiverseTypes:true,category:'mixed',candidates:[],exposure:new Map(),canUse:isQuestionReadyForStudents,generate:(category,typeCounts)=>generateVariedLearningQuestion({category,grade,difficulty:1,seed:++seed,typeCounts})});
    const now=Date.now();let saved:LearningSession={id:crypto.randomUUID(),student_id:'story-student',mode:'adaptive',title:stage.title,questions:prepareLearningQuestions(questions),answers:{},created_at:new Date(now).toISOString(),expires_at:new Date(now+3600000).toISOString(),finished_at:null,result:null,revision:0,rewarded_xp:0};
-   for(let i=0;i<3;i++)saved=answerLearningSession(saved,i,{mode:'choice',optionId:saved.questions[i].correctOptionId},now+1000+i);
+   for(let i=0;i<20;i++)saved=answerLearningSession(saved,i,{mode:'choice',optionId:saved.questions[i].correctOptionId},now+1000+i);
    assert.strictEqual(advanceStory(progress,stage.id,learningView(saved),grade),progress);
    saved=finishLearningSession(saved,now+4000);progress=advanceStory(progress,stage.id,learningView(saved),grade);
    assert.equal(campaignCompleted(progress,story.id),index+1);
   }
   assert.equal(storyCollection(progress,grade).finished.length,1);
  }
+});
+
+function campaignSession(grade:1|2|3|4=2,id='twenty-session'):LearningSessionView {
+ let seed=grade*817234;
+ const questions=selectLearningQuestions({count:20,category:'mixed',preferDiverseTypes:true,candidates:[],exposure:new Map(),canUse:isQuestionReadyForStudents,generate:(category,typeCounts)=>generateVariedLearningQuestion({grade,category,difficulty:1,seed:++seed,typeCounts})});
+ return {...session,id,questions,answers:Object.fromEntries(questions.map((q,i)=>[String(i),{response:{mode:'choice',optionId:q.correctOptionId}}])),result:{...session.result!,totalQuestions:20,correctAnswers:20}};
+}
+
+test('twenty-question adventures balance all ten areas and prefer distinct proved topics in every grade',()=>{
+ for(const grade of [1,2,3,4] as const) {
+  const saved=campaignSession(grade);
+  assert.equal(saved.questions.length,20);
+  for(const category of AVAILABLE_CATEGORIES)assert.equal(saved.questions.filter(q=>q.category===category).length,2);
+  assert.ok(new Set(saved.questions.map(q=>q.type)).size>=(grade===1?16:17));
+  assert.ok(saved.questions.every(q=>q.targetGrade===grade&&isQuestionReadyForStudents(q as import('../src/types').BaseQuestion)));
+ }
+});
+
+test('stars are proportional, replay improves only the best rating, and neither unlocks nor rewards are duplicated',async()=>{
+ const {storyStars,campaignStageAt,campaignCompleted,storyCollection,storyCelebration}=await import('../src/features/student/story-adventure');
+ for(let correct=0;correct<=20;correct++)assert.equal(storyStars(correct),correct/4);
+ for(const correct of [-1,21,NaN,Infinity,1.5])assert.equal(storyStars(correct),0);
+ assert.equal(storyStars(19),4.75);assert.equal(storyStars(20),5);
+ assert.equal(storyCelebration(0),'grow');assert.equal(storyCelebration(10),'orbit');assert.equal(storyCelebration(16),'sparkle');assert.equal(storyCelebration(20),'perfect');
+ const stage=campaignStageAt('g2-map',0),base=campaignSession();
+ const withScore=(correct:number,id:string)=>({...base,id,result:{...base.result!,correctAnswers:correct,wrongAnswers:20-correct,scorePercentage:correct*5}});
+ const first=advanceStory(emptyStoryProgress(),stage.id,withScore(10,'first-score'),2);
+ assert.equal(first.stageResults?.[stage.id].bestCorrect,10);
+ const replay=advanceStory(first,stage.id,withScore(20,'improved-score'),2);
+ assert.equal(replay.stageResults?.[stage.id].bestCorrect,20);assert.equal(replay.stageResults?.[stage.id].attempts,2);
+ assert.equal(campaignCompleted(replay,'g2-map'),1);assert.equal(storyCollection(replay,2).points,20);assert.deepEqual(replay.skillPractice,first.skillPractice);
+ const lower=advanceStory(replay,stage.id,withScore(4,'lower-score'),2);
+ assert.equal(lower.stageResults?.[stage.id].bestCorrect,20);assert.equal(lower.stageResults?.[stage.id].lastCorrect,4);assert.deepEqual(parseStoryProgress(JSON.stringify(lower)),lower);
+ assert.strictEqual(advanceStory(lower,stage.id,withScore(4,'lower-score'),2),lower);
+ assert.strictEqual(advanceStory(lower,campaignStageAt('g2-map',2).id,withScore(20,'locked-score'),2),lower);
+ const short=base.questions.slice(0,19);
+ assert.strictEqual(advanceStory(first,stage.id,{...base,id:'short',questions:short,result:{...base.result!,totalQuestions:19,correctAnswers:19}},2),first);
+ const invalid=parseStoryProgress(JSON.stringify({...lower,stageResults:{[stage.id]:{bestCorrect:21,lastCorrect:2,totalQuestions:20,attempts:1},'g2-map:47':{bestCorrect:20,lastCorrect:20,totalQuestions:20,attempts:1}}}));
+ assert.deepEqual(invalid.stageResults,{});
+ const legacy=parseStoryProgress(JSON.stringify({version:2,completedCount:18,sessions:[],campaigns:{'g2-map':3}}));
+ assert.equal(legacy.stageResults,undefined);
+ const upgraded=advanceStory(legacy,stage.id,withScore(19,'legacy-replay'),2);
+ assert.equal(upgraded.stageResults?.[stage.id].bestCorrect,19);assert.equal(campaignCompleted(upgraded,'g2-map'),3);assert.equal(upgraded.completedCount,18);
 });

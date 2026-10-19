@@ -1,6 +1,6 @@
 # Android ve Google Play yayını
 
-Uygulama kimliği `com.zekapark.app`, bu sürüm `1.0.25` / versionCode `26`.
+Uygulama kimliği `com.zekapark.app`, bu sürüm `1.0.26` / versionCode `27`.
 
 1. `.env.android` içinde yalnız açık bağlantı ayarlarını tanımlayın: VITE_API_BASE_URL ve VITE_PUBLIC_SITE_URL `https://zekapark.vercel.app`; VITE_SUPABASE_URL ve VITE_SUPABASE_PUBLISHABLE_KEY mevcut açık proje değerleri olmalı. Sunucu sırlarını Android paketine koymayın.
 2. `npm ci`, `npm run lint`, `npm run test:google-play`, `npm run android:sync` çalıştırın.
@@ -50,3 +50,11 @@ Doğrulama: 380 test ve 7 öğrenci çalışma alanı testi, TypeScript ve üret
 - Açılan duraklar, bölüm sandıkları, hikâye sonu eşyaları, sekiz rozet ve on alıştırma alanında birikim seviyeleri. Görev tekrarı ek macera puanı vermez. XP mevcut sunucu sonuçlarından gelir.
 - Android ve web aynı parkuru kullanır. Hikâye seçimi, görevler ve koleksiyon cihazda hesap/sınıf ayrımıyla korunur; eski rota sayacı kaybolmaz. Cihazlar arası hikâye eşitlemesi yoktur.
 - 320/390/820 px yerleşim, kayıt kesintisi, tekrar yükleme, bölüm geçişi, hikâye değiştirme ve final ödülü yalıtılmış gerçek uygulama akışlarıyla doğrulanır. Final ekranı testi son göreve hazırlanmış yerel veri kullanır; tüm 48 görevin ilerlemesi dört sınıfta gerçek soru üretimi ve sunucu değerlendirme modeliyle ayrıca sınanır.
+
+## 1.0.26 — 20 soruluk maceralar ve beş yıldız
+
+- Yeni macera görevleri 20 sorudan oluşur: 10 alandan ikişer soru, tekrarlanan kalıptan önce farklı doğrulanmış konu önceliği. Hikâye başına 48 görev / 960 soru.
+- Doğru sayısına orantılı, kısmi dolan beş yıldız: 10/20 → 2,5; 19/20 → 4,75; 20/20 → 5. Dört farklı sonuç animasyonu ve görev boyunca değişen doğru cevap efektleri.
+- Sonuçtan ve haritadan yeniden oynanabilir. Her deneme taze sunucu oturumu açar; en iyi yıldız sonucu korunur. Yeniden oynamak yeni durak açmaz, macera puanını ve ilk tamamlama alıştırma sayaçlarını çoğaltmaz; soru XP’si sunucudan gelir.
+- Eski durak ve hikâye ilerlemesi korunur. Eski görevlerin yıldızları 20 soruluk tekrar oynandıktan sonra kaydedilir. Yıldızlar cihazda hesap/sınıf ayrımıyla saklanır.
+- Sonuç ekranında çözümler açılır bölümden incelenir. Azaltılmış hareket tercihi açıkken süslemeler kapanır; cihaz tercihi değişince anında uygulanır.

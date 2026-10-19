@@ -1,5 +1,8 @@
 import { randomInt } from 'node:crypto';
-import type { BaseQuestion, CognitiveCategory } from '../src/types';
+import { generateQuestion, STUDENT_CATEGORY_TYPES } from '../src/features/questions/generators';
+import { professionalGradeTypes } from '../src/features/questions/reasoning-profile';
+import type { SchoolGrade } from '../src/features/questions/quality-policy';
+import type { BaseQuestion, CognitiveCategory, DifficultyLevel, QuestionType } from '../src/types';
 import { questionVisualKey, questionStimulusKey } from '../src/features/questions/quality';
 import { AVAILABLE_CATEGORIES } from '../src/features/student/available-categories';
 import { getServiceClient } from './supabase-admin';
@@ -52,7 +55,7 @@ export function balancedCategoryPlan(count: number, category: CognitiveCategory 
 export function selectLearningQuestions(options: {
   count: number; category: CognitiveCategory | 'mixed'; candidates: BaseQuestion[];
   exposure: ReadonlyMap<string, number>; canUse: (question: BaseQuestion) => boolean;
-  generate: (category: CognitiveCategory) => BaseQuestion; randomIndex?: (max: number) => number; categories?: CognitiveCategory[]; allowGeneration?: boolean;
+  generate: (category: CognitiveCategory, typeCounts: ReadonlyMap<QuestionType,number>) => BaseQuestion; preferDiverseTypes?: boolean; randomIndex?: (max: number) => number; categories?: CognitiveCategory[]; allowGeneration?: boolean;
 }) {
   const randomIndex = options.randomIndex || randomInt;
   const configured = options.category === 'mixed' && options.categories ? shuffle([...new Set(options.categories)], randomIndex) : undefined;
@@ -69,10 +72,10 @@ export function selectLearningQuestions(options: {
   for (const group of groups.values()) group.sort((a, b) => a.lastAssigned - b.lastAssigned);
   const seen = new Set<string>(), selected: BaseQuestion[] = [];
   const typeCounts = new Map<BaseQuestion['type'], number>();
-  const take = (category: CognitiveCategory, allowRecent: boolean) => {
+  const take = (category: CognitiveCategory, allowRecent: boolean, unusedOnly=false) => {
     const group = groups.get(category) || [];
     while (group.length) {
-      const eligible = group.filter(item => allowRecent ? item.lastAssigned === group[0].lastAssigned : !item.lastAssigned);
+      const eligible = group.filter(item => (allowRecent ? item.lastAssigned === group[0].lastAssigned : !item.lastAssigned) && (!unusedOnly || !typeCounts.has(item.question.type)));
       if (!eligible.length) return undefined;
       // Among equally fresh candidates, avoid a run of the same question template.
       // Stable ordering preserves oldest-first exposure when template counts tie.
@@ -85,21 +88,31 @@ export function selectLearningQuestions(options: {
     return undefined;
   };
   for (const category of plan) {
-    let chosen = take(category, false);
+    let chosen = take(category, false, options.preferDiverseTypes);
     // Prefer a new proven variant before reusing a recently assigned bank question.
     for (let attempt = 0; !chosen && options.allowGeneration !== false && attempt < 50; attempt++) {
       try {
-        const question = options.generate(category);
+        const question = options.generate(category,typeCounts);
         if (question.category !== category || !options.canUse(question)) continue;
         const key = questionStimulusKey(question);
         if (seen.has(key) || options.exposure.has(key) || options.exposure.has(questionVisualKey(question))) continue;
         seen.add(key); chosen = question;
       } catch { /* Try another seed; no answer correction or quality gate relaxation. */ }
     }
+    chosen ||= take(category, false);
     chosen ||= take(category, true);
     if (!chosen) throw new LearningError('Bu çalışma için yeterli farklı ve doğrulanmış soru hazır değil.');
     selected.push(chosen);
     typeCounts.set(chosen.type, (typeCounts.get(chosen.type) || 0) + 1);
   }
   return shuffle(selected, randomIndex);
+}
+
+/** Prefer an unused, independently proved topic before repeating a template in that area. */
+export function generateVariedLearningQuestion(options:{grade:SchoolGrade; category:CognitiveCategory; difficulty:DifficultyLevel; seed:number; typeCounts:ReadonlyMap<QuestionType,number>; randomIndex?:(max:number)=>number}) {
+  const pool=professionalGradeTypes(options.grade).filter(type=>STUDENT_CATEGORY_TYPES[options.category].includes(type));
+  if(!pool.length)throw new LearningError('Bu alan için doğrulanmış soru türü bulunamadı.');
+  const minimum=Math.min(...pool.map(type=>options.typeCounts.get(type)||0));
+  const choices=pool.filter(type=>(options.typeCounts.get(type)||0)===minimum);
+  return generateQuestion({profile:'professional',targetGrade:options.grade,category:options.category,type:choices[(options.randomIndex||randomInt)(choices.length)],difficulty:options.difficulty,seed:options.seed});
 }

@@ -1,5 +1,4 @@
 import { useSyncExternalStore } from 'react';
-import { useReducedMotion } from 'motion/react';
 const KEY = 'zekapark-motion-enabled-v1';
 const listeners = new Set<() => void>();
 let enabled = true;
@@ -14,9 +13,20 @@ export const studentMotion = {
     listeners.forEach(listener => listener());
   },
 };
-/** An in-app preference may reduce motion, but never overrides the device's preference. */
+let deviceQuery:MediaQueryList|undefined;
+function motionQuery() {
+  if(typeof window==='undefined'||typeof window.matchMedia!=='function')return undefined;
+  return deviceQuery??=window.matchMedia('(prefers-reduced-motion: reduce)');
+}
+const subscribeDeviceMotion=(listener:()=>void)=>{
+  const query=motionQuery();
+  query?.addEventListener('change',listener);
+  return ()=>query?.removeEventListener('change',listener);
+};
+const deviceMotionSnapshot=()=>motionQuery()?.matches??false;
+/** Device changes take effect immediately; the in-app toggle can only reduce motion further. */
 export function useStudentReducedMotion() {
-  const deviceReduced = useReducedMotion();
-  const animated = useSyncExternalStore(studentMotion.subscribe, studentMotion.getSnapshot, studentMotion.getServerSnapshot);
-  return Boolean(deviceReduced || !animated);
+  const deviceReduced=useSyncExternalStore(subscribeDeviceMotion,deviceMotionSnapshot,()=>false);
+  const animated=useSyncExternalStore(studentMotion.subscribe,studentMotion.getSnapshot,studentMotion.getServerSnapshot);
+  return deviceReduced||!animated;
 }

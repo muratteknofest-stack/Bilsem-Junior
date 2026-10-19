@@ -1,7 +1,7 @@
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { isAndroidApp } from './lib/native-app';
-import { advanceStory, storyCollection, storyBadges, nextCampaignStage, isStoryStageComplete, type StoryStage, type StoryProgress } from './features/student/story-adventure';
+import { advanceStory, storyCollection, storyBadges, nextCampaignStage, isStoryStageComplete, type StoryStage, type StoryProgress, type StoryReward } from './features/student/story-adventure';
 import { readStoryProgress, saveStoryProgress } from './services/story-progress-service';
 import type { LearningSessionView } from './features/student/learning-contract';
 import type { StudentSection } from './components/StudentDashboard';
@@ -65,7 +65,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => dataService.getCurrentUser());
   const [storyProgress,setStoryProgress] = useState<StoryProgress>(()=>readStoryProgress(currentUser.id,currentUser.grade||1));
   const [storySaveError,setStorySaveError] = useState('');
-  const [storyReward,setStoryReward]=useState<{sessionId:string;points:number;badges:string[]}|undefined>();
+  const [storyReward,setStoryReward]=useState<StoryReward|undefined>();
   const selectStory=(id:string)=>{
     const next={...storyProgress,selectedStoryId:id};
     const saved=saveStoryProgress(currentUser.id,currentUser.grade||1,next);
@@ -81,6 +81,9 @@ export default function App() {
     const previousBadges=storyBadges(storyProgress,activeStory.grade);
     setStoryReward({
       sessionId:session.id,
+      replay:isStoryStageComplete(storyProgress,activeStory.stage),
+      improved:(next.stageResults?.[activeStory.stage.id]?.bestCorrect||0)>(storyProgress.stageResults?.[activeStory.stage.id]?.bestCorrect||0),
+      bestCorrect:next.stageResults?.[activeStory.stage.id]?.bestCorrect||0,
       points:storyCollection(next,activeStory.grade).points-storyCollection(storyProgress,activeStory.grade).points,
       badges:storyBadges(next,activeStory.grade).filter(b=>b.unlocked&&!previousBadges.some(old=>old.id===b.id&&old.unlocked)).map(b=>b.title),
     });
