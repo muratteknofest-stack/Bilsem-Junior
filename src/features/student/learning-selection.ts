@@ -15,6 +15,10 @@ export function selectAdaptiveCategory(requested: CognitiveCategory | 'mixed', m
   return [...AVAILABLE_CATEGORIES].sort((a, b) =>
     (masteries.find(m => m.category === a)?.mastery || 0) - (masteries.find(m => m.category === b)?.mastery || 0))[0];
 }
+/** Mixed adventures retain the balanced all-area plan; standard adaptive work keeps its policy. */
+export function selectSessionCategory(requested: CognitiveCategory | 'mixed', masteries: readonly Pick<SkillMastery, 'category' | 'mastery'>[], mixCategories = false) {
+  return mixCategories && requested === 'mixed' ? 'mixed' as const : selectAdaptiveCategory(requested, masteries);
+}
 export const learningStartSchema = z.object({
   topic: z.enum(['mixed', ...LEARNING_TOPICS]).default('mixed'),
   mode: z.enum(['practice', 'adaptive', 'exam']),
@@ -22,10 +26,11 @@ export const learningStartSchema = z.object({
   exam: z.enum(['mini', 'standard', 'marathon']).default('mini'),
   difficulty: z.union([z.literal('mixed'), z.number().int().min(1).max(6)]).default('mixed'),
   locale: z.enum(['tr', 'en']).optional(),
+  mixCategories: z.boolean().default(false),
   expectedGrade: z.number().int().min(1).max(4).optional(),
   questionCount: z.number().int().min(1).max(MAX_LEARNING_QUESTIONS).optional(),
-}).strict();
-export interface LearningSelection { topic?: LearningTopic; locale?: 'tr'|'en'; grade: SchoolGrade; difficulty: LearningDifficulty; category: string; exam: string; count: number; bankVersion: string; }
+}).strict().refine(value => !value.mixCategories || (value.mode === 'adaptive' && value.category === 'mixed' && value.topic === 'mixed' && value.locale !== 'en'), { message: 'Karışık keşif yalnız bütün alanlarla başlatılabilir.' });
+export interface LearningSelection { mixCategories?: boolean; topic?: LearningTopic; locale?: 'tr'|'en'; grade: SchoolGrade; difficulty: LearningDifficulty; category: string; exam: string; count: number; bankVersion: string; }
 export function difficultyChoices(grade: SchoolGrade) {
   const max = EDUCATION_PROFILES[grade].maxDifficulty;
   return Array.from({ length: max }, (_, i) => ({ value: (i + 1) as DifficultyLevel, label: `${i + 1}. seviye · ${i === 0 ? 'Kolay' : i === max - 1 ? 'Zor' : 'Orta'}` }));

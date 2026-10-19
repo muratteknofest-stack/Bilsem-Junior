@@ -74,7 +74,7 @@ export function VerifiedLearningView({ storyStage, onStoryComplete, onContinueSt
     catch (err) { if (mounted.current) setError(err instanceof Error ? err.message : 'İşlem tamamlanamadı. Yeniden dene.'); return null; }
   };
   const start = async () => { if (mode === 'adaptive' && !validQuestionCount) return; sound.unlock(); const saved = await run(() => {
-    return reviewMistakeId ? learningService.review(reviewMistakeId) : learningService.start(mode, storyStage?.category || topicCategory(topic, category), exam, difficulty, undefined, storyStage?'mixed':topic, storyStage?3:Number(questionCount));
+    return reviewMistakeId ? learningService.review(reviewMistakeId) : learningService.start(mode, storyStage?.category || topicCategory(topic, category), exam, difficulty, undefined, storyStage?'mixed':topic, storyStage?3:Number(questionCount), !!storyStage);
   }); if (saved && mounted.current) { const next = mode === 'exam' ? 0 : nextUnansweredIndex(saved); setIndex(next < 0 ? saved.questions.length - 1 : next); } };
   const savePending = async () => {
     if (!session || mode !== 'exam' || session.result || Date.now() >= Date.parse(session.expiresAt)) return true;
