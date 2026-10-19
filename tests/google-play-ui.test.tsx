@@ -91,3 +91,21 @@ test('a pending purchase after checkout blocks a second payment and malformed pr
  const f=fixture();await f.flow.refresh();f.store.purchase=async()=>({purchases:[purchase({state:'pending'})]});await f.flow.purchase('monthly');assert.equal(f.flow.snapshot().pending,true);assert.equal(canBuyPlay(f.flow.snapshot(),'annual'),false);assert.ok(!f.calls.includes('verify'));
  const g=fixture();await g.flow.refresh();g.store.purchase=async()=>({purchases:[purchase({productIds:[]})]});await g.flow.purchase('monthly');assert.equal(g.flow.snapshot().notice.kind,'error');assert.equal(g.flow.snapshot().storeChecked,false);assert.equal(canBuyPlay(g.flow.snapshot(),'monthly'),false);
 });
+
+test('a store with only an eligible annual plan selects it instead of the missing monthly default',async()=>{
+ const f=fixture();f.store.catalog=async()=>({offers:[offers[2]]});await f.flow.refresh();
+ const html=render(f.flow.snapshot());
+ const inputs=html.match(/<input[^>]+>/g)!;
+ assert.ok(inputs.find(input=>input.includes('value="annual"'))?.includes('checked=""'));
+ assert.ok(!inputs.find(input=>input.includes('value="monthly"'))?.includes('checked=""'));
+ assert.match(html,/₺1.499,00 · her yıl otomatik yenilenir/);
+ assert.equal(canBuyPlay(f.flow.snapshot(),'monthly'),false);
+ assert.equal(canBuyPlay(f.flow.snapshot(),'annual'),true);
+});
+test('restoring after a temporary catalog failure reloads eligible prices without initiating another charge',async()=>{
+ const f=fixture();f.store.catalog=async()=>{throw Error('temporary catalog outage');};await f.flow.refresh();
+ assert.equal(f.flow.snapshot().offers.length,0);assert.equal(canBuyPlay(f.flow.snapshot(),'monthly'),false);
+ f.store.catalog=async()=>({offers});await f.flow.restore();
+ assert.equal(f.flow.snapshot().offers.length,3);assert.equal(canBuyPlay(f.flow.snapshot(),'monthly'),true);assert.equal(f.buys,0);
+ f.flow.dispose();
+});

@@ -32,12 +32,14 @@ function BillingSession({ studentId, studentName, owner }: { studentId: string; 
     flow.current = controller;
     const listeners: Array<{ remove(): Promise<void> }> = []; let disposed = false;
     const remember = (listener: { remove(): Promise<void> }) => { if (disposed) void listener.remove().catch(() => {}); else listeners.push(listener); };
+    const online = () => { void controller.refresh(); };
+    window.addEventListener('online', online);
     void controller.refresh();
     if (Capacitor.isNativePlatform()) {
       void PlayBilling.addListener('purchasesUpdated', controller.purchasesUpdated).then(remember).catch(() => {});
       void App.addListener('appStateChange', ({ isActive }) => { if (isActive) void controller.refresh(); }).then(remember).catch(() => {});
     }
-    return () => { disposed = true; controller.dispose(); for (const listener of listeners) void listener.remove().catch(() => {}); if (flow.current === controller) flow.current = null; };
+    return () => { window.removeEventListener('online', online); disposed = true; controller.dispose(); for (const listener of listeners) void listener.remove().catch(() => {}); if (flow.current === controller) flow.current = null; };
   }, [studentId, owner]);
   if (!isAndroidApp) return <WebPlayMembershipPanel studentName={studentName} state={state} onRefresh={() => { void flow.current?.refresh(); }}/>;
   return <PlayBillingPanel studentName={studentName} state={state} onPurchase={plan => { void flow.current?.purchase(plan); }} onRestore={() => { void flow.current?.restore(); }} onRefresh={() => { void flow.current?.refresh(); }}/>;

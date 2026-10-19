@@ -18,6 +18,7 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
     private BillingClient client;
     private PluginCall purchaseCall;
     private boolean connecting;
+    private boolean purchasePaused;
     private final List<Runnable> waiting = new ArrayList<>();
     private final Handler handler = new Handler(Looper.getMainLooper());
 
@@ -96,9 +97,13 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
                     .setProductDetailsParamsList(Collections.singletonList(BillingFlowParams.ProductDetailsParams.newBuilder().setProductDetails(details).setOfferToken(offer.getOfferToken()).build())).build();
                 getActivity().runOnUiThread(() -> {
                     if (purchaseCall != null) { call.reject("Bir satın alım zaten açık.", "PURCHASE_BUSY"); return; }
-                    purchaseCall = call;
+                    purchaseCall = call; purchasePaused = false;
                     BillingResult result = client.launchBillingFlow(getActivity(), params);
-                    if (!ok(result)) { purchaseCall = null; call.reject("Satın alım başlatılamadı. Varsa mevcut satın alımlarınızı geri yükleyin.", "PURCHASE_UNAVAILABLE"); }
+                    if (!ok(result)) {
+                        purchaseCall = null;
+                        if (result.getResponseCode() == BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED) queryOwned(call, response -> call.resolve(response));
+                        else call.reject("Satın alım başlatılamadı. Satın alımları geri yükleyerek tekrar kontrol edin.", "PURCHASE_UNAVAILABLE");
+                    }
                 });
                 return;
             }
@@ -117,19 +122,53 @@ public class PlayBillingPlugin extends Plugin implements PurchasesUpdatedListene
         }
         JSObject response = new JSObject(); response.put("purchases", items); return response;
     }
-    @PluginMethod public void restore(PluginCall call) {
-        ready(call, () -> {
-            final boolean[] finished = { false };
-            Runnable timeout = () -> { if (!finished[0]) { finished[0] = true; call.reject("Satın alımlar yüklenemedi.", "STORE_UNAVAILABLE"); } };
-            handler.postDelayed(timeout, 15000);
-            client.queryPurchasesAsync(QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build(), (result, list) -> {
-                if (finished[0]) return; finished[0] = true; handler.removeCallbacks(timeout);
-                if (!ok(result)) call.reject("Satın alımlar yüklenemedi.", "STORE_UNAVAILABLE"); else call.resolve(purchases(list));
-            });
+    private interface OwnedCallback { void accept(JSObject response); }
+    private void queryOwned(PluginCall call, OwnedCallback callback) { queryOwned(call, callback, false); }
+    private void queryOwned(PluginCall call, OwnedCallback callback, boolean recovering) {
+        final boolean[] finished = { false };
+        Runnable timeout = () -> { if (!finished[0]) {
+            finished[0] = true;
+            if (recovering && purchaseCall != call) return;
+            if (purchaseCall == call) purchaseCall = null;
+            call.reject("Satın alımlar yüklenemedi. Geri yüklemeyi yeniden deneyin.", "STORE_UNAVAILABLE");
+        } };
+        handler.postDelayed(timeout, 15000);
+        client.queryPurchasesAsync(QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build(), (result, list) -> {
+            if (finished[0]) return; finished[0] = true; handler.removeCallbacks(timeout);
+            if (recovering && purchaseCall != call) return;
+            if (!ok(result)) {
+                if (purchaseCall == call) purchaseCall = null;
+                call.reject("Satın alımlar yüklenemedi. Geri yüklemeyi yeniden deneyin.", "STORE_UNAVAILABLE");
+            } else callback.accept(purchases(list));
         });
     }
+    @PluginMethod public void restore(PluginCall call) {
+        ready(call, () -> queryOwned(call, response -> call.resolve(response)));
+    }
+    @Override protected void handleOnPause() {
+        if (purchaseCall != null) purchasePaused = true;
+    }
+    @Override protected void handleOnResume() {
+        if (purchaseCall == null || !purchasePaused) return;
+        purchasePaused = false;
+        final PluginCall returning = purchaseCall;
+        // The Play sheet may close without delivering its callback (network/process change).
+        // Give the normal callback priority, then query actual owned purchases, never a local grant.
+        handler.postDelayed(() -> {
+            if (purchaseCall != returning) return;
+            if (!client.isReady()) {
+                purchaseCall = null;
+                returning.reject("Google Play bağlantısı kesildi. Satın alımları geri yükleyerek kontrol edin.", "STORE_UNAVAILABLE");
+                return;
+            }
+            queryOwned(returning, response -> {
+                purchaseCall = null;
+                returning.resolve(response);
+            }, true);
+        }, 700);
+    }
     @Override public void onPurchasesUpdated(BillingResult result, List<Purchase> list) {
-        PluginCall call = purchaseCall; purchaseCall = null;
+        PluginCall call = purchaseCall; purchaseCall = null; purchasePaused = false;
         if (result.getResponseCode() == BillingClient.BillingResponseCode.USER_CANCELED) {
             if (call != null) { JSObject response = purchases(null); response.put("cancelled", true); call.resolve(response); } return;
         }
