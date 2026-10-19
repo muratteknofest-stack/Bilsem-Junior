@@ -78,7 +78,7 @@ export function MobileBottomNav({
   if(isAndroidApp && userRole==='student'){
     const nativeItems=[{id:'dashboard',label:'Macera',icon:Compass},{id:'student-study',label:'Çalış',icon:Shapes},{id:'student-rewards',label:'Ödüller',icon:Trophy},{id:'student-profile',label:'Profil',icon:UserRound}];
     const selected=currentRoute==='dashboard'?'dashboard':currentRoute==='student-profile'?'student-profile':['achievements','leaderboard','student-rewards','student-challenges','student-progress'].includes(currentRoute)?'student-rewards':'student-study';
-    return <nav className="bj-native-bottom" aria-label="Öğrenci alt menüsü"><div>{nativeItems.map(({id,label,icon:Icon})=><motion.button key={id} type="button" aria-current={selected===id?'page':undefined} onClick={()=>handlePress(id,currentRoute===id)} whileTap={studentReducedMotion?undefined:{y:3}}><Icon aria-hidden="true"/><span>{label}</span></motion.button>)}</div></nav>;
+    return <nav className="bj-native-bottom" data-reduced-motion={studentReducedMotion} aria-label="Öğrenci alt menüsü"><div>{nativeItems.map(({id,label,icon:Icon})=><motion.button key={id} type="button" aria-current={selected===id?'page':undefined} onClick={()=>handlePress(id,currentRoute===id)} whileTap={studentReducedMotion?undefined:{y:3}}><Icon aria-hidden="true"/><span>{label}</span></motion.button>)}</div></nav>;
   }
   return (
     <nav

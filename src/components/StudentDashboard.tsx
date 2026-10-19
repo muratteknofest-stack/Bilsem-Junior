@@ -32,6 +32,7 @@ import './dashboard-design-system.css';
 import './student/student-professional.css';
 import './student/student-adventure.css';
 import './student/student-quest-world.css';
+import { StudentMotionToggle, useStudentMotionSurface } from './student/StudentMotion';
 export type StudentSection = typeof SECTIONS[number]['id'];
 interface StudentDashboardProps {
   initialSection?: StudentSection;
@@ -126,6 +127,7 @@ export function StudentDashboard({ initialSection = 'modes', isLoading = false, 
   const [skillSearch, setSkillSearch] = useState('');
   const [skillFilter, setSkillFilter] = useState<'all' | 'practice' | 'new'>('all');
   const reduced = useStudentReducedMotion();
+  const motionSurface = useStudentMotionSurface(`${activeTab}-${isLoading}`);
   useEffect(() => { setFavorites(getStudyFavorites()); }, [activeUser.id]);
   const unresolved = activeMistakes.filter(m => !m.resolved).length;
   const safeMasteries = useMemo(() => masteries.length ? masteries : dataService.getSkillMasteries() || [], [masteries]);
@@ -141,9 +143,10 @@ export function StudentDashboard({ initialSection = 'modes', isLoading = false, 
   const switchSection = (section: Section) => { sound.playClick(); setActiveTab(section); };
   if (isLoading) return <main id="student-dashboard" aria-busy="true" className="zp-dashboard-page zp-student-dashboard zp-student-pro"><div className="zp-student-shell"><ProfileBannerSkeleton /><div className="zp-mode-grid"><ModeCardSkeleton /><ModeCardSkeleton /></div></div></main>;
   return <MotionConfig reducedMotion={reduced ? 'always' : 'user'}>
-    <div className="zp-dashboard-page zp-student-dashboard zp-student-pro bj-student-game" data-reduced-motion={reduced}>
+    <div ref={motionSurface} className="zp-dashboard-page zp-student-dashboard zp-student-pro bj-student-game bj-motion-world" data-reduced-motion={reduced}>
       <main id="student-dashboard" className="zp-student-shell">
         <div className="zp-student-topline"><span><span className="zp-brand-dot" /> Bilsem Junior <span className="zp-topline-divider">/</span> Çalışma masam</span><StudentExperienceControls /></div>
+        <StudentMotionToggle />
         {activeTab !== 'tests' && <StudentHeroBanner user={activeUser} greeting={greeting} xpProgress={xpProgress} onUserUpdate={onUserUpdate} onNavigate={onNavigate} prefersReducedMotion={reduced} />}
         <nav className="zp-study-navigation" aria-label="Öğrenci paneli bölümleri">{SECTIONS.map(({ id, label, icon: Icon }) =>
           <button type="button" key={id} aria-pressed={activeTab === id} aria-controls="zp-student-section" onClick={() => switchSection(id)}>
