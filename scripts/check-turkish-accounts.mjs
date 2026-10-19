@@ -389,6 +389,7 @@ try{
  for(const grade of [1,2,3,4]){
   student.grade=grade;
   await page.goto('http://127.0.0.1:5186/tests/browser/turkish-accounts.html?mode=student-app');
+  await page.getByRole('button',{name:'Çalışma alanım',exact:true}).click();
   await page.getByRole('button',{name:/Adaptif Test/}).click();
   await page.getByRole('heading',{name:'Sana uygun sorularla ilerle',exact:true}).waitFor();
   const count=page.getByRole('spinbutton',{name:'Soru sayısı',exact:true}),begin=page.getByRole('button',{name:'Yeni testi başlat',exact:true});
