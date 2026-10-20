@@ -36,10 +36,17 @@ test('numeric distractors represent actual operation errors and explanations inc
     const [[x1, y1], [x2, y2]] = b.examples!;
     const multiplier = (y2 - y1) / (x2 - x1), offset = y1 - x1 * multiplier;
     const values = q.options.map(o => (o.visualData as { textNumber: number }).textNumber);
-    assert.ok(values.includes(b.input! * multiplier)); // omitted intercept
-    assert.ok(values.includes((b.input! + offset) * multiplier)); // reversed operations
+    if (b.machineQuery === 'input') {
+      assert.ok(values.includes(Math.floor(b.input! / multiplier))); // omitted intercept reversal
+      assert.ok(values.includes(b.input! - offset)); // omitted division
+      assert.deepEqual(solveBoard(b), { textNumber: (b.input! - offset) / multiplier });
+      assert.ok(q.explanation.steps.some(s => s.startsWith('Kontrol:') && s.includes(`= ${b.input}.`)));
+    } else {
+      assert.ok(values.includes(b.input! * multiplier)); // omitted intercept
+      assert.ok(values.includes((b.input! + offset) * multiplier)); // reversed operations
+      assert.ok(q.explanation.steps.some(s => s.includes(`${b.input! * multiplier + offset}`)));
+    }
     assert.equal(new Set(values).size, 4);
-    assert.ok(q.explanation.steps.some(s => s.includes(`${b.input! * multiplier + offset}`)));
     assert.equal(isQuestionReadyForStudents(q), true);
   }
 });

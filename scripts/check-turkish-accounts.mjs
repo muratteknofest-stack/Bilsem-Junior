@@ -10,7 +10,9 @@ import {createServer} from 'vite';
 import {chromium} from 'playwright';
 import {generateQuestion} from '../src/features/questions/generators/index.ts';
 import {LEARNING_TOPICS,topicCategory} from '../src/features/student/learning-topics.ts';
-import {balancedCategoryPlan,selectLearningQuestions,generateVariedLearningQuestion,recentQuestionExposure} from '../server/learning-question-selection.ts';
+import {balancedCategoryPlan,selectLearningQuestions,generateVariedLearningQuestion,recentQuestionExposure,currentReasoningCandidate,assertLearningQuestionFormat} from '../server/learning-question-selection.ts';
+import {reasoningDifficultyPlan} from '../src/features/questions/reasoning-profile.ts';
+import {LEARNING_QUESTION_FORMAT} from '../src/features/student/learning-question-format.ts';
 import {isQuestionReadyForStudents} from '../src/features/questions/quality.ts';
 import {selectSessionCategory} from '../src/features/student/learning-selection.ts';
 import {AVAILABLE_CATEGORIES} from '../src/features/student/available-categories.ts';
@@ -72,6 +74,7 @@ try{
   else if(u.pathname==='/api/account/export')value={format:'zekapark-account-export-v1',profiles:[parent,student],learningSessions:[]};
   else if(u.pathname==='/api/learning/grade'){student.grade=body.grade;value={profile:{...student}};}
   else if(u.pathname==='/api/learning/start'){
+   assert.equal(u.searchParams.get('questionFormat'),LEARNING_QUESTION_FORMAT);
    assert.equal(activeRole,'student');assert.equal(body.expectedGrade,student.grade);
    if(!androidStory&&!webStory){assert.ok(LEARNING_TOPICS.includes(body.topic));assert.equal(body.category,topicCategory(body.topic,'mixed'));}
    topicRequests.push(body);
@@ -80,12 +83,14 @@ try{
    const category=body.mode==='adaptive'&&!body.topic?selectSessionCategory(body.category,AVAILABLE_CATEGORIES.map(category=>({category,mastery:category==='numerical'?0:100})),body.mixCategories):body.category;
    const categoryPlan=category==='mixed'?balancedCategoryPlan(count,'mixed'):Array(count).fill(category);
    let storySeed=90000+topicRequests.length*200003;
-   const questions=(androidStory||webStory)&&body.mixCategories?selectLearningQuestions({count,category:'mixed',preferDiverseTypes:true,candidates:[...topicSessions.values()].flatMap(session=>session.questions),exposure:recentQuestionExposure([...topicSessions.values()]),canUse:q=>q.targetGrade===student.grade&&isQuestionReadyForStudents(q),generate:(category,typeCounts)=>generateVariedLearningQuestion({grade:student.grade,category,difficulty:level,seed:++storySeed,typeCounts})}):Array.from({length:count},(_,i)=>generateQuestion({profile:(androidStory||webStory)?'professional':'complete',targetGrade:student.grade,...((androidStory||webStory)&&!body.topic?{category:categoryPlan[i]}:{type:body.topic}),difficulty:level,seed:90000+topicRequests.length*997+i*37}));
+   const exposure=recentQuestionExposure([...topicSessions.values()],true);
+   const questions=(androidStory||webStory)&&body.mixCategories?selectLearningQuestions({count,category:'mixed',preferDiverseTypes:true,...(body.difficulty==='mixed'?{difficultyPlan:reasoningDifficultyPlan(student.grade,count,()=>0)}:{}),candidates:[...topicSessions.values()].flatMap(session=>session.questions),exposure,canUse:q=>q.targetGrade===student.grade&&currentReasoningCandidate(q,student.grade,true)&&isQuestionReadyForStudents(q),generate:(category,typeCounts,difficulty,reasoningCounts)=>generateVariedLearningQuestion({grade:student.grade,category,difficulty:difficulty??level,seed:++storySeed,typeCounts,reasoningCounts,exposure})}):Array.from({length:count},(_,i)=>generateQuestion({profile:(androidStory||webStory)?'professional':'complete',targetGrade:student.grade,...((androidStory||webStory)&&!body.topic?{category:categoryPlan[i]}:{type:body.topic}),difficulty:level,seed:90000+topicRequests.length*997+i*37}));
    const s={id:crypto.randomUUID(),student_id:studentId,mode:body.mode,title:body.topic?body.topic+' konu testi':body.mixCategories?'Hikâyeli macera':'Adaptif çalışma',questions:prepareLearningQuestions(questions),answers:{},created_at:new Date().toISOString(),expires_at:new Date(Date.now()+3600000).toISOString(),finished_at:null,result:null,revision:0,rewarded_xp:0};topicSessions.set(s.id,s);value=learningView(s);
   }
   else if(/^\/api\/learning\/[^/]+\/(answer|finish)$/.test(u.pathname)){
    const [,id,action]=u.pathname.match(/\/api\/learning\/([^/]+)\/(answer|finish)/);
    let current=topicSessions.get(id);assert.ok(current);
+   assertLearningQuestionFormat(current.questions,u.searchParams.get('questionFormat'));
    if(action==='answer'){
     if(failNextLearningAnswer){failNextLearningAnswer=false;await route.fulfill({status:503,contentType:'application/json',body:'{"error":"Yalıtılmış cevap kayıt kesintisi"}'});return;}
     current=answerLearningSession(current,body.index,body.response);

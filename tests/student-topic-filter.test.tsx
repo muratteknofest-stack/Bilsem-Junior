@@ -14,6 +14,9 @@ import { selectLearningQuestions } from '../server/learning-question-selection';
 import { isQuestionReadyForStudents, questionVisualKey } from '../src/features/questions/quality';
 import { StudentTopicPractice } from '../src/components/student/StudentTopicPractice';
 import type { BaseQuestion, DifficultyLevel } from '../src/types';
+import { needsReasoningFormat, LEARNING_QUESTION_FORMAT } from '../src/features/student/learning-question-format';
+import { reasoningDifficultyPlan } from '../src/features/questions/reasoning-profile';
+import { generateProfessionalQuestion as generateV7 } from '../src/features/questions/professional-engine-v7';
 
 test('all 44 studio topics are visible for every student grade and every allowed level filters precisely', () => {
   assert.deepEqual(LEARNING_TOPICS, ALL_QUESTION_TYPES);
@@ -86,11 +89,12 @@ test('real authenticated learning API isolates published topics in all grades, c
       assert.equal(u.searchParams.get('status'), 'eq.published');
       assert.equal(u.searchParams.get('target_grade'), `eq.${grade}`);
       const type = u.searchParams.get('type')?.slice(3);
-      assert.ok(type && LEARNING_TOPICS.includes(type as any));
-      value = bank.filter(q => q.status === 'published' && q.targetGrade === grade && q.type === type && q.id > (u.searchParams.get('id')?.slice(3) || '') &&
+      if(type)assert.ok(LEARNING_TOPICS.includes(type as any));
+      value = bank.filter(q => q.status === 'published' && q.targetGrade === grade && (!type || q.type === type) && q.id > (u.searchParams.get('id')?.slice(3) || '') &&
         (!u.searchParams.has('difficulty') || `eq.${q.difficulty}` === u.searchParams.get('difficulty')) &&
-        `eq.${q.category}` === u.searchParams.get('category')).sort((a,b) => a.id.localeCompare(b.id)).map(q => ({ id: q.id, data: q }));
-    } else if (u.pathname === '/rest/v1/learning_sessions') {
+        (!u.searchParams.has('category') || `eq.${q.category}` === u.searchParams.get('category'))).sort((a,b) => a.id.localeCompare(b.id)).map(q => ({ id: q.id, data: q }));
+    } else if(u.pathname==='/rest/v1/user_private_state')value={values:{}};
+    else if (u.pathname === '/rest/v1/learning_sessions') {
       if (request.method === 'POST') {
         const row = await request.json(); row.revision = 0; row.rewarded_xp = 0; rows.push(row); value = row;
       } else if (u.searchParams.get('select') === 'questions,created_at') value = rows.filter(r => r.student_id === userId()).map(r => ({ questions: r.questions, created_at: r.created_at }));
@@ -106,8 +110,8 @@ test('real authenticated learning API isolates published topics in all grades, c
   app.use((err: any, _req: any, res: any, _next: any) => res.status(500).json({ error: err.message }));
   const server = app.listen(0, '127.0.0.1'); await new Promise<void>(resolve => server.once('listening', resolve));
   const origin = `http://127.0.0.1:${(server.address() as any).port}`;
-  const start = async (body: object, authenticated = true) => {
-    const res = await originalFetch(`${origin}/api/learning/start`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(authenticated ? { Authorization: `Bearer ${token()}` } : {}) }, body: JSON.stringify(body) });
+  const start = async (body: object, authenticated = true, modern = false) => {
+    const res = await originalFetch(`${origin}/api/learning/start${modern?'?questionFormat='+LEARNING_QUESTION_FORMAT:''}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(authenticated ? { Authorization: `Bearer ${token()}` } : {}) }, body: JSON.stringify(body) });
     return { status: res.status, body: await res.json() as any };
   };
   try {
@@ -179,6 +183,35 @@ test('real authenticated learning API isolates published topics in all grades, c
     assert.equal(defaultCount.status, 201); assert.equal(defaultCount.body.questions.length, 10);
     for (const questionCount of [0, 51, 2.5, '5']) assert.equal((await start({ mode: 'adaptive', questionCount })).status, 400);
     assert.ok(reads >= 176);
+    // Exercise the production route, authentication, bank policy and DTO together.
+    // An old published bank must not starve the new reasoning variants.
+    for(const g of [1,2,3,4] as const){
+      grade=g;rows=[];
+      const old=generateV7('number_pattern',7919,1);
+      bank=[{...old,targetGrade:grade,targetGrades:[grade],ageGroup:grade<=2?'1-2':'3-4',status:'published'}];
+      const result=await start({mode:'adaptive',category:'mixed',mixCategories:true,questionCount:20,difficulty:'mixed',expectedGrade:grade},true,true);
+      assert.equal(result.status,201,JSON.stringify(result.body));
+      assert.equal(result.body.questions.length,20);
+      assert.deepEqual(result.body.questions.map((q:BaseQuestion)=>q.difficulty).sort(),reasoningDifficultyPlan(grade,20,()=>0).sort());
+      assert.equal(rows[0].selection.questionFormat,LEARNING_QUESTION_FORMAT);
+      assert.ok(rows[0].questions.every((q:BaseQuestion)=>q.authoring?.engine!=='verified-7'));
+    }
+    const modern=rows[0];assert.ok(modern.questions.some(needsReasoningFormat));
+    const before=JSON.stringify(modern),headers={'Content-Type':'application/json',Authorization:`Bearer ${token()}`};
+    for(const [suffix,method,body] of [['','GET',undefined],['/answer','POST',{index:0,response:{mode:'choice',optionId:modern.questions[0].correctOptionId}}],['/finish','POST',{}]] as const){
+      const rejected=await originalFetch(`${origin}/api/learning/${modern.id}${suffix}`,{method,headers,...(body?{body:JSON.stringify(body)}:{})});
+      assert.equal(rejected.status,426);assert.match((await rejected.json() as any).error,/güncelle/);
+      assert.equal(JSON.stringify(modern),before,'An incompatible request must not commit answers or rewards');
+    }
+    const saved=await originalFetch(`${origin}/api/learning/${modern.id}/answer?view=update&questionFormat=${LEARNING_QUESTION_FORMAT}`,{method:'POST',headers,body:JSON.stringify({index:0,response:{mode:'choice',optionId:modern.questions[0].correctOptionId}})});
+    assert.equal(saved.status,200);const update=await saved.json() as any;assert.equal(update.questions,undefined);assert.equal(update.answers['0'].correct,true);
+    const resumed=await originalFetch(`${origin}/api/learning/${modern.id}?questionFormat=${LEARNING_QUESTION_FORMAT}`,{headers});
+    assert.equal(resumed.status,200);assert.equal((await resumed.json() as any).questions.length,20);
+    rows=[];
+    const legacy=await start({mode:'adaptive',category:'mixed',mixCategories:true,questionCount:20,difficulty:'mixed',expectedGrade:grade});
+    assert.equal(legacy.status,201,JSON.stringify(legacy.body));assert.ok(rows[0].questions.every((q:BaseQuestion)=>!needsReasoningFormat(q)));
+    const easy=await start({mode:'practice',difficulty:1,expectedGrade:grade},true,true);
+    assert.equal(easy.status,201);assert.ok(easy.body.questions.every((q:BaseQuestion)=>q.difficulty===1));
   } finally {
     await new Promise<void>(resolve => server.close(() => resolve()));
     globalThis.fetch = originalFetch;

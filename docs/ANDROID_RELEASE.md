@@ -1,6 +1,14 @@
 # Android ve Google Play yayını
 
-Uygulama kimliği `com.zekapark.app`, bu sürüm `1.0.27` / versionCode `28`.
+Uygulama kimliği `com.zekapark.app`, bu sürüm `1.0.28` / versionCode `29`.
+
+## 1.0.28 — sınıfa göre çok adımlı akıl yürütme
+
+- Karışık 20 soruluk çalışmada sınıfa özel sabit zorluk payları kullanılır: 1. sınıf 4/16 (düzey 1/2), 2. sınıf 6/14 (2/3), 3. sınıf 8/12 (3/4), 4. sınıf 4/7/9 (4/5/6). Öğrencinin seçtiği belirli düzey korunur.
+- İki aşamalı şekil dönüşümü, birleştirme ve döndürme matrisleri, iç içe değişen sayı dizileri, ters işlem makineleri, koşullu sayma ve birden fazla ipucunu gerektiren sıralama eklendi. İki ayrı çözüm ve sınıf profili kontrolleri zorunludur.
+- Soru seçiminde yakın geçmişte kullanılan mantık aileleri de değerlendirilir; yalnız sayı, isim veya renk değişimi yeni bir mantık sayılmaz.
+- Yeni istemci `questionFormat=reasoning-8` yeteneğini bildirir. Eski kurulumlara uyumlu soru düzenleri seçilir. Eski istemci yeni biçimli bir çalışmayı sürdürmeye çalışırsa cevapları değiştirmeden güncelleme mesajı alır. Önceki v7 soru kayıtlarının özgün üreticisi korunur.
+- APK, 1.0.26 paketinin doğrulanmış yerel kodu üzerine yeni web varlıkları ve sürüm bilgisi yerleştirilerek aynı test anahtarıyla hazırlanabilir. Bu paket Google Play üretim sürümü değildir.
 
 1. `.env.android` içinde yalnız açık bağlantı ayarlarını tanımlayın: VITE_API_BASE_URL ve VITE_PUBLIC_SITE_URL `https://zekapark.vercel.app`; VITE_SUPABASE_URL ve VITE_SUPABASE_PUBLISHABLE_KEY mevcut açık proje değerleri olmalı. Sunucu sırlarını Android paketine koymayın.
 2. `npm ci`, `npm run lint`, `npm run test:google-play`, `npm run android:sync` çalıştırın.
