@@ -1,0 +1,11 @@
+.bj-load-recovery[hidden]{display:none!important}
+.bj-load-recovery{box-sizing:border-box;position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:24px;overflow:auto;background:#f1f6fb;color:#18394b;font:16px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.bj-load-card{box-sizing:border-box;width:100%;max-width:480px;padding:32px;background:#fff;border:1px solid #cfdeeb;border-radius:26px;box-shadow:0 7px 0 #c8d7e3;text-align:center}
+.bj-load-brand{font-size:12px;font-weight:800;letter-spacing:.15em;color:#6948ac}
+.bj-load-card h1{font-size:clamp(24px,5vw,32px);line-height:1.25;margin:16px 0}
+.bj-load-card p{margin:16px 0}.bj-load-card button,.bj-load-card a{box-sizing:border-box;display:block;width:100%;min-height:48px;border-radius:14px;padding:12px 18px;font:inherit;font-weight:750;cursor:pointer}
+.bj-load-card button{border:1px solid #583cb4;background:#7050cd;color:#fff;box-shadow:0 4px 0 #48318f;margin-top:24px}
+.bj-load-card a{color:#284d68;margin-top:12px;text-decoration:underline}
+.bj-load-card button:focus-visible,.bj-load-card a:focus-visible{outline:3px solid #009c9c;outline-offset:4px}
+.bj-load-card .bj-load-note{font-size:13px;color:#556b7c}
+@media(max-width:360px){.bj-load-recovery{padding:16px}.bj-load-card{padding:24px}}
