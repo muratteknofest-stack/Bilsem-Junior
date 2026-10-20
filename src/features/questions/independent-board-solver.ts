@@ -45,6 +45,12 @@ export function independentlySolveBoard(b: Board): Tile | { textNumber: number |
     const tiles = b.tiles!.slice(0, -1) as Tile[];
     const op = b.operation!;
     const turns = b.turns || 1;
+    if(b.transformSteps){
+      if(b.transformSteps.length!==2)throw Error('Bağımsız sıralı işlem denetimi başarısız.');
+      const apply=(tile:Tile)=>b.transformSteps!.reduce((t,s)=>move(t,s.operation,s.turns),tile);
+      if(tiles.length===3&&!same(apply(tiles[0]),tiles[1]))throw Error('Bağımsız iki adımlı örnek uyuşmuyor.');
+      return apply(tiles.at(-1)!);
+    }
     if (tiles.length === 3) {
       const candidates = op === 'rotate' ? [1, 2, 3] : [1];
       const valid = candidates.filter(t => same(move(tiles[0], op, t), tiles[1]) &&
@@ -60,11 +66,27 @@ export function independentlySolveBoard(b: Board): Tile | { textNumber: number |
         op === 'intersection' ? v === 1 && c.cells[i] === 1 : v !== c.cells[i])) });
     const rules = ['union', 'intersection', 'exclusive'].filter(op =>
       same(combine(t[0], t[1], op), t[2]) && same(combine(t[3], t[4], op), t[5]));
+    if(b.matrixMode==='combine-rotate'){
+      const candidates=['union','intersection','exclusive'].flatMap(op=>[1,2,3].map(turn=>({op,turn}))).filter(({op,turn})=>same(move(combine(t[0],t[1],op),'rotate',turn),t[2])&&same(move(combine(t[3],t[4],op),'rotate',turn),t[5]));
+      if(candidates.length!==1)throw Error('Bağımsız çift matris kuralı tekil değil.');
+      return move(combine(t[6],t[7],candidates[0].op),'rotate',candidates[0].turn);
+    }
     if (rules.length !== 1) throw new Error('Bağımsız matris çözümü tekil değil.');
     return combine(t[6], t[7], rules[0]);
   }
   if (b.kind === 'numbers') {
     const v = b.values!, d = v.slice(1).map((n, i) => n - v[i]);
+    if(b.rule==='multiply-add'){
+      const additions=[1,3,5].map(i=>v[i]-v[i-1]),factors=[2,4].map(i=>v[i]/v[i-1]);
+      if(v.length!==6||new Set(additions).size!==1||new Set(factors).size!==1||!Number.isInteger(factors[0])||factors[0]<2||!additions[0])throw Error('Bağımsız dönüşümlü işlem denetimi başarısız.');
+      return {textNumber:v[5]*factors[0]};
+    }
+    if(b.rule==='interleaved-growing'){
+      if(v.length!==8)throw Error('Bağımsız iç içe artış için örnekler eksik.');
+      const gap=(i:number)=>v[i]-v[i-2], second=gap(4)-gap(2);
+      if(second<=0||gap(6)-gap(4)!==second||gap(3)!==gap(5)||gap(5)!==gap(7))throw Error('Bağımsız değişen aralıklar tutarsız.');
+      return {textNumber:2*v[6]-v[4]+second};
+    }
     if (b.rule === 'interleaved') {
       // Verify constant two-position gaps instead of splitting into two arrays.
       if (v.length !== 6 || [2, 3].some(i => v[i + 2] - v[i] !== v[i] - v[i - 2])) throw new Error('Bağımsız iç içe örüntü denetimi başarısız.');
@@ -85,6 +107,11 @@ export function independentlySolveBoard(b: Board): Tile | { textNumber: number |
     if (!other) throw new Error('İşlem kuralı için farklı girdiler gerekli.');
     const slope = (y - other[1]) / (x - other[0]);
     if (!examples.every(p => y + (p[0] - x) * slope === p[1])) throw new Error('İşlem örnekleri çelişiyor.');
+    if(b.machineQuery==='input'){
+      const answer=x+(b.input!-y)/slope;
+      if(!slope||!Number.isSafeInteger(answer)||answer<0)throw Error('Bağımsız ters işlem tekil değil.');
+      return {textNumber:answer};
+    }
     return { textNumber: y + (b.input! - x) * slope };
   }
   if (b.kind === 'symbols') {
@@ -98,7 +125,12 @@ export function independentlySolveBoard(b: Board): Tile | { textNumber: number |
   }
   if (b.kind === 'count') {
     let count = 0;
-    for (const item of b.items!) if (item === b.target) count++;
+    for (let i=0;i<b.items!.length;i++) {
+      const columns=b.columns||6,row=Math.floor(i/columns)+1,col=i%columns+1,rows=b.items!.length/columns;
+      const edge=[1,rows].includes(row)||[1,columns].includes(col);
+      const eligible=!b.countScope||b.countScope==='border'&&edge||b.countScope==='inside'&&!edge||b.countScope==='oddRows'&&row%2===1||b.countScope==='evenRows'&&row%2===0;
+      if (b.items![i] === b.target&&eligible) count++;
+    }
     return { textNumber: count };
   }
   if (b.kind === 'order') {
@@ -115,7 +147,7 @@ export function independentlySolveBoard(b: Board): Tile | { textNumber: number |
           const valid=b.constraints!.every(c=>{
             if(c.kind==='position')return !assigned.has(c.name)||assigned.get(c.name)===c.position;
             const a=assigned.get(c.left),z=assigned.get(c.right);
-            return a===undefined||z===undefined||(c.kind==='before'?a<z:z-a===c.distance);
+            return a===undefined||z===undefined||(c.kind==='before'?a<z:c.kind==='notAdjacent'?Math.abs(z-a)!==1:z-a===c.distance);
           })&&(b.clues||[]).every(([a,z])=>!assigned.has(a)||!assigned.has(z)||assigned.get(z)===assigned.get(a)!+1);
           if(valid)visit(i+1);
           assigned.delete(name);

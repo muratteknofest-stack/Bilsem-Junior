@@ -16,7 +16,9 @@ import { topicCategory, topicQuestionCount } from '../../src/features/student/le
 import { questionStimulusKey } from '../../src/features/questions/quality';
 import { loadPublishedLearningBank } from '../learning-bank';
 import { isQuestionReadyForStudents } from '../../src/features/questions/quality';
-import { loadRecentQuestionExposure, selectLearningQuestions, generateVariedLearningQuestion, gradeChallengeFloor, pickGradeChallenge } from '../learning-question-selection';
+import { loadRecentQuestionExposure, selectLearningQuestions, generateVariedLearningQuestion, gradeChallengeFloor, pickGradeChallenge, currentReasoningCandidate, assertLearningQuestionFormat } from '../learning-question-selection';
+import { reasoningDifficultyPlan } from '../../src/features/questions/reasoning-profile';
+import { LEARNING_QUESTION_FORMAT, needsReasoningFormat } from '../../src/features/student/learning-question-format';
 import { AVAILABLE_CATEGORIES } from '../../src/features/student/available-categories';
 import { QUESTION_TYPE_LABELS, COGNITIVE_CATEGORY_LABELS, type BaseQuestion, type SkillMastery } from '../../src/types';
 import { prepareQuestionReport } from '../support-validation';
@@ -61,6 +63,9 @@ function handleError(error: unknown, res: import('express').Response) {
   if (error instanceof LearningError || error instanceof GooglePlayError) return res.status(error.status).json({ error: error.message });
   throw error;
 }
+function requireQuestionFormat(req:AuthenticatedRequest, questions:BaseQuestion[]) {
+  assertLearningQuestionFormat(questions,req.query.questionFormat);
+}
 routes.patch('/learning/grade', async (req: AuthenticatedRequest, res) => {
   const parsed = z.object({ grade: z.number().int().min(1).max(4) }).strict().safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: '1–4 arasında bir sınıf seçmelisin.' });
@@ -103,7 +108,8 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     });
     const count = topicQuestionCount(topicCandidates, requestedCount, topic);
     if (!count) throw new LearningError('Seçilen sınıf, konu ve zorlukta yayımlanmış soru yok. Zorluk filtresini değiştirip yeniden dene.', 422);
-    const selection: LearningSelection = { ...(parsed.data.mixCategories ? {mixCategories:true} : {}), topic, grade: profile.data.grade, difficulty, category, exam: mode === 'exam' ? exam : '', count, bankVersion: bank.bankVersion, ...(locale === 'en' ? { locale } : {}) };
+    const modern = req.query.questionFormat===LEARNING_QUESTION_FORMAT;
+    const selection: LearningSelection = { ...(modern?{questionFormat:LEARNING_QUESTION_FORMAT}:{}), ...(parsed.data.mixCategories ? {mixCategories:true} : {}), topic, grade: profile.data.grade, difficulty, category, exam: mode === 'exam' ? exam : '', count, bankVersion: bank.bankVersion, ...(locale === 'en' ? { locale } : {}) };
     const active = await client.from('learning_sessions').select('*').eq('student_id', student).eq('mode', mode).is('finished_at', null).maybeSingle();
     if (active.error) throw active.error;
     // Starting a test always draws a fresh shuffled set. Explicit GET/resume keeps its snapshot.
@@ -113,18 +119,21 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const challengeMode = locale !== 'en' && topic === 'mixed' && difficulty === 'mixed';
     const challengeFloor = gradeChallengeFloor(grade);
     const gradeAppropriate = (q: BaseQuestion) => !challengeMode || q.difficulty >= challengeFloor;
-    const candidates = topicCandidates.filter(q => fitsLearningSelection(q, selection) && gradeAppropriate(q) && (locale !== 'en' || englishReady(q)));
+    const formatReady=(q:BaseQuestion)=>modern||!needsReasoningFormat(q);
+    const reasoningReady=(q:BaseQuestion)=>locale==='en'||topic!=='mixed'||currentReasoningCandidate(q,grade,modern);
+    const candidates = topicCandidates.filter(q => fitsLearningSelection(q, selection) && gradeAppropriate(q) && formatReady(q)&&reasoningReady(q) && (locale !== 'en' || englishReady(q)));
     if (locale === 'en' && candidates.length < count) throw new LearningError('This activity is not available in English at this level. Try mixed practice.', 422);
     const exposure = await loadRecentQuestionExposure(student);
     const questions = selectLearningQuestions({ count, preferDiverseTypes:topic === 'mixed' && locale !== 'en', allowGeneration: topic === 'mixed', category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number],
+      ...(challengeMode?{difficultyPlan:reasoningDifficultyPlan(grade,count,randomInt)}:{}),
       ...(locale === 'en' ? {categories:[...new Set(candidates.map(q=>q.category))]} : {}),
-      candidates, exposure, canUse: q => fitsLearningSelection(q, selection) && gradeAppropriate(q) && isQuestionReadyForStudents(q) && (locale !== 'en' || englishReady(q)),
-      generate: (nextCategory,typeCounts) => {
+      candidates, exposure, canUse: q => fitsLearningSelection(q, selection) && gradeAppropriate(q) && formatReady(q)&&reasoningReady(q)&&isQuestionReadyForStudents(q) && (locale !== 'en' || englishReady(q)),
+      generate: (nextCategory,typeCounts,plannedDifficulty,reasoningCounts) => {
         if (topic !== 'mixed') throw new LearningError('Seçilen konunun yayımlanmış soruları kullanılmalı.');
         if (locale === 'en') throw new LearningError('English practice is temporarily unavailable. Please try again.', 503);
-        const nextDifficulty = difficulty === 'mixed' ? pickGradeChallenge(grade) : difficulty;
+        const nextDifficulty = plannedDifficulty ?? (difficulty === 'mixed' ? pickGradeChallenge(grade) : difficulty);
         const seed=randomInt(1,2147483647);
-        return generateVariedLearningQuestion({grade,category:nextCategory,difficulty:nextDifficulty,seed,typeCounts});
+        return generateVariedLearningQuestion({grade,category:nextCategory,difficulty:nextDifficulty,seed,typeCounts,reasoningCounts,exposure,legacy:!modern});
       },
     });
     const latestProfile = await client.from('profiles').select('grade').eq('id', student).single();
@@ -162,7 +171,7 @@ routes.get('/learning/history', async (req: AuthenticatedRequest, res) => {
   return res.json({sessions:data});
 });
 routes.get('/learning/:id' , async (req: AuthenticatedRequest, res) => {
-  try { return res.json(learningView(await readSession(req.authUser!.uid, String(req.params.id)))); } catch (error) { return handleError(error, res); }
+  try { const session=await readSession(req.authUser!.uid, String(req.params.id)); requireQuestionFormat(req,session.questions); return res.json(learningView(session)); } catch (error) { return handleError(error, res); }
 });
 routes.post('/learning/review', async (req: AuthenticatedRequest, res) => {
   try {
@@ -175,6 +184,7 @@ routes.post('/learning/review', async (req: AuthenticatedRequest, res) => {
     const mistakes = JSON.parse(progress.data?.values?.yapyap_mistakes || '[]') as Array<{ id: string; resolved: boolean; cachedQuestion: BaseQuestion }>;
     const mistake = mistakes.find(m => m.id === parsed.data.mistakeId);
     if (!mistake || mistake.resolved || !isQuestionReadyForStudents(mistake.cachedQuestion)) throw new LearningError('Bu soru tamamlanmış veya yeniden inceleme bekliyor.');
+    requireQuestionFormat(req,[mistake.cachedQuestion]);
     const profile = await client.from('profiles').select('grade').eq('id', student).single();
     if (profile.error) throw profile.error;
     if (mistake.cachedQuestion.targetGrade !== profile.data.grade) throw new LearningError('Bu tekrar farklı bir sınıfa ait. İncelemek için profilinden o sınıfı seçebilirsin.', 409);
@@ -216,14 +226,14 @@ routes.post('/learning/:id/answer', async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = answerSchema.safeParse(req.body);
     if (!parsed.success) throw new LearningError('Yanıt geçersiz.', 400);
-    const saved = await commit(req.authUser!.uid, String(req.params.id), session => answerLearningSession(session, parsed.data.index, parsed.data.response));
+    const saved = await commit(req.authUser!.uid, String(req.params.id), session => {requireQuestionFormat(req,session.questions);return answerLearningSession(session, parsed.data.index, parsed.data.response);});
     return res.json(req.query.view === 'update' ? learningUpdateView(saved) : learningView(saved));
   } catch (error) { return handleError(error, res); }
 });
 routes.post('/learning/:id/finish', async (req: AuthenticatedRequest, res) => {
   try {
     if (!z.object({}).strict().safeParse(req.body || {}).success) throw new LearningError('Sonuçlar sunucu tarafından hesaplanır.', 400);
-    const saved = await commit(req.authUser!.uid, String(req.params.id), finishLearningSession);
+    const saved = await commit(req.authUser!.uid, String(req.params.id), session=>{requireQuestionFormat(req,session.questions);return finishLearningSession(session);});
     return res.json(req.query.view === 'update' ? learningUpdateView(saved) : learningView(saved));
   } catch (error) { return handleError(error, res); }
 });

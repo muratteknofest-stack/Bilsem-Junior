@@ -59,6 +59,23 @@ for(const [width,height] of [[320,480],[390,844],[768,1024]])for(const grade of 
   if(bad.length)failures.push({width,height,grade,type,curriculum:true,result:bad});count++;
  }
 }
+// New reasoning families need multiple seeds: long sequences, inverse machines,
+// scoped counts and 6-person deductions exercise different layouts of one type.
+for(const [width,height] of [[320,480],[390,844],[667,375],[768,1024]])for(const type of ['number_pattern','operation_machine','shape_counting','logic_grid','matrix_3x3','figure_rotation'])for(let sample=1;sample<=6;sample++){
+ await page.setViewportSize({width,height});
+ await page.evaluate(({type,seed})=>window.__showReasoning(type,seed),{type,seed:sample*7919});
+ await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+ const bad=await page.evaluate(()=>{
+  const root=document.querySelector('.zp-focus'),cards=[...document.querySelectorAll('.zp-answer-option')],frame=document.querySelector('.zp-focus-visual').getBoundingClientRect(),errors=[];
+  if(cards.length!==4)errors.push('missing-options');
+  if(root.scrollHeight>root.clientHeight+1||root.scrollWidth>root.clientWidth+1)errors.push('overflow');
+  for(const card of cards){const r=card.getBoundingClientRect();if(r.height<44||r.width<44||r.top<0||r.bottom>innerHeight+1||r.right>innerWidth+1)errors.push('card');}
+  for(const svg of document.querySelectorAll('.zp-focus-visual .zp-question-visual svg')){const v=svg.getBoundingClientRect();if(v.width&&v.height&&(v.left<frame.left-1||v.right>frame.right+1||v.top<frame.top-1||v.bottom>frame.bottom+1))errors.push('clipped-question');}
+  return errors;
+ });
+ if(bad.length)failures.push({width,height,type,sample,reasoning:true,result:bad});count++;
+ if(width===390&&sample===1)await page.screenshot({path:output+'/reasoning-'+type+'.png'});
+}
 await page.evaluate(()=>window.__show('mirror_reflection',3));
 await page.getByRole('button',{name:'Sorular ve çalışma araçları'}).click();
 if(!await page.locator('dialog[open]').isVisible())throw Error('Tools dialog did not open');

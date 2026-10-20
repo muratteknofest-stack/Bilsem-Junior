@@ -82,7 +82,7 @@ test('incompatible age/grade/difficulty and retry settings stop before provider 
 
 test('a numeric profile violation is regenerated before spending AI calls', async () => {
   const ai = reviewer();
-  const r = await runQuestionPipeline(ai.client, { targetGrade: 1, difficulty: 2, questionType: 'number_pattern', maxAttempts: 4 }, { nextSeed: seeds(5,1,2,3) });
+  const r = await runQuestionPipeline(ai.client, { targetGrade: 1, difficulty: 2, questionType: 'number_pattern', maxAttempts: 4 }, { nextSeed: seeds(1,2,3,4) });
   assert.equal(r.attempts?.[0].report?.stages.find(s => s.id === 'difficulty')?.status, 'failed');
   assert.equal(r.success, true, r.rejectionReasons.join(' ')); assert.equal(ai.prompts.length, 2);
   assert.ok(r.qualityReport!.metrics.maxNumber <= 30);

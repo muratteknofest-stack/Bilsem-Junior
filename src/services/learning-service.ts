@@ -12,6 +12,7 @@ import { isSchoolGrade, type SchoolGrade } from '../features/questions/quality-p
 import { LearningRefreshQueue } from '../features/student/learning-refresh';
 import { LearningSessionCache } from '../features/student/learning-session-cache';
 import { withRequestDeadline } from '../lib/request-deadline';
+import { learningFormatPath } from '../features/student/learning-question-format';
 
 const sessions = new LearningSessionCache();
 export const learningRefresh = new LearningRefreshQueue(() => auth.currentUser?.uid, (userId, isCurrent) => withRequestDeadline(async signal => {
@@ -25,7 +26,7 @@ export const learningRefresh = new LearningRefreshQueue(() => auth.currentUser?.
 
 async function learningApi(path: string, init: RequestInit, milliseconds = 20_000) {
   return withRequestDeadline(async signal => {
-    const response = await authenticatedFetch(`/api/learning/${path}`, { ...init, signal });
+    const response = await authenticatedFetch(`/api/learning/${learningFormatPath(path)}`, { ...init, signal });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || 'Çalışma kaydedilemedi. Yeniden dene.');
     return payload;

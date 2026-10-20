@@ -9,6 +9,7 @@ import { generateRecoveredQuestion } from './recovered-engine';
 import { generateProfessionalQuestion as generateV2 } from './professional-engine-v2';
 import { generateProfessionalQuestion as generateV5 } from './professional-engine-v5';
 import { generateProfessionalQuestion as generateV6 } from './professional-engine-v6';
+import { generateProfessionalQuestion as generateV7 } from './professional-engine-v7';
 import { generateColorfulQuestion as generateColorfulV2 } from './colorful-engine-v2';
 import { publicVisualConfig } from './public-visual';
 import { checkArithmeticExplanations } from './explanation-arithmetic';
@@ -95,7 +96,7 @@ export function auditQuestion(value: unknown, existing: QuestionVisualReference[
         const v = o.visualData as Record<string, unknown>;
         return v?.cells !== undefined && (!Array.isArray(v.cells) || typeof v.size !== 'number' || ![3, 4].includes(v.size) || v.cells.length !== Number(v.size) ** 2 || v.cells.some((c: unknown) => c !== 0 && c !== 1));
       })) result.errors.push('Seçenek ızgarası geçersiz.');
-      const knownVersion = RECOVERED_TYPES.includes(q.type) ? q.authoring?.engine === 'verified-4' : VERIFIED_TYPES.includes(q.type) && [ENGINE_VERSION, 'verified-6', 'verified-5', 'verified-3', 'verified-2'].includes(q.authoring?.engine || '');
+      const knownVersion = RECOVERED_TYPES.includes(q.type) ? q.authoring?.engine === 'verified-4' : VERIFIED_TYPES.includes(q.type) && [ENGINE_VERSION, 'verified-7', 'verified-6', 'verified-5', 'verified-3', 'verified-2'].includes(q.authoring?.engine || '');
       if (!knownVersion) result.errors.push('Soru motoru sürümü tanınmıyor.');
       const expected = fingerprint(solveBoard(q.visualConfig as Board));
       const matches = q.options.filter(o => fingerprint(o.visualData) === expected);
@@ -126,7 +127,7 @@ export function auditQuestion(value: unknown, existing: QuestionVisualReference[
     // Certification covers the displayed instructions and explanation too. Arbitrary
     // edited/AI prose cannot inherit an old stamp or a template's mathematical proof.
     if (cfg?.displayMode === 'verified_board' && STUDENT_TYPES.includes(q.type)) {
-      const reference = RECOVERED_TYPES.includes(q.type) ? generateRecoveredQuestion(q.type, q.seed, q.difficulty) : q.authoring?.engine === 'verified-2' ? generateV2(q.type, q.seed, q.difficulty) : q.authoring?.engine === 'verified-6' ? generateV6(q.type,q.seed,q.difficulty) : ['verified-3','verified-5'].includes(q.authoring?.engine||'') ? generateV5(q.type,q.seed,q.difficulty,q.authoring?.engine==='verified-3') : generateProfessionalQuestion(q.type, q.seed, q.difficulty);
+      const reference = RECOVERED_TYPES.includes(q.type) ? generateRecoveredQuestion(q.type, q.seed, q.difficulty) : q.authoring?.engine === 'verified-2' ? generateV2(q.type, q.seed, q.difficulty) : q.authoring?.engine === 'verified-7' ? generateV7(q.type,q.seed,q.difficulty) : q.authoring?.engine === 'verified-6' ? generateV6(q.type,q.seed,q.difficulty) : ['verified-3','verified-5'].includes(q.authoring?.engine||'') ? generateV5(q.type,q.seed,q.difficulty,q.authoring?.engine==='verified-3') : generateProfessionalQuestion(q.type, q.seed, q.difficulty);
       for (const field of ['prompt', 'secondaryPrompt', 'explanation', 'visualConfig'] as const) {
         if (fingerprint(q[field]) !== fingerprint(reference[field])) {
           result.reviewRequired.push('Soru metni, görsel veya açıklama doğrulanmış şablonla eşleşmiyor: ' + field);
@@ -135,7 +136,7 @@ export function auditQuestion(value: unknown, existing: QuestionVisualReference[
       const normalizedOptions = (question: BaseQuestion) => question.options.map(({ id, label, visualData }) => ({ id, label, visualData })).sort((a, b) => a.id.localeCompare(b.id));
       if (fingerprint(normalizedOptions(q)) !== fingerprint(normalizedOptions(reference))) result.reviewRequired.push('Seçenek içerikleri doğrulanmış şablonla eşleşmiyor.');
       if (q.category !== reference.category) result.reviewRequired.push('Kategori doğrulanmış içerikle eşleşmiyor.');
-      if (['verified-3', 'verified-4', 'verified-5', 'verified-6', ENGINE_VERSION].includes(q.authoring?.engine || '') && fingerprint(q.authoring?.distractorNotes) !== fingerprint(reference.authoring?.distractorNotes)) result.reviewRequired.push('Çeldirici gerekçeleri doğrulanmış içerikle eşleşmiyor.');
+      if (['verified-3', 'verified-4', 'verified-5', 'verified-6', 'verified-7', ENGINE_VERSION].includes(q.authoring?.engine || '') && fingerprint(q.authoring?.distractorNotes) !== fingerprint(reference.authoring?.distractorNotes)) result.reviewRequired.push('Çeldirici gerekçeleri doğrulanmış içerikle eşleşmiyor.');
     }
     result.solverVerified = solved.canSolve && solved.isMatch && !solved.ambiguityDetected && result.reviewRequired.length === 0;
     if (q.targetGrade !== undefined && (q.targetGrade < 1 || q.targetGrade > 4 || !Number.isInteger(q.targetGrade))) result.errors.push('Hedef sınıf 1–4 olmalı.');
