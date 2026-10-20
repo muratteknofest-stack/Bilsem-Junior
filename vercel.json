@@ -20,6 +20,14 @@
       "destination": "/api/index?__path=public/membership/page"
     },
     {
+      "source": "/api/supabase/auth/v1/:path*",
+      "destination": "https://vehhvsdkifwstbjhnhao.supabase.co/auth/v1/:path*"
+    },
+    {
+      "source": "/api/supabase/rest/v1/:path*",
+      "destination": "https://vehhvsdkifwstbjhnhao.supabase.co/rest/v1/:path*"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/index?__path=:path*"
     },
@@ -175,6 +183,23 @@
       "headers": [
         {
           "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    },
+    {
+      "source": "/api/supabase/:path*",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "private, no-store, max-age=0"
+        },
+        {
+          "key": "CDN-Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "Vercel-CDN-Cache-Control",
           "value": "no-store"
         }
       ]
