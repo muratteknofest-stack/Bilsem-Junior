@@ -19,10 +19,22 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/sales/sales.css" />
+    <link rel="stylesheet" href="/boot-recovery.css" />
   </head>
   <body class="bg-slate-50 text-slate-900 antialiased selection:bg-indigo-500 selection:text-white font-['Plus_Jakarta_Sans',sans-serif]">
     <noscript><nav aria-label="Öğrenme rehberleri"><a href="/blog">Bilsem Junior Blog: BİLSEM, dikkat ve düşünme oyunları rehberleri</a></nav><p>Blog yazıları JavaScript olmadan okunabilir. Etkileşimli uygulama için JavaScript gereklidir.</p></noscript>
     <div id="root"><main><h1>Bilsem Junior | BİLSEM Hazırlık ve Düşünme Oyunları</h1><p>1–4. sınıflar için örüntü, mantık, dikkat, görsel algı, matris, uzamsal düşünme, sayısal akıl yürütme, kodlama, bellek ve sözel düşünme alıştırmaları.</p><p>Öğrenciler soru çözebilir, cevap açıklamalarını inceleyebilir; veliler bağlı öğrencilerinin çalışma kayıtlarını takip edebilir. Bilsem Junior bağımsız bir eğitim uygulamasıdır; resmî BİLSEM sınavı veya zekâ tanılama aracı değildir.</p><nav aria-label="Bilsem Junior rehberleri"><a href="/blog">30 öğrenme ve aile rehberi</a> · <a href="/bilgi/hesap-ve-veli-rehberi">Hesap ve veli rehberi</a> · <a href="/bilgi/gizlilik-ve-veriler">Gizlilik ve veriler</a></nav><p>Etkileşimli uygulama yükleniyor…</p></main></div>
+    <main id="bj-load-recovery" class="bj-load-recovery" role="alert" aria-labelledby="bj-load-heading" hidden>
+      <div class="bj-load-card">
+        <span class="bj-load-brand">BİLSEM JUNIOR</span>
+        <h1 id="bj-load-heading">Keşfe kaldığın yerden devam et.</h1>
+        <p id="bj-load-message">Uygulamayı yeniden yükleyip tekrar deneyebilirsin.</p>
+        <button id="bj-load-retry" type="button">Yeniden yükle</button>
+        <a href="/">Ana sayfaya dön</a>
+        <p class="bj-load-note">Sorun sürerse bağlantıyı Chrome veya cihazının tarayıcısında açmayı dene.</p>
+      </div>
+    </main>
+    <script src="/boot-recovery.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
