@@ -155,4 +155,5 @@ test('Vercel routes Auth and REST before the generic API function with no privat
   }
   const headers = configuration.headers.find(rule => rule.source === '/api/supabase/:path*').headers;
   for (const key of ['Cache-Control', 'CDN-Cache-Control', 'Vercel-CDN-Cache-Control']) assert.match(headers.find(header => header.key === key).value, /no-store/);
+  assert.equal(headers.find(header => header.key === 'x-vercel-enable-rewrite-caching').value, '0');
 });
