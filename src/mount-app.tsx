@@ -6,6 +6,8 @@ import { PasswordRecoveryEntry } from './features/auth/components/PasswordRecove
 import { isRecoveryRedirect } from './lib/supabase';
 import { isAdminLocation } from './lib/admin-access';
 import { normalizeAppPathname } from './lib/route-sync';
+import { accountEntry } from './features/auth/account-entry';
+import { PublicAccountEntry } from './features/auth/components/PublicAccountEntry';
 
 const AdminPortal = lazy(() => import('./components/AdminPortal').then(module => ({ default: module.AdminPortal })));
 const WordwallPage = lazy(() => import('./components/WordwallLibrary').then(module => ({ default: module.WordwallPage })));
@@ -27,6 +29,7 @@ if (typeof window !== 'undefined') {
 }
 
 const pathname = normalizeAppPathname(window.location.pathname);
+const publicAccount = accountEntry(new URL(window.location.href));
 
 
 /** A render or lazy-import failure must leave a usable recovery screen. */
@@ -55,7 +58,10 @@ createRoot(root).render(
     ) : pathname === '/wordwall' ? (
       <Suspense fallback={<p role="status" className="p-8 text-center">Testler yükleniyor…</p>}><WordwallPage /></Suspense>
     ) : (
-      <AuthProvider>
+      <AuthProvider
+        publicLanding={pathname === '/'}
+        publicEntry={publicAccount ? <PublicAccountEntry entry={publicAccount} /> : undefined}
+      >
         {isAdminLocation(pathname) ? (
           <Suspense fallback={<p role="status" className="p-8 text-center">Yönetici alanı yükleniyor…</p>}><AdminPortal /></Suspense>
         ) : <App />}

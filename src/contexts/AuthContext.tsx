@@ -13,12 +13,16 @@ import { dataService } from '../services/data-service';
 import { userProfileUpdateSchema, formatZodError } from '../lib/validations';
 import { isManagedStudentEmail } from '../lib/account-identifiers';
 import { cancelAccountSwitch } from '../lib/account-switch';
+import { observeSession, type SessionStartupState } from '../features/auth/session-startup';
+import { AuthStartupView } from '../features/auth/components/AuthStartupView';
+import { markProgressReadUnavailable } from '../services/modules/persistence-service';
 
 interface AuthContextType {
   currentUser: User | null;
   userProfile: UserProfile | null;
   isAdminAuthorized: boolean;
   loading: boolean;
+  startupError: string | null;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
   loginLocally: (profile: UserProfile) => void;
@@ -32,6 +36,7 @@ const AuthContext = createContext<AuthContextType>({
   userProfile: null,
   isAdminAuthorized: false,
   loading: true,
+  startupError: null,
   logout: async () => {},
   updateProfile: async () => {},
   loginLocally: () => {},
@@ -42,11 +47,16 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [isAdminAuthorized, setIsAdminAuthorized] = useState(false);
-  const [loading, setLoading] = useState(true);
+export const AuthProvider: React.FC<{
+  children: React.ReactNode;
+  publicEntry?: React.ReactNode;
+  publicLanding?: boolean;
+}> = ({ children, publicEntry, publicLanding = false }) => {
+  const [session, setSession] = useState<SessionStartupState>({
+    currentUser: null, userProfile: null, isAdminAuthorized: false, loading: true, startupError: null,
+  });
+  const { currentUser, userProfile, isAdminAuthorized, loading, startupError } = session;
+  const setUserProfile = (profile: UserProfile | null) => setSession(previous => ({ ...previous, userProfile: profile }));
 
   const loginLocally = (profile: UserProfile) => {
     setUserProfile(profile);
@@ -63,169 +73,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     dataService.switchRole(role);
   };
 
-  useEffect(() => {
-    let unsubSnap: (() => void) | null = null;
-    let isMounted = true;
-    let authRevision = 0;
-    let activeAccountId: string | null = null;
-
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      async (user) => {
-        if (!isMounted) return;
-        const revision = ++authRevision;
-        const isCurrent = () => isMounted && revision === authRevision && (user?.uid ?? null) === (auth.currentUser?.uid ?? null);
-        if (unsubSnap) {
-          unsubSnap();
-          unsubSnap = null;
-        }
-
-        setCurrentUser(user);
-        setIsAdminAuthorized(false);
-        if (activeAccountId !== (user?.uid ?? null)) {
-          activeAccountId = user?.uid ?? null;
-          setUserProfile(null); setLoading(true);
-          dataService.logout();
-          if (!user) cancelAccountSwitch();
-        }
-        if (user) {
-          if (!isManagedStudentEmail(user.email) && !user.emailVerified) {
-            await supabaseSignOut(auth).catch(() => undefined);
-            dataService.logout();
-            if (isCurrent()) setUserProfile(null);
-            if (isCurrent()) setLoading(false);
-            return;
-          }
-          // Validate the profile in Supabase before exposing an authenticated session.
-          const userDocRef = doc(db, 'users', user.uid);
-          let adminAuthorized = false;
-          
-          try {
-            // Accounts without an application profile are not silently provisioned.
-            const docSnap = await getDoc(userDocRef);
-            if (!isCurrent()) return;
-            if (!docSnap.exists()) {
-              await supabaseSignOut(auth).catch(() => undefined);
-              dataService.logout();
-              if (isCurrent()) setUserProfile(null);
-              if (isCurrent()) setLoading(false);
-              return;
-            } else {
-              const profile = docSnap.data() as UserProfile;
-              if (profile.id !== user.uid || !['student', 'parent', 'admin'].includes(profile.role)) {
-                await supabaseSignOut(auth).catch(() => undefined);
-                dataService.logout();
-                if (isCurrent()) setUserProfile(null);
-                if (isCurrent()) setLoading(false);
-                return;
-              }
-              if (profile.role === 'admin') {
-                // Refreshing inside every Auth event emits another event and
-                // starts an endless token-refresh loop. Verify the current JWT;
-                // privileged API routes independently check the protected role.
-                const token = await user.getIdTokenResult();
-                if (!isCurrent()) return;
-                adminAuthorized = user.emailVerified && token.claims.role === 'admin';
-                if (!adminAuthorized) {
-                  await supabaseSignOut(auth).catch(() => undefined);
-                  dataService.logout();
-                  if (isCurrent()) setUserProfile(null);
-                  if (isCurrent()) setLoading(false);
-                  return;
-                }
-              }
-              const localUser = dataService.getCurrentUser();
-              const activeRole = profile.role;
-              const activeProfile: UserProfile = { ...profile, role: activeRole };
-              dataService.loginAs(activeRole, activeProfile);
-              await dataService.hydrateUserStateFromSupabase();
-              if (isCurrent()) {
-                setUserProfile(activeProfile);
-                setIsAdminAuthorized(adminAuthorized);
-              }
-            }
-          } catch (err) {
-            if (!isCurrent()) return;
-            console.warn('Supabase profili yüklenemedi:', err);
-            await supabaseSignOut(auth).catch(() => undefined);
-            dataService.logout();
-            if (isCurrent()) setUserProfile(null);
-            if (isCurrent()) setIsAdminAuthorized(false);
-            if (isCurrent()) setLoading(false);
-            return;
-          }
-
-          if (!isCurrent()) return;
-          try {
-            unsubSnap = onSnapshot(
-              userDocRef,
-              (snap) => {
-                if (snap.exists() && isCurrent()) {
-                  const profile = snap.data() as UserProfile;
-                  if (profile.id === user.uid && ['student', 'parent', 'admin'].includes(profile.role) &&
-                      (profile.role !== 'admin' || adminAuthorized)) {
-                    const localUser = dataService.getCurrentUser();
-                    const activeRole = profile.role;
-                    const activeProfile: UserProfile = { ...profile, role: activeRole };
-                    setUserProfile(activeProfile);
-                    setIsAdminAuthorized(profile.role === 'admin' && adminAuthorized);
-                    dataService.syncUserFromSupabase(activeProfile);
-                  } else {
-                    void supabaseSignOut(auth).catch(() => undefined);
-                    dataService.logout();
-                    setUserProfile(null);
-                    setIsAdminAuthorized(false);
-                  }
-                } else if (isCurrent()) {
-                  void supabaseSignOut(auth).catch(() => undefined);
-                  dataService.logout();
-                  setUserProfile(null);
-                  setIsAdminAuthorized(false);
-                }
-              },
-              (snapErr) => {
-                console.warn('Supabase profil senkronizasyonu başarısız:', snapErr);
-              }
-            );
-          } catch {}
-          
-          updateDoc(userDocRef, { lastLoginAt: Date.now() }).catch(() => {});
-          if (isCurrent()) setLoading(false);
-        } else {
-          dataService.logout();
-          if (isCurrent()) setUserProfile(null);
-          if (isCurrent()) setIsAdminAuthorized(false);
-          if (isCurrent()) setLoading(false);
-        }
-      },
-      (authError) => {
-        authRevision++;
-        console.warn('Supabase Auth bağlantı hatası:', authError.message || authError);
-        dataService.logout();
-        if (isMounted) {
-          setCurrentUser(null);
-          setUserProfile(null);
-          setIsAdminAuthorized(false);
-          setLoading(false);
-        }
-      }
-    );
-
-    return () => {
-      isMounted = false;
-      authRevision++;
-      if (unsubSnap) unsubSnap();
-      unsubscribe();
-    };
-  }, []);
+  useEffect(() => observeSession({
+    currentUserId: () => auth.currentUser?.uid ?? null,
+    subscribe: (receive, fail) => onAuthStateChanged(auth, receive, fail),
+    canUseAccount: user => isManagedStudentEmail(user.email) || user.emailVerified,
+    loadProfile: async user => {
+      const snapshot = await getDoc(doc(db, 'users', user.uid));
+      return snapshot.exists() ? snapshot.data() as UserProfile : null;
+    },
+    authorizeAdmin: async user => {
+      // Never refresh inside every Auth event: it emits another Auth event.
+      const token = await user.getIdTokenResult();
+      return user.emailVerified && token.claims.role === 'admin';
+    },
+    activate: profile => { dataService.loginAs(profile.role, profile); },
+    syncProfile: profile => { dataService.syncUserFromSupabase(profile); },
+    hydrate: signal => dataService.hydrateUserStateFromSupabase({ signal }),
+    progressUnavailable: markProgressReadUnavailable,
+    clearSession: () => { cancelAccountSwitch(); dataService.logout(); },
+    signOut: () => supabaseSignOut(auth),
+    watch: (user, next, fail) => {
+      const ref = doc(db, 'users', user.uid);
+      const unsubscribe = onSnapshot(ref, snapshot => next(snapshot.exists() ? snapshot.data() as UserProfile : null), fail);
+      void updateDoc(ref, { lastLoginAt: Date.now() }).catch(() => undefined);
+      return unsubscribe;
+    },
+    onState: setSession,
+    notice: error => { console.warn('Oturum bağlantısı:', error); },
+  }), []);
 
   const logout = async () => {
     cancelAccountSwitch();
     await supabaseSignOut(auth);
     dataService.logout();
-    setCurrentUser(null);
-    setUserProfile(null);
-    setIsAdminAuthorized(false);
+    setSession({ currentUser: null, userProfile: null, isAdminAuthorized: false, loading: false, startupError: null });
   };
 
   const updateProfile = async (data: Partial<UserProfile>) => {
@@ -265,7 +146,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       currentUser, 
       userProfile, 
       isAdminAuthorized,
-      loading, 
+      loading,
+      startupError,
       logout, 
       updateProfile,
       loginLocally,
@@ -273,11 +155,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sendEmailVerification,
       sendPasswordResetEmail
     }}>
-      {!loading ? children : (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-          <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      )}
+      {publicEntry ?? ((loading || startupError || (publicLanding && !userProfile))
+        ? <AuthStartupView error={startupError} publicLanding={publicLanding} />
+        : children)}
     </AuthContext.Provider>
   );
 };

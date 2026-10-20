@@ -96,6 +96,12 @@ function queueProgressItem(key: string, value: string | null) {
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => { retries = 0; scheduleProgressPersist(0); });
 }
+/** Called only after aborting a stalled startup read for this account. */
+export function markProgressReadUnavailable(userId: string) {
+  if (auth.currentUser?.uid !== userId || activeUserId !== userId) return;
+  setSyncStatus('error');
+}
+
 export async function hydrateUserStateFromSupabase(options: { signal?: AbortSignal } = {}): Promise<void> {
   if (options.signal?.aborted) return;
   const userId = auth.currentUser?.uid;
