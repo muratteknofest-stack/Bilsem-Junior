@@ -121,3 +121,30 @@ bu PR için iş akışları tekrar çalıştırılmalıdır.
 Son salt okunur Supabase kontrolü: 9 kullanıcı, 9 profil, 5.380 XP; pilotta
 100 inceleme taslağı, 0 yayın. Otomatik kalite kontrolü uzman değerlendirmesi
 veya öğrenme başarısı kanıtı değildir.
+
+## Önizleme giriş düzeltmesi — 21 Ekim 2026
+
+Kullanıcı korunan V2 önizlemede giriş hatası bildirdi; ana canlı sitede girişi
+çalışıyor. Ana yayın V2 dalına geçirilmiş değildir. Kod incelemesinde Supabase
+transport katmanının aynı adres için bile `credentials: omit` kullandığı bulundu.
+Bu, sayfa Vercel hesabıyla açıldıktan sonra Auth/REST isteklerinin erişim
+çerezini kaybetmesine yol açar. Aynı origin için `same-origin`, farklı web/native
+origin için `omit` kullanılır. Elle verilen Cookie başlığı yine silinir.
+
+Vercel edge kuralı yalnız `/api/supabase/(auth|rest)/v1/` için Cookie başlığını
+Supabase'e dış yönlendirmeden önce siler; bearer/apikey başlıkları ve no-store
+kuralları korunur. Güncel resmi Vercel JSON şeması doğrulaması geçti.
+
+Değişenler: `src/lib/supabase-transport.ts`, `vercel.json`, ilgili 14 regresyon
+testi, `scripts/check-protected-preview-auth.mjs`, npm komutu ve V2 CI adımı.
+14/14 transport testi geçti. Gerçek Chromium HTTP cookie deneyi geçti: aynı
+adres için çerez var, çapraz adreste çerez yok; bearer başlığı her durumda korundu.
+Sonuç `preview-auth-cookie-report.json` içinde kayıtlıdır. Bu yerel deney
+Vercel'de gerçek kullanıcı girişi kabulü olarak sunulmaz.
+
+Dağıtılmış kabul hâlâ engelli: Vercel MCP koruma erişiminde 403
+`read_protection_bypass`; CLI'da oturum yok. Ortam listesinde sunucu
+`SUPABASE_SERVICE_ROLE_KEY` yalnız Production için tanımlı. Preview için ayrı
+sunucu yapılandırması ve bağlantıya proje/takım erişimi gerekir. Mevcut üretim
+anahtarı önizlemelerin tamamına açılmadı; hesaplar, şifreler veya giriş koruması
+değiştirilmedi. Yeni URL aşağıdaki PR'da takip edilir.

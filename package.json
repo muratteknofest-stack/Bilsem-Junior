@@ -55,7 +55,8 @@
     "test:startup": "node --import tsx --test tests/project-alignment.test.mjs tests/supabase-transport.test.mjs tests/android-network.test.ts tests/session-startup.test.mjs tests/auth-flows.test.ts tests/auth-error-messages.test.ts tests/security-regression.test.ts tests/admin-access.test.ts tests/student-session.test.ts tests/progress-outbox.test.ts",
     "test:auth-connection": "node --import tsx scripts/check-auth-connection.mjs",
     "test:project-alignment": "node --import tsx --test tests/project-alignment.test.mjs",
-    "test:engine-v2:mobile": "node scripts/check-engine-v2-pilot.mjs"
+    "test:engine-v2:mobile": "node scripts/check-engine-v2-pilot.mjs",
+    "test:preview-auth:browser": "node scripts/check-protected-preview-auth.mjs"
   },
   "dependencies": {
     "@capacitor/android": "8.5.3",

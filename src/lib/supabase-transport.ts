@@ -34,7 +34,8 @@ export function createSupabaseTransport(options: SupabaseTransportOptions): type
     if (request.signal.aborted) throw request.signal.reason ?? new DOMException('İstek iptal edildi.', 'AbortError');
     const target = new URL('/api/supabase' + original.pathname + original.search, api);
     const headers = new Headers(request.headers);
-    // Session credentials travel only in SDK bearer headers, never site cookies.
+    // Supabase sessions use SDK bearer headers. Never accept a caller-supplied
+    // Cookie header; the browser manages the relay site's own protection cookie.
     for (const name of ['cookie', 'host', 'origin', 'referer', 'sb-forwarded-for']) headers.delete(name);
 
     return withRequestDeadline(async deadline => {
@@ -59,7 +60,10 @@ export function createSupabaseTransport(options: SupabaseTransportOptions): type
           : await Promise.race([request.arrayBuffer(), aborted]);
         const forwarded = new Request(target, {
           method: request.method, body: requestBody, headers,
-          credentials: 'omit', redirect: 'error', cache: 'no-store', signal: cancellation.signal,
+          // Protected previews require their own Vercel cookie even for Auth
+          // proxy requests. Cross-origin web/native relays still receive none.
+          credentials: api.origin === options.pageOrigin ? 'same-origin' : 'omit',
+          redirect: 'error', cache: 'no-store', signal: cancellation.signal,
         });
         // Await response bodies too: auth/profile JSON can stall after headers.
         const response = await Promise.race([options.relayFetch(forwarded), aborted]);

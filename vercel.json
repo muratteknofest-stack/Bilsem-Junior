@@ -2,6 +2,19 @@
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "dist",
   "framework": "vite",
+  "routes": [
+    {
+      "src": "/api/supabase/(?:auth|rest)/v1/(.*)",
+      "transforms": [
+        {
+          "type": "request.headers",
+          "op": "delete",
+          "target": { "key": "cookie" }
+        }
+      ],
+      "continue": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/en",
