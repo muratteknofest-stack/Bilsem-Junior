@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createSupabaseTransport } from '../src/lib/supabase-transport.ts';
 import { RequestDeadlineError } from '../src/lib/request-deadline.ts';
 
-const project = 'https://vehhvsdkifwstbjhnhao.supabase.co';
+const project = 'https://vtcsoqohkiagbwatlabk.supabase.co';
 const web = 'https://zekapark.vercel.app';
 const config = relayFetch => ({ supabaseUrl: project, apiBaseUrl: '', pageOrigin: web, relayFetch });
 const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
@@ -94,14 +94,23 @@ test('a cancelled request never starts a relay call', async () => {
 });
 
 test('a stalled request is bounded and late responses cannot settle it again', async () => {
-  // A real fetch owns its Request until completion. Retain that same lifetime
-  // here; retaining only a dependent signal lets Node collect its Request.
+  // A real fetch owns its Request until completion; model that lifetime here.
   let finish; let forwarded; let calls = 0;
   const transport = createSupabaseTransport({ ...config(request => { calls++; forwarded = request; return new Promise(resolve => { finish = resolve; }); }), timeoutMs: 15 });
   const pending = transport(project + '/auth/v1/user');
   await assert.rejects(pending, RequestDeadlineError);
   assert.equal(forwarded.signal.aborted, true); assert.equal(calls, 1);
   finish(Response.json({ id: 'late' })); await flush();
+});
+
+test('a stalled request body is bounded before any credentials are sent', async () => {
+  let calls = 0;
+  const transport = createSupabaseTransport({ ...config(async () => { calls++; return Response.json({}); }), timeoutMs: 15 });
+  const input = new Request(project + '/auth/v1/token?grant_type=password', {
+    method: 'POST', duplex: 'half', body: new ReadableStream({ start() {} }),
+  });
+  await assert.rejects(transport(input), RequestDeadlineError);
+  assert.equal(calls, 0);
 });
 
 test('a response body that stalls is bounded too', async () => {
@@ -143,7 +152,7 @@ test('the actual Supabase SDK signs in through the relay and keeps its original 
   const result = await client.auth.signInWithPassword({ email: 'fixture@example.test', password: 'fixture-password' });
   assert.equal(result.error, null); assert.equal(result.data.user.id, '00000000-0000-4000-8000-000000000001');
   assert.ok(calls.some(url => url.endsWith('/api/supabase/auth/v1/token?grant_type=password')));
-  assert.ok(storage.has('sb-vehhvsdkifwstbjhnhao-auth-token'));
+  assert.ok(storage.has('sb-vtcsoqohkiagbwatlabk-auth-token'));
   assert.equal([...storage.keys()].some(key => key.includes('zekapark.vercel')), false);
 });
 

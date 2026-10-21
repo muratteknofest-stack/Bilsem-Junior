@@ -9,7 +9,7 @@ export async function monitorSite(fetcher=fetch){
    const response=await fetcher(new URL(path,'https://zekapark.vercel.app'),{redirect:'manual',signal:AbortSignal.timeout(20_000)});
    ok=response.status===200&&!response.redirected&&response.headers.get('x-content-type-options')==='nosniff';
    if(path.startsWith('/api/'))ok=ok&&response.headers.get('cache-control')==='no-store';
-   if(path==='/api/health'){const data=await response.json();ok=ok&&data.status==='ok'&&data.database==='ready'&&data.projectRef==='vehhvsdkifwstbjhnhao';}
+   if(path==='/api/health'){const data=await response.json();ok=ok&&data.status==='ok'&&data.database==='ready'&&data.projectRef==='vtcsoqohkiagbwatlabk';}
    else if(path==='/api/public/platform'){const data=await response.json();ok=ok&&typeof data.registrationOpen==='boolean'&&typeof data.policyVersion==='string';}
    else await response.arrayBuffer();
   }catch{}

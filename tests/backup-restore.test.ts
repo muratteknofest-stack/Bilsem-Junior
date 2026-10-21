@@ -8,7 +8,7 @@ import {isolatedRestoreTarget} from '../scripts/restore-backup.mjs';
 
 test('restore target refuses production, external hosts and ambiguous targets',()=>{
  assert.equal(isolatedRestoreTarget('postgresql://fixture:example@127.0.0.1:54322/postgres').PGHOST,'127.0.0.1');
- for(const value of ['postgresql://fixture:example@db.vehhvsdkifwstbjhnhao.supabase.co/postgres','postgresql://fixture:example@example.com/postgres','postgresql://fixture:example@localhost/postgres?host=example.com','postgresql://fixture@localhost/postgres'])assert.throws(()=>isolatedRestoreTarget(value));
+ for(const value of ['postgresql://fixture:example@db.vtcsoqohkiagbwatlabk.supabase.co/postgres','postgresql://fixture:example@example.com/postgres','postgresql://fixture:example@localhost/postgres?host=example.com','postgresql://fixture@localhost/postgres'])assert.throws(()=>isolatedRestoreTarget(value));
 });
 
 test('encrypted archive restores Auth, reciprocal family, private progress and question rows into isolated Postgres',async()=>{

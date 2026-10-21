@@ -51,9 +51,16 @@ export function createSupabaseTransport(options: SupabaseTransportOptions): type
       if (request.signal.aborted) abortOriginal();
       if (deadline.aborted) abortDeadline();
       try {
-        const forwarded = new Request(target, new Request(request, {
-          headers, credentials: 'omit', redirect: 'error', cache: 'no-store', signal: cancellation.signal,
-        }));
+        // Own the cancellation relationship directly. A temporary intermediate
+        // Request can be collected while its dependent AbortSignal is in use.
+        // Buffer small Auth/PostgREST bodies inside the same bounded request;
+        // this also avoids streaming-request differences across WebViews.
+        const requestBody = ['GET', 'HEAD'].includes(request.method) ? undefined
+          : await Promise.race([request.arrayBuffer(), aborted]);
+        const forwarded = new Request(target, {
+          method: request.method, body: requestBody, headers,
+          credentials: 'omit', redirect: 'error', cache: 'no-store', signal: cancellation.signal,
+        });
         // Await response bodies too: auth/profile JSON can stall after headers.
         const response = await Promise.race([options.relayFetch(forwarded), aborted]);
         if (request.method === 'HEAD' || [204, 205, 304].includes(response.status)) return response;

@@ -16,8 +16,8 @@ jobs:
     env:
       VITE_API_BASE_URL: https://zekapark.vercel.app
       VITE_PUBLIC_SITE_URL: https://zekapark.vercel.app
-      VITE_SUPABASE_URL: https://vehhvsdkifwstbjhnhao.supabase.co
-      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ijE2Jbn1oGn9Elz03fiYrA_FUBnEWXI
+      VITE_SUPABASE_URL: https://vtcsoqohkiagbwatlabk.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_J972I2--TwnuLkWjrRqENA_DxnBGjlz
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:

@@ -1,6 +1,6 @@
 # ZekaPark Supabase yönetimi
 
-Aktif proje: `vehhvsdkifwstbjhnhao`. Kimlik doğrulama Supabase Auth, kalıcı hesap/soru/öğrenme verileri Supabase Postgres üzerindedir. Alternatif kimlik sağlayıcısı, belge veritabanı veya eski dışa/içe aktarma betiği kullanılmaz.
+Aktif proje: `vtcsoqohkiagbwatlabk`. Kimlik doğrulama Supabase Auth, kalıcı hesap/soru/öğrenme verileri Supabase Postgres üzerindedir. Alternatif kimlik sağlayıcısı, belge veritabanı veya eski dışa/içe aktarma betiği kullanılmaz.
 
 ## Çalışan proje
 
@@ -20,12 +20,16 @@ Tarihsel migration dosyaları yalnızca sürüm geçmişini korur. Bunlar eski s
 
 Yeni, boş bir projede `schema.sql` temel şemadır. Ancak `schema.sql` tek başına nihai güvenlik korumalarını içermez. Zorunlu kurulum sırası:
 1. `schema.sql` dosyasını boş veritabanına uygulayın.
-2. `supabase/migrations/` altındaki tüm SQL migrasyonlarını kronolojik dosya sırasıyla uygulayın (özellikle `20261010090133_protect_verified_progress.sql` ve `20261010091235_distributed_api_limits.sql` güvenlik ve limit kilitlerini sağlar).
+2. Nihai uygulama sözleşmelerinin kaynak listesi `scripts/build-bilsem-alignment.mjs` içindedir. Eski ve yeni bootstrap dosyalarını topluca yürütmeyin; `schema.sql` ile aynı nesneyi oluşturan tarihsel dosyalar vardır. Mevcut hesap projesine özgü alignment migration yalnız beklenen eski şemayı kabul eder.
 3. `scripts/verify-commercial-db.sql` betiğini çalıştırarak RLS kısıtlamalarının, rol yetkilerinin ve kota işlevlerinin aktif olduğunu doğrulayın (test işlemi otomatik rollback yapar).
 4. Bu talimat mevcut üretim projesinde şemayı yeniden oluşturma veya toplu sıfırlama izni değildir. Canlı ortamda yalnızca yeni eklenen migration dosyaları uygulanır.
 
 ## Doğrulama
 
-`npm run lint`, `npm test`, `npm run test:student` ve `npm run vercel-build` çalıştırın. Üretimde `npm run verify:live -- https://zekapark.vercel.app COMMIT_SHA vehhvsdkifwstbjhnhao` doğru sürümü ve veritabanını JSON yanıtıyla doğrular. Gerçek aile kaydı, e-posta doğrulaması, öğrenci girişi ve veli raporlarını ayrılmış test hesaplarıyla ayrıca kontrol edin.
+`npm run lint`, `npm test`, `npm run test:student` ve `npm run vercel-build` çalıştırın. Üretimde `npm run verify:live -- https://zekapark.vercel.app COMMIT_SHA vtcsoqohkiagbwatlabk` doğru sürümü ve veritabanını JSON yanıtıyla doğrular. Gerçek aile kaydı, e-posta doğrulaması, öğrenci girişi ve veli raporlarını ayrılmış test hesaplarıyla ayrıca kontrol edin.
 
 Veritabanı rollback testi: `tests/supabase-learning.integration.sql`. Ayrılmış fixture kimlikleriyle çalışır; rollback satırını kaldırmayın. Yapılandırma, bağlantı veya kaynak temizliği mevcut hesap/ilerleme verilerini değiştirmez.
+
+## 21 Ekim 2026 hesap projesi eşleştirmesi
+
+[Geçiş ve doğrulama kaydı](../docs/project-alignment-20261021.md). Eski hesapların şifreleri ve doğrulama durumları değiştirilmez. Eski `profiles.is_admin` alanı yeni yönetici yetkisi sayılmaz; sağlayıcı tarafından korunan `app_metadata.role` doğrulanır.
