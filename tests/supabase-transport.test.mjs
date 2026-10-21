@@ -94,11 +94,13 @@ test('a cancelled request never starts a relay call', async () => {
 });
 
 test('a stalled request is bounded and late responses cannot settle it again', async () => {
-  let finish; let signal; let calls = 0;
-  const transport = createSupabaseTransport({ ...config(request => { calls++; signal = request.signal; return new Promise(resolve => { finish = resolve; }); }), timeoutMs: 15 });
+  // A real fetch owns its Request until completion. Retain that same lifetime
+  // here; retaining only a dependent signal lets Node collect its Request.
+  let finish; let forwarded; let calls = 0;
+  const transport = createSupabaseTransport({ ...config(request => { calls++; forwarded = request; return new Promise(resolve => { finish = resolve; }); }), timeoutMs: 15 });
   const pending = transport(project + '/auth/v1/user');
   await assert.rejects(pending, RequestDeadlineError);
-  assert.equal(signal.aborted, true); assert.equal(calls, 1);
+  assert.equal(forwarded.signal.aborted, true); assert.equal(calls, 1);
   finish(Response.json({ id: 'late' })); await flush();
 });
 
