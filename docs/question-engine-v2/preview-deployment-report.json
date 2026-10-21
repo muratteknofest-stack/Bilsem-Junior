@@ -1,7 +1,7 @@
 {
   "checkedAt": "2026-10-21",
-  "runtimeCommit": "b1f30360d9fb278b0730150779315f6ad2661f38",
-  "deploymentId": "dpl_GoAYk9Be261J7XfY6dEYEbJ5ErJR",
+  "runtimeCommit": "997fd62b03560ebf45f5a19cc242c60f7c7e5ba7",
+  "deploymentId": "dpl_5NRJa2V4vfeNyLx3n2Z67iAJ8JKp",
   "deploymentState": "READY",
   "serviceCredentialScope": {
     "type": "Secret",
@@ -15,18 +15,18 @@
   "authenticatedUserLogin": "not verified",
   "productionRelease": "not performed",
   "authConnectivityBuildCheck": "passed: public configuration, password validation, Data API isolation and invalid-session rejection",
-  "previewUrl": "https://zekapark-i80xtpkqn-dyds-projects-c415ba7a.vercel.app/",
-  "deploymentUrl": "https://vercel.com/dyds-projects-c415ba7a/zekapark/GoAYk9Be261J7XfY6dEYEbJ5ErJR",
-  "buildDuration": "4m 49s",
+  "previewUrl": "https://zekapark-jl9qtnxkf-dyds-projects-c415ba7a.vercel.app/",
+  "deploymentUrl": "https://vercel.com/dyds-projects-c415ba7a/zekapark/5NRJa2V4vfeNyLx3n2Z67iAJ8JKp",
+  "buildDuration": "6m 59s",
   "startupTests": {
     "passed": 74,
     "failed": 0
   },
   "questionTests": {
-    "passed": 175,
+    "passed": 180,
     "failed": 0
   },
-  "typescript": "passed during this Vercel build",
+  "typescript": "passed locally and during this Vercel build",
   "publicAssetsChecked": 148,
   "assetCredentialScan": "passed: no recognized private credentials or source maps",
   "publicHomepage": "rendered in the authorized Vercel browser",
@@ -35,8 +35,8 @@
     "database": "ready",
     "version": "1.0.0",
     "projectRef": "vtcsoqohkiagbwatlabk",
-    "commit": "b1f30360d9fb278b0730150779315f6ad2661f38",
-    "timestamp": 1792597792717
+    "commit": "997fd62b03560ebf45f5a19cc242c60f7c7e5ba7",
+    "timestamp": 1792613723067
   },
   "apiHealthReadChecks": [
     "profiles",
@@ -44,8 +44,8 @@
     "platform_settings"
   ],
   "githubActions": {
-    "runId": 39624951642,
-    "commit": "972edf10e42e6a45085274408b06eb00c10735af",
+    "runId": 39667605638,
+    "commit": "997fd62b03560ebf45f5a19cc242c60f7c7e5ba7",
     "conclusion": "failure",
     "job": "verify",
     "runnerId": 0,
@@ -55,5 +55,37 @@
     "Authenticated real-user login acceptance",
     "GitHub Actions runner failure",
     "Independent AI and human expert pilot reviews"
-  ]
+  ],
+  "localRegression": {
+    "passed": 456,
+    "failed": 0
+  },
+  "mobile": {
+    "checks": 348,
+    "viewports": 3,
+    "webgl": true,
+    "contextFallback": true,
+    "pixelDifferenceRatio": 0,
+    "failures": []
+  },
+  "testAssemblyAudit": {
+    "sessions": 12,
+    "questions": 240,
+    "failures": [],
+    "typesPerTest": [
+      16,
+      17
+    ],
+    "reasoningFamiliesPerTest": [
+      16,
+      19
+    ]
+  },
+  "publication": {
+    "total": 100,
+    "review": 100,
+    "eligible": 0,
+    "published": 0,
+    "writes": 0
+  }
 }

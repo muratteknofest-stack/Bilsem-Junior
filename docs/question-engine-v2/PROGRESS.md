@@ -3,7 +3,7 @@
 Temel: main / 7592e423ce5e45f7b8d12680df2c520fffed98cd.
 Dal: codex/question-engine-v2-20261021. Mevcut kullanıcılar ve soru motorları korunur.
 
-Güncel önizleme: https://zekapark-i80xtpkqn-dyds-projects-c415ba7a.vercel.app/ .
+Güncel önizleme: https://zekapark-jl9qtnxkf-dyds-projects-c415ba7a.vercel.app/ .
 21 Ekim 2026: READY, gerçek sunucu yanıtı `status: ok, database: ready`.
 Gerçek hesapla giriş kabulü ve GitHub Actions kontrolleri henüz tamamlanmadı.
 
@@ -255,3 +255,18 @@ Mevcut yayın kapıları korunur; herhangi bir soruya tamamlanmamış inceleme/o
 atanmadı. Yeni toplu üretim yapılmadı, mevcut sorular silinmedi veya yayımlanmadı.
 Yayın engeli `publication-readiness-report.json`, algoritma kapsamı
 `test-assembly-report.json` içinde kayıtlıdır. Bu adım main'i değiştirmez.
+
+### Test algoritmasının dağıtılmış kabulü
+
+`997fd62b03560ebf45f5a19cc242c60f7c7e5ba7` commit'i Vercel'de
+`dpl_5NRJa2V4vfeNyLx3n2Z67iAJ8JKp` olarak 6 dk 59 sn sonunda READY oldu.
+Önizleme: https://zekapark-jl9qtnxkf-dyds-projects-c415ba7a.vercel.app/ .
+Gerçek Vercel günlüğünde 74 başlangıç/güvenlik ve 180 soru testi, TypeScript,
+Auth bağlantı kontrolü ve 148 varlık taraması geçti. Ana sayfa çizildi.
+Gerçek `/api/health` yanıtı `status: ok, database: ready` ve `997fd62` döndürdü.
+Bu sonuç gerçek hesapla parolalı giriş kabulü anlamına gelmez.
+
+Güncel GitHub Actions V2 çalışması `39667605638`, runner atanmadan
+(`runner_id: 0`, `steps: []`) başarısız. Ayrıntılı nedeni doğrulanamadı;
+CI başarılı sayılmıyor. PR taslak olarak kalır. Kullanıcıların kayıtları veya
+aktif soruların yayın durumları değiştirilmedi; main'e birleştirme yapılmadı.
