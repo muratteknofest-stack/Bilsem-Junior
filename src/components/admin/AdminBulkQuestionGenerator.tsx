@@ -295,7 +295,7 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
       const chosenDiff=gradeDifficulty(targetGrade,pickDifficulty(difficultyStrategy,i,totalToGenerate));
       const seed=saltSeedBase+i*173;let q:BaseQuestion;
       try{
-        q=generateDiverseQuestion({profile:'complete',type:chosenType,seed,targetGrade,difficulty:chosenDiff},[...history,...batchResult]);
+        q=generateDiverseQuestion({profile:'professional-v2',type:chosenType,seed,targetGrade,difficulty:chosenDiff},[...history,...batchResult]);
         q.id='bulk-'+crypto.randomUUID();q.createdAt=new Date().toISOString();q.isCustom=true;q.reviewPolicy='professional-v2';q.sourceBatch=sourceBatch;
         q.qualityReport=assessCandidate(q,{grade:targetGrade,difficulty:chosenDiff},[...history,...batchResult]);q.status='review';
       }catch(error){failures.push(`${i+1}. soru (${chosenType}, tohum ${seed}): ${error instanceof Error?error.message:'Üretim doğrulanamadı.'}`);setGenerationErrors([...failures]);await new Promise(r=>setTimeout(r,0));continue;}
@@ -496,7 +496,7 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
               Toplu Soru Oluşturma & Üretim Fabrikası
             </h2>
             <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-3xl leading-relaxed">
-              Tek tıklamayla 1-4. sınıflar için BİLSEM standartlarında onlarca veya yüzlerce özgün, deterministik
+              Tek tıklamayla 1-4. sınıflar için bağımsız doğrulanan, farklı mantık ailelerinden
               algoritmik soru oluşturun, doğrulayın, inceleyin ve doğrudan soru havuzuna ekleyin.
             </p>
           </div>

@@ -1,3 +1,5 @@
+import {assessCandidate} from '../multi-stage-quality';
+import {generateSymbolicQuestion} from '../symbolic-v2';
 import {chooseDiverseCandidate} from '../novelty';
 import type {QuestionVisualReference} from '../quality';
 import { COLORFUL_TYPES, generateColorfulQuestion } from '../colorful-engine';
@@ -46,7 +48,7 @@ export function generateQuestionByType(
 }
 
 export function generateQuestion(options: {
-  profile?: 'professional' | 'complete';
+  profile?: 'professional' | 'complete' | 'professional-v2';
   targetGrade?: SchoolGrade;
   category?: CognitiveCategory | 'mixed';
   difficulty?: DifficultyLevel;
@@ -57,6 +59,14 @@ export function generateQuestion(options: {
   if (!Number.isSafeInteger(seed) || seed < 1 || options.targetGrade !== undefined && !isSchoolGrade(options.targetGrade) || options.difficulty !== undefined && (!Number.isInteger(options.difficulty) || options.difficulty < 1 || options.difficulty > 6)) throw new Error('INVALID_GENERATION_INPUT: Sınıf, zorluk veya tohum geçersiz.');
   const rng = new SeededRNG(seed);
   const difficulty = options.targetGrade ? gradeDifficulty(options.targetGrade, options.difficulty ?? 3) : options.difficulty ?? 3;
+  if(options.profile==='professional-v2'){
+    if(!isSchoolGrade(options.targetGrade))throw Error('V2 üretim için sınıf gerekli.');
+    const pool=options.category&&options.category!=='mixed'?STUDENT_CATEGORY_TYPES[options.category]:ALL_TOPIC_TYPES;
+    const type=options.type||rng.pick(pool.filter(type=>topicAllowedForGrade(type,options.targetGrade)));
+    if(!pool.includes(type))throw Error('CATEGORY_MISMATCH');
+    if(type==='shape_equation'){const q=generateSymbolicQuestion(seed,difficulty,options.targetGrade);const report=assessCandidate(q,{grade:options.targetGrade,difficulty});if(report.stages.some(stage=>stage.status==='failed'))throw Error('Symbolic static quality failed: '+report.stages.flatMap(stage=>stage.reasons).join(' '));q.qualityReport=report;return q;}
+    return generateQuestion({...options,type,profile:'complete'});
+  }
   if(options.profile==='complete') {
     if(!isSchoolGrade(options.targetGrade))throw Error('Tam kapsamlı üretim için hedef sınıf gerekli.');
     const pool=options.category&&options.category!=='mixed'?STUDENT_CATEGORY_TYPES[options.category]:ALL_TOPIC_TYPES;

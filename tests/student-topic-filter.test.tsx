@@ -97,7 +97,7 @@ test('real authenticated learning API isolates published topics in all grades, c
     else if (u.pathname === '/rest/v1/learning_sessions') {
       if (request.method === 'POST') {
         const row = await request.json(); row.revision = 0; row.rewarded_xp = 0; rows.push(row); value = row;
-      } else if (u.searchParams.get('select') === 'questions,created_at') value = rows.filter(r => r.student_id === userId()).map(r => ({ questions: r.questions, created_at: r.created_at }));
+      } else if (u.searchParams.get('select') === 'questions,answers,created_at') value = rows.filter(r => r.student_id === userId()).map(r => ({ questions: r.questions, answers:r.answers, created_at: r.created_at }));
       else if (u.searchParams.has('id')) value = rows.find(r => `eq.${r.id}` === u.searchParams.get('id'));
       else value = rows.filter(r => r.student_id === userId() && r.mode === u.searchParams.get('mode')?.slice(3) && !r.finished_at);
     } else if (u.pathname === '/rest/v1/rpc/commit_learning_session') {

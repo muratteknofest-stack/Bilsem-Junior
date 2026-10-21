@@ -1,3 +1,4 @@
+import {recentAnswerEvidence} from '../server/learning-question-selection';
 import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';
 import type {BaseQuestion} from '../src/types';import {generateQuestion,generateDiverseQuestion} from '../src/features/questions/generators';
 import {inspectQuestionNovelty} from '../src/features/questions/novelty';import {assessCandidate} from '../src/features/questions/multi-stage-quality';import {isQuestionReadyForStudents} from '../src/features/questions/quality';
@@ -24,4 +25,17 @@ test('100 durable pilot questions have independent solutions and await real AI a
  const history:BaseQuestion[]=[];
  for(const q of pilot.questions){const s=solveQuestion(q);assert.equal(s.canSolve&&s.isMatch&&!s.ambiguityDetected,true,q.id);const report=assessCandidate(q,{grade:q.targetGrade!,difficulty:q.difficulty},history);assert.equal(report.stages.filter(s=>s.status==='failed').length,0,q.id);assert.equal(report.stages.filter(s=>s.status==='pending').length,2);assert.equal(q.status,'review');assert.equal(isQuestionReadyForStudents(q),false);history.push(q);}
  for(const grade of [1,2,3,4])assert.equal(history.filter(q=>q.targetGrade===grade).length,25);
+});
+
+test('adaptive evidence reads persisted index-keyed answers and excludes malformed dates',()=>{
+ const q=generateQuestion({type:'number_pattern',seed:9271,targetGrade:4,difficulty:5});
+ const valid={questions:[q],answers:{'0':{correct:true}},created_at:'2026-10-21T00:00:00Z'};
+ assert.equal(recentAnswerEvidence([valid])[0].correct,true);
+ assert.equal(recentAnswerEvidence([{...valid,created_at:'invalid'}]).length,0);
+});
+
+test('new admin HTTP endpoints reject anonymous callers before provider or database work',async()=>{
+ const {createApiApp}=await import('../server/api-app');const server=createApiApp().listen(0,'127.0.0.1');await new Promise<void>(resolve=>server.once('listening',resolve));const address=server.address();assert.ok(address&&typeof address==='object');
+ try{for(const [method,path] of [['GET','ai-capabilities'],['GET','professional-generation-runs'],['GET','question-review-queue'],['POST','ai-validate-question'],['POST','question-decoration'],['POST','questions/draft-batch'],['GET','question-visual-assets/00000000-0000-4000-8000-000000000001/content']]){const response:Response=await fetch(`http://127.0.0.1:${address.port}/api/admin/${path}`,{method,headers:{'Content-Type':'application/json'},...(method==='POST'?{body:'{}'}:{})});assert.equal(response.status,401,path);}}
+ finally{await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()));}
 });

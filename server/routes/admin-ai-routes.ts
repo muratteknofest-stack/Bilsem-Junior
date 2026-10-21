@@ -1,3 +1,8 @@
+import {getServiceClient} from '../supabase-admin';
+import {assessCandidate} from '../../src/features/questions/multi-stage-quality';
+import {reviewDesignedQuestion} from '../ai-question-pipeline-v2';
+import type {AiUsageCall} from '../../src/features/questions/ai-contracts';
+import {generateQuestionDecoration} from '../question-decoration';
 import {aiRoleModelsSchema} from '../../src/features/questions/ai-contracts';
 import {aiCapabilities} from '../ai-prompts/role-config';
 import {runDesignedQuestionPipeline} from '../ai-question-pipeline-v2';
@@ -38,6 +43,7 @@ const aiQuestionGenerateSchema = z.object({
 export const aiQuestionReviewSchema = z.object({
   questionId: z.string().min(1).max(200),
   action: z.enum(['approve', 'reject', 'regenerate']),
+  reviewMode:z.enum(['individual','bulk']).optional().default('individual'),
   expectedRevision: z.number().int().min(0),
 }).strict();
 
@@ -137,8 +143,9 @@ adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, adminAiLimi
       if (!isQuestionReadyForStudents(currentData) || report.errors.length) {
         return res.status(422).json({ error: 'Soru doğrulanamadı; inceleme gerekli.', details: [...report.errors, ...report.reviewRequired] });
       }
-      const reviewed = prepareEditorialQuestion(currentData, 'published', revision, true, req.authUser.uid,
+      const reviewed = prepareEditorialQuestion({...currentData,editorialReviewMode:parsed.data.reviewMode}, 'published', revision, true, req.authUser.uid,
         comparison.filter(q => q.id !== currentData.id));
+      if(parsed.data.reviewMode==='bulk'&&reviewed.releaseAuthorization){reviewed.releaseAuthorization.individualHumanReview=false;delete reviewed.releaseAuthorization.humanReviewedAt;}
       const saved = await saveQuestionRevision(reviewed, revision);
       return res.json({ success: true, question: saved, message: 'Soru onaylandı ve yayınlandı.' });
     }
@@ -172,6 +179,37 @@ adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, adminAiLimi
     logServerFailure('Question review failed', err);
     return res.status(500).json({ error: 'İşlem başarısız.' });
   }
+});
+
+const existingReviewSchema=z.object({questionId:z.string().min(1).max(200),expectedRevision:z.number().int().nonnegative(),roleModels:aiRoleModelsSchema}).strict();
+adminAiRoutes.get('/admin/professional-generation-runs',requireSupabaseAuth,adminAiLimiter,requireProfileRole('admin'),async(_req,res)=>{
+ try{const {data,error}=await getServiceClient().from('professional_generation_runs').select('id,status,created_at,question_id,result').order('created_at',{ascending:false}).limit(30);if(error)throw error;return res.json({runs:data});}catch(error){logServerFailure('Generation history load failed',error);return res.status(503).json({error:'Üretim kayıtları yüklenemedi.'});}
+});
+adminAiRoutes.get('/admin/question-review-queue',requireSupabaseAuth,adminAiLimiter,requireProfileRole('admin'),async(_req,res)=>{
+ try{const {data,error}=await getServiceClient().from('questions').select('data').in('status',['draft','review']).order('updated_at',{ascending:false}).limit(100);if(error)throw error;return res.json({questions:data.map(row=>row.data)});}catch(error){logServerFailure('Question queue load failed',error);return res.status(503).json({error:'İnceleme kuyruğu yüklenemedi.'});}
+});
+adminAiRoutes.post('/admin/ai-validate-question',requireSupabaseAuth,adminAiLimiter,requireProfileRole('admin'),sharedRateLimit('admin-ai',60,600),async(req:AuthenticatedRequest,res)=>{
+ const parsed=existingReviewSchema.safeParse(req.body);if(!parsed.success||!req.authUser)return res.status(400).json({error:'Geçersiz denetim isteği.'});
+ try{
+  const {data,error}=await getServiceClient().from('questions').select('data').eq('id',parsed.data.questionId).single();if(error||!data)return res.status(404).json({error:'Soru bulunamadı.'});
+  const q=data.data as BaseQuestion;assertQuestionRevision(q,parsed.data.expectedRevision);if(q.reviewPolicy!=='professional-v2'||!['draft','review'].includes(q.status||'')||!q.targetGrade)return res.status(422).json({error:'Yalnız yeni inceleme taslakları denetlenebilir.'});
+  const existing=(await loadQualityComparisonPool(q.type)).filter(other=>other.id!==q.id),usage:AiUsageCall[]=[],start=Date.now();
+  let report=assessCandidate(q,{grade:q.targetGrade,age:q.targetAge,difficulty:q.difficulty},existing),failure:string[]=[];
+  try{report=await reviewDesignedQuestion(q,parsed.data.roleModels,existing,undefined,usage);}catch{failure=['AI_REVIEW_UNAVAILABLE: Bağımsız denetim tamamlanmadı.'];}
+  q.qualityReport=report;q.status='review';q.aiMeta={generationId:q.id,model:parsed.data.roleModels.designer.model,promptVersion:'v2-constrained-roles-1',qualityScore:report.eligible?report.score:0,solverVerified:report.eligible,solverAnswer:report.eligible?q.correctOptionId:undefined,generatedAt:new Date().toISOString(),durationMs:Date.now()-start,roleModels:parsed.data.roleModels,usage};
+  const saved=await saveQuestionRevision(prepareEditorialQuestion(q,'review',parsed.data.expectedRevision,false,req.authUser.uid),parsed.data.expectedRevision);
+  return res.json({success:report.eligible,question:saved,qualityReport:report,qualityScore:report.eligible?report.score:0,solverVerified:report.eligible,usage,roleModels:parsed.data.roleModels,validationErrors:failure,rejectionReasons:report.stages.filter(s=>s.status!=='passed').flatMap(s=>s.reasons.length?s.reasons:[s.label+': bekliyor.'])});
+ }catch(error){if(error instanceof EditorialConflictError)return res.status(409).json({error:error.message});logServerFailure('Question validation failed',error);return res.status(503).json({error:'Denetim kaydedilemedi; yayın yapılmadı.'});}
+});
+const decorationSchema=z.object({questionId:z.string().min(1).max(200),expectedRevision:z.number().int().nonnegative()}).strict();
+adminAiRoutes.post('/admin/question-decoration',requireSupabaseAuth,adminAiLimiter,requireProfileRole('admin'),sharedRateLimit('admin-image',10,600),async(req:AuthenticatedRequest,res)=>{
+ const parsed=decorationSchema.safeParse(req.body);if(!parsed.success||!req.authUser)return res.status(400).json({error:'Geçersiz görsel isteği.'});
+ if(!aiCapabilities().imageGenerationConfigured)return res.status(503).json({error:'Görsel sağlayıcısının sunucu ayarları eksik.'});
+ try{const {data,error}=await getServiceClient().from('questions').select('data').eq('id',parsed.data.questionId).single();if(error||!data)return res.status(404).json({error:'Soru bulunamadı.'});const q=data.data as BaseQuestion;assertQuestionRevision(q,parsed.data.expectedRevision);return res.json(await generateQuestionDecoration(q,req.authUser.uid));}catch(error){if(error instanceof EditorialConflictError)return res.status(409).json({error:error.message});logServerFailure('Decoration generation failed',error);return res.status(503).json({error:'Görsel üretimi veya kaydı tamamlanamadı. Yayın yapılmadı.'});}
+});
+adminAiRoutes.get('/admin/question-visual-assets/:id/content',requireSupabaseAuth,adminAiLimiter,requireProfileRole('admin'),async(req,res)=>{
+ if(!z.uuid().safeParse(req.params.id).success)return res.status(400).end();
+ try{const db=getServiceClient(),{data,error}=await db.from('question_visual_assets').select('bucket,object_path,content_type').eq('id',req.params.id).single();if(error||!data)return res.status(404).end();const file=await db.storage.from(data.bucket).download(data.object_path);if(file.error)throw file.error;res.setHeader('Cache-Control','private, no-store');return res.type(data.content_type).send(Buffer.from(await file.data.arrayBuffer()));}catch(error){logServerFailure('Private asset load failed',error);return res.status(503).end();}
 });
 
 export default adminAiRoutes;

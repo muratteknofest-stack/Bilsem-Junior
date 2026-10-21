@@ -12,20 +12,21 @@ import { getServiceClient } from './supabase-admin';
 import { LearningError } from './learning-model';
 import { generateProfessionalQuestion as generateLegacyProfessional } from '../src/features/questions/professional-engine-v7';
 import { isQuestionReadyForStudents } from '../src/features/questions/quality';
-import { LEARNING_QUESTION_FORMAT, needsReasoningFormat } from '../src/features/student/learning-question-format';
+import { LEARNING_QUESTION_FORMAT, supportsReasoningFormat, needsProfessionalV2Format, needsReasoningFormat } from '../src/features/student/learning-question-format';
 
 export const RECENT_SESSION_LIMIT = 30;
 export const RECENT_HISTORY_DAYS = 30;
 type RecentSession = { questions: BaseQuestion[]; answers?: Record<string,{correct?:boolean}>; created_at: string };
 
 export function assertLearningQuestionFormat(questions:BaseQuestion[],format:unknown) {
-  if(format!==LEARNING_QUESTION_FORMAT&&questions.some(needsReasoningFormat))throw new LearningError('Bu çalışmadaki yeni soru türleri için uygulamayı güncellemelisin. Önceki cevapların korunuyor.',426);
+  if(questions.some(q=>needsProfessionalV2Format(q)?format!==LEARNING_QUESTION_FORMAT:needsReasoningFormat(q)&&!supportsReasoningFormat(format)))throw new LearningError('Bu çalışmadaki yeni soru türleri için uygulamayı güncellemelisin. Önceki cevapların korunuyor.',426);
 }
 
 export function currentReasoningCandidate(q:BaseQuestion,grade:SchoolGrade,modern:boolean):boolean {
   if(!professionalGradeTypes(grade).includes(q.type))return false;
   if(!modern)return !needsReasoningFormat(q);
   const mode=(q.visualConfig as Record<string,unknown>).displayMode;
+  if(mode==='symbolic_v2')return modern&&q.authoring?.engine==='symbolic-v2';
   return mode==='verified_board'?['verified-8','verified-4'].includes(q.authoring?.engine||''):
     mode==='colorful_board'?q.authoring?.engine==='colorful-3':mode==='workshop_board'&&q.authoring?.engine==='workshop-3';
 }
@@ -49,7 +50,7 @@ export function recentQuestionExposure(sessions: RecentSession[], includeReasoni
 }
 
 export function recentAnswerEvidence(sessions:RecentSession[]):AnswerEvidence[]{
- return sessions.filter(s=>Number.isFinite(Date.parse(s.created_at))).sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at)).flatMap(s=>Array.isArray(s.questions)?s.questions.flatMap(q=>{const correct=s.answers?.[q.id]?.correct;return q.targetGrade&&typeof correct==='boolean'?[{grade:q.targetGrade,difficulty:q.difficulty,correct}]:[];}):[]);
+ return sessions.filter(s=>Number.isFinite(Date.parse(s.created_at))).sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at)).flatMap(s=>Array.isArray(s.questions)?s.questions.flatMap((q,index)=>{const correct=(s.answers?.[String(index)]||s.answers?.[q.id])?.correct;return q.targetGrade&&typeof correct==='boolean'?[{grade:q.targetGrade,difficulty:q.difficulty,correct}]:[];}):[]);
 }
 export async function loadRecentLearningContext(studentId:string,now=Date.now()){
  const {data,error}=await getServiceClient().from('learning_sessions').select('questions,answers,created_at').eq('student_id',studentId).gte('created_at',new Date(now-RECENT_HISTORY_DAYS*86400000).toISOString()).order('created_at',{ascending:false}).order('id',{ascending:false}).limit(RECENT_SESSION_LIMIT);

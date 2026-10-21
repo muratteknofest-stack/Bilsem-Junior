@@ -80,3 +80,7 @@
 .zp-focus .zp-answer-option[data-feedback=correct],.zp-focus[data-answer-feedback=correct] .zp-answer-option[aria-pressed=true]{border-color:#087b63;background:#effaf5;box-shadow:0 3px 0 #a9d7c5}
 .zp-focus .zp-answer-option[data-feedback=incorrect],.zp-focus[data-answer-feedback=incorrect] .zp-answer-option[aria-pressed=true]{border-color:#c18a23;background:#fff8e9;box-shadow:0 3px 0 #e5cea2}
 .zp-focus-footer{border-color:#d2dde5;background:#fffefb;border-radius:14px}.zp-focus-footer progress{accent-color:#2456d8}.zp-focus-footer progress::-webkit-progress-value{background:#2456d8}
+
+/* Unscaled controls retain a 44px touch target above fitted geometry. */
+.zp-spatial-mode{position:absolute;left:4px;top:4px;min-width:44px;min-height:44px;border:1px solid #d9deee;border-radius:12px;padding:8px;background:#fff;color:#3730a3;font-size:12px;font-weight:700}
+.zp-spatial-notice{position:absolute;bottom:4px;left:4px;max-width:80%;background:#fffE;border-radius:8px;padding:3px 5px;font-size:11px;color:#3730a3}

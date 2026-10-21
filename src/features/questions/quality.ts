@@ -1,3 +1,4 @@
+import {generateSymbolicQuestion} from './symbolic-v2';
 import { COLORFUL_TYPES, generateColorfulQuestion } from './colorful-engine';
 import { generateWorkshopQuestion as generateWorkshopV2 } from './workshop-engine-v2';
 import { inspectEducation, isSchoolGrade, hasCompleteQualityReport } from './quality-policy';
@@ -73,6 +74,10 @@ export function auditQuestion(value: unknown, existing: QuestionVisualReference[
     if (!Number.isFinite(q.estimatedSeconds) || q.estimatedSeconds < 10 || q.estimatedSeconds > 600) result.errors.push('Tahmini süre 10–600 saniye arasında olmalı.');
     if (!q.visualConfig || typeof cfg?.displayMode !== 'string') result.errors.push('Görsel gösterim yapılandırması eksik.');
     if (!Array.isArray(q.skills) || q.skills.length === 0) result.warnings.push('Ölçülen beceriyi belirtin.');
+    if(cfg?.displayMode==='symbolic_v2'){
+      if(q.authoring?.engine!=='symbolic-v2'||!isSchoolGrade(q.targetGrade))result.errors.push('Sembolik motor sürümü veya sınıfı tanınmıyor.');
+      else {const reference=generateSymbolicQuestion(q.seed,q.difficulty,q.targetGrade);for(const field of ['prompt','explanation','visualConfig','options','authoring','category'] as const)if(fingerprint(q[field])!==fingerprint(reference[field]))result.reviewRequired.push('Sembolik kanıt şablonu değişmiş: '+field);}
+    }
     if(cfg?.displayMode==='curriculum_board') {
       if(q.authoring?.engine!==COMPLETE_ENGINE||!isSchoolGrade(q.targetGrade))result.errors.push('Müfredat sürümü veya hedef sınıf tanınmıyor.');
       else {
@@ -148,7 +153,7 @@ export function auditQuestion(value: unknown, existing: QuestionVisualReference[
       result.reviewRequired.push(...education.audience, ...education.difficulty, ...education.visual);
     }
     if (q.targetAge !== undefined && !grades.length) result.reviewRequired.push('Yaş denetimi için hedef sınıf gerekli.');
-    if(q.reviewPolicy==='professional-v2'&&!hasCompleteQualityReport(q))result.reviewRequired.push('PROFESSIONAL_REVIEW_PENDING: Dokuz aşamalı rapor eksik veya içerik değişmiş.');
+    if((q.reviewPolicy==='professional-v2'||q.authoring?.engine==='symbolic-v2')&&!hasCompleteQualityReport(q))result.reviewRequired.push('PROFESSIONAL_REVIEW_PENDING: Dokuz aşamalı rapor eksik veya içerik değişmiş.');
     if(q.context&&!hasCompleteQualityReport(q))result.reviewRequired.push('CONTEXT_REVIEW: Soru bağlamının bağımsız incelemesi tamamlanmadı.');
     if (q.aiMeta?.promptVersion === '3.0-profile-gated' && !hasCompleteQualityReport(q)) result.reviewRequired.push('Çok aşamalı kalite raporu eksik, başarısız veya içerik değişmiş.');
     // --- AI-specific validations ---

@@ -1,0 +1,5 @@
+import React from 'react';import type {AiUsageCall} from '../../features/questions/ai-contracts';
+export function AiUsagePanel({usage=[]}:{usage?:AiUsageCall[]}){
+ if(!usage.length)return <p className="text-xs text-slate-400">Sağlayıcı kullanım bilgisi henüz yok.</p>;
+ return <div className="overflow-x-auto rounded-xl border border-slate-700 p-3"><table className="w-full text-left text-xs text-slate-300"><caption className="mb-2 text-left font-bold">Gerçek API kullanımı · yapılandırılmış ücret tahmini</caption><thead><tr>{['Görev / model','Girdi','Çıktı','Süre','Tahmini USD'].map(t=><th className="p-1" key={t}>{t}</th>)}</tr></thead><tbody>{usage.map((u,i)=><tr key={i}><td className="p-1 break-all">{u.role} · {u.provider}/{u.model}</td><td>{u.inputTokens??'Bilinmiyor'}</td><td>{u.outputTokens??'Bilinmiyor'}</td><td>{(u.durationMs/1000).toFixed(1)} sn</td><td>{u.estimatedCostUsd===null?'Fiyat tanımlı değil':u.estimatedCostUsd.toFixed(6)}</td></tr>)}</tbody></table><p className="mt-2 text-xs text-slate-400">Tahmin, sunucuda tanımlanan token fiyatlarını kullanır; sağlayıcı faturası değildir. Eksik kullanım sıfır sayılmaz.</p></div>;
+}

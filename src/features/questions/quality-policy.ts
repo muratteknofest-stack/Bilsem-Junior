@@ -80,6 +80,12 @@ export function inspectEducation(q: BaseQuestion, grade: SchoolGrade, age?: numb
     if(nums.some(n=>!Number.isSafeInteger(n)||n<0)||metrics.maxNumber>p.maxNumber)difficulty.push('NUMBER_LOAD: Müfredat sayıları sınıf sınırını aşıyor.');
     if(c.letters&&c.letters.length>p.maxSymbols)difficulty.push('WORKING_MEMORY: Harf sayısı sınıf sınırını aşıyor.');
   }
+  if((q.visualConfig as Record<string,unknown>).displayMode==='symbolic_v2'){
+    const board=q.visualConfig as unknown as import('./symbolic-v2').SymbolicBoard;
+    metrics.symbolCount=board.symbols.length;metrics.itemCount=board.equations.reduce((sum,row)=>sum+row.slice(0,-1).filter(Boolean).length,0)+board.query.filter(Boolean).length;
+    metrics.maxNumber=Math.max(...board.equations.map(row=>row.at(-1)!),...q.options.map(o=>Number((o.visualData as {textNumber:number}).textNumber)));
+    if(metrics.maxNumber>p.maxNumber)difficulty.push('NUMBER_LOAD: Sembolik ilişkiler sınıf sınırını aşıyor.');
+  }
   if (age !== undefined && (!Number.isInteger(age) || age < p.ages[0] || age > p.ages[1])) audience.push('AGE_PROFILE: Yaş seçilen sınıfın içerik profili dışında.');
   if (q.targetGrade !== undefined && q.targetGrade !== grade) audience.push('GRADE_MISMATCH: Soru sınıfı istekle uyuşmuyor.');
   if (q.ageGroup !== 'all' && q.ageGroup !== (grade <= 2 ? '1-2' : '3-4')) audience.push('AGE_GROUP: Sınıf grubu etiketi uyuşmuyor.');

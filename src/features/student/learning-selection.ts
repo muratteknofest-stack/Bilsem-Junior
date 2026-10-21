@@ -30,7 +30,7 @@ export const learningStartSchema = z.object({
   expectedGrade: z.number().int().min(1).max(4).optional(),
   questionCount: z.number().int().min(1).max(MAX_LEARNING_QUESTIONS).optional(),
 }).strict().refine(value => !value.mixCategories || (value.mode === 'adaptive' && value.category === 'mixed' && value.topic === 'mixed' && value.locale !== 'en'), { message: 'Karışık keşif yalnız bütün alanlarla başlatılabilir.' });
-export interface LearningSelection { questionFormat?: 'reasoning-8'; mixCategories?: boolean; topic?: LearningTopic; locale?: 'tr'|'en'; grade: SchoolGrade; difficulty: LearningDifficulty; category: string; exam: string; count: number; bankVersion: string; }
+export interface LearningSelection { questionFormat?: 'reasoning-8'|'professional-v2'; mixCategories?: boolean; topic?: LearningTopic; locale?: 'tr'|'en'; grade: SchoolGrade; difficulty: LearningDifficulty; category: string; exam: string; count: number; bankVersion: string; }
 export function difficultyChoices(grade: SchoolGrade) {
   const max = EDUCATION_PROFILES[grade].maxDifficulty;
   return Array.from({ length: max }, (_, i) => ({ value: (i + 1) as DifficultyLevel, label: `${i + 1}. seviye · ${i === 0 ? 'Kolay' : i === max - 1 ? 'Zor' : 'Orta'}` }));
