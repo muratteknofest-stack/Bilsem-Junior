@@ -148,3 +148,14 @@ Dağıtılmış kabul hâlâ engelli: Vercel MCP koruma erişiminde 403
 sunucu yapılandırması ve bağlantıya proje/takım erişimi gerekir. Mevcut üretim
 anahtarı önizlemelerin tamamına açılmadı; hesaplar, şifreler veya giriş koruması
 değiştirilmedi. Yeni URL aşağıdaki PR'da takip edilir.
+
+Son dağıtım denemesi: Vercel `POST /v13/deployments`, doğru
+`team_OCPzh4sUtUTDyhohl2KeH6C0` kapsamında **403 forbidden** döndürdü.
+Sunucunun bildirdiği çözüm: bağlı hesaba `dyds-projects-c415ba7a` takım
+erişiminin kullanıcı tarafından verilmesi (`grant_team_access`); yalnız SSO
+girişi bu yetkiyi eklemez. CLI kimlik bilgisi de yok. Yeni Auth düzeltmesi
+GitHub dalında `2119dd9fc599e17779cee3c1a873591fa4acfd9d` ile kayıtlıdır;
+dağıtıldığı veya gerçek kullanıcıyla girişin başarılı olduğu iddia edilmez.
+Değişen transport dosyalarında TypeScript strict kontrolü geçti. Ana canlı
+health kontrolü mevcut `7592e42` sürümünü, `database: ready` durumunu döndürdü;
+Auth settings 200 ve boş parola isteği 400/validation_failed döndü.
