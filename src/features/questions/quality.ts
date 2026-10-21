@@ -148,6 +148,8 @@ export function auditQuestion(value: unknown, existing: QuestionVisualReference[
       result.reviewRequired.push(...education.audience, ...education.difficulty, ...education.visual);
     }
     if (q.targetAge !== undefined && !grades.length) result.reviewRequired.push('Yaş denetimi için hedef sınıf gerekli.');
+    if(q.reviewPolicy==='professional-v2'&&!hasCompleteQualityReport(q))result.reviewRequired.push('PROFESSIONAL_REVIEW_PENDING: Dokuz aşamalı rapor eksik veya içerik değişmiş.');
+    if(q.context&&!hasCompleteQualityReport(q))result.reviewRequired.push('CONTEXT_REVIEW: Soru bağlamının bağımsız incelemesi tamamlanmadı.');
     if (q.aiMeta?.promptVersion === '3.0-profile-gated' && !hasCompleteQualityReport(q)) result.reviewRequired.push('Çok aşamalı kalite raporu eksik, başarısız veya içerik değişmiş.');
     // --- AI-specific validations ---
     if (q.authoring?.engine?.startsWith('ai-')) {
@@ -165,7 +167,7 @@ export function auditQuestion(value: unknown, existing: QuestionVisualReference[
       }
       if (q.seed === 0) result.warnings.push('AI soruları deterministik değildir; seed 0 olarak işaretlenmiştir.');
     }
-    if (q.aiMeta && (!['2.0-proof-gated', '3.0-profile-gated'].includes(q.aiMeta.promptVersion) || q.aiMeta.solverVerified !== true || q.aiMeta.solverAnswer !== q.correctOptionId)) {
+    if (q.aiMeta && (!['2.0-proof-gated', '3.0-profile-gated','v2-constrained-roles-1'].includes(q.aiMeta.promptVersion) || q.aiMeta.solverVerified !== true || q.aiMeta.solverAnswer !== q.correctOptionId)) {
       result.reviewRequired.push('AI kör çözüm ve editör incelemesi tamamlanmamış veya eski sürüm.');
     }
     if (cfg?.displayMode === 'verified_board') {

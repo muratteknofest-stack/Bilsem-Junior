@@ -34,6 +34,7 @@ export interface QualityStage {
   id: QualityStageId; label: string; weight: number; status: 'passed' | 'failed' | 'pending'; reasons: string[];
 }
 export interface QuestionQualityReport {
+  similarity?: import('./novelty').QuestionNovelty;
   policyVersion: string; contentKey: string; evaluatedAt: string; score: number; eligible: boolean;
   target: { grade: SchoolGrade; age?: number; difficulty: number };
   metrics: { maxNumber: number; itemCount: number; symbolCount: number; peopleCount: number; gridSize: number; promptWords: number; comparedQuestions: number };
@@ -45,7 +46,7 @@ export interface GenerationAttempt {
 }
 export function assessmentContentKey(q: BaseQuestion): string {
   return generateVisualFingerprint({ type: q.type, category: q.category, seed: q.seed, version: q.version, engine: q.authoring?.engine,
-    prompt: q.prompt, secondaryPrompt: q.secondaryPrompt, board: q.visualConfig, options: q.options, answer: q.correctOptionId,
+    prompt: q.prompt, secondaryPrompt: q.secondaryPrompt, context:q.context, reviewPolicy:q.reviewPolicy, board: q.visualConfig, options: q.options, answer: q.correctOptionId,
     explanation: q.explanation, notes: q.authoring?.distractorNotes, grade: q.targetGrade, grades: q.targetGrades,
     age: q.targetAge, ageGroup: q.ageGroup, difficulty: q.difficulty, seconds: q.estimatedSeconds });
 }
@@ -82,6 +83,7 @@ export function inspectEducation(q: BaseQuestion, grade: SchoolGrade, age?: numb
   if (age !== undefined && (!Number.isInteger(age) || age < p.ages[0] || age > p.ages[1])) audience.push('AGE_PROFILE: Yaş seçilen sınıfın içerik profili dışında.');
   if (q.targetGrade !== undefined && q.targetGrade !== grade) audience.push('GRADE_MISMATCH: Soru sınıfı istekle uyuşmuyor.');
   if (q.ageGroup !== 'all' && q.ageGroup !== (grade <= 2 ? '1-2' : '3-4')) audience.push('AGE_GROUP: Sınıf grubu etiketi uyuşmuyor.');
+  if(q.context)metrics.promptWords += (q.context.title+' '+q.context.story).trim().split(/\s+/u).length;
   if (metrics.promptWords > p.maxWords) audience.push('READING_LOAD: Yönergenin okuma yükü fazla.');
   if (grade === 1 && (b.kind === 'machine' || b.kind === 'matrix')) audience.push('PREREQUISITE: Bu çok adımlı kural 1. sınıf profilinde desteklenmiyor.');
   if (q.difficulty > p.maxDifficulty) difficulty.push('DIFFICULTY_LIMIT: Seviye sınıf sınırının üzerinde.');

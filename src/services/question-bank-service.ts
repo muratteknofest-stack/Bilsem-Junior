@@ -1,3 +1,4 @@
+import {saveDraftChunk,BulkQuestionSaveError} from './durable-question-batch';
 import { isQuestionReadyForStudents, assertQuestionReadyForStudents } from '../features/questions/quality';
 import {
   BaseQuestion,
@@ -308,41 +309,12 @@ class QuestionBankService {
     return newQuestion;
   }
 
-  public addBulkQuestions(newQuestions: BaseQuestion[]): number {
-    if (!newQuestions || newQuestions.length === 0) return 0;
-    
-    const preparedQuestions: BaseQuestion[] = newQuestions.map((q) => ({
-      ...q,
-      status: 'draft',
-      isCustom: true,
-      createdAt: q.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }));
-
-    // Prepend all new questions locally
-    this.questions.unshift(...preparedQuestions);
-    this.save();
-    this.notify();
-
-    // Live Batch Sync to Supabase
-    if (typeof window !== 'undefined') {
-      try {
-        for (let i = 0; i < preparedQuestions.length; i += 400) {
-          const chunk = preparedQuestions.slice(i, i + 400);
-          const batch = writeBatch(db);
-          chunk.forEach((q) => {
-            batch.set(doc(db, 'questions', q.id), q);
-          });
-          batch.commit().catch((err) => {
-            console.warn('Live Supabase batch sync error (addBulkQuestions):', err);
-          });
-        }
-      } catch (e) {
-        console.warn('Supabase batch error:', e);
-      }
-    }
-
-    return preparedQuestions.length;
+  public async addBulkQuestions(newQuestions:BaseQuestion[]):Promise<number>{
+    let savedCount=0;const failed:BaseQuestion[]=[];
+    for(let start=0;start<newQuestions.length;start+=10){const chunk=newQuestions.slice(start,start+10);try{
+      const saved=await saveDraftChunk(chunk);for(const q of saved){const index=this.questions.findIndex(old=>old.id===q.id);if(index<0)this.questions.unshift(q);else this.questions[index]=q;}savedCount+=saved.length;this.save();this.notify();
+    }catch{failed.push(...chunk);}}
+    if(failed.length)throw new BulkQuestionSaveError(savedCount,failed);return savedCount;
   }
 
   public updateQuestion(id: string, updates: Partial<BaseQuestion>): BaseQuestion | null {

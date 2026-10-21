@@ -1,3 +1,4 @@
+import {type AnswerEvidence} from '../src/features/questions/adaptive-difficulty';
 import { randomInt } from 'node:crypto';
 import { generateQuestion, STUDENT_CATEGORY_TYPES } from '../src/features/questions/generators';
 import { professionalGradeTypes } from '../src/features/questions/reasoning-profile';
@@ -15,7 +16,7 @@ import { LEARNING_QUESTION_FORMAT, needsReasoningFormat } from '../src/features/
 
 export const RECENT_SESSION_LIMIT = 30;
 export const RECENT_HISTORY_DAYS = 30;
-type RecentSession = { questions: BaseQuestion[]; created_at: string };
+type RecentSession = { questions: BaseQuestion[]; answers?: Record<string,{correct?:boolean}>; created_at: string };
 
 export function assertLearningQuestionFormat(questions:BaseQuestion[],format:unknown) {
   if(format!==LEARNING_QUESTION_FORMAT&&questions.some(needsReasoningFormat))throw new LearningError('Bu çalışmadaki yeni soru türleri için uygulamayı güncellemelisin. Önceki cevapların korunuyor.',426);
@@ -47,13 +48,15 @@ export function recentQuestionExposure(sessions: RecentSession[], includeReasoni
   return exposure;
 }
 
-export async function loadRecentQuestionExposure(studentId: string, now = Date.now()) {
-  const { data, error } = await getServiceClient().from('learning_sessions').select('questions,created_at')
-    .eq('student_id', studentId).gte('created_at', new Date(now - RECENT_HISTORY_DAYS * 86400_000).toISOString())
-    .order('created_at', { ascending: false }).order('id', { ascending: false }).limit(RECENT_SESSION_LIMIT);
-  if (error || !data) throw new LearningError('Çalışma geçmişin okunamadı. Soruları hazırlamak için yeniden dene.', 503);
-  return recentQuestionExposure(data as RecentSession[],true);
+export function recentAnswerEvidence(sessions:RecentSession[]):AnswerEvidence[]{
+ return sessions.filter(s=>Number.isFinite(Date.parse(s.created_at))).sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at)).flatMap(s=>Array.isArray(s.questions)?s.questions.flatMap(q=>{const correct=s.answers?.[q.id]?.correct;return q.targetGrade&&typeof correct==='boolean'?[{grade:q.targetGrade,difficulty:q.difficulty,correct}]:[];}):[]);
 }
+export async function loadRecentLearningContext(studentId:string,now=Date.now()){
+ const {data,error}=await getServiceClient().from('learning_sessions').select('questions,answers,created_at').eq('student_id',studentId).gte('created_at',new Date(now-RECENT_HISTORY_DAYS*86400000).toISOString()).order('created_at',{ascending:false}).order('id',{ascending:false}).limit(RECENT_SESSION_LIMIT);
+ if(error||!data)throw new LearningError('Çalışma geçmişin okunamadı. Yeniden dene.',503);
+ const sessions=data as RecentSession[];return {exposure:recentQuestionExposure(sessions,true),answers:recentAnswerEvidence(sessions)};
+}
+export async function loadRecentQuestionExposure(studentId:string,now=Date.now()){return (await loadRecentLearningContext(studentId,now)).exposure;}
 
 function shuffle<T>(items: T[], randomIndex: (max: number) => number) {
   const shuffled = [...items];

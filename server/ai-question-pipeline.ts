@@ -35,7 +35,9 @@ export interface PipelineResult {
   validationErrors: string[];
   validationWarnings: string[];
   rejectionReasons: string[];
-  plannerOutput?: any;
+  plannerOutput?: Record<string,unknown>;
+  usage?: import('../src/features/questions/ai-contracts').AiUsageCall[];
+  roleModels?: import('../src/features/questions/ai-contracts').AiRoleModels;
   rawGeneratorResponse?: string;
   rawSolverResponse?: string;
   durationMs: number;

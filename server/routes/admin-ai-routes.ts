@@ -1,3 +1,7 @@
+import {aiRoleModelsSchema} from '../../src/features/questions/ai-contracts';
+import {aiCapabilities} from '../ai-prompts/role-config';
+import {runDesignedQuestionPipeline} from '../ai-question-pipeline-v2';
+import {claimGeneration,commitGeneration} from '../professional-generation-store';
 import { logServerFailure } from '../safe-log';
 import { sharedRateLimit } from '../shared-rate-limit';
 import { loadQualityComparisonPool } from '../question-quality-store';
@@ -17,6 +21,7 @@ import { EditorialValidationError, prepareEditorialQuestion } from '../editorial
 import { archiveQuestionRevision, assertQuestionRevision, EditorialConflictError, persistGeneratedQuestionResult, saveQuestionRevision } from '../editorial-store';
 
 const adminAiRoutes = Router();
+adminAiRoutes.get('/admin/ai-capabilities',requireSupabaseAuth,adminAiLimiter,requireProfileRole('admin'),(_req,res)=>res.json(aiCapabilities()));
 
 const aiQuestionGenerateSchema = z.object({
   category: z.string().max(80).optional(),
@@ -27,6 +32,7 @@ const aiQuestionGenerateSchema = z.object({
   difficulty: z.number().int().min(1).max(6),
   minQualityScore: z.number().int().min(0).max(100).optional().default(85),
   aiModel: z.string().max(100).optional(),
+  generationMode:z.enum(['legacy','designed']).optional().default('legacy'),roleModels:aiRoleModelsSchema.optional(),requestId:z.uuid().optional(),
 }).strict();
 
 export const aiQuestionReviewSchema = z.object({
@@ -43,21 +49,16 @@ adminAiRoutes.post('/admin/ai-generate-question', requireSupabaseAuth, adminAiLi
     }
 
     const ai = getGeminiClient();
-    if (!ai) {
+    if (!ai && parsed.data.generationMode==='legacy') {
       return res.status(503).json({ error: 'AI servisi yapılandırılmamış. GEMINI_API_KEY ayarlanmalı.' });
     }
 
     const { runQuestionPipeline } = await import('../ai-question-pipeline');
-    let result = await runQuestionPipeline(ai, {
-      category: parsed.data.category,
-      questionType: parsed.data.questionType,
-      targetGrade: parsed.data.targetGrade as 1 | 2 | 3 | 4,
-      difficulty: parsed.data.difficulty,
-      targetAge: parsed.data.targetAge,
-      maxAttempts: parsed.data.maxAttempts,
-      minQualityScore: parsed.data.minQualityScore,
-      aiModel: parsed.data.aiModel,
-    }, { existingQuestions: await loadQualityComparisonPool(parsed.data.questionType as QuestionType | undefined) });
+    const configuration={category:parsed.data.category,questionType:parsed.data.questionType,targetGrade:parsed.data.targetGrade as 1|2|3|4,difficulty:parsed.data.difficulty,targetAge:parsed.data.targetAge,maxAttempts:parsed.data.maxAttempts,minQualityScore:parsed.data.minQualityScore,aiModel:parsed.data.aiModel};
+    const context={existingQuestions:await loadQualityComparisonPool(parsed.data.questionType as QuestionType|undefined)},requestId=parsed.data.requestId||crypto.randomUUID();
+    const claim=parsed.data.generationMode==='designed'?await claimGeneration(requestId,req.authUser.uid,{...configuration,roleModels:parsed.data.roleModels}):null;
+    if(claim&&!claim.claimed){if(claim.result)return res.json(claim.result);return res.status(409).json({error:'Üretim sürüyor veya sonucu henüz doğrulanmadı. İşlem kaydını kontrol edin.',code:'GENERATION_PENDING',requestId});}
+    let result=parsed.data.generationMode==='designed'?await runDesignedQuestionPipeline({...configuration,roleModels:parsed.data.roleModels},context):await runQuestionPipeline(ai!,configuration,context);
 
     try {
       const adminDb = getAdminDb();
@@ -75,9 +76,9 @@ adminAiRoutes.post('/admin/ai-generate-question', requireSupabaseAuth, adminAiLi
       logServerFailure('AI generation log failed', logErr);
     }
 
-    if (result.question) {
+    if (result.question || claim) {
       try {
-        result = await persistGeneratedQuestionResult(result, req.authUser.uid);
+        result = claim?await commitGeneration(requestId,req.authUser.uid,claim.sha,result):await persistGeneratedQuestionResult(result,req.authUser.uid);
       } catch (saveErr) {
         logServerFailure('AI question save failed', saveErr);
         return res.status(503).json({ error: 'Denetim sonucu kaydedilemedi. Soru yayımlanmadı.' });
@@ -94,9 +95,9 @@ adminAiRoutes.post('/admin/ai-generate-question', requireSupabaseAuth, adminAiLi
       validationErrors: result.validationErrors,
       validationWarnings: result.validationWarnings,
       rejectionReasons: result.rejectionReasons,
-      durationMs: result.durationMs,
+      durationMs: result.durationMs,usage:result.usage,roleModels:result.roleModels,requestId,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     logServerFailure('AI question generation failed', err);
     return res.status(500).json({ error: 'AI soru üretimi başarısız.' });
   }
@@ -147,36 +148,25 @@ adminAiRoutes.post('/admin/ai-question-review', requireSupabaseAuth, adminAiLimi
       return res.json({ success: true, question: saved, message: 'Soru reddedildi.' });
     }
 
-    if (action === 'regenerate') {
-      const ai = getGeminiClient();
-      if (!ai) return res.status(503).json({ error: 'AI servisi kullanılamıyor.' });
-
-      const { runQuestionPipeline } = await import('../ai-question-pipeline');
-      let result = await runQuestionPipeline(ai, {
-        category: currentData.category,
-        questionType: currentData.type,
-        targetGrade: currentData.targetGrade || 3,
-        difficulty: currentData.difficulty || 3,
-        targetAge: currentData.targetAge,
-      }, { existingQuestions: await loadQualityComparisonPool(currentData.type) });
-
-      if (result.question) {
-        result = await persistGeneratedQuestionResult(result, req.authUser.uid);
+    if(action==='regenerate'){
+      const config={category:currentData.category,questionType:currentData.type,targetGrade:currentData.targetGrade||3,difficulty:currentData.difficulty,targetAge:currentData.targetAge};
+      const context={existingQuestions:await loadQualityComparisonPool(currentData.type)};
+      let result;
+      if(currentData.reviewPolicy==='professional-v2'){
+        const requestId=crypto.randomUUID(),configuration={...config,roleModels:currentData.aiMeta?.roleModels};
+        const claim=await claimGeneration(requestId,req.authUser.uid,configuration);
+        result=await commitGeneration(requestId,req.authUser.uid,claim.sha,await runDesignedQuestionPipeline(configuration,context));
+      }else{
+        const ai=getGeminiClient();if(!ai)return res.status(503).json({error:'AI servisi yapılandırılmamış.'});
+        const {runQuestionPipeline}=await import('../ai-question-pipeline');result=await runQuestionPipeline(ai,config,context);
+        if(result.question)result=await persistGeneratedQuestionResult(result,req.authUser.uid);
       }
-
-      if (result.success) await saveQuestionRevision(archiveQuestionRevision(currentData, req.authUser.uid), revision);
-      return res.json({
-        success: result.success,
-        message: result.success ? 'Soru yeniden üretildi.' : 'Yeniden üretim başarısız.',
-        question: result.question,
-        qualityScore: result.qualityScore,
-        qualityReport: result.qualityReport,
-        attempts: result.attempts,
-      });
+      if(result.success)await saveQuestionRevision(archiveQuestionRevision(currentData,req.authUser.uid),revision);
+      return res.json({...result,message:result.success?'Yeni taslak kaydedildi.':'Denetim tamamlanamadı; yayın yapılmadı.'});
     }
 
     return res.status(400).json({ error: 'Geçersiz işlem.' });
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err instanceof EditorialConflictError) return res.status(409).json({ error: err.message });
     if (err instanceof EditorialValidationError) return res.status(422).json({ error: 'Soru yayın için doğrulanamadı.', details: err.details });
     logServerFailure('Question review failed', err);

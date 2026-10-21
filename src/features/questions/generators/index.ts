@@ -1,3 +1,5 @@
+import {chooseDiverseCandidate} from '../novelty';
+import type {QuestionVisualReference} from '../quality';
 import { COLORFUL_TYPES, generateColorfulQuestion } from '../colorful-engine';
 import { professionalGradeTypes } from '../reasoning-profile';
 import { gradeDifficulty, isSchoolGrade, type SchoolGrade } from '../quality-policy';
@@ -14,6 +16,12 @@ import { COMPLETE_TYPES, generateCompleteCurriculum } from '../complete-curricul
 export const ALL_QUESTION_TYPES = ALL_TOPIC_TYPES;
 export const STUDENT_CATEGORY_TYPES = TOPIC_CATEGORY_TYPES;
 export const CATEGORY_TYPES_MAP = TOPIC_CATEGORY_TYPES;
+
+export function generateDiverseQuestion(options:Parameters<typeof generateQuestion>[0],history:readonly QuestionVisualReference[]=[]):BaseQuestion {
+ const seed=options.seed??Math.floor(Math.random()*2147483646)+1,candidates:BaseQuestion[]=[];
+ for(let attempt=0;attempt<16;attempt++){try{candidates.push(generateQuestion({...options,seed:(seed+attempt*10007)%2147483647||1}));}catch{/* Failed proofs never enter selection. */}}
+ return chooseDiverseCandidate(candidates,history);
+}
 
 export function generateQuestionByType(
   type: QuestionType,
