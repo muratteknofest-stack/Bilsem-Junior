@@ -5,7 +5,7 @@ import { LEARNING_TOPICS, type LearningTopic } from './learning-topics';
 import { AVAILABLE_CATEGORIES } from './available-categories';
 
 // This is a selection policy version; the server fingerprints the actual published bank.
-export const LEARNING_BANK_POLICY = 'published-selection-4';
+export const LEARNING_BANK_POLICY = 'published-selection-5';
 export type LearningDifficulty = 'mixed' | DifficultyLevel;
 export const DEFAULT_ADAPTIVE_COUNT = 10;
 export const MAX_LEARNING_QUESTIONS = 50;

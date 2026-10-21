@@ -53,6 +53,7 @@ test('topic changes never resume another topic and legacy mixed sessions remain 
 test('topic practice reuses reviewed bank questions without generating another topic', () => {
   const q = generateQuestion({ profile: 'complete', type: 'paper_folding', targetGrade: 1, difficulty: 1, seed: 917 });
   const selected = selectLearningQuestions({ count: 1, category: q.category, candidates: [q],
+    repeatPolicy: 'oldest-first',
     exposure: new Map([[questionVisualKey(q), 10]]), canUse: isQuestionReadyForStudents, allowGeneration: false,
     generate: () => { assert.fail('Topic practice must not generate filler'); } });
   assert.equal(selected[0], q);

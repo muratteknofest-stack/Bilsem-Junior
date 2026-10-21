@@ -1,4 +1,5 @@
 import {recommendDifficulty,adaptDifficultyPlan} from '../../src/features/questions/adaptive-difficulty';
+import { scaffoldDifficultyPlan } from '../../src/features/questions/test-assembly';
 import { englishBankForGrade, ENGLISH_BANK_VERSION } from '../english-learning-bank';
 import { ENGLISH_AREAS } from '../../src/features/international/english-content';
 import { requireLearningAccess } from '../membership-access';
@@ -128,7 +129,10 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     if (locale === 'en' && candidates.length < count) throw new LearningError('This activity is not available in English at this level. Try mixed practice.', 422);
     const exposure = recent.exposure;
     const questions = selectLearningQuestions({ count, preferDiverseTypes:topic === 'mixed' && locale !== 'en', allowGeneration: topic === 'mixed', category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number],
-      ...(challengeMode?{difficultyPlan:adaptDifficultyPlan(grade,reasoningDifficultyPlan(grade,count,randomInt),recommendation)}:{}),
+      ...(challengeMode?{difficultyPlan:scaffoldDifficultyPlan(adaptDifficultyPlan(grade,reasoningDifficultyPlan(grade,count,randomInt),recommendation))}:{}),
+      // Finite, deliberately chosen topic exercises keep their approved review pool.
+      // Mixed Turkish tests and adventures always require unseen content.
+      repeatPolicy: locale === 'en' || topic !== 'mixed' ? 'oldest-first' : 'unseen',
       ...(locale === 'en' ? {categories:[...new Set(candidates.map(q=>q.category))]} : {}),
       candidates, exposure, canUse: q => fitsLearningSelection(q, selection) && gradeAppropriate(q) && formatReady(q)&&reasoningReady(q)&&isQuestionReadyForStudents(q) && (locale !== 'en' || englishReady(q)),
       generate: (nextCategory,typeCounts,plannedDifficulty,reasoningCounts) => {

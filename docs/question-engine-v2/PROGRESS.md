@@ -214,3 +214,44 @@ başarısız; CI geçti sayılmıyor. PR taslak kalır; main veya üretim yayın
 birleştirilmedi. Pilotun AI ve insan uzman incelemeleri beklemeye devam eder.
 
 Bu adımda değişen dosyalar: `PROGRESS.md` ve `preview-deployment-report.json`.
+
+## Profesyonel test oluşturma — 21 Ekim 2026
+
+`test-assembly.ts`, mevcut üreticileri koruyarak sınıf kotasına göre kısa giriş,
+ana çalışma ve pekiştirme sorusu planlar. Zorluk seviyelerinin adetleri değişmez;
+son sıralama artık soruları kendi zorluk yuvalarından çıkarmaz. Son beş sorudaki
+alan/tür yoğunluğu ve art arda gelen mantık aileleri dikkate alınır. Bu sıralama
+bir ürün sezgiselidir; psikometrik eşdeğerlik veya öğrenme başarısı iddiası değildir.
+
+Türkçe karma test ve macerada normal seçim, mevcut son 30 gün / en fazla 30 oturum
+bağlamında görülmemiş soru ister. İsim/şık sırası değişikliği aynı kökü gizlemez;
+aynı oturumda kök ve görsel tekrarı engellenir. Havuz tükenince sessiz tekrar
+yapılmaz. Belirli konu tekrarları ve sonlu İngilizce havuzu, açık `oldest-first`
+seçim politikasıyla önceki çalışma davranışını korur. Eski kayıtlar yeniden yazılmaz.
+
+Değişen uygulama dosyaları: `server/learning-question-selection.ts`,
+`server/routes/learning-routes.ts`, `src/features/questions/test-assembly.ts`,
+`src/features/student/learning-selection.ts`. Yeni test `tests/test-assembly.test.ts`;
+mevcut iki tekrar testi açık tekrar politikasını kullanacak şekilde güncellendi.
+Yeni kodda `any` eklenmedi. npm test ve soru testleri yeni dosyayı çalıştırır;
+`npm run audit:test-assembly` makine okunabilir raporu yeniden üretir.
+
+Sonuç: **456/456 regresyon testi**, TypeScript ve tam `npm run vercel-build`
+geçti. Derlemede gerçek Auth bağlantısı, 74 başlangıç/güvenlik, 180 soru testi
+ve 148 varlık kontrolü çalıştı. Ayrı denetim 4 sınıfta 12 gerçek algoritmik test
+ve 240 soru oluşturdu; bağımsız çözüm, zorluk sırası, dengeli alanlar ve yakın
+geçmişe göre yenilik geçti. Test başına 16–17 tür, 16–19 mantık ailesi görüldü.
+Bu QA soruları veritabanına yazılmadı veya yayımlanmadı.
+
+**348 mobil kontrol yeniden geçti:** 320×568, 390×844, 768×1024; gerçek Blender
+GLB / WebGL ve bağlam kaybında SVG yedeği doğrulandı, piksel farkı 0, hata 0.
+İlk yerel tarayıcı başlatması eksik açılmış Chromium dosyası nedeniyle çöktü;
+resmî arşivin CRC denetimi yapılıp yeniden açılınca tam tekrar başarılı oldu.
+100 kayıtlı pilotta 500 çizim ve matematik denetimi tekrar geçti.
+
+Canlı salt okunur yayın denetimi: 100 review, 0 published, 0 eligible;
+100 kör AI ve 100 pedagojik AI incelemesi bekliyor, reviewed_by dolu kayıt 0.
+Mevcut yayın kapıları korunur; herhangi bir soruya tamamlanmamış inceleme/onay
+atanmadı. Yeni toplu üretim yapılmadı, mevcut sorular silinmedi veya yayımlanmadı.
+Yayın engeli `publication-readiness-report.json`, algoritma kapsamı
+`test-assembly-report.json` içinde kayıtlıdır. Bu adım main'i değiştirmez.

@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-21",
+  "projectRef": "vtcsoqohkiagbwatlabk",
+  "source": "read-only aggregate queries against public.questions",
+  "total": 100,
+  "review": 100,
+  "published": 0,
+  "eligible": 0,
+  "pendingBlindAiReview": 100,
+  "pendingPedagogicalAiReview": 100,
+  "reviewedByPresent": 0,
+  "gradeCounts": {"1": 25, "2": 25, "3": 25, "4": 25},
+  "publicationWrites": 0,
+  "blockingReason": "All active pilot rows still require independent AI and editorial review. No review, eligibility or approval flag was fabricated or relaxed.",
+  "automaticRecheck": {"questions": 100, "rendered": 500, "failures": []},
+  "release": "not published"
+}
