@@ -95,8 +95,16 @@ uygulamanın giriş → API → veritabanı akışı doğrulanmış sayılmıyor
 ortamında Supabase sunucu anahtarı yok; ayrı önizleme yapılandırması gerekir.
 Üretim anahtarı önizlemelere kopyalanmadı. Yeni V2 için main birleştirilmedi.
 
-GitHub Actions sonucu PR açıldıktan sonra ayrıca kontrol edilecek. Vercel'in
-önizleme yorum kontrolü başarısı, Actions test başarısı olarak sayılmıyor.
+[Taslak PR #76](https://github.com/muratteknofest-stack/Bilsem-Junior/pull/76)
+açıldı; GitHub birleştirme çatışması bildirmiyor. GitHub Actions V2 görevi
+[39593861406](https://github.com/muratteknofest-stack/Bilsem-Junior/actions/runs/39593861406)
+başarısız: `verify` işi 2 saniyede, runner atanmadan ve `steps: []` ile sonlandı.
+Mevcut Quality/Android iş akışları da başarısız. Bu sonuç yerel test başarısı
+ile değiştirilmedi. Ayrıntılı check annotation yolu bağlı GitHub aracı
+tarafından desteklenmediği için neden kesinleştirilmedi; faturalandırma veya
+hesap sorunu olduğu varsayılmıyor. Vercel'in önizleme yorum kontrolü başarısı,
+Actions test başarısı olarak sayılmıyor. Önce CI runner/hesap engeli giderilip
+bu PR için iş akışları tekrar çalıştırılmalıdır.
 
 ### Fazlara göre teslim ve kalan işler
 
@@ -108,7 +116,7 @@ GitHub Actions sonucu PR açıldıktan sonra ayrıca kontrol edilecek. Vercel'in
 | 4 | `ai-question-pipeline-v2.ts`, `structured-ai.ts`, `role-config.ts`, `question-decoration.ts`, `AiRoleControls.tsx` | Sağlayıcı hata/şema testleri geçti. Gerçek sağlayıcı başarıları ve OpenAI görseli bekliyor; anahtar tarayıcıya verilmez. |
 | 5 | Migration/rollback, `professional-generation-store.ts`, `durable-question-batch.ts`, yönetici rotaları/panelleri | Gerçek kayıt/tekrar okuma, anonim izolasyon ve yerel Postgres geri alma geçti. Mevcut hesaplar korunuyor. |
 | 6 | `audit-engine-v2-pilot.tsx`, `check-engine-v2-pilot.mjs`, `tests/browser/engine-v2-pilot.tsx`, raporlar | 100 pilot, 500 sunucu çizimi, 348 mobil kontrol geçti; AI ve insan uzman incelemeleri bekliyor, yayın 0. |
-| 7 | `.github/workflows/question-engine-v2.yml`, bu rapor ve PR | Yerel derleme ve Vercel READY doğrulandı; Actions ve korunan önizleme uçtan uca kabulü tamamlanmadı. |
+| 7 | `.github/workflows/question-engine-v2.yml`, bu rapor ve PR #76 | Yerel derleme ve Vercel READY doğrulandı; Actions runner/test adımları başlamadı, korunan önizleme uçtan uca kabulü engelli. |
 
 Son salt okunur Supabase kontrolü: 9 kullanıcı, 9 profil, 5.380 XP; pilotta
 100 inceleme taslağı, 0 yayın. Otomatik kalite kontrolü uzman değerlendirmesi
