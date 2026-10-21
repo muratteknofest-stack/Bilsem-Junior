@@ -159,3 +159,23 @@ dağıtıldığı veya gerçek kullanıcıyla girişin başarılı olduğu iddia
 Değişen transport dosyalarında TypeScript strict kontrolü geçti. Ana canlı
 health kontrolü mevcut `7592e42` sürümünü, `database: ready` durumunu döndürdü;
 Auth settings 200 ve boş parola isteği 400/validation_failed döndü.
+
+## Tarayıcı üzerinden V2 dağıtımı — 21 Ekim 2026
+
+Vercel MCP takım erişimi 403 kalırken kullanıcının açık onayıyla tarayıcıdaki
+mevcut Vercel oturumu kullanıldı. `b1f30360d9fb278b0730150779315f6ad2661f38`
+commit'i Preview ortamına dağıtıldı. Dağıtım `dpl_CU6A4zQT2pZEX2V4UZ8WBVcsejrz`,
+5 dk 24 sn sonunda READY: https://zekapark-jfrfrik3m-dyds-projects-c415ba7a.vercel.app/ .
+Vercel'de 175 soru testi (0 hata), TypeScript ve 148 herkese açık varlık kontrolü
+geçti. Ana sayfanın gerçekten çizildiği tarayıcıda görüldü.
+
+`/api/health` gerçek yanıtta `{"status":"unavailable","database":"unavailable"}`
+döndü. Önizleme sunucusu hazır değildir; gerçek hesapla giriş kabulü iddia
+edilmez. `SUPABASE_SERVICE_ROLE_KEY` hâlâ yalnız Production ortamındadır.
+Otomatik güvenlik incelemesi bu mevcut üretim anahtarına Preview erişimi ekleme
+adımını reddetti; değişiklik kaydedilmedi. Üretim veritabanına yetkili erişim
+vereceği için yalnız güvenilen V2 dalının özel Preview sunucusuyla sınırlandırılan
+kullanım ayrıca açık kullanıcı onayı bekliyor. Anahtar okunmadı, kopyalanmadı
+veya yeni bir anahtarla değiştirilmedi. Üretim yayını değiştirilmedi.
+
+Makine okunabilir sonuç: `preview-deployment-report.json`.

@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-21",
+  "runtimeCommit": "b1f30360d9fb278b0730150779315f6ad2661f38",
+  "deploymentId": "dpl_CU6A4zQT2pZEX2V4UZ8WBVcsejrz",
+  "previewUrl": "https://zekapark-jfrfrik3m-dyds-projects-c415ba7a.vercel.app/",
+  "deploymentState": "READY",
+  "buildDuration": "5m 24s",
+  "questionTests": {
+    "passed": 175,
+    "failed": 0
+  },
+  "typescript": "passed during Vercel build",
+  "publicAssetsChecked": 148,
+  "publicHomepage": "rendered in authenticated Vercel browser",
+  "apiHealth": {
+    "status": "unavailable",
+    "database": "unavailable"
+  },
+  "authenticatedUserLogin": "not verified",
+  "serviceCredentialScope": "Production only; unchanged",
+  "accessExpansion": "automatic approval review rejected adding Preview access to existing production service credential",
+  "approvalNeeded": "Use only the trusted codex/question-engine-v2-20261021 private Preview server; this permits access to production data",
+  "productionRelease": "not performed"
+}
