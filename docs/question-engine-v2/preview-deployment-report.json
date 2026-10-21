@@ -1,24 +1,59 @@
 {
   "checkedAt": "2026-10-21",
   "runtimeCommit": "b1f30360d9fb278b0730150779315f6ad2661f38",
-  "deploymentId": "dpl_CU6A4zQT2pZEX2V4UZ8WBVcsejrz",
-  "previewUrl": "https://zekapark-jfrfrik3m-dyds-projects-c415ba7a.vercel.app/",
+  "deploymentId": "dpl_GoAYk9Be261J7XfY6dEYEbJ5ErJR",
   "deploymentState": "READY",
-  "buildDuration": "5m 24s",
+  "serviceCredentialScope": {
+    "type": "Secret",
+    "previewBranch": "codex/question-engine-v2-20261021",
+    "productionCredential": "retained without modification",
+    "allPreviewBranches": false,
+    "development": false
+  },
+  "accessApproval": "User explicitly approved using the existing production Supabase credential only in the trusted V2 private Preview server.",
+  "credentialValues": "omitted",
+  "authenticatedUserLogin": "not verified",
+  "productionRelease": "not performed",
+  "authConnectivityBuildCheck": "passed: public configuration, password validation, Data API isolation and invalid-session rejection",
+  "previewUrl": "https://zekapark-i80xtpkqn-dyds-projects-c415ba7a.vercel.app/",
+  "deploymentUrl": "https://vercel.com/dyds-projects-c415ba7a/zekapark/GoAYk9Be261J7XfY6dEYEbJ5ErJR",
+  "buildDuration": "4m 49s",
+  "startupTests": {
+    "passed": 74,
+    "failed": 0
+  },
   "questionTests": {
     "passed": 175,
     "failed": 0
   },
-  "typescript": "passed during Vercel build",
+  "typescript": "passed during this Vercel build",
   "publicAssetsChecked": 148,
-  "publicHomepage": "rendered in authenticated Vercel browser",
+  "assetCredentialScan": "passed: no recognized private credentials or source maps",
+  "publicHomepage": "rendered in the authorized Vercel browser",
   "apiHealth": {
-    "status": "unavailable",
-    "database": "unavailable"
+    "status": "ok",
+    "database": "ready",
+    "version": "1.0.0",
+    "projectRef": "vtcsoqohkiagbwatlabk",
+    "commit": "b1f30360d9fb278b0730150779315f6ad2661f38",
+    "timestamp": 1792597792717
   },
-  "authenticatedUserLogin": "not verified",
-  "serviceCredentialScope": "Production only; unchanged",
-  "accessExpansion": "automatic approval review rejected adding Preview access to existing production service credential",
-  "approvalNeeded": "Use only the trusted codex/question-engine-v2-20261021 private Preview server; this permits access to production data",
-  "productionRelease": "not performed"
+  "apiHealthReadChecks": [
+    "profiles",
+    "learning_sessions",
+    "platform_settings"
+  ],
+  "githubActions": {
+    "runId": 39624951642,
+    "commit": "972edf10e42e6a45085274408b06eb00c10735af",
+    "conclusion": "failure",
+    "job": "verify",
+    "runnerId": 0,
+    "steps": []
+  },
+  "remaining": [
+    "Authenticated real-user login acceptance",
+    "GitHub Actions runner failure",
+    "Independent AI and human expert pilot reviews"
+  ]
 }

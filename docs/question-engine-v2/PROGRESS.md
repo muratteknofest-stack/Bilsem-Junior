@@ -3,6 +3,10 @@
 Temel: main / 7592e423ce5e45f7b8d12680df2c520fffed98cd.
 Dal: codex/question-engine-v2-20261021. Mevcut kullanıcılar ve soru motorları korunur.
 
+Güncel önizleme: https://zekapark-i80xtpkqn-dyds-projects-c415ba7a.vercel.app/ .
+21 Ekim 2026: READY, gerçek sunucu yanıtı `status: ok, database: ready`.
+Gerçek hesapla giriş kabulü ve GitHub Actions kontrolleri henüz tamamlanmadı.
+
 ## Faz 1
 
 İstenen dokuz dosya, gerçek öğrenci seçimi ve yayın RPC'si incelendi. İlk main
@@ -116,7 +120,7 @@ bu PR için iş akışları tekrar çalıştırılmalıdır.
 | 4 | `ai-question-pipeline-v2.ts`, `structured-ai.ts`, `role-config.ts`, `question-decoration.ts`, `AiRoleControls.tsx` | Sağlayıcı hata/şema testleri geçti. Gerçek sağlayıcı başarıları ve OpenAI görseli bekliyor; anahtar tarayıcıya verilmez. |
 | 5 | Migration/rollback, `professional-generation-store.ts`, `durable-question-batch.ts`, yönetici rotaları/panelleri | Gerçek kayıt/tekrar okuma, anonim izolasyon ve yerel Postgres geri alma geçti. Mevcut hesaplar korunuyor. |
 | 6 | `audit-engine-v2-pilot.tsx`, `check-engine-v2-pilot.mjs`, `tests/browser/engine-v2-pilot.tsx`, raporlar | 100 pilot, 500 sunucu çizimi, 348 mobil kontrol geçti; AI ve insan uzman incelemeleri bekliyor, yayın 0. |
-| 7 | `.github/workflows/question-engine-v2.yml`, bu rapor ve PR #76 | Yerel derleme ve Vercel READY doğrulandı; Actions runner/test adımları başlamadı, korunan önizleme uçtan uca kabulü engelli. |
+| 7 | `.github/workflows/question-engine-v2.yml`, bu rapor ve PR #76 | Yerel derleme ve Vercel READY doğrulandı; özel V2 önizlemede Supabase bağlantısı hazır. Gerçek hesapla giriş ve CI runner sorunu bekliyor. |
 
 Son salt okunur Supabase kontrolü: 9 kullanıcı, 9 profil, 5.380 XP; pilotta
 100 inceleme taslağı, 0 yayın. Otomatik kalite kontrolü uzman değerlendirmesi
@@ -179,3 +183,34 @@ kullanım ayrıca açık kullanıcı onayı bekliyor. Anahtar okunmadı, kopyala
 veya yeni bir anahtarla değiştirilmedi. Üretim yayını değiştirilmedi.
 
 Makine okunabilir sonuç: `preview-deployment-report.json`.
+
+## V2 önizleme sunucu bağlantısı tamamlandı — 21 Ekim 2026
+
+Kullanıcının mevcut üretim Supabase anahtarını yalnız güvenilen V2 dalının özel
+Preview sunucusunda kullanmaya verdiği açık onay üzerine ayrı bir Secret kaydı
+eklendi. Kapsam yalnız `codex/question-engine-v2-20261021`; genel Preview ve
+Development seçilmedi. Mevcut Production kaydı değiştirilmedi. Anahtar değeri
+kaynak koda veya bu rapora eklenmedi. Önceki bölümdeki onay bekleme durumu giderildi.
+
+Aynı incelenmiş uygulama kodu `b1f30360d9fb278b0730150779315f6ad2661f38`,
+güncel sunucu ayarlarıyla `dpl_GoAYk9Be261J7XfY6dEYEbJ5ErJR` olarak yeniden
+Preview ortamına dağıtıldı. 4 dk 49 sn sonunda READY:
+https://zekapark-i80xtpkqn-dyds-projects-c415ba7a.vercel.app/ .
+
+Bu dağıtımda 74 başlangıç/güvenlik ve 175 soru testi, TypeScript, gerçek Auth
+bağlantı kontrolü ve 148 varlık taraması geçti. Varlık taraması tanınan özel
+anahtar veya source map bulmadı. Büyük SpatialCanvas parçası uyarısı sürüyor.
+Bu kontrol önceki 450 testin tamamının yeniden çalıştırıldığı anlamına gelmez.
+
+Gerçek tarayıcı isteğinde `/api/health`, `status: ok, database: ready`, doğru
+proje referansı ve `b1f3036` commit'ini döndürdü. Bu uç nokta `profiles`,
+`learning_sessions`, `platform_settings` tablolarına sınırlı okuma yapar;
+veritabanına yazma yapılmadı. Ana sayfa gerçekten çizildi. Gerçek kullanıcıyla
+parolalı giriş henüz doğrulanmadı; sunucu hazırlığı bunun yerine sunulmaz.
+
+GitHub PR başı artık `972edf1` commit'ini gösteriyor. Güncel V2 Actions
+çalışması `39624951642` yine runner atanmadan (`runner_id: 0`, `steps: []`)
+başarısız; CI geçti sayılmıyor. PR taslak kalır; main veya üretim yayını
+birleştirilmedi. Pilotun AI ve insan uzman incelemeleri beklemeye devam eder.
+
+Bu adımda değişen dosyalar: `PROGRESS.md` ve `preview-deployment-report.json`.
