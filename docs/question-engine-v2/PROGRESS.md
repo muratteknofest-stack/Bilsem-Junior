@@ -71,11 +71,45 @@ Denetlenen 100 son taslakta hata yok; üreticinin iç aday retleri ayrıca sayı
 İki AI incelemesi ve insan uzman incelemesi bekliyor. 0 soru yayımlandı. Pilot
 kapıları tamamlanmadan daha geniş üretim/yayın yapılmamalıdır. Mobil sonuçları
 mobile-report.json içinde, otomatik içerik sonucu automatic-pilot-report.json
-ve gerçek kayıt sonucu pilot-report.json içindedir. Mobil kabul henüz sürüyor.
+ve gerçek kayıt sonucu pilot-report.json içindedir. **348 mobil kontrol geçti:**
+100 kayıtlı pilot ve 16 ek üretim/bağlam örneği, 320×568, 390×844 ve 768×1024
+ekranlarında denetlendi. Yatay taşma, seçenek dokunma alanları ve okunabilirlik
+kontrolleri geçti. Gerçek GLB yüklemesi, WebGL çizimi ve bağlam kaybında SVG'ye
+dönüş doğrulandı. SVG karşılaştırmasında piksel farkı 0; hata listesi boş.
 
 ## Faz 7
 
-GitHub dalına doğrulanan ilk kod kaydı gönderildi. Son regresyon, CI ve Vercel
-önizleme doğrulaması sürüyor. Bu dosya tamamlanmamış kontrolleri başarılı saymaz.
+Kod ayrı GitHub dalına gönderildi. **450/450 test**, TypeScript ve tam
+`npm run vercel-build` geçti. Derleme ayrıca 73 başlangıç/güvenlik testi,
+gerçek Auth bağlantısı, 175 soru testi ve 148 herkese açık varlık kontrolü
+çalıştırdı. İlk Auth denemesi başarısız oldu; ayrı gerçek SDK denemesinde
+geçersiz token 403/bad_jwt ile reddedildi ve tam derleme tekrarında kontrol geçti.
+Kontrol koşulu gevşetilmedi. Büyük parça boyutu uyarısı devam ediyor; 3B motor
+isteğe bağlı yükleniyor, bu uyarı performans ölçümünün yerine geçmez.
 
-Son tam regresyon: **450/450 test geçti**. TypeScript geçti. Mobil WebGL ve SVG geri dönüşü çalıştı; son yerleşim/görsel karşılaştırma denemesi devam ediyor.
+Vercel `c9388e896436245006b0ff29c17a5c74d2bf4425` kodu için **READY** bildirdi:
+https://zekapark-q20ia2oue-dyds-projects-c415ba7a.vercel.app . Koruma ekranı
+uygulamaya erişimi durduruyor; yetkili Vercel bağlantısının önizlemeyi açma
+işlemi de 403 `read_protection_bypass` döndürüyor. Bu yüzden dağıtılmış
+uygulamanın giriş → API → veritabanı akışı doğrulanmış sayılmıyor. Preview
+ortamında Supabase sunucu anahtarı yok; ayrı önizleme yapılandırması gerekir.
+Üretim anahtarı önizlemelere kopyalanmadı. Yeni V2 için main birleştirilmedi.
+
+GitHub Actions sonucu PR açıldıktan sonra ayrıca kontrol edilecek. Vercel'in
+önizleme yorum kontrolü başarısı, Actions test başarısı olarak sayılmıyor.
+
+### Fazlara göre teslim ve kalan işler
+
+| Faz | Başlıca değişen dosyalar | Doğrulama / kalan işler |
+| --- | --- | --- |
+| 1 | Bu rapor; mevcut dokuz hedef dosyanın analizi | Main başlangıcı 436 test ve TypeScript geçti. |
+| 2 | `novelty.ts`, `symbolic-v2.ts`, `adaptive-difficulty.ts`, `generators/index.ts`, `learning-question-selection.ts` | 300 yeni sembolik örnek ve mutasyonları; toplam regresyona dahil. Diğer mevcut kategoriler korunur; her kategori için yeni uzman içerik paketi tamamlanmış değildir. |
+| 3 | `SpatialCanvas.tsx`, `spatial-scene.ts`, `CubeSculpture.tsx`, `unit-cube-asset.ts`, Blender tarifi ve GLB | Gerçek GLB, mobil WebGL/SVG dönüşü geçti. Fiziksel düşük güçlü cihaz performansı henüz ölçülmedi. |
+| 4 | `ai-question-pipeline-v2.ts`, `structured-ai.ts`, `role-config.ts`, `question-decoration.ts`, `AiRoleControls.tsx` | Sağlayıcı hata/şema testleri geçti. Gerçek sağlayıcı başarıları ve OpenAI görseli bekliyor; anahtar tarayıcıya verilmez. |
+| 5 | Migration/rollback, `professional-generation-store.ts`, `durable-question-batch.ts`, yönetici rotaları/panelleri | Gerçek kayıt/tekrar okuma, anonim izolasyon ve yerel Postgres geri alma geçti. Mevcut hesaplar korunuyor. |
+| 6 | `audit-engine-v2-pilot.tsx`, `check-engine-v2-pilot.mjs`, `tests/browser/engine-v2-pilot.tsx`, raporlar | 100 pilot, 500 sunucu çizimi, 348 mobil kontrol geçti; AI ve insan uzman incelemeleri bekliyor, yayın 0. |
+| 7 | `.github/workflows/question-engine-v2.yml`, bu rapor ve PR | Yerel derleme ve Vercel READY doğrulandı; Actions ve korunan önizleme uçtan uca kabulü tamamlanmadı. |
+
+Son salt okunur Supabase kontrolü: 9 kullanıcı, 9 profil, 5.380 XP; pilotta
+100 inceleme taslağı, 0 yayın. Otomatik kalite kontrolü uzman değerlendirmesi
+veya öğrenme başarısı kanıtı değildir.
