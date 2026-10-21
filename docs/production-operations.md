@@ -2,7 +2,8 @@
 
 ## Yayın hedefi ve kayıt kapısı
 
-Hedef `https://zekapark.vercel.app`, Supabase projesi `vehhvsdkifwstbjhnhao`.
+Hedef `https://zekapark.vercel.app`, Supabase projesi `vtcsoqohkiagbwatlabk`.
+21 Ekim 2026 eşleştirme ve arşiv kaydı: [proje geçişi](project-alignment-20261021.md).
 Yönetici girişi `/admin/giris`. Yönetici TOTP kurulumu veya doğrulaması tamamlanmadan panel yüklenmez; API ve soru bankası politikaları AAL2 ister.
 Kayıt durumu `/api/public/platform` ile kontrol edilir. Mevcut hesapların giriş ve çalışma erişimi kayıt kapısından etkilenmez.
 

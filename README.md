@@ -12,9 +12,12 @@ React, Vite, Express, Supabase Auth/Postgres and Gemini based learning app.
 4. Run `npm run dev`. The Express service hosts `/api/*` and the app.
 5. Run `npm run lint`, `npm test`, `npm run test:student` and the build before deployment.
 
-The new Supabase project is `vehhvsdkifwstbjhnhao`. Its fresh schema is
-already applied. For another new project, apply
-[supabase/schema.sql](supabase/schema.sql) once before registering accounts.
+The active Supabase project is `vtcsoqohkiagbwatlabk` (Bilsem Junior).
+Its account-project alignment preserves existing Auth identities and XP and
+keeps the previous question, exam and purchase tables in the private
+`bilsem_legacy` schema. See [project alignment](docs/project-alignment-20261021.md).
+Apply `supabase/schema.sql` only to a genuinely empty project; it is not an
+upgrade script for an existing database.
 The schema enables RLS for every application
 table and grants browser access only to the necessary roles. Configure the
 project's publishable key and URL in both the Vite and API environments.

@@ -1,4 +1,7 @@
 import { apiFetch } from './api-fetch';
+import { apiBaseUrl } from './api-url';
+import { Capacitor } from '@capacitor/core';
+import { createSupabaseTransport } from './supabase-transport';
 import { createClient, type User as SupabaseUser } from '@supabase/supabase-js';
 import { hasRecoveryClaims, isPasswordRecoveryLocation, passwordRecoveryRedirect } from './password-recovery';
 
@@ -30,6 +33,11 @@ export const isRecoveryRedirect = typeof window !== 'undefined' &&
   isPasswordRecoveryLocation(window.location);
 
 export const supabase = createClient(url, key, {
+  global: import.meta.env.PROD ? { fetch: createSupabaseTransport({
+    supabaseUrl: url, apiBaseUrl,
+    pageOrigin: typeof window === 'undefined' ? 'https://localhost' : window.location.origin,
+    relayFetch: Capacitor.isNativePlatform() ? apiFetch : (...args) => fetch(...args),
+  }) } : undefined,
   auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true, storage: browserStorage },
 });
 

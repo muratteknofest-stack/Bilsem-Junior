@@ -32,8 +32,11 @@ export function loginAuthError(error: AuthFailure): string | null {
     case 'validation_failed':
       return 'Geçerli bir e-posta adresi girin.';
   }
-  if (error?.message && /fetch failed|failed to fetch|network|load failed/i.test(error.message)) {
-    return 'Ağ bağlantısı kurulamadı. İnternet bağlantınızı kontrol edin.';
+  if (error?.status && [502, 503, 504].includes(error.status)) {
+    return 'Giriş hizmeti şu anda yanıt vermiyor. Biraz sonra tekrar deneyin.';
+  }
+  if (error?.message && /fetch failed|failed to fetch|network|load failed|yanıt alınamadı/i.test(error.message)) {
+    return 'Giriş hizmetine bağlanılamadı. Biraz sonra tekrar deneyin.';
   }
   if (error?.status === 429) return 'Çok fazla giriş denemesi yapıldı. Birkaç dakika sonra tekrar deneyin.';
   return null;

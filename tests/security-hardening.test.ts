@@ -10,7 +10,7 @@ import { createApiApp } from '../server/api-app';
 import { secretKinds } from '../scripts/check-public-assets.mjs';
 import { policyHtml } from '../server/platform-policy';
 
-const publicEnv = { VITE_SUPABASE_URL: 'https://vehhvsdkifwstbjhnhao.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test-only', VITE_API_BASE_URL: '' };
+const publicEnv = { VITE_SUPABASE_URL: 'https://vtcsoqohkiagbwatlabk.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test-only', VITE_API_BASE_URL: '' };
 const jwt = (role: string) => `header.${Buffer.from(JSON.stringify({ role })).toString('base64url')}.signature`;
 
 test('public bundle checks catch recognized private keys and privileged JWTs without flagging publishable keys', () => {
@@ -55,7 +55,7 @@ test('static and API policies agree; only style attributes permit inline content
   assert.deepEqual(browserDirectives.styleSrcAttr, ["'unsafe-inline'"]);
   assert.ok(!contentSecurityPolicy.includes('unsafe-eval') && !contentSecurityPolicy.includes('*.'));
   assert.ok(browserDirectives.frameSrc.includes('https://wordwall.net'));
-  assert.ok(browserDirectives.connectSrc.includes('wss://vehhvsdkifwstbjhnhao.supabase.co'));
+  assert.ok(browserDirectives.connectSrc.includes('wss://vtcsoqohkiagbwatlabk.supabase.co'));
   assert.ok(!JSON.stringify(vercel).includes('service_role'));
 });
 

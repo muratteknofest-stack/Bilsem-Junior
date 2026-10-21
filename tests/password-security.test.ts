@@ -98,7 +98,7 @@ test('provider and revocation failures never report password-change success', as
   assert.equal(revoke.status, 503); assert.deepEqual(revoke.actions, ['check', 'update', 'revoke']);
 });
 
-const expected = { commit: 'a'.repeat(40), projectRef: 'vehhvsdkifwstbjhnhao' };
+const expected = { commit: 'a'.repeat(40), projectRef: 'vtcsoqohkiagbwatlabk' };
 const health = { status: 'ok', database: 'ready', ...expected };
 test('release check rejects a 200 login page and HTTP redirects', async () => {
   await assert.rejects(verifyHealthResponse(new Response('<html>Login</html>', { headers: { 'content-type': 'text/html' } }), expected));
