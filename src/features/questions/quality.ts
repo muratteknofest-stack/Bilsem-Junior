@@ -115,9 +115,9 @@ export function auditQuestion(value: unknown, existing: QuestionVisualReference[
     if (solved.canSolve && !solved.isMatch) result.errors.push('Bağımsız çözüm ile cevap anahtarı uyuşmuyor. ' + solved.proofSteps.join(' '));
     if (!solved.canSolve || solved.ambiguityDetected) result.reviewRequired.push(...solved.proofSteps);
     if (cfg?.displayMode === 'workshop_board') {
-      if (!WORKSHOP_TYPES.includes(q.type) || ![WORKSHOP_ENGINE_VERSION, 'workshop-2', 'workshop-1'].includes(q.authoring?.engine || '')) result.errors.push('Atölye motoru konusu veya sürümü tanınmıyor.');
+      if (!WORKSHOP_TYPES.includes(q.type) || ![WORKSHOP_ENGINE_VERSION, 'workshop-2', 'workshop-1', ...(q.type==='word_scramble_logic'?['workshop-reading-1']:[])].includes(q.authoring?.engine || '')) result.errors.push('Atölye motoru konusu veya sürümü tanınmıyor.');
       else {
-        const reference=(q.authoring?.engine === 'workshop-1' ? generateWorkshopV1 : q.authoring?.engine === 'workshop-2' ? generateWorkshopV2 : generateWorkshopQuestion)(q.type,q.seed,q.difficulty);
+        const reference=q.authoring?.engine === 'workshop-1' ? generateWorkshopV1(q.type,q.seed,q.difficulty) : q.authoring?.engine === 'workshop-2' ? generateWorkshopV2(q.type,q.seed,q.difficulty) : generateWorkshopQuestion(q.type,q.seed,q.difficulty,q.authoring?.engine==='workshop-3');
         for(const field of ['prompt','secondaryPrompt','explanation','visualConfig','category','options','authoring'] as const) {
           const normalize=(question:BaseQuestion)=>field==='options'?question.options.map(({id,label,visualData})=>({id,label,visualData})).sort((a,b)=>a.id.localeCompare(b.id)):question[field];
           if(fingerprint(normalize(q))!==fingerprint(normalize(reference)))result.reviewRequired.push('Atölye kuralı, soru metni, şık veya çözüm doğrulanmış şablonla eşleşmiyor: '+field);
@@ -231,5 +231,6 @@ export function assertQuestionReadyForStudents(value: unknown): asserts value is
     throw new Error(['QUESTION_REVIEW_REQUIRED', ...report.errors, ...report.reviewRequired].join(' | '));
   }
 }
+
 
 

@@ -26,7 +26,7 @@ export function currentReasoningCandidate(q:BaseQuestion,grade:SchoolGrade,moder
   if(!modern)return !needsReasoningFormat(q);
   const mode=(q.visualConfig as Record<string,unknown>).displayMode;
   return mode==='verified_board'?['verified-8','verified-4'].includes(q.authoring?.engine||''):
-    mode==='colorful_board'?q.authoring?.engine==='colorful-3':mode==='workshop_board'&&q.authoring?.engine==='workshop-3';
+    mode==='colorful_board'?q.authoring?.engine==='colorful-3':mode==='workshop_board'&&(q.authoring?.engine==='workshop-3'||q.type==='word_scramble_logic'&&q.authoring?.engine==='workshop-reading-1');
 }
 
 /** Server snapshots retain visual content even though their question IDs are opaque. */
@@ -172,3 +172,4 @@ export function generateVariedLearningQuestion(options:{grade:SchoolGrade; categ
   if(!best)throw new LearningError('Bu sınıfta doğrulanmış farklı bir soru hazırlanamadı.');
   return best;
 }
+
