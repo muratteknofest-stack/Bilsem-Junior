@@ -6,7 +6,7 @@ import { createSupabaseTransport } from '../src/lib/supabase-transport.ts';
 import { RequestDeadlineError } from '../src/lib/request-deadline.ts';
 
 const project = 'https://vtcsoqohkiagbwatlabk.supabase.co';
-const web = 'https://zekapark.vercel.app';
+const web = 'https://bilsemjunior.vercel.app';
 const config = relayFetch => ({ supabaseUrl: project, apiBaseUrl: '', pageOrigin: web, relayFetch });
 const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
 

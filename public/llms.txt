@@ -5,13 +5,13 @@
 Bilsem Junior MEB veya BİLSEM'in resmî hizmeti değildir. Sorular resmî sınav soruları değildir. Zekâ puanı, tanı veya sınav başarısı garantisi sunmaz.
 
 ## Herkese açık içerik
-- [Blog](https://zekapark.vercel.app/blog): 30 BİLSEM, dikkat, mantık, görsel düşünme ve aile desteği rehberi.
-- [Platform](https://zekapark.vercel.app/bilgi/zekapark-hakkinda)
-- [Çalışma alanları](https://zekapark.vercel.app/bilgi/calisma-alanlari)
-- [Aile hesabı rehberi](https://zekapark.vercel.app/bilgi/hesap-ve-veli-rehberi)
-- [Gizlilik](https://zekapark.vercel.app/bilgi/gizlilik-ve-veriler)
-- [Koşullar](https://zekapark.vercel.app/bilgi/kullanim-kosullari)
-- [Site haritası](https://zekapark.vercel.app/sitemap.xml)
+- [Blog](https://bilsemjunior.vercel.app/blog): 30 BİLSEM, dikkat, mantık, görsel düşünme ve aile desteği rehberi.
+- [Platform](https://bilsemjunior.vercel.app/bilgi/zekapark-hakkinda)
+- [Çalışma alanları](https://bilsemjunior.vercel.app/bilgi/calisma-alanlari)
+- [Aile hesabı rehberi](https://bilsemjunior.vercel.app/bilgi/hesap-ve-veli-rehberi)
+- [Gizlilik](https://bilsemjunior.vercel.app/bilgi/gizlilik-ve-veriler)
+- [Koşullar](https://bilsemjunior.vercel.app/bilgi/kullanim-kosullari)
+- [Site haritası](https://bilsemjunior.vercel.app/sitemap.xml)
 
 ## Özellik sınırları
 Uygulama içi çalışmalar sunucuda değerlendirilir. Wordwall etkinliklerinin puanları Bilsem Junior çalışma raporlarına otomatik aktarılmaz. Adaptif çalışma geçmişte daha az ilerleme kaydedilen çalışma alanlarından soru seçer. Ücretli abonelik satışı etkin değildir.

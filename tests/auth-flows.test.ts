@@ -46,13 +46,13 @@ test('password reset needs a strong password and matching confirmation', () => {
 
 test('recovery errors returning to the home page still open the recovery screen', () => {
   for (const url of [
-    'https://zekapark.vercel.app/#error=access_denied&error_code=otp_expired',
-    'https://zekapark.vercel.app/?error_code=otp_expired',
-    'https://zekapark.vercel.app/#type=recovery&access_token=test-only',
-    'https://zekapark.vercel.app/reset-password',
+    'https://bilsemjunior.vercel.app/#error=access_denied&error_code=otp_expired',
+    'https://bilsemjunior.vercel.app/?error_code=otp_expired',
+    'https://bilsemjunior.vercel.app/#type=recovery&access_token=test-only',
+    'https://bilsemjunior.vercel.app/reset-password',
   ]) assert.equal(isPasswordRecoveryLocation(new URL(url)), true);
-  assert.equal(isPasswordRecoveryLocation(new URL('https://zekapark.vercel.app/')), false);
-  assert.equal(isPasswordRecoveryLocation(new URL('https://zekapark.vercel.app/#type=signup')), false);
+  assert.equal(isPasswordRecoveryLocation(new URL('https://bilsemjunior.vercel.app/')), false);
+  assert.equal(isPasswordRecoveryLocation(new URL('https://bilsemjunior.vercel.app/#type=signup')), false);
 });
 
 test('a verified recovery session remains eligible after reload; other sessions do not', () => {
@@ -64,10 +64,10 @@ test('a verified recovery session remains eligible after reload; other sessions 
 });
 
 test('reset requests from previews use the configured production recovery page', () => {
-  assert.equal(passwordRecoveryRedirect('https://old-preview.vercel.app', 'https://zekapark.vercel.app'), 'https://zekapark.vercel.app/reset-password');
+  assert.equal(passwordRecoveryRedirect('https://old-preview.vercel.app', 'https://bilsemjunior.vercel.app'), 'https://bilsemjunior.vercel.app/reset-password');
   assert.equal(passwordRecoveryRedirect('http://localhost:3000'), 'http://localhost:3000/reset-password');
   for (const origin of ['http://example.com', 'https://user:secret@example.com', 'https://example.com/path', 'https://example.com/?next=evil']) {
-    assert.throws(() => passwordRecoveryRedirect('https://zekapark.vercel.app', origin));
+    assert.throws(() => passwordRecoveryRedirect('https://bilsemjunior.vercel.app', origin));
   }
 });
 

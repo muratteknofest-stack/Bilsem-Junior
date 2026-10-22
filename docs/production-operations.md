@@ -2,7 +2,7 @@
 
 ## Yayın hedefi ve kayıt kapısı
 
-Hedef `https://zekapark.vercel.app`, Supabase projesi `vtcsoqohkiagbwatlabk`.
+Hedef `https://bilsemjunior.vercel.app`, Supabase projesi `vtcsoqohkiagbwatlabk`.
 21 Ekim 2026 eşleştirme ve arşiv kaydı: [proje geçişi](project-alignment-20261021.md).
 Yönetici girişi `/admin/giris`. Yönetici TOTP kurulumu veya doğrulaması tamamlanmadan panel yüklenmez; API ve soru bankası politikaları AAL2 ister.
 Kayıt durumu `/api/public/platform` ile kontrol edilir. Mevcut hesapların giriş ve çalışma erişimi kayıt kapısından etkilenmez.
@@ -21,7 +21,7 @@ Kayıt ekranı veli bilgileri, öğrenci bilgileri ve onay olmak üzere üç ad�
 
 `supabase/templates` altındaki altı şablonun içerik ve konuları `subjects.json` içinde sürümlenir. Hosted Supabase dashboard > Authentication > Emails bölümünde aynı projeye uygulanmalıdır. Yerel config veya dosya değişikliği hosted ayarı kendiliğinden değiştirmez.
 
-Auth Site URL `https://zekapark.vercel.app` olmalı; Redirect URLs listesinde `https://zekapark.vercel.app/reset-password` bulunmalıdır. Üretim SMTP sağlayıcısında gönderen kimliği, SPF/DKIM/DMARC ve teslimat kontrolü yapılmalıdır. Parola kurtarma e-postalarında link izleme kapatılmalıdır. Varsayılan Supabase SMTP'nin üretim kapasitesi varsayılmamalıdır.
+Auth Site URL `https://bilsemjunior.vercel.app` olmalı; Redirect URLs listesinde `https://bilsemjunior.vercel.app/reset-password` bulunmalıdır. Üretim SMTP sağlayıcısında gönderen kimliği, SPF/DKIM/DMARC ve teslimat kontrolü yapılmalıdır. Parola kurtarma e-postalarında link izleme kapatılmalıdır. Varsayılan Supabase SMTP'nin üretim kapasitesi varsayılmamalıdır.
 
 Haftalık rapor servisi ayrıca SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS ve APP_BASE_URL kullanır. Bu ayarlar ile Supabase Auth SMTP farklı yapılandırmalardır. Sırları sohbet, kaynak kod veya günlüklerde paylaşmayın.
 
