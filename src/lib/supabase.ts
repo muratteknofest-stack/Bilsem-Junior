@@ -72,7 +72,9 @@ export async function isPasswordRecoveryReady(): Promise<boolean> {
 }
 
 export async function updateRecoveredPassword(password: string) {
-  if (!recoverySessionReady) throw new Error('Sıfırlama bağlantısı geçersiz veya süresi dolmuş.');
+  // The in-memory flag can be reset by an unrelated auth event while the form
+  // is open; re-verify the recovery session from signed claims before failing.
+  if (!recoverySessionReady && !(await isPasswordRecoveryReady())) throw new Error('Sıfırlama bağlantısı geçersiz veya süresi dolmuş. Yeni bir bağlantı isteyin.');
   const { data, error } = await supabase.auth.getSession();
   if (error || !data.session) throw new Error('Sıfırlama oturumu doğrulanamadı. Yeni bağlantı isteyin.');
   const base = String(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
