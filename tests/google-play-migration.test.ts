@@ -14,9 +14,10 @@ test('catalog requires the actual app, product and three active calendar periods
  await verifyPlayCatalog(async(input,init)=>{assert.equal(String(input),'https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.zekapark.app/subscriptions/zekapark_uyelik');assert.equal(init?.redirect,'error');return Response.json(catalog());},'fixture');
  await assert.rejects(verifyPlayCatalog(async()=>new Response('private provider detail',{status:403}),'fixture'),e=>e instanceof Error&&!e.message.includes('private'));
 });
-test('retired checkout endpoints and components are absent from runtime routing',()=>{
- for(const path of ['server/routes/shopier-routes.ts','server/shopier-client.ts','src/components/ShopierBilling.tsx','scripts/check-shopier-connection.mjs'])assert.equal(existsSync(path),false);
- assert.ok(!readFileSync('server/api-app.ts','utf8').toLowerCase().includes('shopier'));
+test('web Shopier membership coexists with native Google Play billing',()=>{
+ for(const path of ['server/routes/shopier-routes.ts','server/shopier-client.ts','src/components/ShopierBilling.tsx'])assert.equal(existsSync(path),true);
+ assert.ok(readFileSync('server/api-app.ts','utf8').includes("app.use('/api', shopierRoutes)"));
+ assert.match(readFileSync('src/components/NativeAccessStatus.tsx','utf8'), /if \(!isAndroidApp\) return <WebBillingSession/);
  assert.ok(!readFileSync('src/components/ParentPortalView.tsx','utf8').includes('Shopier'));
  const routes=JSON.parse(readFileSync('vercel.json','utf8'));assert.equal(routes.rewrites.find((r:{source:string})=>r.source==='/paketler').destination,'/api/index?__path=public/membership/page');
 });
@@ -37,3 +38,4 @@ test('retirement revokes legacy writes and claims while preserving business sett
   assert.deepEqual(grants.rows[0],{claim:false,write:false,read:true});
  }finally{await db.close();}
 });
+

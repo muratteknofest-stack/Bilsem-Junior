@@ -114,6 +114,7 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
       ledger=[{token_hash:body.p_hash,token_ciphertext:body.p_token,package_name:body.p_package,product_id:body.p_product,parent_id:parent,student_id:student}];value=body.p_hash;
     }else if(u.pathname==='/rest/v1/google_play_purchase_bindings')value=preparedBinding?{parent_id:parent,student_id:student}:null;
     else if(u.pathname==='/rest/v1/google_play_subscriptions')value=req.headers.get('accept')?.includes('vnd.pgrst.object')?ledger[0]||null:ledger;
+    else if(u.pathname==='/rest/v1/shopier_access_orders')value=[];
     else throw Error('Unexpected fixture endpoint '+u.pathname);
     return Response.json(value);
   }) as typeof fetch;
@@ -157,3 +158,4 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     for(const k of Object.keys(process.env))if(!(k in savedEnv))delete process.env[k];Object.assign(process.env,savedEnv);
   }
 });
+
