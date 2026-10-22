@@ -1,0 +1,46 @@
+{
+  "checkedAt": "2026-10-22T17:35:50.320673+00:00",
+  "integratedMain": "b813f3db626e87b55456c16e107f2d46e7f97b94",
+  "v2Parent": "9918c569dc3d676a98a766282dfe11292928017e",
+  "preservedMainPullRequests": [
+    77,
+    78,
+    79,
+    80
+  ],
+  "filesIntegrated": 29,
+  "threeWayMergedFiles": [
+    ".env.example",
+    "tests/supabase-transport.test.mjs"
+  ],
+  "conflicts": [],
+  "preservedV2": [
+    "Server-only AI configuration entries",
+    "Protected preview transport and its cookie regression tests",
+    "Question engine, pilot review and test assembly implementations"
+  ],
+  "validation": {
+    "regression": {
+      "passed": 466,
+      "failed": 0
+    },
+    "typescript": "passed",
+    "startup": {
+      "passed": 74,
+      "failed": 0
+    },
+    "questions": {
+      "passed": 190,
+      "failed": 0
+    },
+    "authConnectivity": "passed"
+  },
+  "previousVerifiedRuntime": {
+    "commit": "7ca74e8e2cf764263665d938386b752f12fcbb5c",
+    "url": "https://zekapark-bltrki1rr-dyds-projects-c415ba7a.vercel.app/",
+    "status": "READY",
+    "database": "ready"
+  },
+  "previewAtReportCreation": "Merged runtime preview will be created by the integration commit; PR 76 records subsequent verification.",
+  "productionRelease": "V2 not merged or promoted to production by this task."
+}

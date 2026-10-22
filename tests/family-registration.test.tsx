@@ -24,10 +24,10 @@ test('closed or unavailable registration permits editing and step navigation, bu
   assert.ok(source.indexOf('if (step < 2) { setStep') < source.indexOf('if (!availability?.registrationOpen) {'));
 });
 test('direct registration and login addresses preserve the public account form and never select administrator access', () => {
-  for (const path of ['/register', '/register/']) assert.deepEqual(accountEntry(new URL(path, 'https://zekapark.vercel.app')), { mode:'register',role:'parent' });
-  assert.deepEqual(accountEntry(new URL('https://zekapark.vercel.app/login?role=parent')), { mode:'login',role:'parent' });
-  assert.deepEqual(accountEntry(new URL('https://zekapark.vercel.app/login?role=admin')), { mode:'login',role:'student' });
-  for (const path of ['/', '/admin/giris', '/register/extra', '/blog/login']) assert.equal(accountEntry(new URL(path, 'https://zekapark.vercel.app')), null);
+  for (const path of ['/register', '/register/']) assert.deepEqual(accountEntry(new URL(path, 'https://bilsemjunior.vercel.app')), { mode:'register',role:'parent' });
+  assert.deepEqual(accountEntry(new URL('https://bilsemjunior.vercel.app/login?role=parent')), { mode:'login',role:'parent' });
+  assert.deepEqual(accountEntry(new URL('https://bilsemjunior.vercel.app/login?role=admin')), { mode:'login',role:'student' });
+  for (const path of ['/', '/admin/giris', '/register/extra', '/blog/login']) assert.equal(accountEntry(new URL(path, 'https://bilsemjunior.vercel.app')), null);
   assert.equal(accountEntryPath('register','parent'),'/register'); assert.equal(accountEntryPath('login','parent'),'/login?role=parent'); assert.equal(accountEntryPath('login','admin'),'/login');
 });
 const input = { parentEmail: ' VELI@example.com ', parentPassword: 'VeliGüvenli937', studentPassword: 'ÖğrenciGüvenli938', studentName: ' Deniz ', grade: 2, examFocus: 'Genel Zihinsel Yetenek', consentAccepted: true, termsAccepted: true, guardianConfirmed: true, policyVersion: '2026-10-11.1' };

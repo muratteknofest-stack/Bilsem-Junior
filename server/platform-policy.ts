@@ -65,7 +65,7 @@ export function publicPolicy(
   return info;
 }
 export function policyHtml(info: PlatformInfo): string {
-  const siteUrl = (process.env.PUBLIC_SITE_URL || 'https://zekapark.vercel.app').replace(/\/+$/, '');
+  const siteUrl = (process.env.PUBLIC_SITE_URL || 'https://bilsemjunior.vercel.app').replace(/\/+$/, '');
   const url = `${siteUrl}/bilgi/${info.slug}`;
   const contactEmail = info.contactEmail && /^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(info.contactEmail) ? info.contactEmail : SUPPORT_EMAIL;
   const schema = JSON.stringify({

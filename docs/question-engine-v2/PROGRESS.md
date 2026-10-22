@@ -286,3 +286,10 @@ Canlı Supabase okuması: 100 soru, 100 incelemede, 0 yayımlanmış, 0 uygun ka
 
 
 Dağıtım kabulü: `7ca74e8e2cf764263665d938386b752f12fcbb5c`, Vercel `dpl_CzFEwir6vNA337MyZz4VtV5UGbuT`, Preview READY (8m50s). Yeni önizleme: https://zekapark-bltrki1rr-dyds-projects-c415ba7a.vercel.app/ . Ana sayfa tarayıcıda çizildi. Gerçek `/api/health`, aynı commit için `status: ok`, `database: ready` döndürdü. Vercel günlüğünde 74 başlangıç/güvenlik ve yeni 10 inceleme testi başarılı görüldü; tam derleme tamamlandı. Soru testlerinin toplam sayısı tarayıcı günlüğünden ayrıca çıkarılmadı. GitHub V2 çalışması `39727434596`, iş `119654478264`, runner 0 / adım yok durumunda başarısız; CI başarılı sayılmadı. Ana dal ve Production değiştirilmedi.
+
+
+## 22 Ekim 2026 — geliştirme dalını güncel main ile birleştirme
+
+Son kaynak kontrolünde main'in PR77–80 ile `b813f3d` sürümüne ilerlediği görüldü. Güncel adres değişiklikleri, parola kurtarma oturumunun gönderim anında yeniden denetlenmesi, yavaş claims denetiminin recovery olayını ezmesini önleyen düzeltme ve tüm doğrulanmış hesapların kendi parolasını değiştirebilmesi V2 dalına alındı. 29 dosya entegre edildi. İki ortak dosya (`.env.example`, `tests/supabase-transport.test.mjs`) üç yönlü birleştirildi; V2 sunucu AI ayarları ve Preview çerezi regresyonları korundu. Çakışma yok.
+
+Birleşmiş kaynakta 466/466 genel test ve TypeScript başarılı; derleme soru testleri 190/190, başlangıç testleri 74/74 ve gerçek Auth bağlantı kontrolü başarılı. Main bu görev tarafından değiştirilmedi; V2 geliştirme dalı main'i ikinci parent olarak içeren bir entegrasyon commit'i ile güncellenir. Önceki doğrulanmış önizleme `7ca74e8` / READY / database ready olarak kayıtlıdır; yeni birleşmiş önizleme sonradan PR76'da doğrulanır.

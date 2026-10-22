@@ -2,7 +2,7 @@
 
 # ZekaPark Türkçe yayın durumu — 14 Ekim 2026
 
-Ücretsiz Türkçe sürüm https://zekapark.vercel.app/ adresinde yayımlanıyor. Ücretli satışın hazır olduğu beyan edilmiyor.
+Ücretsiz Türkçe sürüm https://bilsemjunior.vercel.app/ adresinde yayımlanıyor. Ücretli satışın hazır olduğu beyan edilmiyor.
 
 ## Canlı veritabanında doğrulanan durum
 

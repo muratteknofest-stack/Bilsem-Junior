@@ -7,7 +7,7 @@ function fixture({storage=new Map(),denied=false}={}) {
   const nodes={},listeners={},redirects=[],timers=[];
   for(const id of ['root','bj-load-recovery','bj-load-message','bj-load-retry'])nodes[id]={hidden:id==='bj-load-recovery',textContent:'',listeners:{},addEventListener(name,fn){this.listeners[name]=fn;}};
   const document={title:'Bilsem Junior',getElementById:id=>nodes[id]};
-  const window={URL,navigator:{onLine:true},location:{href:'https://zekapark.vercel.app/reset-password?code=keep#access_token=keep',replace:href=>redirects.push(href),reload:()=>redirects.push('reload')},sessionStorage:{getItem(key){if(denied)throw Error('Denied');return storage.get(key)||null;},setItem(key,value){if(denied)throw Error('Denied');storage.set(key,value);}},setTimeout(fn){timers.push(fn);return timers.length;},clearTimeout(){},addEventListener(name,fn){listeners[name]=fn;}};
+  const window={URL,navigator:{onLine:true},location:{href:'https://bilsemjunior.vercel.app/reset-password?code=keep#access_token=keep',replace:href=>redirects.push(href),reload:()=>redirects.push('reload')},sessionStorage:{getItem(key){if(denied)throw Error('Denied');return storage.get(key)||null;},setItem(key,value){if(denied)throw Error('Denied');storage.set(key,value);}},setTimeout(fn){timers.push(fn);return timers.length;},clearTimeout(){},addEventListener(name,fn){listeners[name]=fn;}};
   runInNewContext(source,{window,document,Date});
   return {window,document,nodes,redirects,timers,event:(name,extra={})=>listeners[name]({preventDefault(){},...extra})};
 }

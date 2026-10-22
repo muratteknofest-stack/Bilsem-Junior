@@ -14,8 +14,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
-      VITE_API_BASE_URL: https://zekapark.vercel.app
-      VITE_PUBLIC_SITE_URL: https://zekapark.vercel.app
+      VITE_API_BASE_URL: https://bilsemjunior.vercel.app
+      VITE_PUBLIC_SITE_URL: https://bilsemjunior.vercel.app
       VITE_SUPABASE_URL: https://vtcsoqohkiagbwatlabk.supabase.co
       VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_J972I2--TwnuLkWjrRqENA_DxnBGjlz
     steps:

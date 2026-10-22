@@ -67,12 +67,16 @@ export async function isPasswordRecoveryReady(): Promise<boolean> {
   // A reload loses the in-memory event flag, but not the verified recovery
   // session. Ordinary password/sign-up sessions must not unlock this form.
   const { data, error: claimsError } = await supabase.auth.getClaims();
-  recoverySessionReady = !claimsError && hasRecoveryClaims(data?.claims);
+  if (!claimsError && hasRecoveryClaims(data?.claims)) recoverySessionReady = true;
+  // Only the verified PASSWORD_RECOVERY event or recovery claims may unlock the
+  // form; a slower claims check must never overwrite a flag the event set.
   return recoverySessionReady;
 }
 
 export async function updateRecoveredPassword(password: string) {
-  if (!recoverySessionReady) throw new Error('Sıfırlama bağlantısı geçersiz veya süresi dolmuş.');
+  // The in-memory flag can be reset by an unrelated auth event while the form
+  // is open; re-verify the recovery session from signed claims before failing.
+  if (!recoverySessionReady && !(await isPasswordRecoveryReady())) throw new Error('Sıfırlama bağlantısı geçersiz veya süresi dolmuş. Yeni bir bağlantı isteyin.');
   const { data, error } = await supabase.auth.getSession();
   if (error || !data.session) throw new Error('Sıfırlama oturumu doğrulanamadı. Yeni bağlantı isteyin.');
   const base = String(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');

@@ -2,7 +2,7 @@
 
 ## Yayın sonucu
 
-PR #14 ve #13 birleştirildi. Uygulama https://zekapark.vercel.app/ ve blog https://zekapark.vercel.app/blog adreslerinde yayında. İlk üretim commit'i 22eeda86bfbe485071175ba6e212ac7c334576f3; Vercel dağıtımı 5wgSXFP1QAVtnJM6NYCN5NDXV8K3 READY olarak doğrulandı. Bu raporu içeren takip değişikliği, uygulanan son migration kaynaklarını ve testleri ana dala kaydeder.
+PR #14 ve #13 birleştirildi. Uygulama https://bilsemjunior.vercel.app/ ve blog https://bilsemjunior.vercel.app/blog adreslerinde yayında. İlk üretim commit'i 22eeda86bfbe485071175ba6e212ac7c334576f3; Vercel dağıtımı 5wgSXFP1QAVtnJM6NYCN5NDXV8K3 READY olarak doğrulandı. Bu raporu içeren takip değişikliği, uygulanan son migration kaynaklarını ve testleri ana dala kaydeder.
 
 Altı kategoride 30 özgün yazı, ilgili gerçek Pexels fotoğrafları, kaynak/görsel bilgileri ve yayın ilkeleri eklendi. Tam yazılar statik HTML ile okunuyor; canonical, BlogPosting/Breadcrumb, robots.txt, 40 URL'lik sitemap ve RSS mevcut. Teknik hazırlık aramalarda gösterim veya sıralama garantisi değildir.
 
@@ -18,7 +18,7 @@ Proje zekapark, takım dyds-projects-c415ba7a, veritabanı vehhvsdkifwstbjhnhao.
 
 Production Supabase URL/public publishable yapılandırması ve PUBLIC_SITE_URL eklendi. APP_BASE_URL üretim adresine güncellendi. Eski VITE_API_BASE_URL değerleri okunmadı/değiştirilmedi; Vercel derlemesi bunları yok sayıp aynı kaynak /api kullanır. Vercel dışı ayrı sunucu ayarı korunur.
 
-`npm run verify:live -- https://zekapark.vercel.app 22eeda86bfbe485071175ba6e212ac7c334576f3 vehhvsdkifwstbjhnhao` başarılı: doğru commit, doğru proje ve hazır veritabanı JSON ile doğrulandı. HTML giriş sayfası ve yönlendirme sağlık kanıtı sayılmaz. Sonraki dağıtımda gerçek yeni commit ile tekrar çalıştırılmalıdır.
+`npm run verify:live -- https://bilsemjunior.vercel.app 22eeda86bfbe485071175ba6e212ac7c334576f3 vehhvsdkifwstbjhnhao` başarılı: doğru commit, doğru proje ve hazır veritabanı JSON ile doğrulandı. HTML giriş sayfası ve yönlendirme sağlık kanıtı sayılmaz. Sonraki dağıtımda gerçek yeni commit ile tekrar çalıştırılmalıdır.
 
 Canlı 13 HTTP/SEO kontrolü başarılı: ana sayfa/blog/gizlilik 200, bilinmeyen blog/API 404, yetkisiz hesap/yönetici 401, yetkisiz öğrenme/parola POST 401, robots/sitemap/RSS 200 ve hostile Origin 403. Güvenlik başlıkları, API no-store, doğru sitemap/canonical ve üretim noindex bulunmaması doğrulandı. Blog masaüstü görünümü canlı tarayıcıda kontrol edildi; mobil, ekran okuyucu veya oturumlu aile testi değildir.
 

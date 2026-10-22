@@ -10,7 +10,7 @@ Uygulama kimliği `com.zekapark.app`, bu sürüm `1.0.28` / versionCode `29`.
 - Yeni istemci `questionFormat=reasoning-8` yeteneğini bildirir. Eski kurulumlara uyumlu soru düzenleri seçilir. Eski istemci yeni biçimli bir çalışmayı sürdürmeye çalışırsa cevapları değiştirmeden güncelleme mesajı alır. Önceki v7 soru kayıtlarının özgün üreticisi korunur.
 - APK, 1.0.26 paketinin doğrulanmış yerel kodu üzerine yeni web varlıkları ve sürüm bilgisi yerleştirilerek aynı test anahtarıyla hazırlanabilir. Bu paket Google Play üretim sürümü değildir.
 
-1. `.env.android` içinde yalnız açık bağlantı ayarlarını tanımlayın: VITE_API_BASE_URL ve VITE_PUBLIC_SITE_URL `https://zekapark.vercel.app`; VITE_SUPABASE_URL ve VITE_SUPABASE_PUBLISHABLE_KEY mevcut açık proje değerleri olmalı. Sunucu sırlarını Android paketine koymayın.
+1. `.env.android` içinde yalnız açık bağlantı ayarlarını tanımlayın: VITE_API_BASE_URL ve VITE_PUBLIC_SITE_URL `https://bilsemjunior.vercel.app`; VITE_SUPABASE_URL ve VITE_SUPABASE_PUBLISHABLE_KEY mevcut açık proje değerleri olmalı. Sunucu sırlarını Android paketine koymayın.
 2. `npm ci`, `npm run lint`, `npm run test:google-play`, `npm run android:sync` çalıştırın.
 3. JDK 21 ve Android SDK 36 ile `npm run android:bundle` çalıştırın. İmzasız AAB mağazaya yüklenemez; mevcut yükleme anahtarıyla güvenli makinede imzalayın. Parola ve anahtar depoya veya sohbete eklenmez.
 4. Play Console uygulaması, `zekapark_uyelik` ürünü ve üç etkin otomatik yenilenen plan (`monthly` P1M, `quarterly` P3M, `annual` P1Y) kurulmalı. Gerçek fiyatlar mağazadan alınır.
