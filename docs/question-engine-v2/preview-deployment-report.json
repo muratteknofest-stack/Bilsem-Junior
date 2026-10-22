@@ -1,85 +1,60 @@
 {
-  "checkedAt": "2026-10-21",
-  "runtimeCommit": "997fd62b03560ebf45f5a19cc242c60f7c7e5ba7",
-  "deploymentId": "dpl_5NRJa2V4vfeNyLx3n2Z67iAJ8JKp",
+  "checkedAt": "2026-10-22T17:30:36.131287+00:00",
+  "runtimeCommit": "7ca74e8e2cf764263665d938386b752f12fcbb5c",
+  "deploymentId": "dpl_CzFEwir6vNA337MyZz4VtV5UGbuT",
   "deploymentState": "READY",
-  "serviceCredentialScope": {
-    "type": "Secret",
-    "previewBranch": "codex/question-engine-v2-20261021",
-    "productionCredential": "retained without modification",
-    "allPreviewBranches": false,
-    "development": false
-  },
-  "accessApproval": "User explicitly approved using the existing production Supabase credential only in the trusted V2 private Preview server.",
-  "credentialValues": "omitted",
-  "authenticatedUserLogin": "not verified",
-  "productionRelease": "not performed",
-  "authConnectivityBuildCheck": "passed: public configuration, password validation, Data API isolation and invalid-session rejection",
-  "previewUrl": "https://zekapark-jl9qtnxkf-dyds-projects-c415ba7a.vercel.app/",
-  "deploymentUrl": "https://vercel.com/dyds-projects-c415ba7a/zekapark/5NRJa2V4vfeNyLx3n2Z67iAJ8JKp",
-  "buildDuration": "6m 59s",
+  "previewUrl": "https://zekapark-bltrki1rr-dyds-projects-c415ba7a.vercel.app/",
+  "deploymentUrl": "https://vercel.com/dyds-projects-c415ba7a/zekapark/CzFEwir6vNA337MyZz4VtV5UGbuT",
+  "buildDuration": "8m 50s",
+  "buildVerification": "Full npm run vercel-build completed on Vercel; exact question test total was not extracted from the browser log.",
   "startupTests": {
     "passed": 74,
     "failed": 0
   },
-  "questionTests": {
-    "passed": 180,
-    "failed": 0
-  },
-  "typescript": "passed locally and during this Vercel build",
-  "publicAssetsChecked": 148,
-  "assetCredentialScan": "passed: no recognized private credentials or source maps",
-  "publicHomepage": "rendered in the authorized Vercel browser",
+  "newReviewTests": "All ten new review contract/error tests visibly passed in the Vercel log. Fixtures are not real provider approvals.",
+  "typescript": "passed locally and in the completed Vercel build",
+  "publicAssetsCheckedLocally": 148,
+  "publicHomepage": "rendered in authorized browser; startup screen resolved",
   "apiHealth": {
     "status": "ok",
     "database": "ready",
     "version": "1.0.0",
     "projectRef": "vtcsoqohkiagbwatlabk",
-    "commit": "997fd62b03560ebf45f5a19cc242c60f7c7e5ba7",
-    "timestamp": 1792613723067
+    "commit": "7ca74e8e2cf764263665d938386b752f12fcbb5c",
+    "timestamp": 1792646973590
   },
   "apiHealthReadChecks": [
     "profiles",
     "learning_sessions",
     "platform_settings"
   ],
-  "githubActions": {
-    "runId": 39667605638,
-    "commit": "997fd62b03560ebf45f5a19cc242c60f7c7e5ba7",
-    "conclusion": "failure",
-    "job": "verify",
-    "runnerId": 0,
-    "steps": []
+  "serviceCredentialScope": {
+    "previewBranch": "codex/question-engine-v2-20261021",
+    "productionCredential": "retained without modification",
+    "allPreviewBranches": false,
+    "development": false
   },
-  "remaining": [
-    "Authenticated real-user login acceptance",
-    "GitHub Actions runner failure",
-    "Independent AI and human expert pilot reviews"
-  ],
+  "credentialValues": "omitted",
+  "authenticatedUserLogin": "not verified",
+  "productionRelease": "not performed",
   "localRegression": {
-    "passed": 456,
+    "passed": 466,
     "failed": 0
   },
-  "mobile": {
-    "checks": 348,
+  "reviewMobile": {
+    "checks": 15,
     "viewports": 3,
-    "webgl": true,
-    "contextFallback": true,
-    "pixelDifferenceRatio": 0,
+    "scope": "Real review progress component; layout fixture only, no AI or database writes",
+    "errors": [],
     "failures": []
   },
-  "testAssemblyAudit": {
-    "sessions": 12,
-    "questions": 240,
-    "failures": [],
-    "typesPerTest": [
-      16,
-      17
-    ],
-    "reasoningFamiliesPerTest": [
-      16,
-      19
-    ]
+  "githubActions": {
+    "runId": 39727434596,
+    "commit": "7ca74e8e2cf764263665d938386b752f12fcbb5c",
+    "conclusion": "failure",
+    "jobId": 119654478264,
+    "runnerId": 0,
+    "steps": []
   },
   "publication": {
     "total": 100,
@@ -87,5 +62,11 @@
     "eligible": 0,
     "published": 0,
     "writes": 0
-  }
+  },
+  "remaining": [
+    "Configure a real AI provider key privately on the trusted branch.",
+    "Complete independent provider and actual editor pilot review.",
+    "Verify authenticated real-user/admin flows.",
+    "Resolve GitHub Actions pre-runner failure; cause not accessible via connector."
+  ]
 }

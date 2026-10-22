@@ -43,6 +43,17 @@
     "Authenticated administrator end-to-end review has not been run; unit contract fixtures and the real progress component were tested locally."
   ],
   "preview": {
-    "status": "awaiting deployment after this implementation commit"
+    "runtimeCommit": "7ca74e8e2cf764263665d938386b752f12fcbb5c",
+    "deploymentState": "READY",
+    "previewUrl": "https://zekapark-bltrki1rr-dyds-projects-c415ba7a.vercel.app/",
+    "buildDuration": "8m 50s",
+    "apiHealth": {
+      "status": "ok",
+      "database": "ready",
+      "version": "1.0.0",
+      "projectRef": "vtcsoqohkiagbwatlabk",
+      "commit": "7ca74e8e2cf764263665d938386b752f12fcbb5c",
+      "timestamp": 1792646973590
+    }
   }
 }
