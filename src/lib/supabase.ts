@@ -67,7 +67,9 @@ export async function isPasswordRecoveryReady(): Promise<boolean> {
   // A reload loses the in-memory event flag, but not the verified recovery
   // session. Ordinary password/sign-up sessions must not unlock this form.
   const { data, error: claimsError } = await supabase.auth.getClaims();
-  recoverySessionReady = !claimsError && hasRecoveryClaims(data?.claims);
+  if (!claimsError && hasRecoveryClaims(data?.claims)) recoverySessionReady = true;
+  // Only the verified PASSWORD_RECOVERY event or recovery claims may unlock the
+  // form; a slower claims check must never overwrite a flag the event set.
   return recoverySessionReady;
 }
 
