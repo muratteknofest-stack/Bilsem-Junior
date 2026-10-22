@@ -7,6 +7,8 @@ export function AdminMfaGate({ children }: { children: React.ReactNode }) {
     [busy, setBusy] = useState(false);
   const [factor, setFactor] = useState<string | null>(null),
     [qr, setQr] = useState<string | null>(null),
+    [setupSecret, setSetupSecret] = useState<string | null>(null),
+    [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle"),
     [code, setCode] = useState(""),
     [error, setError] = useState("");
   useEffect(() => {
@@ -45,6 +47,9 @@ export function AdminMfaGate({ children }: { children: React.ReactNode }) {
     if (busy) return;
     setBusy(true);
     setError("");
+    setQr(null);
+    setSetupSecret(null);
+    setCopyStatus("idle");
     try {
       const existing = await supabase.auth.mfa.listFactors();
       if (existing.error) throw existing.error;
@@ -72,12 +77,22 @@ export function AdminMfaGate({ children }: { children: React.ReactNode }) {
       if (result.error) throw result.error;
       setFactor(result.data.id);
       setQr(result.data.totp.qr_code);
+      setSetupSecret(result.data.totp.secret);
     } catch {
       setError(
         "Doğrulayıcı kurulamadı. Supabase Auth TOTP ayarlarının açık olduğunu kontrol edin.",
       );
     } finally {
       setBusy(false);
+    }
+  }
+  async function copySetupSecret() {
+    if (!setupSecret) return;
+    try {
+      await navigator.clipboard.writeText(setupSecret);
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("error");
     }
   }
   async function verify(event: React.FormEvent) {
@@ -97,6 +112,8 @@ export function AdminMfaGate({ children }: { children: React.ReactNode }) {
         throw new Error();
       setCode("");
       setQr(null);
+      setSetupSecret(null);
+      setCopyStatus("idle");
       setReady(true);
     } catch {
       setCode("");
@@ -134,7 +151,7 @@ export function AdminMfaGate({ children }: { children: React.ReactNode }) {
       {qr && (
         <>
           <p>
-            Doğrulayıcı uygulamanızla bu karekodu tarayın. Karekodu paylaşmayın.
+            Doğrulayıcı uygulamanızla bu karekodu tarayın. Karekodu ve kurulum anahtarını paylaşmayın.
             Hesap kurtarma için doğrulayıcınızın güvenli yedekleme seçeneğini
             kullanın.
           </p>
@@ -143,6 +160,36 @@ export function AdminMfaGate({ children }: { children: React.ReactNode }) {
             alt="Yönetici doğrulayıcı kurulum karekodu"
             className="my-4 h-56 w-56"
           />
+          {setupSecret && (
+            <div className="mb-5 rounded-xl border border-indigo-100 bg-indigo-50 p-4">
+              <p id="admin-mfa-setup-key-label" className="font-semibold">
+                Elle kurulum anahtarı
+              </p>
+              <code
+                aria-labelledby="admin-mfa-setup-key-label"
+                className="my-3 block select-all break-all rounded-lg bg-white p-3 font-mono text-base tracking-wider text-slate-900"
+                dir="ltr"
+                tabIndex={0}
+              >
+                {setupSecret.match(/.{1,4}/g)?.join(" ") || setupSecret}
+              </code>
+              <button
+                type="button"
+                onClick={() => void copySetupSecret()}
+                disabled={busy}
+                className="min-h-12 rounded-xl border border-indigo-300 bg-white px-4 py-3 font-semibold text-indigo-800 disabled:opacity-50"
+              >
+                Anahtarı kopyala
+              </button>
+              <p role="status" className="mt-2 text-sm text-slate-700">
+                {copyStatus === "copied"
+                  ? "Kurulum anahtarı kopyalandı."
+                  : copyStatus === "error"
+                    ? "Kopyalanamadı. Anahtarı yukarıdan seçerek elle kopyalayabilirsiniz."
+                    : "QR kodunu tarayamıyorsanız bu harf ve rakamları doğrulayıcıya elle ekleyin. Kod türü: Zamana dayalı (TOTP)."}
+              </p>
+            </div>
+          )}
         </>
       )}
       {factor ? (
@@ -178,3 +225,4 @@ export function AdminMfaGate({ children }: { children: React.ReactNode }) {
     </section>
   );
 }
+
