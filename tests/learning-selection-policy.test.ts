@@ -1,15 +1,53 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { balancedCategoryPlan, recentQuestionExposure, selectLearningQuestions, gradeChallengeFloor, pickGradeChallenge, generateVariedLearningQuestion } from '../server/learning-question-selection';
+import { balancedCategoryPlan, recentQuestionExposure, selectLearningQuestions, gradeChallengeFloor, pickGradeChallenge, generateVariedLearningQuestion, currentReasoningCandidate } from '../server/learning-question-selection';
 import { AVAILABLE_CATEGORIES } from '../src/features/student/available-categories';
 import { DeadlineFinishGate } from '../src/features/student/answer-progression';
 import { generateQuestion } from '../src/features/questions/generators';
 import { isQuestionReadyForStudents, questionVisualKey, questionStimulusKey } from '../src/features/questions/quality';
 import { LearningError } from '../server/learning-model';
 import { EDUCATION_PROFILES } from '../src/features/questions/quality-policy';
+import { reasoningDifficultyPlan } from '../src/features/questions/reasoning-profile';
+import { SeededRNG } from '../src/lib/rng';
+import { generateWorkshopQuestion } from '../src/features/questions/workshop-engine';
 
 const numeric = (seed: number) => generateQuestion({ targetGrade: 2, type: 'number_pattern', seed, difficulty: 2 });
 const cannotGenerate = () => { throw Error('No more novel content'); };
+
+test('the expanded reading engine preserves saved workshop-3 puzzles and rejects a forged version', () => {
+  const oldQuestion = generateWorkshopQuestion('word_scramble_logic', 321, 1, true);
+  const newQuestion = generateWorkshopQuestion('word_scramble_logic', 321, 1);
+  assert.equal(oldQuestion.authoring?.engine, 'workshop-3');
+  assert.equal(newQuestion.authoring?.engine, 'workshop-reading-1');
+  assert.notEqual(oldQuestion.id, newQuestion.id);
+  assert.ok(isQuestionReadyForStudents(oldQuestion));
+  assert.ok(isQuestionReadyForStudents(newQuestion));
+  assert.equal(isQuestionReadyForStudents({...oldQuestion, authoring: {...oldQuestion.authoring!, engine: 'workshop-reading-1'}}), false);
+});
+
+test('first-grade verbal sessions fill 30 and 45 slots without repeating displayed puzzles', () => {
+  for (const legacy of [false, true]) for (const count of [30, 45]) for (const level of [1, 2, 'mixed'] as const) {
+    const rng = new SeededRNG(count * 7919 + (level === 'mixed' ? 999 : level) + Number(legacy));
+    const randomIndex = (max: number) => rng.nextInt(0, max - 1);
+    const plan = level === 'mixed' ? reasoningDifficultyPlan(1, count, randomIndex) : Array(count).fill(level);
+    const selected = selectLearningQuestions({
+      count, category: 'verbal', candidates: [], exposure: new Map(), difficultyPlan: plan,
+      preferDiverseTypes: true, randomIndex,
+      canUse: q => q.targetGrade === 1 && currentReasoningCandidate(q, 1, !legacy) && isQuestionReadyForStudents(q),
+      generate: (category, typeCounts, difficulty, reasoningCounts) => generateVariedLearningQuestion({
+        grade: 1, category, typeCounts, difficulty: difficulty!, reasoningCounts,
+        seed: rng.nextInt(1, 2147483646), randomIndex, legacy,
+      }),
+    });
+    assert.equal(selected.length, count);
+    assert.equal(new Set(selected.map(questionStimulusKey)).size, count);
+    assert.deepEqual(selected.map(q => q.difficulty).sort(), [...plan].sort());
+    assert.ok(new Set(selected.map(q => {
+      const data = q.options.find(o => o.id === q.correctOptionId)!.visualData;
+      return data && 'textNumber' in data ? data.textNumber : undefined;
+    })).size >= 10);
+  }
+});
 
 test('mixed plans cover all ten categories with quota differences of at most one', () => {
   for (const count of [5, 15, 30, 45]) {
@@ -126,3 +164,4 @@ test('unseen grade-level content replaces easy bank filler in a mixed fourth-gra
   assert.ok(new Set(chosen.map(questionStimulusKey)).size === 3);
   assert.ok(new Set(chosen.map(q => q.type)).size >= 2);
 });
+

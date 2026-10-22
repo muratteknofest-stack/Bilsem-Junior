@@ -13,8 +13,11 @@ import { solveWorkshopBoard, transformed, TANGRAM_POLYGONS, POLYGON_SYMBOLS, WOR
 
 const same=(a:unknown,b:unknown)=>fingerprint(a)===fingerprint(b);
 const words=['TOP','KUM','ARI','KALEM','KİTAP','MASA','ELMA','OKUL','BALIK','KAPI','ORMAN'];
+// Short-word tasks need enough distinct letter/code boards for a full 45-question
+// session. Three words only provide 18 permutations, regardless of the seed.
+const readingWords=['TOP','KUM','ARI','AYI','KAR','BAL','DAL','YOL','GÖL','TAŞ','GÜL','CAN','SES','GÖZ','DİŞ','SÜT','MUZ','NAR','YÜZ','GÜN','YAZ','KIŞ','TAÇ','ÇAY','YÜN','KOL','DİZ','KEK','TUZ','SAÇ','KUŞ','KOÇ','FİL','KAZ','MUM','ÇAM','ÇİM','KALEM','KİTAP','MASA','ELMA','OKUL','BALIK','KAPI','ORMAN','BULUT','ÇİÇEK','YILDIZ'];
 const relations:[string,string][]=[['kuş','yuva'],['arı','kovan'],['köpek','kulübe'],['at','ahır'],['tavuk','kümes'],['karınca','karınca yuvası']];
-export function generateWorkshopQuestion(type:QuestionType,seed:number,difficulty:DifficultyLevel):BaseQuestion {
+export function generateWorkshopQuestion(type:QuestionType,seed:number,difficulty:DifficultyLevel,legacyReading=false):BaseQuestion {
   if(!WORKSHOP_TYPES.includes(type)||!Number.isSafeInteger(seed)||seed<1||!Number.isInteger(difficulty)||difficulty<1||difficulty>6)throw Error('INVALID_WORKSHOP_INPUT: Konu, tohum veya zorluk geçersiz.');
   const rng=new SeededRNG(seed),size=difficulty<=3?3:4;
   let b:WorkshopBoard={displayMode:'workshop_board',kind:type}, prompt='',steps:string[]=[],extra:WorkshopValue[]=[];
@@ -82,7 +85,7 @@ export function generateWorkshopQuestion(type:QuestionType,seed:number,difficult
     case 'tangram_puzzle': b.polygon=rng.pick(TANGRAM_POLYGONS);prompt='Karedeki renkli üçgen sabit kalıyor. Dış kenarları aynı boyda tutarak boş kısmı hangi üçgen tamamlar?';steps=['Renkli üçgen karenin köşegeninin bir tarafını kaplar.','Diğer köşegen tarafını tam örten üçgeni seç; örtüşme ve boşluk bırakma.'];extra=TANGRAM_POLYGONS.map(polygon=>({polygon}));break;
     case 'maze_path': {b.size=size;const wall=size===3?1:2;b.cells=Array.from({length:size**2},(_,i)=>Number(i%size===wall));const left=b.cells.flatMap((v,i)=>!v&&i%size<wall?[i]:[]),right=b.cells.flatMap((v,i)=>!v&&i%size>wall?[i]:[]);b.start=rng.pick(left);b.goals=rng.shuffle([rng.pick(left.filter(i=>i!==b.start)),...rng.shuffle(right).slice(0,3)]);prompt='Başlangıçtan yalnızca boş komşu hücrelere yatay veya dikey ilerle. Duvarı aşmadan hangi hedefe ulaşabilirsin?';steps=['Başlangıca bağlı açık hücreleri incele; çapraz geçiş yapılamaz.','Duvarla ayrılan hedefleri ele ve ulaşılabilen tek hedefi seç.'];extra=['A','B','C','D'].map(textNumber=>({textNumber}));break;}
     case 'detail_detection': {const original=tile(),copy=structuredClone(original),occupied=original.cells.flatMap((v,i)=>v?[i]:[]);copy.cells[rng.pick(occupied)]=0;b.tiles=[original,copy];prompt='Sağdaki kopyada bir dolu hücre kaybolmuş. Eksik hücre hangi satır ve sütundadır?';steps=['İki deseni satır satır aynı hücrelerde karşılaştır.','Solda dolu, sağda boş olan tek hücrenin satır ve sütununu seç.'];break;}
-    case 'word_scramble_logic': {const word=rng.pick(words.filter(w=>w.length<=(difficulty<=2?3:Math.min(6,3+difficulty)))),order=rng.shuffle(Array.from({length:word.length},(_,i)=>i));b.letters=order.map(i=>word[i]);b.order=Array.from({length:word.length},(_,i)=>order.indexOf(i)+1);prompt='Numaralı harfleri verilen kod sırasıyla oku. Hangi sözcük oluşur?';steps=['Kod sırasındaki ilk numaranın gösterdiği harfi al.','Diğer numaraları sırayla izleyerek harfleri birleştir; harf atlama veya ekleme.'];break;}
+    case 'word_scramble_logic': {const word=rng.pick((legacyReading?words:readingWords).filter(w=>w.length<=(difficulty<=2?3:Math.min(6,3+difficulty)))),order=rng.shuffle(Array.from({length:word.length},(_,i)=>i));b.letters=order.map(i=>word[i]);b.order=Array.from({length:word.length},(_,i)=>order.indexOf(i)+1);prompt='Numaralı harfleri verilen kod sırasıyla oku. Hangi sözcük oluşur?';steps=['Kod sırasındaki ilk numaranın gösterdiği harfi al.','Diğer numaraları sırayla izleyerek harfleri birleştir; harf atlama veya ekleme.'];break;}
     default:throw Error('UNKNOWN_WORKSHOP_TOPIC');
   }
   const answer=solveWorkshopBoard(b,extra),choices:WorkshopValue[]=[answer];
@@ -119,7 +122,8 @@ export function generateWorkshopQuestion(type:QuestionType,seed:number,difficult
   let correctOptionId='';const notes:Record<string,string>={};
   const options=rng.shuffle(choices).map((visualData,i)=>{const id='ABCD'[i],correct=same(visualData,answer);if(correct)correctOptionId=id;notes[id]=describeWorkshopChoice(b,visualData,answer);return {id,label:id,visualData,fingerprint:fingerprint(visualData)};});
   const finalSteps=[...steps,`Verilen kurala uyan tek seçenek ${correctOptionId}.`];
-  return {id:`${type}-w3-d${difficulty}-s${seed}`,version:3,type,category:TOPIC_CATEGORY[type],seed,difficulty,ageGroup:difficulty<=2?'1-2':'3-4',prompt,options,correctOptionId,explanation:{ruleTitle:QUESTION_TYPE_LABELS[type],summary:finalSteps.join(' '),steps:finalSteps},visualConfig:b,skills:[type],estimatedSeconds:30+difficulty*10,status:'draft',authoring:{engine:WORKSHOP_ENGINE_VERSION,objective:prompt,distractorNotes:notes}};
+  const expandedReading=type==='word_scramble_logic'&&!legacyReading;
+  return {id:`${type}-${expandedReading?'w4':'w3'}-d${difficulty}-s${seed}`,version:expandedReading?4:3,type,category:TOPIC_CATEGORY[type],seed,difficulty,ageGroup:difficulty<=2?'1-2':'3-4',prompt,options,correctOptionId,explanation:{ruleTitle:QUESTION_TYPE_LABELS[type],summary:finalSteps.join(' '),steps:finalSteps},visualConfig:b,skills:[type],estimatedSeconds:30+difficulty*10,status:'draft',authoring:{engine:expandedReading?'workshop-reading-1':WORKSHOP_ENGINE_VERSION,objective:prompt,distractorNotes:notes}};
 }
 export function describeWorkshopChoice(board:WorkshopBoard,choice:WorkshopValue,expected:WorkshopValue):string {
   if(same(choice,expected))return 'Verilen bilgilerden hesaplanan tek doğru sonuç; bağımsız aday denetimi de aynı sonucu veriyor.';

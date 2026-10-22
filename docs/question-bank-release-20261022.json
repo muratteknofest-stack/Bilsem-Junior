@@ -1,0 +1,42 @@
+{
+  "batchId": "owner-20261022-complete",
+  "total": 8000,
+  "passed": 8000,
+  "failures": [],
+  "uniqueStems": 8000,
+  "uniqueVisuals": 8000,
+  "uniqueStimuli": 8000,
+  "arithmeticChecks": 4128,
+  "selectionChecks": 3520,
+  "generatedFallbackChecks": 4758,
+  "checkedAt": "2026-10-22T20:09:14.805Z",
+  "sourceSha256": "5398a49c48165cc86682e477f635265cc5918384b88d72b18150b21773a33407",
+  "limits": [
+    "Automated solution, grade policy and rendered-markup checks; no individual human educator review is recorded.",
+    "Topic-specific tests use the available distinct questions when a level has fewer than the requested count.",
+    "Mixed tests use the production selector, including independently verified generation when no suitable bank question is available."
+  ],
+  "database": {
+    "projectRef": "vtcsoqohkiagbwatlabk",
+    "total": 8397,
+    "published": 8000,
+    "review": 100,
+    "draft": 297,
+    "perGrade": 2000,
+    "topicsPerGrade": 44,
+    "priorContentFingerprint": "9b89bc1f4955293a4f9e614204dafb9ccc15a4752505c0d4aae6c5551c2706c0",
+    "afterReleaseNormalizedContentFingerprint": "9b89bc1f4955293a4f9e614204dafb9ccc15a4752505c0d4aae6c5551c2706c0",
+    "existing397Preserved": true,
+    "individualHumanReview": false
+  },
+  "codeValidation": {
+    "generalTests": 438,
+    "generalFailures": 0,
+    "startupTests": 73,
+    "questionBuildTests": 164,
+    "typescript": "passed",
+    "authConnectivity": "passed",
+    "productionBuild": "passed",
+    "publicAssetsChecked": 146
+  }
+}
