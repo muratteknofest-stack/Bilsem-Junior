@@ -25,6 +25,7 @@ jobs:
       - run: npm ci
       - run: npm run lint && npm test
       - run: npx playwright install --with-deps chromium
+      - run: npm run test:review-batch:browser
       - run: npm run test:engine-v2:mobile
       - run: npm run test:preview-auth:browser
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -32,6 +33,7 @@ jobs:
         with:
           name: engine-v2-mobile-evidence
           path: |
+            test-artifacts/review-batch/
             test-artifacts/engine-v2/
             test-artifacts/protected-preview-auth/
           if-no-files-found: ignore

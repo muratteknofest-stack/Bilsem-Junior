@@ -4,7 +4,7 @@ import {reviewDesignedQuestion} from '../ai-question-pipeline-v2';
 import type {AiUsageCall} from '../../src/features/questions/ai-contracts';
 import {generateQuestionDecoration} from '../question-decoration';
 import {aiRoleModelsSchema} from '../../src/features/questions/ai-contracts';
-import {aiCapabilities} from '../ai-prompts/role-config';
+import {aiCapabilities,aiProviderConfigured} from '../ai-prompts/role-config';
 import {runDesignedQuestionPipeline} from '../ai-question-pipeline-v2';
 import {claimGeneration,commitGeneration} from '../professional-generation-store';
 import { logServerFailure } from '../safe-log';
@@ -190,6 +190,7 @@ adminAiRoutes.get('/admin/question-review-queue',requireSupabaseAuth,adminAiLimi
 });
 adminAiRoutes.post('/admin/ai-validate-question',requireSupabaseAuth,adminAiLimiter,requireProfileRole('admin'),sharedRateLimit('admin-ai',60,600),async(req:AuthenticatedRequest,res)=>{
  const parsed=existingReviewSchema.safeParse(req.body);if(!parsed.success||!req.authUser)return res.status(400).json({error:'Geçersiz denetim isteği.'});
+ if(![parsed.data.roleModels.solver,parsed.data.roleModels.pedagogue].every(selection=>aiProviderConfigured(selection.provider)))return res.status(503).json({error:'Bağımsız çözücü ve pedagojik denetçi için sunucu API anahtarı gerekli.',code:'AI_NOT_CONFIGURED'});
  try{
   const {data,error}=await getServiceClient().from('questions').select('data').eq('id',parsed.data.questionId).single();if(error||!data)return res.status(404).json({error:'Soru bulunamadı.'});
   const q=data.data as BaseQuestion;assertQuestionRevision(q,parsed.data.expectedRevision);if(q.reviewPolicy!=='professional-v2'||!['draft','review'].includes(q.status||'')||!q.targetGrade)return res.status(422).json({error:'Yalnız yeni inceleme taslakları denetlenebilir.'});

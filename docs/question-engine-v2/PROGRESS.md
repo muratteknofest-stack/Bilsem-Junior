@@ -270,3 +270,16 @@ Güncel GitHub Actions V2 çalışması `39667605638`, runner atanmadan
 (`runner_id: 0`, `steps: []`) başarısız. Ayrıntılı nedeni doğrulanamadı;
 CI başarılı sayılmıyor. PR taslak olarak kalır. Kullanıcıların kayıtları veya
 aktif soruların yayın durumları değiştirilmedi; main'e birleştirme yapılmadı.
+
+
+## 22 Ekim 2026 — mevcut pilot için toplu bağımsız inceleme
+
+Yönetici AI motoru artık seçilen 1–20 soruyu sırayla `/api/admin/ai-validate-question` üzerinden denetler. İlk 20 incelenmemiş taslak seçilebilir. Her kayıt yanıtının soru kimliği, yeni revizyonu, inceleme durumu ve eksiksiz kalite raporu doğrulanmadan başarılı sonuç gösterilmez. Ret raporu ile kayıt/sağlayıcı hatası ayrı tutulur. Kaydedilen raporlar korunur; mevcut sorudan sonra durdurulabilir. Ağ, revizyon, oturum, kota veya sağlayıcı hatasında kalan çağrılar durur; otomatik ücretli yeniden deneme yapılmaz. Yeniden denemek için kuyruk yenilenerek güncel revizyonlar alınır.
+
+Çözücü başarılı olduktan sonra pedagojik çağrı kesilirse tamamlanan aşama korunur, eksik aşama başarısız kaydedilir. Eksik sağlayıcı yapılandırması veritabanını değiştirmeden 503 döner. Mevcut taslağı denetlemek tasarımcıyı tekrar çağırmaz. AI denetimi editör kararı veya otomatik yayın değildir. Seçim değişince önceki toplu editör onayı temizlenir.
+
+Değişen alanlar: `question-review-batch.ts`, `QuestionReviewBatchPanel.tsx`, `AdminAiQuestionEngine.tsx`, sunucu AI inceleme/pipeline yolları, testler, tarayıcı yerleşim düzeneği ve V2 CI test listesi. Yeni `any` eklenmedi; şema veya öğrenci verisi değiştirilmedi.
+
+Doğrulama: 466/466 genel test; 10/10 toplu inceleme testi; TypeScript başarılı; gerçek Vercel derleme komutu başarılı; 148 varlık kontrolü. Gerçek ilerleme bileşeni 320×568, 390×844 ve 768×1024 boyutlarında Playwright ile 15 kontrolden geçti. Unit testlerdeki onay yanıtları yalnız sözleşme test verisidir, AI incelemesi veya yayımlanmış soru sayılmaz.
+
+Canlı Supabase okuması: 100 soru, 100 incelemede, 0 yayımlanmış, 0 uygun kalite raporu, 0 bireysel uzman incelemesi. Bu adımda veritabanına yazılmadı. Vercel ortam değişkenlerinin adları kontrol edildi; Gemini/OpenAI/Qwen sunucu API anahtarı görülmedi. Gizli değerler açılmadı. Gerçek AI denetimi ve girişli yönetici akışı henüz doğrulanamadı. GitHub Actions hâlâ adım çalıştırmadan başarısız; nedenine erişilemedi.

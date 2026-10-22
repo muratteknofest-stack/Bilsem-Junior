@@ -1,4 +1,6 @@
 import {AiRoleControls} from './AiRoleControls';
+import {QuestionReviewBatchPanel} from './QuestionReviewBatchPanel';
+import {reviewConfigurationReady,runQuestionReviewBatch,type ReviewBatchProgress} from '../../lib/question-review-batch';
 import {AiUsagePanel} from './AiUsagePanel';
 import {QuestionDecorationControl} from './QuestionDecorationControl';
 import {EngineOperationsPanel} from './EngineOperationsPanel';
@@ -97,6 +99,12 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
   const [selectedIds,setSelectedIds]=useState<Set<string>>(new Set());
   const [bulkConfirmed,setBulkConfirmed]=useState(false);
   const [reviewBusy,setReviewBusy]=useState(false);
+  const [reviewProgress,setReviewProgress]=useState<ReviewBatchProgress|null>(null);
+  const [batchRunning,setBatchRunning]=useState(false);
+  const reviewGate=useRef(false);
+  const stopReview=useRef(false);
+  const mounted=useRef(true);
+  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;stopReview.current=true;};},[]);
   useEffect(()=>{const controller=new AbortController();authenticatedFetch('/api/admin/ai-capabilities',{signal:controller.signal}).then(async response=>{if(!response.ok)throw Error('Model ayarları yüklenemedi.');const parsed=aiCapabilitiesSchema.parse(await response.json());setCapabilities(parsed);setRoleModels(parsed.defaults);}).catch(()=>{if(!controller.signal.aborted)setErrorMessage('AI ayarları yüklenemedi. Sayfayı yeniden açın.');});return()=>controller.abort();},[]);
 
   const [targetAge, setTargetAge] = useState<number | undefined>();
@@ -179,13 +187,28 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
 
   const loadQueue=async()=>{
     setReviewBusy(true);setErrorMessage('');
-    try{const response=await authenticatedFetch('/api/admin/question-review-queue');if(!response.ok)throw Error('İnceleme kuyruğu yüklenemedi.');const payload:unknown=await response.json();if(!payload||typeof payload!=='object'||!('questions' in payload)||!Array.isArray(payload.questions))throw Error('Geçersiz kuyruk yanıtı.');const items=payload.questions.map(q=>toResult(aiGenerationResponseSchema.parse({success:false,question:q,qualityScore:0}))).filter((q):q is GeneratedQuestionResult=>q!==null).map(q=>({...q,status:'draft' as const,solverVerified:q.rawOutput?.aiMeta?.solverVerified===true}));setResults(items);setSelectedIds(new Set());}
+    try{const response=await authenticatedFetch('/api/admin/question-review-queue');if(!response.ok)throw Error('İnceleme kuyruğu yüklenemedi.');const payload:unknown=await response.json();if(!payload||typeof payload!=='object'||!('questions' in payload)||!Array.isArray(payload.questions))throw Error('Geçersiz kuyruk yanıtı.');const items=payload.questions.map(q=>toResult(aiGenerationResponseSchema.parse({success:false,question:q,qualityScore:0}))).filter((q):q is GeneratedQuestionResult=>q!==null).map(q=>({...q,status:'draft' as const,solverVerified:q.rawOutput?.aiMeta?.solverVerified===true}));setResults(items);setSelectedIds(new Set());setBulkConfirmed(false);setReviewProgress(null);}
     catch(error){setErrorMessage(error instanceof Error?error.message:'Kuyruk yüklenemedi.');}finally{setReviewBusy(false);}
   };
-  const validateExisting=async(id:string)=>{
-    const question=results.find(q=>q.id===id)?.rawOutput;if(!question||!roleModels)return;setReviewBusy(true);
-    try{const response=await authenticatedFetch('/api/admin/ai-validate-question',{method:'POST',body:JSON.stringify({questionId:id,expectedRevision:question.revision||0,roleModels})});if(!response.ok)throw Error('AI denetimi kaydedilemedi.');const item=toResult(aiGenerationResponseSchema.parse(await response.json()));if(item)setResults(previous=>previous.map(q=>q.id===id?item:q));}
-    catch(error){setErrorMessage(error instanceof Error?error.message:'AI denetimi tamamlanamadı.');}finally{setReviewBusy(false);}
+  const validateExisting=async(ids:string[])=>{
+    if(reviewGate.current||isGenerating||!roleModels)return;
+    if(!reviewConfigurationReady(capabilities,roleModels)){setErrorMessage('Bağımsız çözücü ve pedagojik denetçi için seçilen sağlayıcının sunucu API anahtarı gerekli. Supabase anahtarı AI anahtarı değildir.');return;}
+    const questions=ids.map(id=>results.find(q=>q.id===id)?.rawOutput);
+    if(questions.some(q=>!q)){setErrorMessage('Önce inceleme kuyruğunu yenileyin.');return;}
+    reviewGate.current=true;stopReview.current=false;setBatchRunning(true);setReviewBusy(true);setErrorMessage('');setBulkConfirmed(false);
+    try{
+      await runQuestionReviewBatch({targets:questions.map(q=>({id:q!.id,revision:q!.revision||0})),models:roleModels,
+        shouldStop:()=>stopReview.current||!mounted.current,
+        request:(target,models,signal)=>authenticatedFetch('/api/admin/ai-validate-question',{method:'POST',signal,body:JSON.stringify({questionId:target.id,expectedRevision:target.revision,roleModels:models})}),
+        changed:progress=>{if(mounted.current)setReviewProgress(progress);},
+        saved:question=>{
+          if(!mounted.current)return;
+          const item=toResult(aiGenerationResponseSchema.parse({success:question.qualityReport?.eligible===true,question,qualityScore:question.qualityReport?.score||0,solverVerified:question.aiMeta?.solverVerified}));
+          if(item)setResults(previous=>previous.map(q=>q.id===question.id?{...item,status:'draft'}:q));
+          setSelectedIds(previous=>{const next=new Set(previous);next.delete(question.id);return next;});
+        }});
+    }catch(error){if(mounted.current)setErrorMessage(error instanceof Error?error.message:'AI denetimi tamamlanamadı.');}
+    finally{reviewGate.current=false;if(mounted.current){setReviewBusy(false);setBatchRunning(false);}}
   };
   const handleBulk=async(action:'approve'|'reject')=>{
     if(!selectedIds.size||selectedIds.size>20||action==='approve'&&!bulkConfirmed)return;setReviewBusy(true);
@@ -197,7 +220,8 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
     <div className="space-y-6">
       {errorMessage && <p role="alert" className="rounded-xl border border-red-400/40 bg-red-950/40 p-4 text-red-200">{errorMessage}</p>}
       <EngineOperationsPanel/>
-      <div className="space-y-2 rounded-xl border border-slate-700 p-3 text-xs text-slate-300"><button disabled={reviewBusy||isGenerating} onClick={loadQueue} className="rounded-lg bg-indigo-700 px-3 py-2 text-white">İnceleme kuyruğunu yükle (son 100)</button><p>{selectedIds.size} seçili · toplu işlem sınırı 20.</p><label className="block"><input type="checkbox" checked={bulkConfirmed} onChange={e=>setBulkConfirmed(e.target.checked)}/> Seçtiğim soruların yönerge, çözüm ve görsellerini inceledim.</label><div className="flex gap-2"><button disabled={reviewBusy||!bulkConfirmed||!selectedIds.size||selectedIds.size>20} onClick={()=>handleBulk('approve')} className="rounded-lg bg-emerald-800 px-3 py-2">Seçilenleri onayla ve yayımla</button><button disabled={reviewBusy||!selectedIds.size||selectedIds.size>20} onClick={()=>handleBulk('reject')} className="rounded-lg bg-red-900 px-3 py-2">Seçilenleri reddet</button></div><p>Toplu editör kararı kaydedilir; bireysel uzman incelemesi yapılmış sayılmaz. Eksik kalite aşaması olan soru yayımlanmaz.</p></div>
+      <div className="space-y-2 rounded-xl border border-slate-700 p-3 text-xs text-slate-300"><button disabled={reviewBusy||isGenerating} onClick={loadQueue} className="rounded-lg bg-indigo-700 px-3 py-2 text-white">İnceleme kuyruğunu yükle (son 100)</button><p>{selectedIds.size} seçili · toplu işlem sınırı 20.</p><div className="flex flex-wrap gap-2"><button type="button" disabled={reviewBusy||isGenerating||!results.length} onClick={()=>{setSelectedIds(new Set(results.filter(q=>!['approved','rejected'].includes(q.status)&&q.rawOutput?.reviewPolicy==='professional-v2'&&!q.solverVerified).slice(0,20).map(q=>q.id)));setBulkConfirmed(false);}} className="min-h-11 rounded-lg bg-slate-700 px-3 py-2">İlk 20 taslağı seç</button><button type="button" disabled={reviewBusy||isGenerating||!selectedIds.size||selectedIds.size>20||!reviewConfigurationReady(capabilities,roleModels)} onClick={()=>validateExisting([...selectedIds])} className="min-h-11 rounded-lg bg-indigo-700 px-3 py-2">Seçilenleri bağımsız AI denetiminden geçir</button></div>{!reviewConfigurationReady(capabilities,roleModels)&&<p className="text-amber-200">AI incelemesi için çözücü ve pedagojik denetçi sağlayıcısının sunucu anahtarını tanımlayın. Supabase anahtarı bu görevi yapmaz.</p>}<label className="block"><input type="checkbox" checked={bulkConfirmed} disabled={reviewBusy||isGenerating} onChange={e=>setBulkConfirmed(e.target.checked)}/> Seçtiğim soruların yönerge, çözüm ve görsellerini inceledim.</label><div className="flex gap-2"><button disabled={reviewBusy||!bulkConfirmed||!selectedIds.size||selectedIds.size>20} onClick={()=>handleBulk('approve')} className="rounded-lg bg-emerald-800 px-3 py-2">Seçilenleri onayla ve yayımla</button><button disabled={reviewBusy||!selectedIds.size||selectedIds.size>20} onClick={()=>handleBulk('reject')} className="rounded-lg bg-red-900 px-3 py-2">Seçilenleri reddet</button></div><p>Toplu editör kararı kaydedilir; bireysel uzman incelemesi yapılmış sayılmaz. Eksik kalite aşaması olan soru yayımlanmaz.</p></div>
+      <QuestionReviewBatchPanel progress={reviewProgress} running={batchRunning} onStop={()=>{stopReview.current=true;}}/>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -398,7 +422,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                   <div className="p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-2"><label className="text-xs text-slate-300"><input type="checkbox" aria-label={`Toplu işlem için ${res.id}`} checked={selectedIds.has(res.id)} disabled={isGenerating||reviewBusy||['approved','rejected'].includes(res.status)} onChange={e=>setSelectedIds(previous=>{const next=new Set(previous);if(e.target.checked)next.add(res.id);else next.delete(res.id);return next;})}/> Seç</label>
+                        <div className="flex flex-wrap items-center gap-2 mb-2"><label className="text-xs text-slate-300"><input type="checkbox" aria-label={`Toplu işlem için ${res.id}`} checked={selectedIds.has(res.id)} disabled={isGenerating||reviewBusy||['approved','rejected'].includes(res.status)} onChange={e=>{setSelectedIds(previous=>{const next=new Set(previous);if(e.target.checked)next.add(res.id);else next.delete(res.id);return next;});setBulkConfirmed(false);}}/> Seç</label>
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${DIFFICULTY_COLORS[res.difficulty]}`}>
                             {DIFFICULTY_LABELS[res.difficulty]}
                           </span>
@@ -460,7 +484,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                             <button onClick={() => handleReview(res.id, 'reject')} className="px-3 py-1.5 rounded-lg text-xs font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 transition-colors flex items-center gap-1">
                               <X className="w-3.5 h-3.5" /> Reddet
                             </button>
-                            <button disabled={!res.solverVerified} onClick={() => handleReview(res.id, 'approve')} className="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors flex items-center gap-1">
+                            <button disabled={reviewBusy||isGenerating||!res.solverVerified} onClick={() => handleReview(res.id, 'approve')} className="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors flex items-center gap-1">
                               <CheckCircle2 className="w-3.5 h-3.5" /> Onayla
                             </button>
                           </>
@@ -473,7 +497,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                   {expandedId === res.id && (
                     <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} className="border-t border-slate-800 bg-slate-900/50">
                       <div className="p-4 space-y-4 text-xs text-slate-300">
-                        <button disabled={reviewBusy||isGenerating} onClick={()=>validateExisting(res.id)} className="rounded-lg bg-indigo-700 px-3 py-2 text-white">Mevcut soruyu bağımsız AI denetiminden geçir</button><QuestionQualityPanel report={res.qualityReport} attempts={res.attempts} /><AiUsagePanel usage={res.rawOutput?.aiMeta?.usage}/>{res.rawOutput&&<QuestionDecorationControl question={res.rawOutput} configured={capabilities?.imageGenerationConfigured===true}/>}
+                        <button disabled={reviewBusy||isGenerating} onClick={()=>validateExisting([res.id])} className="rounded-lg bg-indigo-700 px-3 py-2 text-white">Mevcut soruyu bağımsız AI denetiminden geçir</button><QuestionQualityPanel report={res.qualityReport} attempts={res.attempts} /><AiUsagePanel usage={res.rawOutput?.aiMeta?.usage}/>{res.rawOutput&&<QuestionDecorationControl question={res.rawOutput} configured={capabilities?.imageGenerationConfigured===true}/>}
                         {res.rawOutput && <div className="rounded-xl bg-white p-3"><QuestionRenderer key={previewMethod+String(perspective)+res.id} question={res.rawOutput} previewMethod={previewMethod} previewPerspective={perspective} /><div className="grid grid-cols-2 gap-3">{res.rawOutput.options.map(option => <OptionRenderer question={res.rawOutput} key={option.id} option={option} disabled showCorrect isCorrectOption={option.id === res.correctOptionId} />)}</div></div>}
                         {res.validationWarnings && res.validationWarnings.length > 0 && (
                           <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl space-y-1">

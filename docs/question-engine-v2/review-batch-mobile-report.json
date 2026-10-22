@@ -1,0 +1,7 @@
+{
+  "checks": 15,
+  "viewports": 3,
+  "scope": "Real review progress component; layout fixture only, no AI or database writes",
+  "errors": [],
+  "failures": []
+}
