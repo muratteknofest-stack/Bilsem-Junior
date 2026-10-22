@@ -71,7 +71,7 @@ authRoutes.post('/auth/resend-confirmation', accountSecurityLimiter, sharedRateL
   }
 });
 
-authRoutes.post('/auth/change-password', requireSupabaseAuth, requireVerifiedEmail, requireProfileRole('parent', 'admin'), accountSecurityLimiter, sharedRateLimit('own-password-change', 6, 3600), changeOwnPassword);
+authRoutes.post('/auth/change-password', requireSupabaseAuth, requireVerifiedEmail, accountSecurityLimiter, sharedRateLimit('own-password-change', 6, 3600), changeOwnPassword);
 
 export default authRoutes;
 
