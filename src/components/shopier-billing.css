@@ -1,0 +1,21 @@
+.zp-billing{border:1px solid #ddd6fe;border-radius:24px;background:#fff;padding:20px;color:#253047;margin:16px 0}
+.zp-billing summary{display:flex;align-items:center;gap:12px;cursor:pointer;font-weight:800;min-height:48px}
+.zp-billing summary small{display:block;color:#667085;font-weight:500}
+.zp-billing-summary-icon{font-size:30px;color:#7655cb}.zp-billing-chevron{margin-left:auto}
+.zp-billing-content{padding-top:16px}.zp-billing-status{padding:14px;background:#f3f0ff;border-radius:12px}
+.zp-billing .zp-plan-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}
+.zp-billing .zp-plan-card{padding:16px;border-radius:18px;background:#f5f0ff;min-width:0}
+.zp-billing .zp-plan-peach{background:#fff1e8}.zp-billing .zp-plan-mint{background:#eaf9f1}
+.zp-billing .zp-plan-top{display:flex;justify-content:space-between}.zp-billing .zp-plan-tag{font-size:10px;font-weight:800}
+.zp-billing .zp-plan-price{font-size:26px;font-weight:900}.zp-billing .zp-plan-price span{font-size:14px}
+.zp-billing .zp-plan-duration,.zp-billing .zp-plan-intro,.zp-billing .zp-plan-small{font-size:13px}
+.zp-billing .zp-plan-feature-title{font-weight:700}.zp-billing .zp-plan-features{list-style:none;padding:0;font-size:13px}
+.zp-billing .zp-plan-features li{margin:8px 0}.zp-billing .zp-plan-features span{margin-right:6px}
+.zp-billing .zp-sales-button{display:flex;gap:8px;align-items:center;justify-content:center;min-height:48px;border-radius:12px;padding:10px 14px;background:#6546b8;color:#fff;font-weight:700;text-decoration:none;border:0;cursor:pointer}
+.zp-billing .zp-sales-button:disabled{background:#e2e4e9;color:#667085;cursor:default}
+.zp-billing .zp-sales-button:focus-visible,.zp-billing input:focus-visible{outline:3px solid #ec9c32;outline-offset:3px}
+.zp-billing-instructions,.zp-billing .zp-sales-notice{font-size:14px;line-height:1.6}
+.zp-billing-activation{border-top:1px solid #e6e2ee;padding-top:16px}.zp-billing-activation-heading{display:flex;gap:12px}
+.zp-billing-form-row{display:flex;align-items:end;gap:12px}.zp-billing-form-row label{flex:1;min-width:0;font-size:14px;font-weight:700}
+.zp-billing-form-row input{display:block;min-height:48px;border:1px solid #b7adca;border-radius:10px;padding:10px;width:100%;box-sizing:border-box;margin-top:6px}
+@media(max-width:700px){.zp-billing .zp-plan-grid{grid-template-columns:1fr}.zp-billing-form-row{display:block}.zp-billing-form-row button{width:100%;margin-top:12px}}
