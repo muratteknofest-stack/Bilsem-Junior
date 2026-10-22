@@ -21,7 +21,7 @@ import {prepareEditorialQuestion} from '../server/editorial-validation.ts';
 process.env.VITE_SUPABASE_URL='https://turkish-fixture.invalid';process.env.VITE_SUPABASE_PUBLISHABLE_KEY='sb_publishable_isolated_fixture';
 const androidStory=process.env.BILSEM_ANDROID_STORY_CHECK==='1';
 const webStory=process.env.BILSEM_WEB_STORY_CHECK==='1';
-if(androidStory){process.env.VITE_API_BASE_URL='https://turkish-fixture.invalid';process.env.VITE_PUBLIC_SITE_URL='https://zekapark.vercel.app';}
+if(androidStory){process.env.VITE_API_BASE_URL='https://turkish-fixture.invalid';process.env.VITE_PUBLIC_SITE_URL='https://bilsemjunior.vercel.app';}
 const server=await createServer({cacheDir:androidStory?'/tmp/bilsem-android-story-vite-cache':'/tmp/bilsem-turkish-accounts-vite-cache',...(androidStory?{mode:'android'}:{}),server:{host:'127.0.0.1',port:5186,strictPort:true}});await server.listen();let browser,page;
 const parentId='11111111-1111-4111-8111-111111111111',studentId='22222222-2222-4222-8222-222222222222';
 const parent={id:parentId,role:'parent',name:'Pilot veli',linked_student_ids:[studentId],xp:0,level:1},student={id:studentId,role:'student',name:'Kaşif',grade:2,student_code:'EXPLORER1234',linked_parent_id:parentId,xp:0,level:1};

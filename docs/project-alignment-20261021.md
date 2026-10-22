@@ -1,6 +1,6 @@
 # Bilsem Junior Supabase eşleştirmesi — 21 Ekim 2026
 
-Aktif hedef `vtcsoqohkiagbwatlabk`, yayın adresi `https://zekapark.vercel.app`.
+Aktif hedef `vtcsoqohkiagbwatlabk`, yayın adresi `https://bilsemjunior.vercel.app`.
 Önceki `vehhvsdkifwstbjhnhao` projesi bu hesapla erişilebilir değildir; bu projeden kayıt aktarımı doğrulanmış değildir.
 
 ## Korunan kayıtlar

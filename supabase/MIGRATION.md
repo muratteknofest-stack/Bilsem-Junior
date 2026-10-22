@@ -26,7 +26,7 @@ Yeni, boş bir projede `schema.sql` temel şemadır. Ancak `schema.sql` tek baş
 
 ## Doğrulama
 
-`npm run lint`, `npm test`, `npm run test:student` ve `npm run vercel-build` çalıştırın. Üretimde `npm run verify:live -- https://zekapark.vercel.app COMMIT_SHA vtcsoqohkiagbwatlabk` doğru sürümü ve veritabanını JSON yanıtıyla doğrular. Gerçek aile kaydı, e-posta doğrulaması, öğrenci girişi ve veli raporlarını ayrılmış test hesaplarıyla ayrıca kontrol edin.
+`npm run lint`, `npm test`, `npm run test:student` ve `npm run vercel-build` çalıştırın. Üretimde `npm run verify:live -- https://bilsemjunior.vercel.app COMMIT_SHA vtcsoqohkiagbwatlabk` doğru sürümü ve veritabanını JSON yanıtıyla doğrular. Gerçek aile kaydı, e-posta doğrulaması, öğrenci girişi ve veli raporlarını ayrılmış test hesaplarıyla ayrıca kontrol edin.
 
 Veritabanı rollback testi: `tests/supabase-learning.integration.sql`. Ayrılmış fixture kimlikleriyle çalışır; rollback satırını kaldırmayın. Yapılandırma, bağlantı veya kaynak temizliği mevcut hesap/ilerleme verilerini değiştirmez.
 

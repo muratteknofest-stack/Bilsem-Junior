@@ -109,15 +109,15 @@ test('free registration does not imply completed commercial launch checks',()=>{
 
 function releaseFetch(overrides:Record<string,{status?:number;body?:string;headers?:Record<string,string>}>={}){
  return async (input:Parameters<typeof fetch>[0],init?:RequestInit)=>{const url=input instanceof URL?input:new URL(typeof input==='string'?input:input.url);const path=url.pathname;const crossSite=new Headers(init?.headers).get('Sec-Fetch-Site')==='cross-site';const status=crossSite&&path.startsWith('/api/')?403:init?.method==='POST'?(new Headers(init.headers).has('Origin')?403:401):path==='/api/release-unknown'?404:path.startsWith('/api/')&&!path.startsWith('/api/public/')?401:200;
- const body=path==='/'?'<html lang="tr"><title>Bilsem Junior</title></html>':path==='/robots.txt'?'User-agent: *\nDisallow: /admin':path==='/sitemap.xml'?'https://zekapark.vercel.app/':path==='/api/public/platform'?JSON.stringify({registrationOpen:true,policyVersion:'fixture-1'}):path==='/api/public/membership'?JSON.stringify({ready:false,enforced:false,plans:[{},{},{}]}):path==='/paketler'||path==='/paketler/'?'<html><link href="/sales/sales.css"><h1 id="sales-heading">Keşif</h1><section class="zp-plan-card"></section></html>':path==='/sales/sales.css'?'.zp-plan-mint{color:green}':path.startsWith('/bilgi/')?'<html><h1>Policy</h1></html>':'fixture';
+ const body=path==='/'?'<html lang="tr"><title>Bilsem Junior</title></html>':path==='/robots.txt'?'User-agent: *\nDisallow: /admin':path==='/sitemap.xml'?'https://bilsemjunior.vercel.app/':path==='/api/public/platform'?JSON.stringify({registrationOpen:true,policyVersion:'fixture-1'}):path==='/api/public/membership'?JSON.stringify({ready:false,enforced:false,plans:[{},{},{}]}):path==='/paketler'||path==='/paketler/'?'<html><link href="/sales/sales.css"><h1 id="sales-heading">Keşif</h1><section class="zp-plan-card"></section></html>':path==='/sales/sales.css'?'.zp-plan-mint{color:green}':path.startsWith('/bilgi/')?'<html><h1>Policy</h1></html>':'fixture';
  const override=overrides[path]||{};return new Response(override.body??body,{status:override.status??status,headers:{'x-content-type-options':'nosniff','x-frame-options':'DENY','cache-control':'no-store','content-type':path.endsWith('.css')?'text/css; charset=utf-8':'text/html; charset=utf-8',...override.headers}});
  };
 }
 test('live release checks distinguish free registration and disabled paid sales',async()=>{
- const report=await verifyPublicRelease(new URL('https://zekapark.vercel.app'),releaseFetch());assert.deepEqual(report,{checks:27,registrationOpen:true,paidSalesReady:false});
+ const report=await verifyPublicRelease(new URL('https://bilsemjunior.vercel.app'),releaseFetch());assert.deepEqual(report,{checks:27,registrationOpen:true,paidSalesReady:false});
 });
 test('live release refuses sign-in walls, private exports, missing protection and indexing blocks',async()=>{
- const origin=new URL('https://zekapark.vercel.app');
+ const origin=new URL('https://bilsemjunior.vercel.app');
  await assert.rejects(()=>verifyPublicRelease(origin,releaseFetch({'/api/account/export':{status:200}})));
  await assert.rejects(()=>verifyPublicRelease(origin,releaseFetch({'/':{status:302}})));
  await assert.rejects(()=>verifyPublicRelease(origin,releaseFetch({'/':{headers:{'x-frame-options':'SAMEORIGIN'}}})));
@@ -132,7 +132,7 @@ test('package addresses with and without a trailing slash use the same public se
  }
 });
 test('live release refuses a broken package address or a missing sales stylesheet',async()=>{
- const origin=new URL('https://zekapark.vercel.app');
+ const origin=new URL('https://bilsemjunior.vercel.app');
  for(const path of ['/paketler','/paketler/']){
   await assert.rejects(()=>verifyPublicRelease(origin,releaseFetch({[path]:{status:404}})));
   await assert.rejects(()=>verifyPublicRelease(origin,releaseFetch({[path]:{body:'<h1>Sayfa bulunamadı</h1>'}})));
@@ -143,7 +143,7 @@ test('live release refuses a broken package address or a missing sales styleshee
 
 
 test('live release requires external document links to work and cross-site API reads to stay blocked',async()=>{
- const origin=new URL('https://zekapark.vercel.app'),fixture=releaseFetch();
+ const origin=new URL('https://bilsemjunior.vercel.app'),fixture=releaseFetch();
  const brokenNavigation:typeof fetch=async(input,init)=>new Headers(init?.headers).get('Sec-Fetch-Site')==='cross-site'&&new URL(String(input)).pathname==='/paketler'?Response.json({error:'Origin blocked'},{status:403}):fixture(input,init);
  await assert.rejects(()=>verifyPublicRelease(origin,brokenNavigation));
  const openApi:typeof fetch=async(input,init)=>new Headers(init?.headers).get('Sec-Fetch-Site')==='cross-site'&&new URL(String(input)).pathname==='/api/account/export'?Response.json({data:'private'}):fixture(input,init);

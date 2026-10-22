@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 /**
  * End-to-End Live Pilot Family Test for ZekaPark
  * 
- * Verifies live production flow on https://zekapark.vercel.app:
+ * Verifies live production flow on https://bilsemjunior.vercel.app:
  * 1. Health & platform status check (registration readiness & policy version)
  * 2. New family registration with reciprocal profiles and student code generation
  * 3. Email verification and student activation flow validation
@@ -21,12 +21,12 @@ if (!suppliedEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(suppliedEmail) || /\.(i
 if (!process.env.PILOT_PARENT_PASSWORD || !process.env.PILOT_STUDENT_PASSWORD) {
   throw new Error('Pilot parolalarını güvenli ortam değişkenleriyle yapılandırın. Test başlatılmadı.');
 }
-const BASE_URL = (process.argv[2] || process.env.PUBLIC_SITE_URL || 'https://zekapark.vercel.app').replace(/\/+$/, '');
+const BASE_URL = (process.argv[2] || process.env.PUBLIC_SITE_URL || 'https://bilsemjunior.vercel.app').replace(/\/+$/, '');
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://vtcsoqohkiagbwatlabk.supabase.co';
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_J972I2--TwnuLkWjrRqENA_DxnBGjlz';
 
 const target = new URL(BASE_URL);
-if (target.origin !== 'https://zekapark.vercel.app' || target.pathname !== '/') throw new Error('Pilot yayın hedefi doğrulanamadı.');
+if (target.origin !== 'https://bilsemjunior.vercel.app' || target.pathname !== '/') throw new Error('Pilot yayın hedefi doğrulanamadı.');
 const nativeFetch = globalThis.fetch;
 const fetch: typeof globalThis.fetch = (input, init) => nativeFetch(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(25_000) });
 

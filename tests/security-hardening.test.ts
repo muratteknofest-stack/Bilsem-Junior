@@ -24,7 +24,7 @@ test('public bundle checks catch recognized private keys and privileged JWTs wit
 
 test('public settings export exact names and reject service-role, secret keys and credential-bearing URLs without printing them', () => {
   const marker = 'fixture-secret-never-export';
-  const settings = publicBuildSettings({ ...publicEnv, VITE_SUPABASE_URL_SECRET: marker, VITE_API_BASE_URL_TOKEN: marker, VITE_GEMINI_API_KEY: marker, SUPABASE_SERVICE_ROLE_KEY: marker }, true, true, 'https://zekapark.vercel.app');
+  const settings = publicBuildSettings({ ...publicEnv, VITE_SUPABASE_URL_SECRET: marker, VITE_API_BASE_URL_TOKEN: marker, VITE_GEMINI_API_KEY: marker, SUPABASE_SERVICE_ROLE_KEY: marker }, true, true, 'https://bilsemjunior.vercel.app');
   assert.equal(Object.keys(settings).length, 4);
   assert.ok(!JSON.stringify(settings).includes(marker));
   assert.equal(settings.VITE_API_BASE_URL, '');
@@ -102,12 +102,12 @@ test('rejected API requests retain all security headers and malformed/oversize i
   } finally { await new Promise<void>(resolve=>server.close(()=>resolve())); if(saved===undefined)delete process.env.NODE_ENV;else process.env.NODE_ENV=saved; }
 });
 
-test('policyHtml uses PUBLIC_SITE_URL when configured and defaults cleanly to zekapark.vercel.app', () => {
+test('policyHtml uses PUBLIC_SITE_URL when configured and defaults cleanly to bilsemjunior.vercel.app', () => {
   const info = { slug: 'test-policy', title: 'Test Başlık', description: 'Test Açıklama', sections: [] };
   const prev = process.env.PUBLIC_SITE_URL;
   try {
     delete process.env.PUBLIC_SITE_URL;
-    assert.match(policyHtml(info as any), /rel="canonical" href="https:\/\/zekapark\.vercel\.app\/bilgi\/test-policy"/);
+    assert.match(policyHtml(info as any), /rel="canonical" href="https:\/\/bilsemjunior\.vercel\.app\/bilgi\/test-policy"/);
     process.env.PUBLIC_SITE_URL = 'https://custom.zekapark.com/';
     assert.match(policyHtml(info as any), /rel="canonical" href="https:\/\/custom\.zekapark\.com\/bilgi\/test-policy"/);
   } finally {

@@ -1,6 +1,6 @@
 # ZekaPark: doğrulanmış güvenlik denetimi ve düzeltmeler
 
-Tarih: 11 Ekim 2026. Hedef: https://zekapark.vercel.app/.
+Tarih: 11 Ekim 2026. Hedef: https://bilsemjunior.vercel.app/.
 Kapsam: kaynak kodu, kilitli bağımlılıklar, düşük hacimli HTTP kontrolleri ve Supabase yetki metadatası. Bu denetim, kapsamlı bir sızma testi veya hesap güvenliği sertifikası değildir. Gerçek kullanıcı şifreleri değiştirilmedi; kullanıcı verileri dışa aktarılmadı.
 
 ## İlk raporun teknoloji varsayımı

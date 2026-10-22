@@ -127,7 +127,7 @@ jobs:
         with:
           node-version: 22
       - name: Verify the actual production release and Turkish public routes
-        run: node scripts/check-live-release.mjs https://zekapark.vercel.app "$GITHUB_SHA" vehhvsdkifwstbjhnhao
+        run: node scripts/check-live-release.mjs https://bilsemjunior.vercel.app "$GITHUB_SHA" vtcsoqohkiagbwatlabk
 
   learning-launch:
     runs-on: ubuntu-latest
