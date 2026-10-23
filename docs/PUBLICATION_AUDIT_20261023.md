@@ -4,7 +4,7 @@ Tarih: 23 Ekim 2026. Kapsam: mevcut GitHub ana dalı, canlı web uçları, öğr
 
 ## Sonuç
 
-Web uygulaması erişilebilir ve ücretsiz kayıt açıktır. Bu çalışma web ve Android derleme/yayın zincirindeki somut hataları giderir; Android AAB, APK ve doğrulama dosyaları gerçekten derlenmiştir. Google Play üretim yayını ve ücretli satış henüz tamamlanmış değildir. Mevcut yükleme sertifikasıyla imzalama, Play Console ürünleri/beyanları ve gerçek cihazdaki satın alma kabul testleri gerekir. Otomatik test sonuçları öğretmen onayı, gerçek e-posta teslimi veya gerçekleşmiş ödeme anlamına gelmez.
+Web uygulaması erişilebilir ve ücretsiz kayıt açıktır. Bu çalışma web ve Android derleme/yayın zincirindeki somut hataları giderir; Android AAB, APK ve doğrulama dosyaları gerçekten derlenmiştir. Google Play üretim yayını ve ücretli satış henüz tamamlanmış değildir. İmzalı ilk sürümün Play Console’a yüklenmesi, ürünler/beyanlar ve gerçek cihazdaki satın alma kabul testleri gerekir. Otomatik test sonuçları öğretmen onayı, gerçek e-posta teslimi veya gerçekleşmiş ödeme anlamına gelmez.
 
 ## Mimari ve kapsam
 
@@ -54,7 +54,7 @@ Yerel native derleme, gerçek Android cihazında çalıştırma veya Play'den in
 
 | İş | Gerekli işlem |
 | --- | --- |
-| Mevcut Android imzası | Play Console'daki mevcut yükleme anahtarı ve sertifika özetiyle güvenli makinede imzala. İmzasız aday AAB doğrudan Play'e yüklenemez. Özel anahtarı/parolayı sohbet veya GitHub'a koyma. |
+| Android imzası / ilk Play yüklemesi | Console’da hiç uygulama paketi veya kayıtlı yükleme sertifikası görünmediği doğrulandı. İlk yükleme için ayrı RSA 4096 bit anahtarla AAB ve APK imzalandı; iki imza doğrulandı. İlk AAB yüklemesi henüz yapılmadı. Özel anahtar/parola ayrı özel yedektedir; GitHub’a eklenmedi. |
 | Play ürünleri | Console Abonelikler ekranı halen faturalandırma destekli yeni APK/AAB istiyor. İmzalı paket kabul edildikten sonra `zekapark_uyelik` ve `monthly` P1M, `quarterly` P3M, `annual` P1Y planları, gerçek fiyat/bölgelerle yapılandırılmalı. |
 | Gerçek sunucu bağlantısı | Production ortamından token değişimi, uygulama kapsamlı Publisher API erişimi ve üç aktif planın katalog doğrulaması yapılmalı. |
 | Bildirim teslimi | RTDN konusu Console'a kaydedildi. Vercel istek günlüğünde 23 Ekim 21:25:07 (Türkiye) zamanlı `POST /api/google-play/notifications` isteğinin **204** ile tamamlandığı doğrulandı. Bu test bildirimi gerçek satın alma/yenileme olayının veya WIF token değişiminin testi değildir. |
@@ -72,3 +72,18 @@ Kaynaklar: [Vite güvenlik duyuruları](https://github.com/vitejs/vite/security/
 Kod değişiklikleri GitHub ana dalına `6e98cd0940591aeaa4e40b4644670ef151f46e50` ile gönderildi. Vercel Production dağıtımı `5EdrbAWFrcXai9i9ozKtm7hEiPC9`, 23 Ekim 22:06:08 (Türkiye) itibarıyla Ready/Current oldu. Sonraki rapor güncellemesi uygulama kodunu veya Android dosyalarını değiştirmez.
 
 Canlı doğrulamada doğru kod sürümü/veritabanı ile 19 temel sayfa/API kontrolü ve sekiz dış bağlantı/CORS kontrolü geçti. Ham Node HTTPS taşıyıcısı bu ortamda DNS hatası verdi; kalan sekiz kontrol aynı başlıkları koruyan, ortamın HTTPS proxy bağlantısını kullanan araçla doğrulandı.
+
+## Play Console devam çalışması
+
+Google Play oturumu yeniden açıldı. En yeni sürümler ve paketler ekranında paket listesi “Yok”; Alpha kanalında boş bir taslak vardı. Uygulama imzalama sayfası Google’ın dağıtım imzasını gösteriyor, yükleme sertifikası göstermiyor. Önceki “mevcut Play yükleme anahtarı” varsayımı bu canlı incelemeyle desteklenmedi; geçmişteki imza yedeği yalnız geliştirme/test anahtarıdır.
+
+- Alpha taslağına `1.0.28 • Kapalı test` adı ve Türkçe sürüm notları kaydedildi.
+- Reklam yok, resmi kurum uygulaması değil, sağlık özelliği yok ve finansal hizmet yok beyanları kaydedildi. Yayın özeti dört değişikliği doğruluyor; henüz incelemeye gönderilmedi.
+- Ayrı ilk Play yükleme anahtarı üretildi (RSA 4096, 10.000 gün). Özel yedek korunuyor; hiçbir özel anahtar veya parola depoya/uygulama paketine eklenmedi.
+- Yükleme sertifikası SHA-256: `35:D2:63:FE:38:5B:45:EB:4A:7E:71:19:51:20:0D:C5:F5:A3:0C:C9:D0:62:F0:B4:E7:F5:8D:B3:33:C3:95:7B`. Bu Google’ın dağıtım sertifikası değildir ve henüz Play’e kaydedilmemiştir. İlk AAB yüklemesi bunu kaydeder.
+- AAB: 7.967.033 byte; SHA-256 `bf9ef3dfcc8194a8ce17bbce1f495983f7c0a7df748ce206d34274236d7208ee`.
+- Release APK: 8.225.854 byte; SHA-256 `bcfcf8ec58d6660b58d94da485b2ab96ff4e08c5ed5cbe8bee18a6e4b6c73033`. İki imza da doğrulandı; paket 1.0.28 / kod 29.
+- Console üretim erişimi için en az 12 kullanıcının kesintisiz 14 günlük kapalı testini istiyor; şu an kayıtlı kullanıcı sayısı 0. Bu süre teknik derlemeyle atlanamaz.
+- Hedef kitle, veri güvenliği, içerik derecelendirmesi, gerçek işletmeci bilgileri, inceleme erişimi ve ücretli katalog/gerçek satın alma kabulü halen tamamlanmadı. Satış bayrakları değiştirilmedi.
+
+Bu devam çalışması uygulama kaynak kodunu veya derlenmiş web/Android içeriğini değiştirmez; doğrulanmış aday dosyalar imzalandı.
