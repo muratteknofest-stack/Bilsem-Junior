@@ -77,7 +77,7 @@ Canlı doğrulamada doğru kod sürümü/veritabanı ile 19 temel sayfa/API kont
 
 Google Play oturumu yeniden açıldı. En yeni sürümler ve paketler ekranında paket listesi “Yok”; Alpha kanalında boş bir taslak vardı. Uygulama imzalama sayfası Google’ın dağıtım imzasını gösteriyor, yükleme sertifikası göstermiyor. Önceki “mevcut Play yükleme anahtarı” varsayımı bu canlı incelemeyle desteklenmedi; geçmişteki imza yedeği yalnız geliştirme/test anahtarıdır.
 
-- Alpha taslağına `1.0.28 • Kapalı test` adı ve Türkçe sürüm notları kaydedildi.
+- Alpha taslağına `1.0.28 • Kapalı test` adı kaydedildi. Türkçe notlar ilk kaydetmede başarı mesajı verse de yeniden açılışta korunmadı; mevcut en-US mağaza dili için İngilizce sürüm notlarıyla düzeltildi.
 - Reklam yok, resmi kurum uygulaması değil, sağlık özelliği yok ve finansal hizmet yok beyanları kaydedildi. Yayın özeti dört değişikliği doğruluyor; henüz incelemeye gönderilmedi.
 - Ayrı ilk Play yükleme anahtarı üretildi (RSA 4096, 10.000 gün). Özel yedek korunuyor; hiçbir özel anahtar veya parola depoya/uygulama paketine eklenmedi.
 - Yükleme sertifikası SHA-256: `35:D2:63:FE:38:5B:45:EB:4A:7E:71:19:51:20:0D:C5:F5:A3:0C:C9:D0:62:F0:B4:E7:F5:8D:B3:33:C3:95:7B`. Bu Google’ın dağıtım sertifikası değildir ve henüz Play’e kaydedilmemiştir. İlk AAB yüklemesi bunu kaydeder.
