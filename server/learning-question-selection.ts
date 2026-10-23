@@ -7,7 +7,7 @@ import { EDUCATION_PROFILES } from '../src/features/questions/quality-policy';
 import type { SchoolGrade } from '../src/features/questions/quality-policy';
 import type { BaseQuestion, CognitiveCategory, DifficultyLevel, QuestionType } from '../src/types';
 import { questionVisualKey, questionStimulusKey } from '../src/features/questions/quality';
-import { questionReasoningKey } from '../src/features/questions/reasoning-identity';
+import { questionReasoningKey, questionStyleKey } from '../src/features/questions/reasoning-identity';
 import { AVAILABLE_CATEGORIES } from '../src/features/student/available-categories';
 import { getServiceClient } from './supabase-admin';
 import { LearningError } from './learning-model';
@@ -43,7 +43,7 @@ export function recentQuestionExposure(sessions: RecentSession[], includeReasoni
         if (!question?.type || !question.visualConfig || !Array.isArray(question.options)) continue;
         const key = questionStimulusKey(question);
         exposure.set(key, Math.max(exposure.get(key) || 0, assignedAt));
-        if(includeReasoning){const rule=questionReasoningKey(question);exposure.set(rule,Math.max(exposure.get(rule)||0,assignedAt));}
+        if(includeReasoning)for(const rule of [questionReasoningKey(question),questionStyleKey(question)])exposure.set(rule,Math.max(exposure.get(rule)||0,assignedAt));
       } catch { /* A damaged historical snapshot cannot establish exposure. */ }
     }
   }
@@ -94,6 +94,8 @@ export function selectLearningQuestions(options: {
   exposure: ReadonlyMap<string, number>; canUse: (question: BaseQuestion) => boolean;
   generate: (category: CognitiveCategory, typeCounts: ReadonlyMap<QuestionType,number>, difficulty?: DifficultyLevel, reasoningCounts?: ReadonlyMap<string,number>) => BaseQuestion; preferDiverseTypes?: boolean; randomIndex?: (max: number) => number; categories?: CognitiveCategory[]; allowGeneration?: boolean; difficultyPlan?: readonly DifficultyLevel[];
   repeatPolicy?: 'unseen' | 'oldest-first';
+  /** Mixed tests may transfer a repeated-style slot to another eligible area. */
+  redistributeRepeatedCategories?: boolean;
 }) {
   if (!Number.isInteger(options.count) || options.count < 1 || options.count > 50) throw new LearningError('Çalışma uzunluğu 1–50 arasında olmalı.', 422);
   const randomIndex = options.randomIndex || randomInt;
@@ -101,82 +103,101 @@ export function selectLearningQuestions(options: {
   if (configured && !configured.length) throw new LearningError('No verified activities are available.');
   const plan = configured ? Array.from({length:options.count},(_,i)=>configured[i%configured.length]) : balancedCategoryPlan(options.count, options.category, randomIndex);
   if(options.difficultyPlan && options.difficultyPlan.length!==options.count)throw new LearningError('Zorluk planı çalışma uzunluğuyla uyuşmuyor.');
-  const groups = new Map<CognitiveCategory, Array<{ question: BaseQuestion; key: string; lastAssigned: number }>>();
+  type Candidate = { question: BaseQuestion; key: string; visual: string; rule: string; style: string; lastAssigned: number };
+  const describe = (question: BaseQuestion): Candidate => {
+    const key=questionStimulusKey(question), visual=questionVisualKey(question);
+    return {question,key,visual,rule:questionReasoningKey(question),style:questionStyleKey(question),
+      lastAssigned:Math.max(options.exposure.get(key)||0,options.exposure.get(visual)||0)};
+  };
+  const groups = new Map<CognitiveCategory, Candidate[]>();
   for (const question of shuffle(options.candidates, randomIndex)) {
     try {
       if (!options.canUse(question)) continue;
-      const key = questionStimulusKey(question), group = groups.get(question.category) || [];
-      group.push({ question, key, lastAssigned: Math.max(options.exposure.get(key) || 0, options.exposure.get(questionVisualKey(question)) || 0) });
-      groups.set(question.category, group);
-    } catch { /* Invalid candidates still cannot bypass canUse during selection. */ }
+      const group=groups.get(question.category)||[];
+      group.push(describe(question));groups.set(question.category,group);
+    } catch { /* Invalid content cannot enter a selection pool. */ }
   }
-  for (const group of groups.values()) group.sort((a, b) => a.lastAssigned - b.lastAssigned);
-  const seen = new Set<string>(), seenVisuals = new Set<string>(), selected: BaseQuestion[] = [];
-  const typeCounts = new Map<BaseQuestion['type'], number>();
-  const reasoningCounts = new Map<string,number>();
-  const take = (category: CognitiveCategory, allowRecent: boolean, unusedOnly=false, difficulty?:DifficultyLevel) => {
-    const group = groups.get(category) || [];
-    while (group.length) {
-      const matching=group.filter(item=>difficulty===undefined||item.question.difficulty===difficulty);
-      if(!matching.length)return undefined;
-      const oldest=Math.min(...matching.map(item=>item.lastAssigned));
-      const eligible = matching.filter(item => (allowRecent ? item.lastAssigned === oldest : !item.lastAssigned) && (!unusedOnly || !typeCounts.has(item.question.type)));
-      if (!eligible.length) return undefined;
-      // Among equally fresh candidates, avoid a run of the same question template.
-      // Stable ordering preserves oldest-first exposure when template counts tie.
-      const rank=(q:BaseQuestion)=>{try{const key=questionReasoningKey(q);return [typeCounts.get(q.type)||0,reasoningCounts.get(key)||0,options.exposure.get(key)||0];}catch{return [Infinity,Infinity,Infinity];}};
-      const item = eligible.reduce((best, next) => {const a=rank(next.question),b=rank(best.question);const index=a.findIndex((n,i)=>n!==b[i]);return index>=0&&a[index]<b[index]?next:best;});
-      group.splice(group.indexOf(item), 1);
-      const visual = questionVisualKey(item.question);
-      if (seen.has(item.key) || seenVisuals.has(visual) || !options.canUse(item.question)) continue;
-      seen.add(item.key);
-      seenVisuals.add(visual);
-      return item.question;
-    }
-    return undefined;
+  const seen=new Set<string>(),seenVisuals=new Set<string>(),selected:BaseQuestion[]=[];
+  const typeCounts=new Map<QuestionType,number>(),reasoningCounts=new Map<string,number>();
+  const categoryCounts=new Map<CognitiveCategory,number>();
+  // A new type name cannot outweigh a repeated rule or exercise style.
+  const rank=(item:Candidate)=>[reasoningCounts.get(item.rule)||0,reasoningCounts.get(item.style)||0,
+    typeCounts.get(item.question.type)||0,options.exposure.get(item.rule)||0,options.exposure.get(item.style)||0];
+  const better=(next:Candidate,best:Candidate)=>{
+    const a=rank(next),b=rank(best),index=a.findIndex((value,i)=>value!==b[i]);
+    return index>=0&&a[index]<b[index];
   };
+  const available=(item:Candidate,difficulty?:DifficultyLevel)=>!seen.has(item.key)&&!seenVisuals.has(item.visual)&&
+    (difficulty===undefined||item.question.difficulty===difficulty);
   for (const [index,category] of plan.entries()) {
     const difficulty=options.difficultyPlan?.[index];
-    let chosen = take(category, false, options.preferDiverseTypes,difficulty);
-    // Prefer a new proven variant before reusing a recently assigned bank question.
-    for (let attempt = 0; !chosen && options.allowGeneration !== false && attempt < 50; attempt++) {
-      try {
-        const question = options.generate(category,typeCounts,difficulty,reasoningCounts);
-        if (question.category !== category || !options.canUse(question)) continue;
-        if(difficulty!==undefined&&question.difficulty!==difficulty)continue;
-        const key = questionStimulusKey(question), visual = questionVisualKey(question);
-        if (seen.has(key) || seenVisuals.has(visual) || options.exposure.has(key) || options.exposure.has(visual)) continue;
-        seen.add(key); seenVisuals.add(visual); chosen = question;
-      } catch { /* Try another seed; no answer correction or quality gate relaxation. */ }
+    const inspected=new Map<CognitiveCategory,Candidate|undefined>();
+    const inspect=(area:CognitiveCategory):Candidate|undefined=>{
+      if(inspected.has(area))return inspected.get(area);
+      const fresh=(groups.get(area)||[]).filter(item=>!item.lastAssigned&&available(item,difficulty));
+      let best=fresh.reduce<Candidate|undefined>((best,next)=>!best||better(next,best)?next:best,undefined);
+      if(options.allowGeneration!==false&&(!best||rank(best).some(value=>value>0))) {
+        // The generator searches every eligible type, rather than locking onto
+        // one underused type whose remaining seeds all repeat the same rule.
+        for(let attempt=0;attempt<8;attempt++)try {
+          const q=options.generate(area,typeCounts,difficulty,reasoningCounts);
+          if(q.category!==area||!options.canUse(q))continue;
+          const item=describe(q);
+          if(item.lastAssigned||!available(item,difficulty))continue;
+          if(!best||better(item,best))best=item;
+          break;
+        } catch { /* No proof gate, grade or difficulty constraint is relaxed. */ }
+      }
+      inspected.set(area,best);return best;
+    };
+    let chosen=inspect(category);
+    if(options.category==='mixed'&&options.redistributeRepeatedCategories&&(!chosen||rank(chosen)[0]>0||rank(chosen)[1]>0)) {
+      const areas=shuffle(configured||[...AVAILABLE_CATEGORIES],randomIndex)
+        .sort((a,b)=>(categoryCounts.get(a)||0)-(categoryCounts.get(b)||0));
+      // Keep all ten areas represented, then use a different eligible mechanic
+      // before forcing another memory/reading/rotation variant into the test.
+      if(!chosen||(categoryCounts.get(category)||0)>0)for(const area of areas) {
+        if(area===category)continue;
+        const alternative=inspect(area);
+        if(!alternative||rank(alternative)[0]>0)continue;
+        if(!chosen||better(alternative,chosen))chosen=alternative;
+        if(chosen&&rank(chosen)[0]===0&&rank(chosen)[1]===0)break;
+      }
     }
-    chosen ||= take(category, false,false,difficulty);
-    if (options.repeatPolicy === 'oldest-first') chosen ||= take(category, true,false,difficulty);
-    if (!chosen) throw new LearningError('Bu çalışma için yeterli farklı ve doğrulanmış soru hazır değil.');
-    selected.push(chosen);
-    typeCounts.set(chosen.type, (typeCounts.get(chosen.type) || 0) + 1);
-    const key=questionReasoningKey(chosen);reasoningCounts.set(key,(reasoningCounts.get(key)||0)+1);
+    if(!chosen&&options.repeatPolicy==='oldest-first') {
+      const recent=(groups.get(category)||[]).filter(item=>available(item,difficulty));
+      chosen=recent.reduce<Candidate|undefined>((best,next)=>!best||next.lastAssigned<best.lastAssigned||
+        next.lastAssigned===best.lastAssigned&&better(next,best)?next:best,undefined);
+    }
+    if(!chosen)throw new LearningError('Bu çalışma için yeterli farklı ve doğrulanmış soru hazır değil.');
+    seen.add(chosen.key);seenVisuals.add(chosen.visual);selected.push(chosen.question);
+    typeCounts.set(chosen.question.type,(typeCounts.get(chosen.question.type)||0)+1);
+    categoryCounts.set(chosen.question.category,(categoryCounts.get(chosen.question.category)||0)+1);
+    for(const key of [chosen.rule,chosen.style])reasoningCounts.set(key,(reasoningCounts.get(key)||0)+1);
   }
-  return orderTestQuestions(shuffle(selected, randomIndex), options.difficultyPlan);
+  return orderTestQuestions(shuffle(selected,randomIndex),options.difficultyPlan);
 }
 
 /** Prefer an unused, independently proved topic before repeating a template in that area. */
 export function generateVariedLearningQuestion(options:{grade:SchoolGrade; category:CognitiveCategory; difficulty:DifficultyLevel; seed:number; typeCounts:ReadonlyMap<QuestionType,number>; reasoningCounts?:ReadonlyMap<string,number>; exposure?:ReadonlyMap<string,number>; legacy?:boolean; randomIndex?:(max:number)=>number}) {
   const pool=professionalGradeTypes(options.grade).filter(type=>STUDENT_CATEGORY_TYPES[options.category].includes(type));
   if(!pool.length)throw new LearningError('Bu alan için doğrulanmış soru türü bulunamadı.');
-  const minimum=Math.min(...pool.map(type=>options.typeCounts.get(type)||0));
-  const choices=pool.filter(type=>(options.typeCounts.get(type)||0)===minimum);
-  const type=choices[(options.randomIndex||randomInt)(choices.length)];
-  let best:BaseQuestion|undefined,bestRank:[number,number]|undefined;
-  for(let i=0;i<6;i++){
-    let q=generateQuestion({profile:'professional',targetGrade:options.grade,category:options.category,type,difficulty:options.difficulty,seed:(options.seed+i*10007)%2147483647||1});
-    if(options.legacy&&q.authoring?.engine==='verified-8')q={...generateLegacyProfessional(q.type,q.seed,q.difficulty),targetGrade:options.grade,targetGrades:[options.grade],ageGroup:options.grade<=2?'1-2':'3-4'};
-    if(!isQuestionReadyForStudents(q))continue;
-    const key=questionReasoningKey(q);
-    const rank:[number,number]=[options.reasoningCounts?.get(key)||0,options.exposure?.get(key)||0];
-    if(!bestRank||rank[0]<bestRank[0]||rank[0]===bestRank[0]&&rank[1]<bestRank[1]){best=q;bestRank=rank;}
-    if(rank[0]===0&&rank[1]===0)break;
+  const choices=shuffle(pool,options.randomIndex||randomInt).sort((a,b)=>(options.typeCounts.get(a)||0)-(options.typeCounts.get(b)||0));
+  const minimum=options.typeCounts.get(choices[0])||0;
+  let best:BaseQuestion|undefined,bestRank:number[]|undefined;
+  for(const [typeIndex,type] of choices.entries())for(let i=0;i<8;i++){
+    try {
+      let q=generateQuestion({profile:'professional',targetGrade:options.grade,category:options.category,type,difficulty:options.difficulty,seed:(options.seed+i*10007+typeIndex*104729)%2147483647||1});
+      if(options.legacy&&q.authoring?.engine==='verified-8')q={...generateLegacyProfessional(q.type,q.seed,q.difficulty),targetGrade:options.grade,targetGrades:[options.grade],ageGroup:options.grade<=2?'1-2':'3-4'};
+      if(!isQuestionReadyForStudents(q))continue;
+      const key=questionReasoningKey(q),style=questionStyleKey(q);
+      const rank=[options.reasoningCounts?.get(key)||0,options.reasoningCounts?.get(style)||0,options.typeCounts.get(type)||0,
+        options.exposure?.get(key)||0,options.exposure?.get(style)||0];
+      const differing=bestRank?rank.findIndex((value,index)=>value!==bestRank![index]):-1;
+      if(!bestRank||differing>=0&&rank[differing]<bestRank[differing]){best=q;bestRank=rank;}
+      if(rank[0]===0&&rank[1]===0&&rank[2]===minimum&&rank[3]===0&&rank[4]===0)return q;
+    } catch { /* An unavailable type/seed cannot hide other eligible mechanics. */ }
   }
   if(!best)throw new LearningError('Bu sınıfta doğrulanmış farklı bir soru hazırlanamadı.');
   return best;
 }
-

@@ -5,7 +5,8 @@ import { getServiceClient } from '../supabase-admin';
 import { requireSupabaseAuth, requireVerifiedEmail, requireProfileRole, type AuthenticatedRequest } from '../security';
 import { aiLimiter } from '../rate-limiters';
 import { sharedRateLimit } from '../shared-rate-limit';
-import { generateQuestion } from '../../src/features/questions/generators';
+import { generateDiverseQuestion } from '../../src/features/questions/generators';
+import type { BaseQuestion } from '../../src/types';
 import { isSchoolGrade } from '../../src/features/questions/quality-policy';
 import { prepareQuestionReport } from '../support-validation';
 import { publicChallenge, answeredChallenge } from '../challenge-validation';
@@ -25,7 +26,11 @@ routes.post('/challenges/start', async (req: AuthenticatedRequest,res) => {
   const {data:profile,error}=await client.from('profiles').select('grade').eq('id',req.authUser!.uid).single();
   if(error) throw error;
   if(!isSchoolGrade(profile.grade)) return res.status(422).json({error:'Görev için 1–4. sınıf bilgisi gerekli.'});
-  const question=generateQuestion({targetGrade:profile.grade,seed:randomInt(1,2147483647)});
+  const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Istanbul'}).format(new Date());
+  const history=await client.from('daily_challenge_attempts').select('question').eq('student_id',req.authUser!.uid).eq('day',day);
+  if(history.error)throw history.error;
+  const question=generateDiverseQuestion({profile:'professional',targetGrade:profile.grade,seed:randomInt(1,2147483647)},
+    (history.data||[]).map(row=>row.question as BaseQuestion));
   const result=await client.rpc('issue_daily_challenge',{p_student:req.authUser!.uid,p_grade:profile.grade,p_question:question});
   if(result.error) throw result.error;
   if(!result.data) return res.status(409).json({error:'Bugünün üç görevi tamamlandı. Yarın yeniden görüşelim.'});
