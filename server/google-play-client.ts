@@ -1,8 +1,8 @@
-import { GoogleAuth, OAuth2Client } from 'google-auth-library';
+import { OAuth2Client } from 'google-auth-library';
 import { z } from 'zod';
 import { GooglePlayError, playTokenSchema } from './google-play-model';
 import { PLAY_PLANS } from '../src/lib/google-play-contract';
-const credentialsSchema = z.object({ type: z.literal('service_account'), client_email: z.string().email().endsWith('.iam.gserviceaccount.com'), private_key: z.string().startsWith('-----BEGIN PRIVATE KEY-----') });
+import { playAuthIssues, playAccessToken } from './google-play-auth';
 export function playConfig() {
   const packageName = process.env.GOOGLE_PLAY_PACKAGE_NAME || 'com.quantumtech.bilsemjunior';
   const productId = process.env.GOOGLE_PLAY_PRODUCT_ID || 'zekapark_uyelik';
@@ -11,9 +11,7 @@ export function playConfig() {
 }
 // Report variable names only; credentials and rejected values must never reach logs.
 export function playSetupIssues(env: NodeJS.ProcessEnv = process.env): string[] {
-  const issues: string[] = [];
-  try { credentialsSchema.parse(JSON.parse(env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON || '')); }
-  catch { issues.push('GOOGLE_PLAY_SERVICE_ACCOUNT_JSON'); }
+  const issues = playAuthIssues(env);
   if ((env.GOOGLE_PLAY_BINDING_SECRET || '').length < 32) issues.push('GOOGLE_PLAY_BINDING_SECRET');
   if (!/^[a-fA-F0-9]{64}$/.test(env.GOOGLE_PLAY_TOKEN_KEY || '')) issues.push('GOOGLE_PLAY_TOKEN_KEY');
   try {
@@ -24,25 +22,13 @@ export function playSetupIssues(env: NodeJS.ProcessEnv = process.env): string[] 
   return issues;
 }
 export function playSetupReady() { return playSetupIssues().length === 0; }
-let auth: GoogleAuth | undefined, credentialVersion: string | undefined;
-async function accessToken() {
-  const value = process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON;
-  try {
-    if (!value) throw Error();
-    if (!auth || credentialVersion !== value) {
-      auth = new GoogleAuth({ credentials: credentialsSchema.parse(JSON.parse(value)), scopes: ['https://www.googleapis.com/auth/androidpublisher'], clientOptions: { transporterOptions: { timeout: 8000, retry: false } } });
-      credentialVersion = value;
-    }
-    const result = await auth.getAccessToken(); if (!result) throw Error(); return result;
-  } catch { throw new GooglePlayError('Google Play doğrulama servisi henüz kullanılamıyor.'); }
-}
 export async function playRequest(token: string, action: 'get' | 'acknowledge', request: typeof fetch = fetch, bearer?: string) {
   const config = playConfig(); playTokenSchema.parse(token);
   const path = action === 'get' ? `purchases/subscriptionsv2/tokens/${encodeURIComponent(token)}` : `purchases/subscriptions/${encodeURIComponent(config.productId)}/tokens/${encodeURIComponent(token)}:acknowledge`;
   try {
     const response = await request(`https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${config.packageName}/${path}`, {
       method: action === 'get' ? 'GET' : 'POST', redirect: 'error', signal: AbortSignal.timeout(10000),
-      headers: { Authorization: `Bearer ${bearer || await accessToken()}`, 'Content-Type': 'application/json' }, ...(action === 'acknowledge' ? { body: '{}' } : {}),
+      headers: { Authorization: `Bearer ${bearer || await playAccessToken()}`, 'Content-Type': 'application/json' }, ...(action === 'acknowledge' ? { body: '{}' } : {}),
     });
     if (!response.ok) throw new GooglePlayError('Google Play aboneliği şu anda doğrulanamıyor.', response.status === 404 || response.status === 410 ? 409 : 503);
     if (action === 'acknowledge') return null;
@@ -78,7 +64,7 @@ export async function verifyPlayCatalog(request: typeof fetch = fetch, bearer?: 
   const config = playConfig();
   try {
     const response = await request(`https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${config.packageName}/subscriptions/${encodeURIComponent(config.productId)}`, {
-      headers: { Authorization: `Bearer ${bearer || await accessToken()}`, Accept: 'application/json' },
+      headers: { Authorization: `Bearer ${bearer || await playAccessToken()}`, Accept: 'application/json' },
       redirect:'error', signal:AbortSignal.timeout(10000),
     });
     if (!response.ok) { await response.body?.cancel(); throw new GooglePlayError('Google Play ürün kataloğu okunamadı. Uygulama ve hizmet hesabı izinlerini kontrol edin.'); }

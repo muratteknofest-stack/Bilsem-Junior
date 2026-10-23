@@ -21,7 +21,7 @@ Fiyatları ve ülkeleri Play Console'da belirleyip temel planları etkinleştiri
 
 1. `20261017061944_google_play_subscriptions.sql` geçişi önceki üretim projesine uygulanmıştı. Güncel Bilsem Junior projesi `vtcsoqohkiagbwatlabk` olup Google Play tabloları hesap-proje hizalamasıyla bu projede de bulunur. Başka bir ortama kurarken önceki hesap-silme geçişleri uygulanmış olmalıdır. Tablolar/RPC'ler yalnızca sunucuya açıktır. GitHub iş akışı migration'ı otomatik çalıştırmaz; üretimde aynı geçişi tekrar uygulamayın.
 2. Google Cloud'da Android Publisher API'yi etkinleştirin. Kullanıcının inceleyip oluşturduğu hizmet hesabını Play Console uygulamasına ekleyin. Yalnız Bilsem Junior uygulaması kapsamında “View financial data, orders, and cancellation survey responses” ve “Manage orders and subscriptions” izinlerini verin. Bu izinler Billing API için Google tarafından istenir; hesap genelinde yönetici veya başka uygulamalara erişim vermeyin. İlk kurulum lisans testçisiyle doğrulanmalıdır. Hizmet hesabı/anahtar veya erişim yetkisi bu PR tarafından oluşturulmaz.
-3. `.env.example` içindeki değerleri yalnızca sunucu ortam değişkenlerine girin. `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` bir sunucu sırrıdır; uygulamaya, depoya veya sohbet mesajına konulmaz. Bağımsız hesap-bağlama sırrını ve şifreleme anahtarını kullanıcı güvenli ortamda oluşturmalıdır. Satış ve zorunlu erişim bayrakları başlangıçta `false` kalır.
+3. `.env.example` içindeki değerleri yalnızca sunucu ortam değişkenlerine girin. Bu kurulumda aşağıdaki anahtarsız Workload Identity yöntemi kullanılır. JSON anahtarı olan başka ortamlar için `service_account` modu korunur; bu moddaki `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` bir sunucu sırrıdır ve uygulamaya, depoya veya sohbet mesajına konulmaz. Bağımsız hesap-bağlama sırrı ve şifreleme anahtarı korunmalıdır. Satış ve zorunlu erişim bayrakları başlangıçta `false` kalır.
 4. Native API istekleri `CapacitorHttp` kullanır; sahte Origin göndermez, CORS istisnası eklemek gerekmez. Yalnız tarayıcı tabanlı localhost WebView testleri yapılacaksa `https://localhost` açıkça izinli kaynaklara eklenebilir. JWT, aktif oturum, doğrulanmış veli e-postası ve aile yetkisi kontrolleri korunur. Bu PR üretim CORS ayarını değiştirmez.
 5. Platformun yasal işletmeci bilgileri ve mevcut yayın kabul kontrolleri tamamlanmalıdır; eksikse `/prepare` satış başlatmaz. Bu kontrolleri yapmadan başarılı işaretlemeyin.
 
@@ -35,7 +35,10 @@ Anahtarlar uzun ömürlü kayıtları korur: bağlama sırrını rastgele deği�
 | `GOOGLE_PLAY_PRODUCT_ID` | Kodun beklediği `zekapark_uyelik`; Console kataloğunda ayrıca doğrulayın |
 | `GOOGLE_PLAY_RTDN_AUDIENCE` | `https://bilsemjunior.vercel.app/api/google-play/notifications` |
 | `GOOGLE_PLAY_RTDN_EMAIL` | Pub/Sub kimlik doğrulamalı push için seçilen gerçek hizmet hesabı e-postası |
-| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Android Publisher erişimi verilen gerçek hizmet hesabının JSON anahtarı; Vercel üretim ortamına Secret olarak |
+| `GOOGLE_PLAY_AUTH_MODE` | Bu proje için `workload_identity`; eski JSON kurulumu için `service_account` (varsayılan) |
+| `GOOGLE_PLAY_WIF_PROVIDER` | `projects/367829590893/locations/global/workloadIdentityPools/bilsem-vercel/providers/bilsem-production` |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL` | `bilsem-play-api@bilsem-junior-512517.iam.gserviceaccount.com` |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Yalnız `service_account` modunda gerekli; anahtarsız modda kullanılmaz |
 | `GOOGLE_PLAY_BINDING_SECRET` | En az 32 karakterlik bağımsız rastgele sunucu sırrı; varsa mevcut değeri koruyun |
 | `GOOGLE_PLAY_TOKEN_KEY` | AES-256 için 64 onaltılık karakter; varsa mevcut değeri koruyun |
 | `GOOGLE_PLAY_BILLING_ENABLED` | Gerçek kabul testlerine kadar `false` |
@@ -51,7 +54,24 @@ Mevcut üretilmiş Android projesinde `android:prepare`, Capacitor kimliğini Gr
 
 ### Google Cloud Shell ile kurulumu tamamlama
 
-23 Ekim 2026: Vercel üretim ortamına yedi genel ayar ve iki Secret (`GOOGLE_PLAY_BINDING_SECRET`, `GOOGLE_PLAY_TOKEN_KEY`) kaydedildi ve dağıtım tamamlandı. Satış, ücretli erişim, mağaza yayını ve üretimde test satın alımı bayrakları kapalıdır. Quantum Studio App Console incelemesinde abonelik ürünü ve hizmet hesabı daveti bulunmadı; RTDN kapalıydı. Google Cloud Console kullanılan uzak tarayıcıda `Site Unavailable` verdiğinden Cloud kaynakları henüz oluşturulmadı.
+23 Ekim 2026: Vercel üretim ortamında iki kalıcı Secret ve satışları kapalı tutan ayarlar bulunur. `GOOGLE_PLAY_RTDN_EMAIL` ayrıca Production için kaydedildi; bu ek ayar henüz yeni dağıtıma uygulanmadı. Kullanıcı `bilsem-junior-512517` (367829590893) projesinde Cloud Shell kurulumu çalıştırdı ve `cloudResourcesVerified: true` sonucu paylaştı. `bilsem-play-api` hizmet hesabı, onaylanan uygulama izinleriyle Play Console'da Etkin olarak doğrulandı. JSON anahtarı üretimi Google tarafından `FAILED_PRECONDITION: Key creation is not allowed on this service account` ile reddedildi; ardından dosyanın var olması geçerli anahtar kanıtı değildir. Uzak Cloud Console erişimi hâlâ kullanılamadığından anahtarsız güven kurulumu kullanıcı Cloud Shell oturumunda tamamlanmalıdır. RTDN teslimi, etkin üç temel plan ve gerçek satın alma henüz doğrulanmadı.
+
+### Bu proje için anahtarsız bağlantı
+
+Vercel OIDC ve Google Workload Identity Federation kullanılır. `@vercel/oidc` 4.0.0 güncel çağrı bağlamındaki tokeni yalnız kimlik yenilerken okur. Google SDK bunu STS'de değiştirir, mevcut Play API hesabını 600 saniyelik Android Publisher yetkisiyle temsil eder. STS ve IAM çağrılarında zaman sınırı, yönlendirme engeli ve gizli hata ayrıntılarının filtrelenmesi uygulanır. Mod açıkça seçilir; eksik federasyon ayarları JSON anahtarına geri düşmez. Bu mod yalnız Vercel Production ortamında hazır kabul edilir.
+
+`scripts/bilsem-play-keyless.py` bu gerçek Cloud/Vercel proje kimliklerine sabitlenmiştir. Varsayılan çalıştırma yalnız plan üretir. Mevcut Vercel issuer modu doğrulandıktan sonra Cloud Shell'de:
+
+```bash
+python3 scripts/bilsem-play-keyless.py
+python3 scripts/bilsem-play-keyless.py --apply
+```
+
+Global issuer seçiliyse her iki komuta `--issuer-mode global` ekleyin; Team modu için varsayılan geçerlidir. Betik sadece `bilsem-vercel` havuzu ve `bilsem-production` sağlayıcısını oluşturur. İzin, mevcut API hizmet hesabında yalnız `owner:dyds-projects-c415ba7a:project:bilsemjunior:environment:production` principal'ına `roles/iam.workloadIdentityUser` olarak verilir. Sağlayıcı koşulu ayrıca gerçek `owner_id` ve `project_id` ile Production ortamını sınırlar. Başka veya daha geniş mevcut güven ilişkilerini üzerine yazmadan reddeder. Kuruluşun anahtar üretme politikası değiştirilmez; özel anahtar oluşturulmaz veya dosya içeriği okunmaz.
+
+`wifTrustVerified: true` yalnız Cloud güven yapılandırmasının doğrulandığını gösterir. Gerçek token değişimi ayrıca Production işlev çağrısıyla doğrulanmalıdır. Yukarıdaki üç anahtarsız ortam değişkenini yalnız Vercel Production'a Config olarak kaydedin, yeni kodu dağıtın, ardından gerçek katalog ve RTDN testlerini çalıştırın. Vercel tokenini elle kopyalamayın veya ortam değişkeni olarak sabitlemeyin; SDK güncel çağrı tokenini alır. Mevcut bağlama ve şifreleme Secret'larını değiştirmeyin.
+
+Resmi kaynaklar: [Vercel GCP bağlantısı](https://vercel.com/docs/oidc/gcp), [Vercel OIDC başvurusu](https://vercel.com/docs/oidc/reference), [Google Workload Identity Federation](https://cloud.google.com/iam/docs/workload-identity-federation).
 
 `scripts/provision-google-play-cloud.py` oturum açılmış Google Cloud Shell/CLI ile kalan Cloud kaynaklarını kurar. Python 3.9+ gerekir; paket yüklemez. Önce **mevcut gerçek Cloud proje kimliğini** belirleyin. Play geliştirici hesap numarası `8719423094329535468` Cloud proje kimliği değildir. Betik yeni proje veya faturalandırma hesabı açmaz. İlgili Cloud hesabının hizmet/API etkinleştirme, hizmet hesabı oluşturma, Pub/Sub ve kaynak kapsamlı IAM izinlerini yönetme yetkileri olmalıdır.
 
@@ -71,7 +91,7 @@ Betik Android Publisher, IAM ve Pub/Sub API'lerini etkinleştirir; `bilsem-play-
 
 Mevcut aynı adlı kaynaklar tekrar oluşturulmaz. Başka hedef, hesap, audience, filtre veya mesaj dönüşümü varsa betik üzerine yazmadan durur. Hata sonrası kaynakları otomatik silmez. Üretim Cloud kurulumu bu ortamda çalıştırılmış değildir; çevrimdışı testler gerçek Google erişimini kanıtlamaz.
 
-Android Publisher hizmet hesabı için henüz anahtar yoksa isteğe bağlı olarak yeni, özel bir dosya oluşturun:
+Anahtarsız bağlantı kullanılmayan ve kuruluşun izin verdiği ayrı ortamlarda, Android Publisher hizmet hesabı için isteğe bağlı özel dosya oluşturulabilir. Bu projedeki anahtar üretme engelini kaldırmak için kullanılmaz:
 
 ```bash
 python3 scripts/provision-google-play-cloud.py --project GERCEK_PROJE_KIMLIGI --apply --key-file ~/bilsem-play-private/service-account.json
@@ -82,7 +102,7 @@ Anahtar yalnız açık `--key-file` isteğinde üretilir, mevcut dosyanın üzer
 Cloud kurulumu sonrasında üç bağlantı tamamlanır:
 
 1. Çıktıdaki `apiServiceAccount` e-postasını Play Console → Hesabı yönetme → Kullanıcılar ve izinler altında **yalnız Bilsem Junior** uygulamasına ekleyin. Billing API'nin gerektirdiği finansal veri görüntüleme ve sipariş/abonelik yönetme izinlerini verin. Betik Play Console daveti göndermez.
-2. Vercel `bilsemjunior` projesinin yalnız **Production** ortamına `GOOGLE_PLAY_RTDN_EMAIL` değerini Config; JSON dosyasının tüm içeriğini `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` adıyla **Secret** olarak tek tek kaydedin. Toplu `.env` yapıştırma tür/ortam seçimini değiştirebildiğinden her kayıt sonrası türü ve kapsamı doğrulayın. Sırları sohbet, GitHub, APK veya ekran görüntüsüne koymayın. Yeniden dağıtım gerekir.
+2. Vercel `bilsemjunior` projesinin yalnız **Production** ortamına `GOOGLE_PLAY_RTDN_EMAIL` ve yukarıdaki anahtarsız kimlik ayarlarını Config olarak kaydedin. Yalnız ayrı bir `service_account` kurulumu yapılıyorsa JSON dosyası `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` adıyla **Secret** olarak kaydedilir. Toplu `.env` yapıştırma tür/ortam seçimini değiştirebildiğinden her kayıt sonrası türü ve kapsamı doğrulayın. Sırları sohbet, GitHub, APK veya ekran görüntüsüne koymayın. Yeniden dağıtım gerekir.
 3. Play Console → Bilsem Junior → Google Play ile para kazanın → Para kazanma kurulumu altında bildirimleri açın; çıktıdaki `playConsoleTopic` değerini girin. “Yalnızca abonelikler ve geçersiz satın alma işlemleri” seçeneğiyle kaydedin. Test bildiriminin sunucuda doğrulanıp 204 dönmesini kontrol edin. Sonra gerçek katalog kontrolünü ve lisans testçisiyle satın alma/yenileme/iade testlerini yapın. Google Play abonelik ekranının istediği faturalandırma destekli imzalı AAB de yüklenmiş olmalıdır.
 
 Çevrimdışı güvenlik ve yeniden çalıştırma kontrolleri: `npm run test:google-play:cloud`. Betik satışları veya yayın kabul bayraklarını açmaz.
