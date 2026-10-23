@@ -19,7 +19,7 @@ export function WebPlayMembershipPanel({ state, studentName, onRefresh }: {
     <div className="zp-play-body">
       {studentName && <p className="zp-play-student"><span aria-hidden="true"><Crown size={19}/></span><span>Seçili öğrenci<strong>{studentName}</strong></span></p>}
       {active ? <div className="zp-play-active"><span className="zp-play-active-medal" aria-hidden="true"><Crown size={28}/></span><div><p><CheckCircle2 size={18} aria-hidden="true"/>Aboneliğiniz aktif</p><p>{new Date(config.access.expiresAt!).toLocaleDateString('tr-TR')} tarihine kadar bu öğrenci hesabıyla webden de çalışabilirsiniz.</p></div></div>
-        : <><p className="zp-play-web-copy">Satın alma Android uygulamasındaki veli panelinde Google Play ile tamamlanır. Aynı Bilsem Junior veli hesabına girip aynı öğrenciyi seçin. Doğrulanan abonelik bu öğrenci için webde de geçerlidir.</p>
+        : <><p className="zp-play-web-copy">Satın alma yalnızca Android uygulamasındaki veli panelinde Google Play ile tamamlanır. Aynı Bilsem Junior veli hesabına girip aynı öğrenciyi seçin. Doğrulanan abonelik bu öğrenci için webde de geçerlidir.</p>
           <div className="zp-play-web-periods" aria-label="Abonelik dönemleri">{PLAY_PLANS.map(plan => <span key={plan.id}>{plan.title}</span>)}</div>
           <p className="zp-play-terms">Fiyat ve yenileme koşulları ödeme öncesinde Google Play’de gösterilir. Üyelik iptal edilmedikçe seçilen dönemde otomatik yenilenir.</p>
           {storeUrl ? <a href={storeUrl} target="_blank" rel="noopener noreferrer" className="zp-play-web-link">Android uygulamasını Google Play’de aç<ExternalLink size={16} aria-hidden="true"/></a>

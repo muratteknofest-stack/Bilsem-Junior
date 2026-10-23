@@ -1,6 +1,6 @@
 # Google Play abonelik kurulumu
 
-18 Ekim 2026: Tek ödeme sağlayıcısı Google Play. Satın alma Android veli panelinde, erişim doğrulaması sunucuda yapılır. Aynı öğrenci webde de aboneliğini kullanır. Gerçek Play Console kurulumu ve lisans testçisi kabulü tamamlanmadan satış açılmaz.
+23 Ekim 2026: Tek ödeme sağlayıcısı Google Play. Satın alma yalnızca gerçek Android ortamında açılır; Android derleme etiketi taşıyan tarayıcı önizlemeleri ve diğer işletim sistemleri ödeme başlatamaz. Satın alma Android veli panelinde, erişim doğrulaması sunucuda yapılır. Aynı öğrenci webde de aboneliğini kullanır. Gerçek Play Console kurulumu ve lisans testçisi kabulü tamamlanmadan satış açılmaz.
 
 ## Ürünler
 
@@ -19,7 +19,7 @@ Fiyatları ve ülkeleri Play Console'da belirleyip temel planları etkinleştiri
 
 ## Sunucu ve veritabanı
 
-1. `20261017061944_google_play_subscriptions.sql` geçişi `vehhvsdkifwstbjhnhao` üretim projesine uygulandı ve migration geçmişi doğrulandı. Başka bir ortama kurarken önceki hesap-silme geçişleri uygulanmış olmalıdır. Tablolar/RPC'ler yalnızca sunucuya açıktır. GitHub iş akışı migration'ı otomatik çalıştırmaz; üretimde aynı geçişi tekrar uygulamayın.
+1. `20261017061944_google_play_subscriptions.sql` geçişi önceki üretim projesine uygulanmıştı. Güncel Bilsem Junior projesi `vtcsoqohkiagbwatlabk` olup Google Play tabloları hesap-proje hizalamasıyla bu projede de bulunur. Başka bir ortama kurarken önceki hesap-silme geçişleri uygulanmış olmalıdır. Tablolar/RPC'ler yalnızca sunucuya açıktır. GitHub iş akışı migration'ı otomatik çalıştırmaz; üretimde aynı geçişi tekrar uygulamayın.
 2. Google Cloud'da Android Publisher API'yi etkinleştirin. Kullanıcının inceleyip oluşturduğu hizmet hesabını Play Console uygulamasına ekleyin. Abonelikleri görüntüleme ve onaylama için gereken uygulama kapsamlı en az izinleri verin; gereksiz finans/yönetici erişimi vermeyin. İlk kurulum lisans testçisiyle doğrulanmalıdır. Hizmet hesabı/anahtar veya erişim yetkisi bu PR tarafından oluşturulmaz.
 3. `.env.example` içindeki değerleri yalnızca sunucu ortam değişkenlerine girin. `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` bir sunucu sırrıdır; uygulamaya, depoya veya sohbet mesajına konulmaz. Bağımsız hesap-bağlama sırrını ve şifreleme anahtarını kullanıcı güvenli ortamda oluşturmalıdır. Satış ve zorunlu erişim bayrakları başlangıçta `false` kalır.
 4. Native API istekleri `CapacitorHttp` kullanır; sahte Origin göndermez, CORS istisnası eklemek gerekmez. Yalnız tarayıcı tabanlı localhost WebView testleri yapılacaksa `https://localhost` açıkça izinli kaynaklara eklenebilir. JWT, aktif oturum, doğrulanmış veli e-postası ve aile yetkisi kontrolleri korunur. Bu PR üretim CORS ayarını değiştirmez.

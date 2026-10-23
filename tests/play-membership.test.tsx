@@ -1,10 +1,11 @@
+import { isGooglePlayBillingPlatform } from '../src/lib/play-billing';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { PlayMembershipPage } from '../src/components/PlayMembershipPage';
 import { WebPlayMembershipPanel } from '../src/components/WebPlayMembershipPanel';
-import { PlayBillingFlow, initialPlayBillingState, playConfigSchema } from '../src/lib/google-play-flow';
+import { PlayBillingFlow, initialPlayBillingState, playConfigSchema, canBuyPlay } from '../src/lib/google-play-flow';
 import { safePlayStoreUrl } from '../src/lib/play-listing';
 import { playStoreListing } from '../server/play-listing';
 
@@ -50,4 +51,24 @@ test('stale access is not displayed as an active web membership; purchase stays 
   const state = { ...initialPlayBillingState(), phase: 'idle' as const, config: { ...config, access: { active: true, expiresAt: '2027-01-16T12:00:00Z' } }, fresh: false };
   const html = renderToStaticMarkup(<WebPlayMembershipPanel state={state} onRefresh={() => {}}/>);
   assert.ok(!html.includes('Aboneliğiniz aktif')); assert.match(html, /aynı öğrenciyi seçin/); assert.match(html, /Android uygulamasını Google Play’de aç/);
+});
+
+
+test('only a real Android platform may initialize purchasing; browser and other native shells remain read-only', async () => {
+  for (const [native, platform] of [[false, 'web'], [false, 'android'], [true, 'ios'], [true, 'android']] as const) {
+    const allowed = isGooglePlayBillingPlatform({ isNativePlatform: () => native, getPlatform: () => platform });
+    assert.equal(allowed, native && platform === 'android');
+    if (allowed) continue;
+    const requests: string[] = [];
+    const unexpected = async () => { assert.fail('A non-Android client invoked the billing bridge'); };
+    const flow = new PlayBillingFlow({ studentId: 'student-fixture', native: allowed, isCurrent: () => true, changed() {},
+      store: { catalog: unexpected, purchase: unexpected, restore: unexpected },
+      async request(path) { requests.push(path); return config; },
+    });
+    try {
+      await flow.refresh(); await flow.purchase('monthly'); await flow.restore();
+      assert.deepEqual(requests, ['access?studentId=student-fixture']);
+      assert.equal(canBuyPlay(flow.snapshot(), 'monthly'), false);
+    } finally { flow.dispose(); }
+  }
 });

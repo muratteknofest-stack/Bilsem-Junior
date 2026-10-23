@@ -1,11 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { authenticatedFetch } from '../lib/api-client';
 import { auth } from '../lib/supabase';
-import { PlayBilling } from '../lib/play-billing';
+import { PlayBilling, isGooglePlayBillingPlatform } from '../lib/play-billing';
 import { initialPlayBillingState, PlayBillingFlow } from '../lib/google-play-flow';
-import { isAndroidApp } from '../lib/native-app';
 import { WebPlayMembershipPanel } from './WebPlayMembershipPanel';
 import { PlayBillingPanel } from './PlayBillingPanel';
 
@@ -14,9 +12,10 @@ export function NativeAccessStatus({ studentId, studentName }: { studentId: stri
   return <BillingSession key={`${owner}:${studentId}`} studentId={studentId} studentName={studentName} owner={owner}/>;
 }
 function BillingSession({ studentId, studentName, owner }: { studentId: string; studentName?: string; owner: string | undefined }) {
+  const nativeAndroid = isGooglePlayBillingPlatform();
   const [state, setState] = useState(initialPlayBillingState), flow = useRef<PlayBillingFlow | null>(null);
   useEffect(() => {
-    const controller = new PlayBillingFlow({ studentId, native: Capacitor.isNativePlatform(), store: PlayBilling,
+    const controller = new PlayBillingFlow({ studentId, native: nativeAndroid, store: PlayBilling,
       isCurrent: () => auth.currentUser?.uid === owner, changed: setState,
       async request(path, body, signal) {
         const response = await authenticatedFetch('/api/parent/google-play/' + path, { signal, ...(body ? { method: 'POST', body: JSON.stringify(body) } : {}) });
@@ -35,12 +34,12 @@ function BillingSession({ studentId, studentName, owner }: { studentId: string; 
     const online = () => { void controller.refresh(); };
     window.addEventListener('online', online);
     void controller.refresh();
-    if (Capacitor.isNativePlatform()) {
+    if (nativeAndroid) {
       void PlayBilling.addListener('purchasesUpdated', controller.purchasesUpdated).then(remember).catch(() => {});
       void App.addListener('appStateChange', ({ isActive }) => { if (isActive) void controller.refresh(); }).then(remember).catch(() => {});
     }
     return () => { window.removeEventListener('online', online); disposed = true; controller.dispose(); for (const listener of listeners) void listener.remove().catch(() => {}); if (flow.current === controller) flow.current = null; };
-  }, [studentId, owner]);
-  if (!isAndroidApp) return <WebPlayMembershipPanel studentName={studentName} state={state} onRefresh={() => { void flow.current?.refresh(); }}/>;
+  }, [studentId, owner, nativeAndroid]);
+  if (!nativeAndroid) return <WebPlayMembershipPanel studentName={studentName} state={state} onRefresh={() => { void flow.current?.refresh(); }}/>;
   return <PlayBillingPanel studentName={studentName} state={state} onPurchase={plan => { void flow.current?.purchase(plan); }} onRestore={() => { void flow.current?.restore(); }} onRefresh={() => { void flow.current?.refresh(); }}/>;
 }
