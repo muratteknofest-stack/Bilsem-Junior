@@ -48,7 +48,7 @@ Web uygulaması erişilebilir ve ücretsiz kayıt açıktır. Bu çalışma web 
 | Derlenmiş Android ayarları | Doğru paket/sürüm, SDK 24/36; release hata ayıklama, testOnly, açık HTTP ve yedekleme kapalı. APK 16 KB sayfa hizalaması doğrulandı. |
 | Canlı web başlangıç durumu | Sağlık yanıtı `status:ok`, `database:ready`, doğru Supabase projesi. Ücretsiz kayıt açık; ücretli satış kapalı. |
 
-Yerel native derleme, gerçek Android cihazında çalıştırma veya Play'den indirme testi değildir. Son gözlenen GitHub Actions Android/kalite işleri başarısızdır; bu rapordaki yerel sonuçlar uzak CI işi başarılıymış gibi sunulmaz. Yeni işlerin durumu ayrıca izlenmelidir.
+Yerel native derleme, gerçek Android cihazında çalıştırma veya Play'den indirme testi değildir. GitHub Actions Android/kalite işleri hesap faturalandırma/harcama limiti kontrolü nedeniyle test adımlarını başlatamıyor; iş sayfasındaki hata açıklaması doğrulandı. Bu rapordaki yerel sonuçlar uzak CI işi başarılıymış gibi sunulmaz. Ödeme veya harcama limiti ayarı değiştirilmedi.
 
 ## Yayın öncesi kalan somut işler
 
@@ -57,7 +57,7 @@ Yerel native derleme, gerçek Android cihazında çalıştırma veya Play'den in
 | Mevcut Android imzası | Play Console'daki mevcut yükleme anahtarı ve sertifika özetiyle güvenli makinede imzala. İmzasız aday AAB doğrudan Play'e yüklenemez. Özel anahtarı/parolayı sohbet veya GitHub'a koyma. |
 | Play ürünleri | Console Abonelikler ekranı halen faturalandırma destekli yeni APK/AAB istiyor. İmzalı paket kabul edildikten sonra `zekapark_uyelik` ve `monthly` P1M, `quarterly` P3M, `annual` P1Y planları, gerçek fiyat/bölgelerle yapılandırılmalı. |
 | Gerçek sunucu bağlantısı | Production ortamından token değişimi, uygulama kapsamlı Publisher API erişimi ve üç aktif planın katalog doğrulaması yapılmalı. |
-| Bildirim teslimi | RTDN konusu Console'a kaydedildi. Test mesajının sunucuda kimliği doğrulanarak 204 ile işlendiği henüz doğrulanmadı. |
+| Bildirim teslimi | RTDN konusu Console'a kaydedildi. Vercel istek günlüğünde 23 Ekim 21:25:07 (Türkiye) zamanlı `POST /api/google-play/notifications` isteğinin **204** ile tamamlandığı doğrulandı. Bu test bildirimi gerçek satın alma/yenileme olayının veya WIF token değişiminin testi değildir. |
 | Satın alma kabulü | Play lisans testçisiyle satın alma, bekleyen ödeme, geri yükleme, iptal/yenileme/iade ve başka öğrenciye yetki verilmemesi denenmeli. Webde aynı öğrencinin erişimi ayrıca kontrol edilmeli. |
 | İşletmeci açıklamaları | Canlı gizlilik sayfasında gerçek veri sorumlusu/unvan, adres, işleme dayanakları, saklama/silme süreleri ve aktarım koşulları eksik. Doğrulanmış destek adresi ve gerçek bilgiler işletmeci tarafından tamamlanmalı. |
 | Mağaza beyanları | Gerçek hedef yaş, çocuk hedef kitlesi, veri güvenliği, içerik derecelendirme, gizlilik/hesap silme bağlantıları ve mağaza görselleri tamamlanmalı. Bu rapor mağaza veya mevzuat onayı değildir. |
@@ -66,3 +66,9 @@ Yerel native derleme, gerçek Android cihazında çalıştırma veya Play'den in
 Kurulum ve imzalama komutları: [ANDROID_RELEASE.md](ANDROID_RELEASE.md). Play/WIF ve bildirim ayrıntıları: [GOOGLE_PLAY_BILLING.md](GOOGLE_PLAY_BILLING.md).
 
 Kaynaklar: [Vite güvenlik duyuruları](https://github.com/vitejs/vite/security/advisories), [OSV](https://osv.dev/), [Android zipalign](https://developer.android.com/tools/zipalign), [Google Play sunucu ve bildirim kurulumu](https://developer.android.com/google/play/billing/getting-ready), [Capacitor Android](https://capacitorjs.com/docs/android).
+
+## Dağıtım doğrulaması
+
+Kod değişiklikleri GitHub ana dalına `6e98cd0940591aeaa4e40b4644670ef151f46e50` ile gönderildi. Vercel Production dağıtımı `5EdrbAWFrcXai9i9ozKtm7hEiPC9`, 23 Ekim 22:06:08 (Türkiye) itibarıyla Ready/Current oldu. Sonraki rapor güncellemesi uygulama kodunu veya Android dosyalarını değiştirmez.
+
+Canlı doğrulamada doğru kod sürümü/veritabanı ile 19 temel sayfa/API kontrolü ve sekiz dış bağlantı/CORS kontrolü geçti. Ham Node HTTPS taşıyıcısı bu ortamda DNS hatası verdi; kalan sekiz kontrol aynı başlıkları koruyan, ortamın HTTPS proxy bağlantısını kullanan araçla doğrulandı.
