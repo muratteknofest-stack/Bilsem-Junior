@@ -25,5 +25,15 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-android",
+    "build",
+    "android",
+    "coverage",
+    "test-artifacts",
+    "server/generated-api.mjs"
+  ]
 }
