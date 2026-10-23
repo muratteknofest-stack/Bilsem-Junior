@@ -80,6 +80,22 @@ export function inspectEducation(q: BaseQuestion, grade: SchoolGrade, age?: numb
     if(nums.some(n=>!Number.isSafeInteger(n)||n<0)||metrics.maxNumber>p.maxNumber)difficulty.push('NUMBER_LOAD: Müfredat sayıları sınıf sınırını aşıyor.');
     if(c.letters&&c.letters.length>p.maxSymbols)difficulty.push('WORKING_MEMORY: Harf sayısı sınıf sınırını aşıyor.');
   }
+  if((q.visualConfig as Record<string,unknown>).displayMode==='reasoning_lab') {
+    const lab=q.visualConfig as import('./reasoning-lab').LabBoard;
+    const values:number[]=[];
+    metrics.gridSize='size' in lab?lab.size:0;metrics.itemCount=0;metrics.symbolCount=0;metrics.peopleCount=0;
+    switch(lab.mechanic) {
+      case 'route-count':metrics.itemCount=lab.size**2;break;
+      case 'domino-chain':metrics.itemCount=lab.chain.length*2;values.push(...lab.chain.filter(x=>x!==null).flat());break;
+      case 'box-transfer':values.push(...lab.initial,...lab.transfers.map(t=>t.amount));metrics.itemCount=lab.transfers.length;break;
+      case 'switch-parity':metrics.symbolCount=lab.lamps.length;metrics.itemCount=lab.presses.length;break;
+      case 'position-swaps':metrics.peopleCount=lab.items.length;metrics.itemCount=lab.swaps.length;break;
+      case 'boundary-edges':metrics.itemCount=lab.cells.length;break;
+      case 'guaranteed-draw':values.push(...lab.counts,lab.target);metrics.itemCount=lab.counts.reduce((a,n)=>a+n,0);break;
+      case 'cheapest-route':values.push(...lab.routes.flat(),...lab.routes.map(r=>r.reduce((a,n)=>a+n,0)));metrics.itemCount=lab.routes.flat().length;break;
+    }
+    metrics.maxNumber=Math.max(metrics.maxNumber,...values);
+  }
   if((q.visualConfig as Record<string,unknown>).displayMode==='symbolic_v2'){
     const board=q.visualConfig as unknown as import('./symbolic-v2').SymbolicBoard;
     metrics.symbolCount=board.symbols.length;metrics.itemCount=board.equations.reduce((sum,row)=>sum+row.slice(0,-1).filter(Boolean).length,0)+board.query.filter(Boolean).length;

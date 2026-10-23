@@ -1,3 +1,4 @@
+import {LAB_ENGINE,LAB_MECHANICS} from '../src/features/questions/reasoning-lab';
 import {readFile,writeFile} from 'node:fs/promises';
 import type {BaseQuestion,CognitiveCategory,QuestionType} from '../src/types';
 import {selectLearningQuestions,generateVariedLearningQuestion,currentReasoningCandidate,recentQuestionExposure} from '../server/learning-question-selection';
@@ -42,14 +43,14 @@ for(const grade of [1,2,3,4] as const) {
       if(category!=='mixed'&&selected.some(q=>q.category!==category))failures.push(`${grade}/${mode}: category escaped`);
       if(!topic&&mode!=='english'&&selected.some(q=>history.has(questionStimulusKey(q))))failures.push(`${grade}/${mode}: exact history repeated`);
       accepted++;checkedQuestions+=selected.length;
-      if((mode==='bank'||mode==='generated')&&count===20)adventures++;
+      if((mode==='bank'||mode==='generated')&&count===20){adventures++;if(new Set(selected.map(q=>q.category)).size!==AVAILABLE_CATEGORIES.length)failures.push(`${grade}/${mode}: adventure lost an area`);}
       cases.push([grade,mode,category,topic||'mixed',count,session,'accepted',selected.length,rules,styles]);
       for(const [key,value] of recentQuestionExposure([{questions:selected,created_at:new Date(1792700000000+session*3600000).toISOString()}],true))history.set(key,value);
     } catch(error) {
       if(!(error instanceof QuestionDiversityError))throw error;
       blocked++;
       if(error.requestedCount!==count||error.preparedCount<0||error.preparedCount>=count)failures.push('Invalid shortage metadata');
-      if((mode==='bank'||mode==='generated')&&count<=20||mode==='english'&&count===5||topic&&count===1)
+      if((mode==='bank'||mode==='generated')&&(count<=30||grade>1&&count===45)||mode==='english'&&count===5||topic&&count===1)
         failures.push(`${grade}/${mode}/${category}/${count}: required short/adventure/topic session unavailable`);
       cases.push([grade,mode,category,topic||'mixed',count,session,'blocked',error.preparedCount,0,0]);
     }
@@ -80,7 +81,7 @@ for(const grade of [1,2,3,4] as const) {
   }
 }
 if(adventures!==16)failures.push('All sixteen twenty-question adventure scenarios must complete');
-const report={checkedAt:new Date().toISOString(),policy:'distinct-styles-3',bankQuestions:bank.length,ready:ready.length,
+const report={checkedAt:new Date().toISOString(),policy:'distinct-styles-3',lab:{engine:LAB_ENGINE,mechanics:LAB_MECHANICS},bankQuestions:bank.length,ready:ready.length,
   totals:{requests:cases.length,accepted,blocked,checkedQuestions,adventures,duplicateStyles,duplicateRules},failures,
   columns:['grade','mode','category','topic','requestedCount','session','outcome','preparedCount','rules','styles'],cases,
   scope:'Every successful test has the requested length and unique rule/style keys. Shortage is an explicit refusal, not a partial test or fallback to similar questions. Bank snapshot QA only; no live account/database writes.'};

@@ -1,3 +1,4 @@
+import { generateLabQuestion, LAB_ENGINE, LAB_MECHANICS, LAB_TOPICS } from '../src/features/questions/reasoning-lab';
 import {type AnswerEvidence} from '../src/features/questions/adaptive-difficulty';
 import { orderTestQuestions } from '../src/features/questions/test-assembly';
 import { QuestionDiversityError } from '../src/features/questions/test-diversity';
@@ -14,20 +15,21 @@ import { getServiceClient } from './supabase-admin';
 import { LearningError } from './learning-model';
 import { generateProfessionalQuestion as generateLegacyProfessional } from '../src/features/questions/professional-engine-v7';
 import { isQuestionReadyForStudents } from '../src/features/questions/quality';
-import { LEARNING_QUESTION_FORMAT, supportsReasoningFormat, needsProfessionalV2Format, needsReasoningFormat } from '../src/features/student/learning-question-format';
+import { LEARNING_QUESTION_FORMAT, supportsReasoningFormat, supportsProfessionalV2Format, needsCurrentQuestionFormat, needsProfessionalV2Format, needsReasoningFormat } from '../src/features/student/learning-question-format';
 
 export const RECENT_SESSION_LIMIT = 30;
 export const RECENT_HISTORY_DAYS = 30;
 type RecentSession = { questions: BaseQuestion[]; answers?: Record<string,{correct?:boolean}>; created_at: string };
 
 export function assertLearningQuestionFormat(questions:BaseQuestion[],format:unknown) {
-  if(questions.some(q=>needsProfessionalV2Format(q)?format!==LEARNING_QUESTION_FORMAT:needsReasoningFormat(q)&&!supportsReasoningFormat(format)))throw new LearningError('Bu çalışmadaki yeni soru türleri için uygulamayı güncellemelisin. Önceki cevapların korunuyor.',426);
+  if(questions.some(q=>needsCurrentQuestionFormat(q)?format!==LEARNING_QUESTION_FORMAT:needsProfessionalV2Format(q)?!supportsProfessionalV2Format(format):needsReasoningFormat(q)&&!supportsReasoningFormat(format)))throw new LearningError('Bu çalışmadaki yeni soru türleri için uygulamayı güncellemelisin. Önceki cevapların korunuyor.',426);
 }
 
 export function currentReasoningCandidate(q:BaseQuestion,grade:SchoolGrade,modern:boolean):boolean {
   if(!professionalGradeTypes(grade).includes(q.type))return false;
   if(!modern)return !needsReasoningFormat(q);
   const mode=(q.visualConfig as Record<string,unknown>).displayMode;
+  if(mode==='reasoning_lab')return q.authoring?.engine===LAB_ENGINE;
   if(mode==='symbolic_v2')return modern&&q.authoring?.engine==='symbolic-v2';
   return mode==='verified_board'?['verified-8','verified-4'].includes(q.authoring?.engine||''):
     mode==='colorful_board'?q.authoring?.engine==='colorful-3':mode==='workshop_board'&&(q.authoring?.engine==='workshop-3'||q.type==='word_scramble_logic'&&q.authoring?.engine==='workshop-reading-1');
@@ -87,6 +89,10 @@ export function pickGradeChallenge(grade: SchoolGrade, randomIndex = randomInt):
 /** Equal category quotas avoid inheriting the bank's 25% spatial / 3% verbal bias. */
 export function balancedCategoryPlan(count: number, category: CognitiveCategory | 'mixed', randomIndex = randomInt) {
   const categories = shuffle<CognitiveCategory>(category === 'mixed' ? [...AVAILABLE_CATEGORIES] : [category], randomIndex);
+  // In early grades the matrix area has only the rotation style, which spatial
+  // tasks can also use. Reserve that area before a flexible spatial slot takes
+  // its only style. Every area still receives the same planned quota.
+  if(category==='mixed'&&count>=categories.length)categories.sort((a,b)=>Number(a!=='matrix')-Number(b!=='matrix'));
   return Array.from({ length: count }, (_, index) => categories[index % categories.length]);
 }
 
@@ -191,15 +197,17 @@ export function selectLearningQuestions(options: {
 }
 
 /** Prefer an unused, independently proved topic before repeating a template in that area. */
-export function generateVariedLearningQuestion(options:{grade:SchoolGrade; category:CognitiveCategory; difficulty:DifficultyLevel; seed:number; typeCounts:ReadonlyMap<QuestionType,number>; reasoningCounts?:ReadonlyMap<string,number>; exposure?:ReadonlyMap<string,number>; legacy?:boolean; randomIndex?:(max:number)=>number}) {
+export function generateVariedLearningQuestion(options:{grade:SchoolGrade; category:CognitiveCategory; difficulty:DifficultyLevel; seed:number; typeCounts:ReadonlyMap<QuestionType,number>; reasoningCounts?:ReadonlyMap<string,number>; exposure?:ReadonlyMap<string,number>; legacy?:boolean; lab?:boolean; randomIndex?:(max:number)=>number}) {
   const pool=professionalGradeTypes(options.grade).filter(type=>STUDENT_CATEGORY_TYPES[options.category].includes(type));
   if(!pool.length)throw new LearningError('Bu alan için doğrulanmış soru türü bulunamadı.');
-  const choices=shuffle(pool,options.randomIndex||randomInt).sort((a,b)=>(options.typeCounts.get(a)||0)-(options.typeCounts.get(b)||0));
-  const minimum=options.typeCounts.get(choices[0])||0;
+  const variants=[...pool.map(type=>({type,mechanic:undefined as undefined|typeof LAB_MECHANICS[number]})),...(!options.legacy&&options.lab!==false?LAB_MECHANICS.filter(mechanic=>pool.includes(LAB_TOPICS[mechanic])).map(mechanic=>({type:LAB_TOPICS[mechanic],mechanic})):[])];
+  const choices=shuffle(variants,options.randomIndex||randomInt).sort((a,b)=>(options.typeCounts.get(a.type)||0)-(options.typeCounts.get(b.type)||0));
+  const minimum=options.typeCounts.get(choices[0].type)||0;
   let best:BaseQuestion|undefined,bestRank:number[]|undefined;
-  for(const [typeIndex,type] of choices.entries())for(let i=0;i<8;i++){
+  for(const [typeIndex,{type,mechanic}] of choices.entries())for(let i=0;i<(mechanic?1:8);i++){
     try {
-      let q=generateQuestion({profile:'professional',targetGrade:options.grade,category:options.category,type,difficulty:options.difficulty,seed:(options.seed+i*10007+typeIndex*104729)%2147483647||1});
+      const seed=(options.seed+i*10007+typeIndex*104729)%2147483647||1;
+      let q=mechanic?generateLabQuestion(mechanic,seed,options.difficulty,options.grade):generateQuestion({profile:'professional',targetGrade:options.grade,category:options.category,type,difficulty:options.difficulty,seed});
       if(options.legacy&&q.authoring?.engine==='verified-8')q={...generateLegacyProfessional(q.type,q.seed,q.difficulty),targetGrade:options.grade,targetGrades:[options.grade],ageGroup:options.grade<=2?'1-2':'3-4'};
       if(!isQuestionReadyForStudents(q))continue;
       const key=questionReasoningKey(q),style=questionStyleKey(q);

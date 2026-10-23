@@ -1,3 +1,5 @@
+import { solveLab, validateLabBoard, LAB_TOPICS } from './reasoning-lab';
+import { independentlySolveLab } from './reasoning-lab-solver';
 import {solveSymbolic,independentlySolveSymbolic,symbolicBoardSchema} from './symbolic-v2';
 import { solveColorful, independentlyMatchesColorful, type ColorfulBoard, type ColorfulValue } from './colorful-engine';
 import type { BaseQuestion } from '../../types';
@@ -28,6 +30,15 @@ export function solveQuestion(q: BaseQuestion): UniversalSolverResult {
   });
   try {
     if (!q || !Array.isArray(q.options) || q.options.length !== 4 || q.options.some(o => !o)) return failure('Dört geçerli seçenek gerekli.');
+    if((q.visualConfig as Record<string,unknown>)?.displayMode==='reasoning_lab') {
+      const b=validateLabBoard(q.visualConfig);
+      if(LAB_TOPICS[b.mechanic]!==q.type||b.grade!==q.targetGrade)return failure('Akıl yürütme konusu veya sınıfı uyuşmuyor.');
+      const answer=solveLab(b),independent=independentlySolveLab(b);
+      if(answer!==independent)return failure('İki bağımsız çözüm uyuşmuyor.',true);
+      const expected={textNumber:answer},matches=q.options.filter(o=>fingerprint(o.visualData)===fingerprint(expected));
+      if(matches.length!==1)return failure('Tek doğru seçenek yok.',true);
+      return {canSolve:true,isMatch:matches[0].id===q.correctOptionId,expectedAnswerId:matches[0].id,expectedFingerprint:fingerprint(expected),solverMethod:'ReasoningLabIndependent-v1',confidence:1,ambiguityDetected:false,proofSteps:['Görünür verilenlerden iki farklı yöntemle aynı sonuç hesaplandı.','Tek uygun seçenek: '+matches[0].id]};
+    }
     if((q.visualConfig as Record<string,unknown>)?.displayMode==='symbolic_v2'){
       const b=symbolicBoardSchema.parse(q.visualConfig);if(q.type!==b.kind||q.targetGrade!==b.grade)return failure('Sembolik sınıf veya konu uyuşmuyor.');
       const answer=solveSymbolic(b),independent=independentlySolveSymbolic(b);if(answer!==independent)return failure('Bağımsız cebirsel çözümler uyuşmuyor.',true);

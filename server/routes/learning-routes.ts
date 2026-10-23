@@ -20,7 +20,7 @@ import { loadPublishedLearningBank } from '../learning-bank';
 import { isQuestionReadyForStudents } from '../../src/features/questions/quality';
 import { loadRecentLearningContext, selectLearningQuestions, generateVariedLearningQuestion, gradeChallengeFloor, pickGradeChallenge, currentReasoningCandidate, assertLearningQuestionFormat } from '../learning-question-selection';
 import { reasoningDifficultyPlan } from '../../src/features/questions/reasoning-profile';
-import { LEARNING_QUESTION_FORMAT, supportsReasoningFormat, needsProfessionalV2Format, needsReasoningFormat } from '../../src/features/student/learning-question-format';
+import { LEARNING_QUESTION_FORMAT, supportsReasoningFormat, supportsProfessionalV2Format, needsCurrentQuestionFormat, needsProfessionalV2Format, needsReasoningFormat } from '../../src/features/student/learning-question-format';
 import { AVAILABLE_CATEGORIES } from '../../src/features/student/available-categories';
 import { QUESTION_TYPE_LABELS, COGNITIVE_CATEGORY_LABELS, type BaseQuestion, type SkillMastery } from '../../src/types';
 import { prepareQuestionReport } from '../support-validation';
@@ -114,7 +114,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const count = requestedCount;
     if (topic!=='mixed'&&!topicCandidates.length) throw new LearningError('Seçilen sınıf, konu ve zorlukta yayımlanmış soru yok. Zorluk filtresini değiştirip yeniden dene.', 422);
     const modern = supportsReasoningFormat(req.query.questionFormat);
-    const selection: LearningSelection = { ...(modern?{questionFormat:req.query.questionFormat as 'reasoning-8'|'professional-v2'}:{}), ...(parsed.data.mixCategories ? {mixCategories:true} : {}), topic, grade: profile.data.grade, difficulty, category, exam: mode === 'exam' ? exam : '', count, bankVersion: bank.bankVersion, ...(locale === 'en' ? { locale } : {}) };
+    const selection: LearningSelection = { ...(modern?{questionFormat:req.query.questionFormat as 'reasoning-8'|'professional-v2'|'reasoning-lab-1'}:{}), ...(parsed.data.mixCategories ? {mixCategories:true} : {}), topic, grade: profile.data.grade, difficulty, category, exam: mode === 'exam' ? exam : '', count, bankVersion: bank.bankVersion, ...(locale === 'en' ? { locale } : {}) };
     const active = await client.from('learning_sessions').select('*').eq('student_id', student).eq('mode', mode).is('finished_at', null).maybeSingle();
     if (active.error) throw active.error;
     // Starting a test always draws a fresh shuffled set. Explicit GET/resume keeps its snapshot.
@@ -126,7 +126,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const recommendation=mode==='adaptive'?recommendDifficulty(grade,recent.answers):{adjustment:0 as const,sampleSize:0,accuracy:null,reason:'steady' as const};
     const challengeFloor = Math.max(1,gradeChallengeFloor(grade)+Math.min(0,recommendation.adjustment));
     const gradeAppropriate = (q: BaseQuestion) => !challengeMode || q.difficulty >= challengeFloor;
-    const formatReady=(q:BaseQuestion)=>needsProfessionalV2Format(q)?req.query.questionFormat===LEARNING_QUESTION_FORMAT:modern||!needsReasoningFormat(q);
+    const formatReady=(q:BaseQuestion)=>needsCurrentQuestionFormat(q)?req.query.questionFormat===LEARNING_QUESTION_FORMAT:needsProfessionalV2Format(q)?supportsProfessionalV2Format(req.query.questionFormat):modern||!needsReasoningFormat(q);
     const reasoningReady=(q:BaseQuestion)=>locale==='en'||topic!=='mixed'||currentReasoningCandidate(q,grade,modern);
     const candidates = topicCandidates.filter(q => fitsLearningSelection(q, selection) && gradeAppropriate(q) && formatReady(q)&&reasoningReady(q) && (locale !== 'en' || englishReady(q)));
     if (locale === 'en' && candidates.length < count) throw new LearningError('This activity is not available in English at this level. Try mixed practice.', 422);
@@ -145,7 +145,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
         if (locale === 'en') throw new LearningError('English practice is temporarily unavailable. Please try again.', 503);
         const nextDifficulty = plannedDifficulty ?? (difficulty === 'mixed' ? pickGradeChallenge(grade) : difficulty);
         const seed=randomInt(1,2147483647);
-        return generateVariedLearningQuestion({grade,category:nextCategory,difficulty:nextDifficulty,seed,typeCounts,reasoningCounts,exposure,legacy:!modern});
+        return generateVariedLearningQuestion({grade,category:nextCategory,difficulty:nextDifficulty,seed,typeCounts,reasoningCounts,exposure,legacy:!modern,lab:req.query.questionFormat===LEARNING_QUESTION_FORMAT});
       },
     });
     const latestProfile = await client.from('profiles').select('grade').eq('id', student).single();

@@ -14,7 +14,7 @@ import { selectLearningQuestions } from '../server/learning-question-selection';
 import { isQuestionReadyForStudents, questionVisualKey } from '../src/features/questions/quality';
 import { StudentTopicPractice } from '../src/components/student/StudentTopicPractice';
 import type { BaseQuestion, DifficultyLevel } from '../src/types';
-import { needsReasoningFormat, LEARNING_QUESTION_FORMAT } from '../src/features/student/learning-question-format';
+import { needsReasoningFormat, LEARNING_QUESTION_FORMAT, PREVIOUS_PROFESSIONAL_QUESTION_FORMAT, LEGACY_REASONING_QUESTION_FORMAT } from '../src/features/student/learning-question-format';
 import { reasoningDifficultyPlan } from '../src/features/questions/reasoning-profile';
 import { generateProfessionalQuestion as generateV7 } from '../src/features/questions/professional-engine-v7';
 
@@ -112,8 +112,8 @@ test('real authenticated learning API isolates published topics in all grades, r
   app.use((err: any, _req: any, res: any, _next: any) => res.status(500).json({ error: err.message }));
   const server = app.listen(0, '127.0.0.1'); await new Promise<void>(resolve => server.once('listening', resolve));
   const origin = `http://127.0.0.1:${(server.address() as any).port}`;
-  const start = async (body: object, authenticated = true, modern = false) => {
-    const res = await originalFetch(`${origin}/api/learning/start${modern?'?questionFormat='+LEARNING_QUESTION_FORMAT:''}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(authenticated ? { Authorization: `Bearer ${token()}` } : {}) }, body: JSON.stringify(body) });
+  const start = async (body: object, authenticated = true, modern: boolean | string = false) => {
+    const res = await originalFetch(`${origin}/api/learning/start${modern?'?questionFormat='+(typeof modern==='string'?modern:LEARNING_QUESTION_FORMAT):''}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(authenticated ? { Authorization: `Bearer ${token()}` } : {}) }, body: JSON.stringify(body) });
     return { status: res.status, body: await res.json() as any };
   };
   try {
@@ -220,6 +220,13 @@ test('real authenticated learning API isolates published topics in all grades, r
     assert.equal(saved.status,200);const update=await saved.json() as any;assert.equal(update.questions,undefined);assert.equal(update.answers['0'].correct,true);
     const resumed=await originalFetch(`${origin}/api/learning/${modern.id}?questionFormat=${LEARNING_QUESTION_FORMAT}`,{headers});
     assert.equal(resumed.status,200);assert.equal((await resumed.json() as any).questions.length,20);
+    for(const oldFormat of [PREVIOUS_PROFESSIONAL_QUESTION_FORMAT,LEGACY_REASONING_QUESTION_FORMAT]){
+      rows=[];
+      const oldClient=await start({mode:'adaptive',category:'mixed',mixCategories:true,questionCount:20,difficulty:'mixed',expectedGrade:grade},true,oldFormat);
+      assert.equal(oldClient.status,201,JSON.stringify(oldClient.body));
+      assert.equal(rows[0].selection.questionFormat,oldFormat);
+      assert.ok(rows[0].questions.every((q:BaseQuestion)=>q.authoring?.engine!=='reasoning-lab-1'),'Installed older clients cannot receive new drawing modes');
+    }
     rows=[];
     const legacy=await start({mode:'adaptive',category:'mixed',mixCategories:true,questionCount:20,difficulty:'mixed',expectedGrade:grade});
     assert.equal(legacy.status,201,JSON.stringify(legacy.body));assert.ok(rows[0].questions.every((q:BaseQuestion)=>!needsReasoningFormat(q)));

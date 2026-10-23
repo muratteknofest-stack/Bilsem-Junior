@@ -26,7 +26,7 @@ export function analyzeQuestionMechanics(q:BaseQuestion):MechanicalReport {
   const errors:string[]=[], mode=(q.visualConfig as Record<string,unknown>)?.displayMode;
   const keys=q.options.map(o=>visibleOptionKey(o.visualData));
   if(new Set(keys).size!==4)errors.push('VISIBLE_DUPLICATE: Öğrencinin gördüğü dört şık birbirinden farklı olmalı.');
-  if(mode==='workshop_board'||mode==='verified_board')for(const option of q.options){
+  if(mode==='workshop_board'||mode==='verified_board'||mode==='reasoning_lab')for(const option of q.options){
     const value=option.visualData as Record<string,unknown>;
     if(!value||typeof value!=='object'||Array.isArray(value)){errors.push(`${option.id}: Seçenek nesnesi geçersiz.`);continue;}
     const allowed=mode==='workshop_board'&&value.figure!==undefined?['figure']:mode==='workshop_board'&&value.symbol!==undefined?['symbol']:mode==='workshop_board'&&value.polygon!==undefined?['polygon']:value.cells!==undefined?['size','cells']:['textNumber'];

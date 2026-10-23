@@ -1,13 +1,26 @@
 {
-  "checkedAt": "2026-10-23T06:48:02.562Z",
+  "checkedAt": "2026-10-23T07:37:38.857Z",
   "policy": "distinct-styles-3",
+  "lab": {
+    "engine": "reasoning-lab-1",
+    "mechanics": [
+      "route-count",
+      "domino-chain",
+      "box-transfer",
+      "switch-parity",
+      "position-swaps",
+      "boundary-edges",
+      "guaranteed-draw",
+      "cheapest-route"
+    ]
+  },
   "bankQuestions": 8000,
   "ready": 8000,
   "totals": {
     "requests": 500,
-    "accepted": 272,
-    "blocked": 228,
-    "checkedQuestions": 1440,
+    "accepted": 289,
+    "blocked": 211,
+    "checkedQuestions": 2005,
     "adventures": 16,
     "duplicateStyles": 0,
     "duplicateRules": 0
@@ -130,7 +143,7 @@
       45,
       0,
       "blocked",
-      31,
+      39,
       0,
       0
     ],
@@ -142,7 +155,7 @@
       45,
       1,
       "blocked",
-      32,
+      40,
       0,
       0
     ],
@@ -250,7 +263,7 @@
       45,
       0,
       "blocked",
-      30,
+      38,
       0,
       0
     ],
@@ -262,7 +275,7 @@
       45,
       1,
       "blocked",
-      30,
+      38,
       0,
       0
     ],
@@ -286,7 +299,7 @@
       5,
       0,
       "blocked",
-      1,
+      2,
       0,
       0
     ],
@@ -381,10 +394,10 @@
       "mixed",
       5,
       0,
-      "blocked",
-      4,
-      0,
-      0
+      "accepted",
+      5,
+      5,
+      5
     ],
     [
       1,
@@ -1629,10 +1642,10 @@
       "mixed",
       45,
       0,
-      "blocked",
-      37,
-      0,
-      0
+      "accepted",
+      45,
+      45,
+      45
     ],
     [
       2,
@@ -1641,10 +1654,10 @@
       "mixed",
       45,
       1,
-      "blocked",
-      37,
-      0,
-      0
+      "accepted",
+      45,
+      45,
+      45
     ],
     [
       2,
@@ -1749,10 +1762,10 @@
       "mixed",
       45,
       0,
-      "blocked",
-      37,
-      0,
-      0
+      "accepted",
+      45,
+      45,
+      45
     ],
     [
       2,
@@ -1761,10 +1774,10 @@
       "mixed",
       45,
       1,
-      "blocked",
-      37,
-      0,
-      0
+      "accepted",
+      45,
+      45,
+      45
     ],
     [
       2,
@@ -1786,7 +1799,7 @@
       5,
       0,
       "blocked",
-      2,
+      3,
       0,
       0
     ],
@@ -1833,10 +1846,10 @@
       "mixed",
       5,
       0,
-      "blocked",
-      4,
-      0,
-      0
+      "accepted",
+      5,
+      5,
+      5
     ],
     [
       2,
@@ -1881,10 +1894,10 @@
       "mixed",
       5,
       0,
-      "blocked",
-      3,
-      0,
-      0
+      "accepted",
+      5,
+      5,
+      5
     ],
     [
       2,
@@ -3129,10 +3142,10 @@
       "mixed",
       45,
       0,
-      "blocked",
-      41,
-      0,
-      0
+      "accepted",
+      45,
+      45,
+      45
     ],
     [
       3,
@@ -3141,10 +3154,10 @@
       "mixed",
       45,
       1,
-      "blocked",
-      41,
-      0,
-      0
+      "accepted",
+      45,
+      45,
+      45
     ],
     [
       3,
@@ -3249,10 +3262,10 @@
       "mixed",
       45,
       0,
-      "blocked",
-      41,
-      0,
-      0
+      "accepted",
+      45,
+      45,
+      45
     ],
     [
       3,
@@ -3261,10 +3274,10 @@
       "mixed",
       45,
       1,
-      "blocked",
-      41,
-      0,
-      0
+      "accepted",
+      45,
+      45,
+      45
     ],
     [
       3,
@@ -3286,7 +3299,7 @@
       5,
       0,
       "blocked",
-      2,
+      3,
       0,
       0
     ],
@@ -3381,10 +3394,10 @@
       "mixed",
       5,
       0,
-      "blocked",
-      3,
-      0,
-      0
+      "accepted",
+      5,
+      5,
+      5
     ],
     [
       3,
@@ -4629,10 +4642,10 @@
       "mixed",
       45,
       0,
-      "blocked",
-      41,
-      0,
-      0
+      "accepted",
+      45,
+      45,
+      45
     ],
     [
       4,
@@ -4641,10 +4654,10 @@
       "mixed",
       45,
       1,
-      "blocked",
-      41,
-      0,
-      0
+      "accepted",
+      45,
+      45,
+      45
     ],
     [
       4,
@@ -4749,10 +4762,10 @@
       "mixed",
       45,
       0,
-      "blocked",
-      41,
-      0,
-      0
+      "accepted",
+      45,
+      45,
+      45
     ],
     [
       4,
@@ -4761,10 +4774,10 @@
       "mixed",
       45,
       1,
-      "blocked",
-      41,
-      0,
-      0
+      "accepted",
+      45,
+      45,
+      45
     ],
     [
       4,
@@ -4786,7 +4799,7 @@
       5,
       0,
       "blocked",
-      2,
+      3,
       0,
       0
     ],
@@ -4881,10 +4894,10 @@
       "mixed",
       5,
       0,
-      "blocked",
-      3,
-      0,
-      0
+      "accepted",
+      5,
+      5,
+      5
     ],
     [
       4,

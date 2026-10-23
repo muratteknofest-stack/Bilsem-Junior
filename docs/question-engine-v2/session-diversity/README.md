@@ -10,22 +10,32 @@
 - Günlük üç görev, misafir demo ve eski yayımlanmış havuz seçicisinde de tekrar engeli vardır. Soru bankası üretimi/yönetici atölyesi çok sayıda alıştırma varyantı oluşturabilir; bunlar öğrenci testinde aynı tarzı tekrar ettiremez.
 - İngilizce hesap testleri de aynı kurala tabidir. Sonlu İngilizce havuzunda uzun test hazırlanamazsa tekrarlarla doldurulmaz; beş farklı tarz içeren karışık pratiğe geçme seçeneği gösterilir. Mevcut kaydedilmiş oturumlar ve geçmiş yanıtlar yeniden yazılmaz.
 
+## Yeni soru mekanikleri — reasoning-lab-1
+
+Sekiz yeni görev ailesi eklendi: domino uçlarını bağlama, kutular arasında sıralı aktarım, lamba durumlarını değiştirme, kartları yer değiştirme, birim karelerin dış kenarlarını sayma, sağ/aşağı yollarını sayma, bölüm uzunluklarından en düşük yol toplamını bulma ve geri koymadan çekişte kesin sonucu belirleme. Her ailenin görünür verilenleri ve sorgusu farklıdır. Tohum, renk, sayı, sınıf veya zorluk değişikliği aynı aileyi ikinci kez seçilebilir yapmaz.
+
+- Her mekanik birincil çözüm ve farklı bir bağımsız yöntemle doğrulanır: dinamik yol sayımı/arama, uç eşleme/aday tarama, sıralı aktarım/korunum, anahtarlama/tek-çift basış, ileri değiştirme/geriye izleme, dış kenar taraması/ortak kenar hesabı, sınırlı toplam/çekiş kombinasyonları, yol toplamı/ikili farklar.
+- 1.200 sınıf/zorluk/tohum örneği; bozuk verilenler, yanlış cevap anahtarı, değiştirilmiş yönerge, gizli seçenek alanı, çizim ve öğrenci DTO kontrolleriyle sınandı. Mevcut motorların kanonik sürümleri değiştirilmedi.
+- Yeni çizimler yalnız `reasoning-lab-1` biçimini bildiren istemcilere gönderilir. `professional-v2`, `reasoning-8` ve daha eski istemciler destekledikleri motorlarla devam eder; yeni bir çizim içeren kaydedilmiş oturuma uyumsuz istemciyle cevap yazılamaz. Yeni APK dağıtımı bu sürümün kapsamında değildir.
+- Yeni aileler Türkçe karışık testlerin doğrulanmış üretim havuzuna eklendi. Yayımlanmış banka sorularının statüsü ve tek konu çalışmalarının onaylı banka sınırı değişmedi.
+- Erken sınıflarda matris alanının yalnız döndürme tarzı bulunabildiği için karışık uzun testin ilk matris kotası esnek uzamsal sorulardan önce ayrılır. Böylece aynı tarzı iki alanda tekrarlatmadan bütün alanların ilk temsili korunur.
+
 ## Güncel denetim
 
 `strict.json`: 8.000 bank sorusu kalite kapısından geçti. Dört sınıf, tüm 44 konu, alan filtreleri, banka/üretim, zorluk planları, oturum geçmişi, İngilizce hesap pratiği, günlük görev ve demo için 500 hazırlama isteği denetlendi.
 
 | Sonuç | Sayı |
 |---|---:|
-| İstenen uzunlukta oluşturulan test | 272 |
-| Yeterli farklı tarz bulunmadığı için açıkça reddedilen istek | 228 |
-| Oluşturulan testlerde kontrol edilen soru | 1.440 |
+| İstenen uzunlukta oluşturulan test | 289 |
+| Yeterli farklı tarz bulunmadığı için açıkça reddedilen istek | 211 |
+| Oluşturulan testlerde kontrol edilen soru | 2.005 |
 | Tekrarlanan kural / tarz | 0 / 0 |
 | Tamamlanan 20 soruluk macera senaryosu | 16 / 16 |
 | Beklenmeyen doğrulama hatası | 0 |
 
-Banka ve üretimle, ardışık geçmişli tüm sınıflarda 5/15/20/30 soruluk karışık örnekler tamamlandı. 45 soruluk örnekler, 15 soruluk tek konu örnekleri ve kısıtlı alan/havuz örneklerinin bir kısmı bilerek reddedildi. Bu sayılar 228 testin hazır olduğu anlamına gelmez; tekrar içeren veya kısaltılmış test yayımlanmasını engellediğimiz durumlardır. Yeni soru tarzları yazılmadan bu havuzlarda her uzunluk sunulamaz. Algoritmik tarz sınıflandırması insan/psikometrik inceleme yerine geçmez.
+Banka ve üretimle, ardışık geçmişli tüm sınıflarda 5/15/20/30 soruluk karışık örnekler tamamlandı; 20 soruluk 16 maceranın tamamı on alanı da içerdi. 2–4. sınıflardaki 45 soruluk 12 örneğin tamamı hazırlandı. 1. sınıftaki 45 soruluk dört örnek, 15 soruluk tek konu örnekleri ve kısıtlı alan/havuz örneklerinin bir kısmı bilerek reddedildi. Bu 211 istek için kısaltılmış veya benzer tarzlarla doldurulmuş bir oturum oluşturulmadı. 1. sınıfın 45 soruluk kapsamı ve dar konu/İngilizce havuzları için daha fazla gerçek mekanik gerekir. Algoritmik tarz sınıflandırması insan/psikometrik inceleme yerine geçmez.
 
-479 yazılım testi geçti. Gerçek öğrenme rotasının kimlik doğrulama, soru bankası ve oturum DTO zinciriyle yapılan testler, başarısız hazırlığın eski yanıtları koruduğunu ve istemcinin bu engeli kapatamadığını doğrular. Yeni politika için biçim/metin kimlikleri aynı sayılan gerçek motor örnekleri ve kullanıcıya gösterilen kurtarma seçenekleri de kontrol edilir.
+485 yazılım testi geçti. Gerçek öğrenme rotasının kimlik doğrulama, soru bankası ve oturum DTO zinciriyle yapılan testler, başarısız hazırlığın eski yanıtları koruduğunu ve istemcinin bu engeli kapatamadığını doğrular. Yeni politika için biçim/metin kimlikleri aynı sayılan gerçek motor örnekleri ve kullanıcıya gösterilen kurtarma seçenekleri de kontrol edilir.
 
 ```sh
 npm run audit:strict-test-diversity -- /path/to/owner-bank.json /path/to/strict-report.json

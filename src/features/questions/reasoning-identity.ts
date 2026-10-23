@@ -6,7 +6,8 @@ import { transformTile, type Board, type Tile } from './professional-engine';
 export function questionReasoningKey(q: Pick<BaseQuestion,'type'|'visualConfig'>): string {
   const b=q.visualConfig as Record<string,unknown>;
   let rule: unknown;
-  if(b.displayMode==='symbolic_v2')rule={kind:'symbolic-relations',mechanic:b.mechanic,variables:(b.symbols as string[]).length,queryMode:b.queryMode};
+  if(b.displayMode==='reasoning_lab')rule={kind:'reasoning-lab',mechanic:b.mechanic};
+  else if(b.displayMode==='symbolic_v2')rule={kind:'symbolic-relations',mechanic:b.mechanic,variables:(b.symbols as string[]).length,queryMode:b.queryMode};
   else if(b.displayMode==='verified_board') {
     const v=q.visualConfig as Board;
     if(v.kind==='matrix') {
@@ -50,7 +51,8 @@ export function questionReasoningKey(q: Pick<BaseQuestion,'type'|'visualConfig'>
 export function questionStyleKey(q: Pick<BaseQuestion,'type'|'visualConfig'>): string {
   const b=q.visualConfig as Record<string,unknown>;
   let style: unknown = q.type;
-  if (['dice_unfold','spatial_origami'].includes(q.type)) style='cube-opposite-face';
+  if (b.displayMode==='reasoning_lab') style={kind:'reasoning-lab',mechanic:b.mechanic};
+  else if (['dice_unfold','spatial_origami'].includes(q.type)) style='cube-opposite-face';
   else if (['paper_folding','punch_folding','symmetry_completion'].includes(q.type)) style='reflection-completion';
   else if (q.type==='visual_memory') style='memory-pattern';
   else if (q.type==='shadow_matching') style='shadow-match';
