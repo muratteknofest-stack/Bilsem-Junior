@@ -8,7 +8,13 @@ import { isQuestionReadyForStudents, questionStimulusKey, questionVisualKey } fr
 import { solveQuestion } from '../src/features/questions/universal-solver';
 import { recentQuestionExposure, selectLearningQuestions, generateVariedLearningQuestion } from '../server/learning-question-selection';
 import { AVAILABLE_CATEGORIES } from '../src/features/student/available-categories';
+import type { BaseQuestion } from '../src/types';
 import { LearningError } from '../server/learning-model';
+import { questionReasoningKey, questionStyleKey } from '../src/features/questions/reasoning-identity';
+import { professionalGradeTypes } from '../src/features/questions/reasoning-profile';
+import { STUDENT_CATEGORY_TYPES } from '../src/features/questions/generators';
+import { generateProfessionalQuestion } from '../src/features/questions/professional-engine';
+import { chooseDiverseCandidate } from '../src/features/questions/novelty';
 
 function seededRandom(seed: number) {
   return (maximum: number) => {
@@ -93,4 +99,84 @@ test('invalid lengths are rejected before selection or generation', () => {
       generate: () => { assert.fail('Invalid request reached generation'); },
     }), LearningError);
   }
+});
+
+test('aliases and cosmetic complexity cannot masquerade as different mechanics', () => {
+  const question=(type:BaseQuestion['type'],seed=7919)=>generateQuestion({targetGrade:2,type,difficulty:2,seed});
+  const cube=question('dice_unfold'),origami=question('spatial_origami',19937);
+  assert.equal(questionReasoningKey(cube),questionReasoningKey(origami));
+  assert.equal(questionStyleKey(cube),questionStyleKey(origami));
+  assert.equal(questionReasoningKey(question('paper_folding')),questionReasoningKey(question('punch_folding')));
+  assert.equal(questionReasoningKey(question('matrix_2x2')),questionReasoningKey(question('figure_rotation')));
+  const mirror=question('mirror_reflection');
+  const tileMirror=Array.from({length:10},(_,i)=>generateProfessionalQuestion('mirror_reflection',7919+i,2))
+    .find(q=>(q.visualConfig as {operation?:string}).operation==='mirrorX')!;
+  assert.equal(questionReasoningKey(mirror),questionReasoningKey(tileMirror));
+  const memory=question('visual_memory');
+  assert.equal(questionReasoningKey(memory),questionReasoningKey({...memory,visualConfig:{...memory.visualConfig,source:{size:4}}}));
+});
+
+test('analogy rules remain distinct instead of collapsing genuine fill, union and completion tasks', () => {
+  const questions=Array.from({length:60},(_,i)=>generateQuestion({targetGrade:2,type:'visual_analogy',difficulty:2,seed:(i+1)*7919}));
+  assert.equal(new Set(questions.map(questionReasoningKey)).size,3);
+  assert.equal(new Set(questions.map(questionStyleKey)).size,3);
+});
+
+test('two topic aliases cannot displace a different eligible task in the bank', () => {
+  const candidates=['dice_unfold','spatial_origami','top_view'].map((type,i)=>generateQuestion({targetGrade:2,type:type as BaseQuestion['type'],difficulty:2,seed:7919+i*997}));
+  const questions=selectLearningQuestions({count:2,category:'spatial',candidates,allowGeneration:false,
+    exposure:new Map(),canUse:isQuestionReadyForStudents,randomIndex:max=>max-1,generate:()=>{throw Error('disabled');}});
+  assert.equal(new Set(questions.map(questionReasoningKey)).size,2);
+  assert.ok(questions.some(q=>q.type==='top_view'));
+});
+
+test('a generated new rule outranks an unassigned bank variant of an already selected rule', () => {
+  const all=Array.from({length:40},(_,i)=>generateQuestion({targetGrade:2,type:'number_pattern',difficulty:2,seed:(i+1)*7919}));
+  const first=all[0],same=all.find(q=>q.id!==first.id&&questionReasoningKey(q)===questionReasoningKey(first))!;
+  const other=all.find(q=>questionReasoningKey(q)!==questionReasoningKey(first))!;
+  const questions=selectLearningQuestions({count:2,category:'numerical',candidates:[first,same],exposure:new Map(),
+    canUse:isQuestionReadyForStudents,randomIndex:max=>max-1,generate:()=>other});
+  assert.equal(new Set(questions.map(questionReasoningKey)).size,2);
+});
+
+test('generation searches other types when the least-used type has no new rule', () => {
+  const grade=2,category='numerical',typeCounts=new Map<BaseQuestion['type'],number>();
+  for(const type of professionalGradeTypes(grade).filter(type=>STUDENT_CATEGORY_TYPES[category].includes(type)))typeCounts.set(type,type==='weight_comparison'?0:1);
+  const used=generateQuestion({targetGrade:grade,type:'weight_comparison',difficulty:2,seed:7919});
+  const q=generateVariedLearningQuestion({grade,category,difficulty:2,seed:19937,typeCounts,
+    reasoningCounts:new Map([[questionReasoningKey(used),1],[questionStyleKey(used),1]]),randomIndex:()=>0});
+  assert.notEqual(q.type,'weight_comparison');
+  assert.notEqual(questionReasoningKey(q),questionReasoningKey(used));
+});
+
+test('mixed adventures transfer exhausted area quotas while retaining grade, length and difficulty slots', () => {
+  for(const grade of [1,2,3,4] as const) {
+    const randomIndex=seededRandom(grade*971),plan=scaffoldDifficultyPlan(reasoningDifficultyPlan(grade,20,randomIndex));
+    let seed=grade*100003;
+    const questions=selectLearningQuestions({count:20,category:'mixed',redistributeRepeatedCategories:true,
+      candidates:[],exposure:new Map(),difficultyPlan:plan,canUse:q=>q.targetGrade===grade&&isQuestionReadyForStudents(q),randomIndex,
+      generate:(category,typeCounts,difficulty,reasoningCounts)=>generateVariedLearningQuestion({grade,category,difficulty:difficulty!,typeCounts,reasoningCounts,seed:++seed,randomIndex})});
+    assert.deepEqual(questions.map(q=>q.difficulty),plan);
+    assert.equal(new Set(questions.map(questionReasoningKey)).size,20);
+    assert.equal(new Set(questions.map(q=>q.category)).size,10);
+  }
+});
+
+test('limited topic pools spread all eligible rules before repeating one', () => {
+  const candidates=Array.from({length:90},(_,i)=>generateQuestion({targetGrade:2,type:'number_pattern',difficulty:2,seed:(i+1)*7919}));
+  const questions=selectLearningQuestions({count:12,category:'numerical',candidates,exposure:new Map(),allowGeneration:false,
+    canUse:isQuestionReadyForStudents,randomIndex:seededRandom(71),generate:()=>{throw Error('disabled');}});
+  const counts=new Map<string,number>();
+  for(const q of questions)counts.set(questionReasoningKey(q),(counts.get(questionReasoningKey(q))||0)+1);
+  assert.equal(counts.size,3);
+  assert.deepEqual([...counts.values()],[4,4,4]);
+});
+
+test('shared daily/demo novelty selection prefers a different style over a new angle of a used style', () => {
+  const rotations=Array.from({length:80},(_,i)=>generateProfessionalQuestion('figure_rotation',(i+1)*7919,4));
+  const rotation=rotations.find(q=>!(q.visualConfig as {transformSteps?:unknown}).transformSteps)!;
+  const related=rotations.find(q=>questionReasoningKey(q)!==questionReasoningKey(rotation)&&questionStyleKey(q)===questionStyleKey(rotation))!;
+  assert.ok(related);
+  const other=generateQuestion({targetGrade:4,type:'top_view',difficulty:4,seed:19937});
+  assert.equal(chooseDiverseCandidate([related,other],[rotation]).id,other.id);
 });

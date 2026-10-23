@@ -10,7 +10,7 @@ import {
   DIFFICULTY_COLORS,
   UserProfile
 } from '../types';
-import { generateQuestion, STUDENT_CATEGORY_TYPES } from '../features/questions/generators';
+import { generateDiverseQuestion, STUDENT_CATEGORY_TYPES } from '../features/questions/generators';
 import { demoQuestionsRemaining, isDemoUser, useDemoQuestion } from '../lib/demo-access';
 import { loadPublishedQuestionsForGrade, usePublishedQuestions } from '../features/questions/use-published-questions';
 import { selectPublishedPool } from '../features/questions/editorial-data';
@@ -252,12 +252,12 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
             ? ((i < 3 ? 2 : i < 7 ? 3 : 4) as DifficultyLevel)
             : (selectedDifficulty as DifficultyLevel);
   
-        const q = generateQuestion({
+        const q = generateDiverseQuestion({
           targetGrade: isSchoolGrade(dataService.getCurrentUser().grade) ? dataService.getCurrentUser().grade as 1|2|3|4 : undefined,
           category: selectedCategory,
           difficulty: diff,
           seed: Math.floor(Math.random() * 900000) + 100000 + i * 31,
-        });
+        }, qList);
         qList.push(q);
       }
   

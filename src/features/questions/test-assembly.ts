@@ -1,7 +1,7 @@
 import type { BaseQuestion, DifficultyLevel } from '../../types';
-import { questionReasoningKey } from './reasoning-identity';
+import { questionReasoningKey, questionStyleKey } from './reasoning-identity';
 
-export const TEST_ASSEMBLY_VERSION = 'balanced-reasoning-1';
+export const TEST_ASSEMBLY_VERSION = 'diverse-mechanics-2';
 
 /** Keep exact grade quotas, with a short introduction and consolidation item. */
 export function scaffoldDifficultyPlan(plan: readonly DifficultyLevel[]): DifficultyLevel[] {
@@ -29,15 +29,18 @@ export function orderTestQuestions(
   if (difficultyPlan && difficultyPlan.length !== questions.length) throw Error('TEST_PLAN_LENGTH');
   const pending = [...questions], ordered: BaseQuestion[] = [];
   const reasoning = new Map(questions.map(q => [q, questionReasoningKey(q)]));
+  const styles = new Map(questions.map(q => [q, questionStyleKey(q)]));
   for (let slot = 0; slot < questions.length; slot++) {
     const eligible = pending.filter(q => !difficultyPlan || q.difficulty === difficultyPlan[slot]);
     if (!eligible.length) throw Error('TEST_PLAN_DIFFICULTY');
     const last = ordered.at(-1), window = ordered.slice(-5);
     const rank = (q: BaseQuestion) => [
+      Number(!!last && styles.get(q) === styles.get(last)),
       Number(!!last && reasoning.get(q) === reasoning.get(last)),
       Number(q.type === last?.type),
       Number(q.category === last?.category),
       window.filter(item => reasoning.get(item) === reasoning.get(q)).length,
+      window.filter(item => styles.get(item) === styles.get(q)).length,
       window.filter(item => item.category === q.category).length,
       window.filter(item => item.type === q.type).length,
     ];
@@ -65,6 +68,7 @@ export function describeTestAssembly(questions: readonly BaseQuestion[]) {
     difficulties: frequencies(questions.map(q => q.difficulty)),
     types: frequencies(questions.map(q => q.type)),
     reasoningFamilies: new Set(questions.map(questionReasoningKey)).size,
+    exerciseStyles: new Set(questions.map(questionStyleKey)).size,
     skills: [...new Set(questions.flatMap(q => q.skills))].sort(),
     estimatedSeconds: questions.reduce((sum, q) => sum + q.estimatedSeconds, 0),
     difficultySequence: questions.map(q => q.difficulty),

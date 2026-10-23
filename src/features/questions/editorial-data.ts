@@ -1,9 +1,11 @@
 import type { BaseQuestion } from '../../types';
 import { auditQuestion, questionVisualKey, isQuestionReadyForStudents, assertQuestionReadyForStudents } from './quality';
+import { chooseDiverseCandidate } from './novelty';
 
 export function selectPublishedPool(generated: BaseQuestion[], published: BaseQuestion[]): BaseQuestion[] {
   const used = new Set<string>();
   const usedVisuals = new Set<string>();
+  const selected: BaseQuestion[] = [];
   published = published.filter(q => q.status === 'published' && isQuestionReadyForStudents(q));
   return generated.map((fallback, index) => {
     assertQuestionReadyForStudents(fallback);
@@ -12,14 +14,16 @@ export function selectPublishedPool(generated: BaseQuestion[], published: BaseQu
       (!fallback.targetGrade || q.targetGrade === fallback.targetGrade || q.targetGrades?.includes(fallback.targetGrade)));
     if (!candidates.length) {
       usedVisuals.add(questionVisualKey(fallback));
+      selected.push(fallback);
       return fallback;
     }
     // Generated seeds vary by session; rotate through the approved bank rather
     // than giving every student the first matching question on every attempt.
     const offset = ((fallback.seed ?? index) + index * 101) >>> 0;
-    const matching = candidates[offset % candidates.length];
+    const matching = chooseDiverseCandidate([...candidates.slice(offset % candidates.length),...candidates.slice(0,offset % candidates.length)],selected);
     used.add(matching.id);
     usedVisuals.add(questionVisualKey(matching));
+    selected.push(matching);
     return JSON.parse(JSON.stringify(matching));
   });
 }
