@@ -4,7 +4,7 @@
 
 ## Ürünler
 
-İlk yüklemeden önce `com.zekapark.app` kimliğinin sahipliğini/kullanılabilirliğini doğrulayın. Değişirse Capacitor ayarı, Java paketleri, hazırlama betiğinin dosya hedefleri ve sunucu ayarı birlikte değişmelidir.
+Kullanıcının paylaştığı Quantum Studio App Console kaydındaki uygulama kimliği `com.quantumtech.bilsemjunior` olarak eşleştirildi. Geliştirici hesap numarası Cloud proje kimliği değildir. Mevcut uygulamayı kullanın; yeni paket veya yeni yükleme anahtarı oluşturmayın. Ürün ve hizmet hesabı ayarları Console erişimiyle ayrıca doğrulanmalıdır.
 
 Play Console'da uygulama için bir abonelik oluşturun:
 
@@ -20,12 +20,32 @@ Fiyatları ve ülkeleri Play Console'da belirleyip temel planları etkinleştiri
 ## Sunucu ve veritabanı
 
 1. `20261017061944_google_play_subscriptions.sql` geçişi önceki üretim projesine uygulanmıştı. Güncel Bilsem Junior projesi `vtcsoqohkiagbwatlabk` olup Google Play tabloları hesap-proje hizalamasıyla bu projede de bulunur. Başka bir ortama kurarken önceki hesap-silme geçişleri uygulanmış olmalıdır. Tablolar/RPC'ler yalnızca sunucuya açıktır. GitHub iş akışı migration'ı otomatik çalıştırmaz; üretimde aynı geçişi tekrar uygulamayın.
-2. Google Cloud'da Android Publisher API'yi etkinleştirin. Kullanıcının inceleyip oluşturduğu hizmet hesabını Play Console uygulamasına ekleyin. Abonelikleri görüntüleme ve onaylama için gereken uygulama kapsamlı en az izinleri verin; gereksiz finans/yönetici erişimi vermeyin. İlk kurulum lisans testçisiyle doğrulanmalıdır. Hizmet hesabı/anahtar veya erişim yetkisi bu PR tarafından oluşturulmaz.
+2. Google Cloud'da Android Publisher API'yi etkinleştirin. Kullanıcının inceleyip oluşturduğu hizmet hesabını Play Console uygulamasına ekleyin. Yalnız Bilsem Junior uygulaması kapsamında “View financial data, orders, and cancellation survey responses” ve “Manage orders and subscriptions” izinlerini verin. Bu izinler Billing API için Google tarafından istenir; hesap genelinde yönetici veya başka uygulamalara erişim vermeyin. İlk kurulum lisans testçisiyle doğrulanmalıdır. Hizmet hesabı/anahtar veya erişim yetkisi bu PR tarafından oluşturulmaz.
 3. `.env.example` içindeki değerleri yalnızca sunucu ortam değişkenlerine girin. `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` bir sunucu sırrıdır; uygulamaya, depoya veya sohbet mesajına konulmaz. Bağımsız hesap-bağlama sırrını ve şifreleme anahtarını kullanıcı güvenli ortamda oluşturmalıdır. Satış ve zorunlu erişim bayrakları başlangıçta `false` kalır.
 4. Native API istekleri `CapacitorHttp` kullanır; sahte Origin göndermez, CORS istisnası eklemek gerekmez. Yalnız tarayıcı tabanlı localhost WebView testleri yapılacaksa `https://localhost` açıkça izinli kaynaklara eklenebilir. JWT, aktif oturum, doğrulanmış veli e-postası ve aile yetkisi kontrolleri korunur. Bu PR üretim CORS ayarını değiştirmez.
 5. Platformun yasal işletmeci bilgileri ve mevcut yayın kabul kontrolleri tamamlanmalıdır; eksikse `/prepare` satış başlatmaz. Bu kontrolleri yapmadan başarılı işaretlemeyin.
 
 Anahtarlar uzun ömürlü kayıtları korur: bağlama sırrını rastgele değiştirmek eski satın alımların eşleşmesini, token anahtarını değiştirmek kayıtların çözülmesini bozar. Rotasyon için kontrollü yeniden eşleme/şifreleme geçişi gerekir. Şifreli tokenlar, sahiplik ve gerekli mali kayıtlar için saklama süresini gerçek gizlilik metnine ekleyin. Hesap silmede ödeme saklama incelemesi tamamlanana kadar mevcut yönetici akışı durur; yönetici incelemesi sonrasında kimliksizleştirme ve token kaldırma prosedürü ayrıca tamamlanmalıdır. Sahipsiz token-hash kaydı başka aileye yeniden atanamaz.
+
+## Bu uygulamanın sunucu değerleri ve kurulum kontrolü
+
+| Ortam değişkeni | Değer / işlem |
+| --- | --- |
+| `GOOGLE_PLAY_PACKAGE_NAME` | `com.quantumtech.bilsemjunior` |
+| `GOOGLE_PLAY_PRODUCT_ID` | Kodun beklediği `zekapark_uyelik`; Console kataloğunda ayrıca doğrulayın |
+| `GOOGLE_PLAY_RTDN_AUDIENCE` | `https://bilsemjunior.vercel.app/api/google-play/notifications` |
+| `GOOGLE_PLAY_RTDN_EMAIL` | Pub/Sub kimlik doğrulamalı push için seçilen gerçek hizmet hesabı e-postası |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Android Publisher erişimi verilen gerçek hizmet hesabının JSON anahtarı; Vercel üretim ortamına Secret olarak |
+| `GOOGLE_PLAY_BINDING_SECRET` | En az 32 karakterlik bağımsız rastgele sunucu sırrı; varsa mevcut değeri koruyun |
+| `GOOGLE_PLAY_TOKEN_KEY` | AES-256 için 64 onaltılık karakter; varsa mevcut değeri koruyun |
+| `GOOGLE_PLAY_BILLING_ENABLED` | Gerçek kabul testlerine kadar `false` |
+| `GOOGLE_PLAY_ENFORCE_PAID_ACCESS` | Gerçek kabul testlerine kadar `false` |
+| `GOOGLE_PLAY_STORE_PUBLISHED` | Gerçek herkese açık mağaza sayfası açılana kadar `false` |
+| `GOOGLE_PLAY_ALLOW_TEST_PURCHASES` | Üretimde `false`; ayrı test sunucusunda lisans testleri için açılır |
+
+Sunucu ortamında `npm run google-play:check` çalıştırın. Güvenli yerel sunucu ayar dosyası varsa `node --env-file=/guvenli/yol/bilsem-server.env --import tsx scripts/check-google-play-setup.ts` kullanılabilir. Dosyayı depoya koymayın. Komut yalnızca eksik/geçersiz değişken adlarını ve kontrol sonuçlarını gösterir; sır üretmez, satış açmaz, veritabanına yazmaz. Yapılandırma tamamlandığında Google'daki gerçek abonelik kataloğunu okur; uygulama, ürün ve üç etkin dönemin eşleşmesini zorunlu tutar. Yanlış paket ayarını reddeder. Bu kontrol RTDN teslimi veya gerçek satın alma testi değildir. Tam yayın değerlendirmesi için aynı sunucu ortamında ayrıca `npm run release:commercial` çalıştırın.
+
+Mevcut üretilmiş Android projesinde `android:prepare`, Capacitor kimliğini Gradle `namespace` ve `applicationId` alanlarına da uygular, eski paket altındaki kendi Java sınıflarını temizler. Böylece `cap sync` sonrasında eski kimlikle paket üretilemez. Bu işlem imzalama anahtarı oluşturmaz; önceki test APK'sı yeni Console paketine dönüşmez. Yeni AAB mevcut Console yükleme anahtarıyla imzalanmalıdır.
 
 ## Yenileme, iptal ve iade bildirimi
 
@@ -50,8 +70,10 @@ Bekleyen ödeme erişim açmaz. Aktif ve ek ödeme süresindeki abonelikler eri�
 6. Üretimde `GOOGLE_PLAY_ALLOW_TEST_PURCHASES=false`; ancak gerçek ödeme ve yayın şartları tamamlandığında satış ve isteniyorsa `GOOGLE_PLAY_ENFORCE_PAID_ACCESS=true`. İkincisi sunucuda platform genelinde yeni testlere uygulanır; sadece Android UI bayrağına göre ücretli yetki verilemez. Google'dan edinilen erişim aynı öğrencinin web oturumunda da kullanılabilir.
 7. Yeni bireysel Play hesabında kapalı test/üretim erişim şartlarını, çocuk hedef kitlesi/Families politikalarını, Veri Güvenliği ve uygulama/web hesap silme akışlarını tamamlayın. Kabul garantisi verilmez.
 
-## Resmi kaynaklar — 16 Ekim 2026
+## Resmi kaynaklar — 23 Ekim 2026
 
+- https://developers.google.com/android-publisher/getting_started — hizmet hesabı ve gerekli Play Console izinleri
+- https://developer.android.com/google/play/billing/getting-ready — Pub/Sub ve RTDN bağlantısı
 - https://developer.android.com/google/play/billing/integrate — Billing 9.1.0 ve satın alma yaşam döngüsü
 - https://developers.google.com/android-publisher/api-ref/rest/v3/purchases.subscriptionsv2 — yetkili abonelik durumu, gerçek bitiş, hesap kimlikleri
 - https://developers.google.com/android-publisher/api-ref/rest/v3/purchases.subscriptions/acknowledge
@@ -84,6 +106,6 @@ Android ilk açılışta web ile aynı LandingPage bileşenini kullanır. Öğre
 
 19 Ekim 2026 kurulum kontrolünde üretim ortamında `GOOGLE_PLAY_*` ayarları bulunmadı. Gerçek satış bu nedenle açık değildir. Gerekli bağlantılar: Android Publisher hizmet hesabı (`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`), kalıcı hesap bağlama sırrı (`GOOGLE_PLAY_BINDING_SECRET`), token şifreleme anahtarı (`GOOGLE_PLAY_TOKEN_KEY`), doğrulanmış RTDN hedefi ve hizmet hesabı (`GOOGLE_PLAY_RTDN_AUDIENCE`, `GOOGLE_PLAY_RTDN_EMAIL`). Bunlar sunucuya güvenli şekilde tanımlanmalıdır; sohbet veya APK içine konulmaz. `GOOGLE_PLAY_BILLING_ENABLED` ve ücretli erişim bayrakları kabul testinden önce açılmaz.
 
-Play Console'da `com.zekapark.app` uygulamasının `zekapark_uyelik` ürünü ile `monthly` / P1M, `quarterly` / P3M, `annual` / P1Y otomatik yenilenen temel planları etkin olmalıdır. Ürünlerin mevcut Console durumu bu kod çalışmasıyla doğrulanmış değildir. Gerçek fiyat, satın alma ve yenileme testleri lisans testçisi ve Google Play kurulumu üzerinden tamamlanmalıdır.
+Play Console'da `com.quantumtech.bilsemjunior` uygulamasının `zekapark_uyelik` ürünü ile `monthly` / P1M, `quarterly` / P3M, `annual` / P1Y otomatik yenilenen temel planları etkin olmalıdır. Ürünlerin mevcut Console durumu bu kod çalışmasıyla doğrulanmış değildir. Gerçek fiyat, satın alma ve yenileme testleri lisans testçisi ve Google Play kurulumu üzerinden tamamlanmalıdır.
 
 Bu sürümün APK'sı geliştirme test anahtarıyla imzalanmış test dağıtımıdır. Google Play'e yayımlama ve gerçek ödeme kabul testi yapılmış sayılmaz.

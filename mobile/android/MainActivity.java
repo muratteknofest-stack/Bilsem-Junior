@@ -1,4 +1,4 @@
-package com.zekapark.app;
+package com.quantumtech.bilsemjunior;
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {

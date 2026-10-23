@@ -1,4 +1,4 @@
-package com.zekapark.app;
+package com.quantumtech.bilsemjunior;
 
 import android.content.Intent;
 import android.os.SystemClock;

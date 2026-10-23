@@ -9,7 +9,7 @@ import { PlayBillingFlow, initialPlayBillingState, playConfigSchema, canBuyPlay 
 import { safePlayStoreUrl } from '../src/lib/play-listing';
 import { playStoreListing } from '../server/play-listing';
 
-const storeUrl = 'https://play.google.com/store/apps/details?id=com.zekapark.app';
+const storeUrl = 'https://play.google.com/store/apps/details?id=com.quantumtech.bilsemjunior';
 const config = { ready: true, enforced: true, productId: 'zekapark_uyelik', storeUrl,
   binding: { accountId: 'a'.repeat(64), profileId: 'b'.repeat(64) }, access: { active: false, expiresAt: null } };
 
@@ -29,7 +29,7 @@ test('publication flag alone controls store listing, never grants an entitlement
 });
 test('billing listing only permits a direct Google Play app URL', () => {
   assert.ok(safePlayStoreUrl(storeUrl));
-  for (const url of ['javascript:alert(1)', 'https://evil.test/?id=com.zekapark.app', storeUrl + '&redirect=evil', storeUrl + '&id=com.evil.app', storeUrl + '#token', storeUrl.replace('play.google.com','play.google.com.evil.test'), 'https://user:password@play.google.com/store/apps/details?id=com.zekapark.app']) {
+  for (const url of ['javascript:alert(1)', 'https://evil.test/?id=com.quantumtech.bilsemjunior', storeUrl + '&redirect=evil', storeUrl + '&id=com.evil.app', storeUrl + '#token', storeUrl.replace('play.google.com','play.google.com.evil.test'), 'https://user:password@play.google.com/store/apps/details?id=com.quantumtech.bilsemjunior']) {
     assert.equal(safePlayStoreUrl(url), false); assert.equal(playConfigSchema.safeParse({ ...config, storeUrl: url }).success, false);
   }
 });

@@ -1,6 +1,6 @@
 # Android ve Google Play yayını
 
-Uygulama kimliği `com.zekapark.app`, bu sürüm `1.0.28` / versionCode `29`.
+Uygulama kimliği `com.quantumtech.bilsemjunior`, bu sürüm `1.0.28` / versionCode `29`.
 
 ## 1.0.28 — sınıfa göre çok adımlı akıl yürütme
 

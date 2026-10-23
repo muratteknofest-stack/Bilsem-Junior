@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  // Confirm ownership/availability before the first Play Console upload.
-  appId: 'com.zekapark.app',
+  // Existing Bilsem Junior app in Quantum Studio App Play Console.
+  appId: 'com.quantumtech.bilsemjunior',
   appName: 'Bilsem Junior',
   // HTTP plugin options can contain credentials; never log them, including debug APKs.
   loggingBehavior: 'none',

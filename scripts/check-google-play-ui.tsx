@@ -23,7 +23,7 @@ offers:[{basePlanId:'monthly',price:'₺299,00',period:'P1M'},{basePlanId:'quart
 window.__billingActions=[];
 function Fixture(){const[state,setState]=useState(ready),[web,setWeb]=useState(false);window.__billingShow=kind=>{
  setWeb(kind.startsWith('web-'));kind=kind.replace('web-','');
- const s=structuredClone(ready);s.config.storeUrl='https://play.google.com/store/apps/details?id=com.zekapark.app';
+ const s=structuredClone(ready);s.config.storeUrl='https://play.google.com/store/apps/details?id=com.quantumtech.bilsemjunior';
  if(kind==='only-annual')s.offers=[s.offers[2]];
  if(kind==='empty')s.offers=[];
  if(kind==='other-student'){s.otherStudent=true;s.notice={kind:'warning',text:'Bu abonelik başka bir öğrenciye bağlı.'};}

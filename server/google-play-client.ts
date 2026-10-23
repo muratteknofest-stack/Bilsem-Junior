@@ -4,20 +4,26 @@ import { GooglePlayError, playTokenSchema } from './google-play-model';
 import { PLAY_PLANS } from '../src/lib/google-play-contract';
 const credentialsSchema = z.object({ type: z.literal('service_account'), client_email: z.string().email().endsWith('.iam.gserviceaccount.com'), private_key: z.string().startsWith('-----BEGIN PRIVATE KEY-----') });
 export function playConfig() {
-  const packageName = process.env.GOOGLE_PLAY_PACKAGE_NAME || 'com.zekapark.app';
+  const packageName = process.env.GOOGLE_PLAY_PACKAGE_NAME || 'com.quantumtech.bilsemjunior';
   const productId = process.env.GOOGLE_PLAY_PRODUCT_ID || 'zekapark_uyelik';
   if (!/^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*){2,}$/.test(packageName) || !/^[a-z0-9][a-z0-9_.]{0,39}$/.test(productId)) throw new GooglePlayError('Google Play ürün ayarları geçersiz.');
   return { packageName, productId, enabled: process.env.GOOGLE_PLAY_BILLING_ENABLED === 'true', enforced: process.env.GOOGLE_PLAY_ENFORCE_PAID_ACCESS === 'true', allowTest: process.env.GOOGLE_PLAY_ALLOW_TEST_PURCHASES === 'true' };
 }
-export function playSetupReady() {
+// Report variable names only; credentials and rejected values must never reach logs.
+export function playSetupIssues(env: NodeJS.ProcessEnv = process.env): string[] {
+  const issues: string[] = [];
+  try { credentialsSchema.parse(JSON.parse(env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON || '')); }
+  catch { issues.push('GOOGLE_PLAY_SERVICE_ACCOUNT_JSON'); }
+  if ((env.GOOGLE_PLAY_BINDING_SECRET || '').length < 32) issues.push('GOOGLE_PLAY_BINDING_SECRET');
+  if (!/^[a-fA-F0-9]{64}$/.test(env.GOOGLE_PLAY_TOKEN_KEY || '')) issues.push('GOOGLE_PLAY_TOKEN_KEY');
   try {
-    credentialsSchema.parse(JSON.parse(process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON || ''));
-    if ((process.env.GOOGLE_PLAY_BINDING_SECRET || '').length < 32 || !/^[a-fA-F0-9]{64}$/.test(process.env.GOOGLE_PLAY_TOKEN_KEY || '')) return false;
-    const audience = new URL(process.env.GOOGLE_PLAY_RTDN_AUDIENCE || '');
-    if (audience.protocol !== 'https:' || audience.username || audience.password || audience.search || audience.hash || audience.pathname !== '/api/google-play/notifications' || ['localhost','127.0.0.1','[::1]'].includes(audience.hostname)) return false;
-    return z.string().email().endsWith('.iam.gserviceaccount.com').safeParse(process.env.GOOGLE_PLAY_RTDN_EMAIL).success;
-  } catch { return false; }
+    const audience = new URL(env.GOOGLE_PLAY_RTDN_AUDIENCE || '');
+    if (audience.protocol !== 'https:' || audience.username || audience.password || audience.search || audience.hash || audience.pathname !== '/api/google-play/notifications' || ['localhost','127.0.0.1','[::1]'].includes(audience.hostname)) throw Error();
+  } catch { issues.push('GOOGLE_PLAY_RTDN_AUDIENCE'); }
+  if (!z.string().email().endsWith('.iam.gserviceaccount.com').safeParse(env.GOOGLE_PLAY_RTDN_EMAIL).success) issues.push('GOOGLE_PLAY_RTDN_EMAIL');
+  return issues;
 }
+export function playSetupReady() { return playSetupIssues().length === 0; }
 let auth: GoogleAuth | undefined, credentialVersion: string | undefined;
 async function accessToken() {
   const value = process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON;

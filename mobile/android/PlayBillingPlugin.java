@@ -1,4 +1,4 @@
-package com.zekapark.app;
+package com.quantumtech.bilsemjunior;
 
 import android.os.Handler;
 import android.os.Looper;

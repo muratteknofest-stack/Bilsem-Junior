@@ -43,7 +43,7 @@ test('provider requests use fixed Google origin, bounded responses, no redirects
   const original=process.env.GOOGLE_PLAY_PACKAGE_NAME;delete process.env.GOOGLE_PLAY_PACKAGE_NAME;
   try {
     const result=await playRequest(purchaseToken,'get',async(input,init)=>{
-      assert.equal(String(input),'https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.zekapark.app/purchases/subscriptionsv2/tokens/test-purchase-token');assert.equal(init?.redirect,'error');assert.equal(new Headers(init?.headers).get('authorization'),'Bearer unit-test');return Response.json(subscription());
+      assert.equal(String(input),'https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.quantumtech.bilsemjunior/purchases/subscriptionsv2/tokens/test-purchase-token');assert.equal(init?.redirect,'error');assert.equal(new Headers(init?.headers).get('authorization'),'Bearer unit-test');return Response.json(subscription());
     },'unit-test');assert.deepEqual(result,subscription());
     await playRequest(purchaseToken,'acknowledge',async(input,init)=>{assert.match(String(input),/purchases\/subscriptions\/zekapark_uyelik\/tokens\/test-purchase-token:acknowledge$/);assert.equal(init?.method,'POST');return new Response(null,{status:204});},'unit-test');
     await assert.rejects(playRequest(purchaseToken,'get',async()=>new Response('x'.repeat(256001)),'unit-test'),GooglePlayError);
@@ -62,7 +62,7 @@ test('real Postgres preserves one binding and exact expiry, rejects stale grants
     await db.exec(await readFile('supabase/migrations/20261017061944_google_play_subscriptions.sql','utf8'));
     await db.query("insert into public.profiles(id,role,linked_student_ids,linked_parent_id) values($1::uuid,'parent',array[$2::text,$3::text],null),($2::uuid,'student','{}',$1::text),($3::uuid,'student','{}',$1::text)",[parent,student,other]);
     const hash=tokenHash(purchaseToken), encrypted=encryptPlayToken(purchaseToken,key);
-    const save=(options:{hash?:string;child?:string;state?:string;date?:string;linked?:string}={})=>db.query("select public.record_google_play_subscription($1,$2,$3,$4,'com.zekapark.app','zekapark_uyelik','quarterly',$5,$6,true,'ACKNOWLEDGEMENT_STATE_PENDING',$7,$8,false)",[options.hash||hash,parent,options.child||student,encrypted,options.state||'SUBSCRIPTION_STATE_ACTIVE',expiry,options.linked||null,options.date||new Date().toISOString()]);
+    const save=(options:{hash?:string;child?:string;state?:string;date?:string;linked?:string}={})=>db.query("select public.record_google_play_subscription($1,$2,$3,$4,'com.quantumtech.bilsemjunior','zekapark_uyelik','quarterly',$5,$6,true,'ACKNOWLEDGEMENT_STATE_PENDING',$7,$8,false)",[options.hash||hash,parent,options.child||student,encrypted,options.state||'SUBSCRIPTION_STATE_ACTIVE',expiry,options.linked||null,options.date||new Date().toISOString()]);
     await db.exec("set role authenticated;select set_config('request.jwt.claims','{\"role\":\"authenticated\"}',false)");
     await assert.rejects(db.query('select * from public.google_play_subscriptions'),/permission denied/);await assert.rejects(db.query('select * from public.google_play_purchase_bindings'),/permission denied/);await assert.rejects(save(),/permission denied/);
     await db.exec("reset role;set role service_role;select set_config('request.jwt.claims','{\"role\":\"service_role\"}',false)");
@@ -144,12 +144,12 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     payload=subscription({subscriptionState:'SUBSCRIPTION_STATE_ON_HOLD'});await assert.rejects(requireLearningAccess(student),e=>(e as any).status===403);
     payload=subscription({subscriptionState:'SUBSCRIPTION_STATE_CANCELED'});await requireLearningAccess(student);
     payload=subscription({subscriptionState:'SUBSCRIPTION_STATE_EXPIRED'});await assert.rejects(requireLearningAccess(student),e=>(e as any).status===403);
-    events=[];const notification={message:{data:Buffer.from(JSON.stringify({packageName:'com.zekapark.app',subscriptionNotification:{purchaseToken}})).toString('base64'),messageId:'test'}};
+    events=[];const notification={message:{data:Buffer.from(JSON.stringify({packageName:'com.quantumtech.bilsemjunior',subscriptionNotification:{purchaseToken}})).toString('base64'),messageId:'test'}};
     assert.equal((await post('google-play/notifications',notification)).status,401);assert.equal(events.length,0);
     oidcValid=true;assert.equal((await post('google-play/notifications',notification)).status,204);assert.deepEqual(events,['google','save']);
     events=[];notification.message.data=Buffer.from(JSON.stringify({packageName:'other.package.app',subscriptionNotification:{purchaseToken}})).toString('base64');assert.equal((await post('google-play/notifications',notification)).status,400);assert.equal(events.length,0);
     // Empty ledger can never become active through notifications alone.
-    ledger=[];preparedBinding=false;events=[];notification.message.data=Buffer.from(JSON.stringify({packageName:'com.zekapark.app',subscriptionNotification:{purchaseToken}})).toString('base64');assert.equal((await post('google-play/notifications',notification)).status,204);assert.deepEqual(events,['google']);
+    ledger=[];preparedBinding=false;events=[];notification.message.data=Buffer.from(JSON.stringify({packageName:'com.quantumtech.bilsemjunior',subscriptionNotification:{purchaseToken}})).toString('base64');assert.equal((await post('google-play/notifications',notification)).status,204);assert.deepEqual(events,['google']);
     // A prepared binding recovers a completed purchase even when the client died before verify.
     preparedBinding=true;payload=subscription();events=[];assert.equal((await post('google-play/notifications',notification)).status,204);assert.deepEqual(events,['google','google','save','ack']);assert.equal(ledger.length,1);
   }finally{

@@ -46,6 +46,7 @@
     "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug",
     "android:bundle": "npm run android:sync && cd android && ./gradlew bundleRelease",
     "android:prepare": "node scripts/prepare-android.mjs",
+    "google-play:check": "node --import tsx scripts/check-google-play-setup.ts",
     "test:google-play": "node --import tsx --test tests/google-play.test.ts tests/google-play-ui.test.tsx tests/play-membership.test.tsx tests/android-network.test.ts tests/google-play-migration.test.ts",
     "test:google-play:browser": "npm run android:build:web && node --import tsx scripts/check-google-play-ui.tsx",
     "test:play-layout": "node --import tsx scripts/check-play-layout.mjs",
