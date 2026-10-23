@@ -29,7 +29,8 @@ export const learningStartSchema = z.object({
   mixCategories: z.boolean().default(false),
   expectedGrade: z.number().int().min(1).max(4).optional(),
   questionCount: z.number().int().min(1).max(MAX_LEARNING_QUESTIONS).optional(),
-}).strict().refine(value => !value.mixCategories || (value.mode === 'adaptive' && value.category === 'mixed' && value.topic === 'mixed' && value.locale !== 'en'), { message: 'Karışık keşif yalnız bütün alanlarla başlatılabilir.' });
+}).strict().refine(value => !value.mixCategories || (value.mode === 'adaptive' && value.category === 'mixed' && value.topic === 'mixed' && value.locale !== 'en'), { message: 'Karışık keşif yalnız bütün alanlarla başlatılabilir.' })
+  .refine(value=>value.mode!=='practice'||(value.questionCount??5)<=5,{message:'Kısa pratik 1–5 soru olmalı.'});
 export interface LearningSelection { questionFormat?: 'reasoning-8'|'professional-v2'; mixCategories?: boolean; topic?: LearningTopic; locale?: 'tr'|'en'; grade: SchoolGrade; difficulty: LearningDifficulty; category: string; exam: string; count: number; bankVersion: string; }
 export function difficultyChoices(grade: SchoolGrade) {
   const max = EDUCATION_PROFILES[grade].maxDifficulty;

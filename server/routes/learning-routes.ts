@@ -102,7 +102,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     }
     const configuration = await readPlatformSettings();
     const settings = configuredExams(configuration.settings).find(e => e.id === exam)!;
-    const requestedCount = mode === 'exam' ? settings.count : mode === 'adaptive' ? parsed.data.questionCount ?? DEFAULT_ADAPTIVE_COUNT : 5;
+    const requestedCount = mode === 'exam' ? settings.count : mode === 'adaptive' ? parsed.data.questionCount ?? DEFAULT_ADAPTIVE_COUNT : parsed.data.questionCount ?? 5;
     const bank = locale === 'en' ? {questions:englishBankForGrade(grade),bankVersion:ENGLISH_BANK_VERSION} : await loadPublishedLearningBank({ grade: profile.data.grade, difficulty, category, topic });
     const seen = new Set<string>();
     const topicCandidates = topic === 'mixed' ? bank.questions : bank.questions.filter(q => {

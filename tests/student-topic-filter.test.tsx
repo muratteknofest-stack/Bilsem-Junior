@@ -60,6 +60,8 @@ test('topic practice reuses reviewed bank questions without generating another t
 
 test('adaptive question counts are bounded integers and participate in saved selection matching', () => {
   assert.equal(DEFAULT_ADAPTIVE_COUNT, 10);
+  for(const questionCount of [1,2,3,4,5])assert.equal(learningStartSchema.parse({mode:'practice',questionCount}).questionCount,questionCount);
+  assert.equal(learningStartSchema.safeParse({mode:'practice',questionCount:6}).success,false);
   for (const questionCount of [1, 7, 10, 25, 50]) assert.equal(learningStartSchema.parse({ mode: 'adaptive', questionCount }).questionCount, questionCount);
   for (const questionCount of [0, -1, 51, 2.5, '10', null]) assert.equal(learningStartSchema.safeParse({ mode: 'adaptive', questionCount }).success, false);
   const selection: LearningSelection = { grade: 2, category: 'spatial', difficulty: 'mixed', exam: '', count: 7, bankVersion: 'fixture' };
@@ -125,7 +127,7 @@ test('real authenticated learning API isolates published topics in all grades, r
         // Same-category distractor and draft rows must never enter the topic session.
         const other = generateQuestion({ profile: 'complete', targetGrade: grade, type: topic === 'paper_folding' ? 'mirror_reflection' : 'paper_folding', difficulty: 1, seed: 7181 });
         bank = [q, { ...q, id: 'draft-only', status: 'draft' }, { ...other, status: 'published' }];
-        const result = await start({ mode: 'adaptive', questionCount: 1, topic, category: 'mixed', difficulty: 1, expectedGrade: grade });
+        const result = await start({ mode: 'practice', questionCount: 1, topic, category: 'mixed', difficulty: 1, expectedGrade: grade });
         assert.equal(result.status, 201, `${grade}/${topic}: ${JSON.stringify(result.body)}`);
         assert.equal(result.body.questions.length, 1);
         assert.equal(rows[0].selection.topic, topic);
@@ -158,7 +160,7 @@ test('real authenticated learning API isolates published topics in all grades, r
       bank = Array.from({ length: 80 }, (_, i) => ({ ...generateQuestion({ profile: 'complete', targetGrade: grade, type: 'matrix_3x3', difficulty: 1, seed: 51000 + i * 997 }), status: 'published' as const }));
       for (const mode of ['practice', 'adaptive', 'exam'] as const) {
         rows = [];
-        const body = { mode, topic: 'matrix_3x3', difficulty: 1, expectedGrade: grade, questionCount: 7 };
+        const body = { mode, topic: 'matrix_3x3', difficulty: 1, expectedGrade: grade, questionCount: mode==='practice'?5:7 };
         const rejected = await start(body);
         assert.equal(rejected.status, 422);
         assert.equal(rejected.body.code, 'INSUFFICIENT_DISTINCT_QUESTIONS');

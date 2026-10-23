@@ -42,7 +42,7 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
   const [topic, setTopic] = useState<LearningTopic>(isLearningTopic(initialTopic) ? initialTopic : 'mixed');
   const [exam, setExam] = useState('mini');
   const [difficulty, setDifficulty] = useState<LearningDifficulty>('mixed');
-  const [questionCount, setQuestionCount] = useState(String(storyStage?STORY_QUESTION_COUNT:DEFAULT_ADAPTIVE_COUNT));
+  const [questionCount, setQuestionCount] = useState(String(storyStage?STORY_QUESTION_COUNT:mode==='practice'?5:DEFAULT_ADAPTIVE_COUNT));
   const validQuestionCount = /^\d+$/.test(questionCount) && Number(questionCount) >= 1 && Number(questionCount) <= MAX_LEARNING_QUESTIONS;
   const selectedGrade = dataService.getCurrentUser().grade;
   const grade = isSchoolGrade(selectedGrade) ? selectedGrade : 1;
@@ -159,7 +159,7 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
   const restart = () => { feedbackLedger.current.reset(); setFeedback(null); setSession(null); setResponse(null); setIndex(0); setError(''); setDiversityError(null); };
   const shortestExam=[...exams].sort((a,b)=>a.count-b.count)[0];
   const shorterExam=diversityError?[...exams].filter(item=>item.count<diversityError.requestedCount&&item.count<=diversityError.preparedCount).sort((a,b)=>b.count-a.count)[0]:undefined;
-  const shorterCount=diversityError&&mode==='adaptive'?Math.min(5,diversityError.preparedCount):
+  const shorterCount=diversityError&&mode!=='exam'?Math.min(5,diversityError.preparedCount):
     mode==='exam'&&shorterExam?shorterExam.count:0;
   const resetDiversityNotice=()=>{setError('');setDiversityError(null);};
   const chooseNewDifficulty = async () => {
@@ -204,7 +204,7 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
     {diversityError&&!session&&!storyStage?<DiversityRecoveryNotice error={diversityError} busy={busy}
       mixedCount={mode==='exam'?shortestExam?.count||15:5}
       onMixed={()=>{setTopic('mixed');setCategory('mixed');setQuestionCount('5');if(shortestExam)setExam(shortestExam.id);resetDiversityNotice();}}
-      shorterCount={shorterCount||undefined} onShorter={shorterCount?()=>{if(mode==='adaptive')setQuestionCount(String(shorterCount));else if(shorterExam)setExam(shorterExam.id);resetDiversityNotice();}:undefined}/>:error&&<div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{error}</div>}
+      shorterCount={shorterCount||undefined} onShorter={shorterCount?()=>{if(mode!=='exam')setQuestionCount(String(shorterCount));else if(shorterExam)setExam(shorterExam.id);resetDiversityNotice();}:undefined}/>:error&&<div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{error}</div>}
     <AnswerHistory items={history} />
     {!session && storyStage ? <section className="bj-story-setup" aria-label="Hikâye görevi"><img src="/brand/junior-fox.svg" alt="Junior rehber"/><p>HİKÂYE MODU · {grade}. SINIF</p><h2>{storyStage.title}</h2>{storyStage.narrative&&<p>{storyStage.narrative}</p>}<p>{storyStage.task} {STORY_QUESTION_COUNT} soruyu tamamla, yıldızlarını kazan ve sıradaki durağı aç. Cevaplarını birlikte inceleyelim.</p><button type="button" className={button} disabled={busy} onClick={()=>void start()}>{busy?'Görev hazırlanıyor…':'Maceraya başla'}</button></section> : !session ? <LearningSetupPanel mode={mode} grade={grade} review={!!reviewMistakeId} busy={busy} topic={topic} onTopic={setTopic} category={category} onCategory={setCategory} difficulty={difficulty} onDifficulty={setDifficulty} questionCount={questionCount} onCount={setQuestionCount} validCount={validQuestionCount} exam={exam} onExam={setExam} exams={exams} onStart={() => void start()} /> : <>
       {session.result && <section aria-label="Çalışma sonucu" className={`zp-result ${storyStage?'bj-story-result':''} space-y-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-5`}>
