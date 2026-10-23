@@ -49,6 +49,44 @@ Mevcut üretilmiş Android projesinde `android:prepare`, Capacitor kimliğini Gr
 
 ## Yenileme, iptal ve iade bildirimi
 
+### Google Cloud Shell ile kurulumu tamamlama
+
+23 Ekim 2026: Vercel üretim ortamına yedi genel ayar ve iki Secret (`GOOGLE_PLAY_BINDING_SECRET`, `GOOGLE_PLAY_TOKEN_KEY`) kaydedildi ve dağıtım tamamlandı. Satış, ücretli erişim, mağaza yayını ve üretimde test satın alımı bayrakları kapalıdır. Quantum Studio App Console incelemesinde abonelik ürünü ve hizmet hesabı daveti bulunmadı; RTDN kapalıydı. Google Cloud Console kullanılan uzak tarayıcıda `Site Unavailable` verdiğinden Cloud kaynakları henüz oluşturulmadı.
+
+`scripts/provision-google-play-cloud.py` oturum açılmış Google Cloud Shell/CLI ile kalan Cloud kaynaklarını kurar. Python 3.9+ gerekir; paket yüklemez. Önce **mevcut gerçek Cloud proje kimliğini** belirleyin. Play geliştirici hesap numarası `8719423094329535468` Cloud proje kimliği değildir. Betik yeni proje veya faturalandırma hesabı açmaz. İlgili Cloud hesabının hizmet/API etkinleştirme, hizmet hesabı oluşturma, Pub/Sub ve kaynak kapsamlı IAM izinlerini yönetme yetkileri olmalıdır.
+
+Depo dizininde önce yalnız planı inceleyin (`GERCEK_PROJE_KIMLIGI` alanını gerçek değerle değiştirin):
+
+```bash
+python3 scripts/provision-google-play-cloud.py --project GERCEK_PROJE_KIMLIGI
+```
+
+Plan Cloud'a bağlanmaz ve hiçbir kaynağı değiştirmez. Gerçek kurulum için:
+
+```bash
+python3 scripts/provision-google-play-cloud.py --project GERCEK_PROJE_KIMLIGI --apply
+```
+
+Betik Android Publisher, IAM ve Pub/Sub API'lerini etkinleştirir; `bilsem-play-api` ve `bilsem-play-push` hizmet hesaplarını oluşturur. Bildirim ve başarısız mesaj konuları ile push/inceleme aboneliklerini hazırlar. Google Play'in resmi yayıncısına yalnız bildirim konusu üzerinde yayınlama; Pub/Sub servis ajanına yalnız push hesabında token üretme, başarısız mesaj konusunda yayınlama ve ana abonelikte okuma izni verir. Proje genelinde Owner/Editor/Token Creator veya herkese açık erişim eklemez. Push imzalı OIDC, tam audience, sarılmış Pub/Sub JSON gövdesi, 10–600 saniye yeniden deneme ve 10 denemelik dead-letter kuralı kullanır. Başarısız mesajlar yedi gün tutulur; inceleme aboneliği otomatik sona ermez. Alarm ayrıca kurulmalıdır.
+
+Mevcut aynı adlı kaynaklar tekrar oluşturulmaz. Başka hedef, hesap, audience, filtre veya mesaj dönüşümü varsa betik üzerine yazmadan durur. Hata sonrası kaynakları otomatik silmez. Üretim Cloud kurulumu bu ortamda çalıştırılmış değildir; çevrimdışı testler gerçek Google erişimini kanıtlamaz.
+
+Android Publisher hizmet hesabı için henüz anahtar yoksa isteğe bağlı olarak yeni, özel bir dosya oluşturun:
+
+```bash
+python3 scripts/provision-google-play-cloud.py --project GERCEK_PROJE_KIMLIGI --apply --key-file ~/bilsem-play-private/service-account.json
+```
+
+Anahtar yalnız açık `--key-file` isteğinde üretilir, mevcut dosyanın üzerine yazılmaz, depoya yazılamaz ve ekrana basılmaz. Dizin/dosya izinleri 0700/0600'dür. Kuruluş anahtar oluşturmayı engelliyorsa betik durur; güvenlik politikasını aşmaz. Sonraki çalıştırmalarda mevcut anahtarı koruyun ve `--key-file` kullanmayın. Vercel'deki iki kalıcı kripto anahtarını tekrar üretmeyin.
+
+Cloud kurulumu sonrasında üç bağlantı tamamlanır:
+
+1. Çıktıdaki `apiServiceAccount` e-postasını Play Console → Hesabı yönetme → Kullanıcılar ve izinler altında **yalnız Bilsem Junior** uygulamasına ekleyin. Billing API'nin gerektirdiği finansal veri görüntüleme ve sipariş/abonelik yönetme izinlerini verin. Betik Play Console daveti göndermez.
+2. Vercel `bilsemjunior` projesinin yalnız **Production** ortamına `GOOGLE_PLAY_RTDN_EMAIL` değerini Config; JSON dosyasının tüm içeriğini `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` adıyla **Secret** olarak tek tek kaydedin. Toplu `.env` yapıştırma tür/ortam seçimini değiştirebildiğinden her kayıt sonrası türü ve kapsamı doğrulayın. Sırları sohbet, GitHub, APK veya ekran görüntüsüne koymayın. Yeniden dağıtım gerekir.
+3. Play Console → Bilsem Junior → Google Play ile para kazanın → Para kazanma kurulumu altında bildirimleri açın; çıktıdaki `playConsoleTopic` değerini girin. “Yalnızca abonelikler ve geçersiz satın alma işlemleri” seçeneğiyle kaydedin. Test bildiriminin sunucuda doğrulanıp 204 dönmesini kontrol edin. Sonra gerçek katalog kontrolünü ve lisans testçisiyle satın alma/yenileme/iade testlerini yapın. Google Play abonelik ekranının istediği faturalandırma destekli imzalı AAB de yüklenmiş olmalıdır.
+
+Çevrimdışı güvenlik ve yeniden çalıştırma kontrolleri: `npm run test:google-play:cloud`. Betik satışları veya yayın kabul bayraklarını açmaz.
+
 - Google Cloud Pub/Sub konusu oluşturun; Google Play'in resmi bildirim yayıncısına yalnızca bu konu için yayınlama izni verin ve konuyu Play Console gerçek zamanlı geliştirici bildirimlerine (RTDN) bağlayın.
 - Push hedefi: `https://bilsemjunior.vercel.app/api/google-play/notifications`. OIDC kimlik doğrulamasını etkinleştirin. Özel push hizmet hesabı e-postasını `GOOGLE_PLAY_RTDN_EMAIL`, tam audience değerini `GOOGLE_PLAY_RTDN_AUDIENCE` olarak kaydedin. Pub/Sub servis ajanına yalnızca gereken token üretme yetkisini verin. Retry/dead-letter ve başarısız bildirim alarmı kurun; Vercel korumasının Google push'u engellemediğini doğrulayın.
 - Sunucu JWT imzasını, audience, issuer, doğrulanmış e-posta ve beklenen hizmet hesabını kontrol eder. Bildirim içindeki 'yenilendi' iddiası erişim açmaz; Android Publisher `subscriptionsv2.get` tekrar çağrılır. Uygulama satın alım sonrasında kapandıysa token yalnızca satın alma öncesi yetkili veli tarafından kalıcı kaydedilmiş hesap/öğrenci eşlemesi ve Google’dan okunan aynı kimliklerle geri kazanılır. Önceden hazırlanmış eşleme yoksa bildirim erişim açmaz.

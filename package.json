@@ -46,6 +46,8 @@
     "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug",
     "android:bundle": "npm run android:sync && cd android && ./gradlew bundleRelease",
     "android:prepare": "node scripts/prepare-android.mjs",
+    "google-play:cloud:plan": "python3 scripts/provision-google-play-cloud.py",
+    "test:google-play:cloud": "python3 -m unittest discover -s tests -p google_play_cloud_test.py -v",
     "google-play:check": "node --import tsx scripts/check-google-play-setup.ts",
     "test:google-play": "node --import tsx --test tests/google-play.test.ts tests/google-play-ui.test.tsx tests/play-membership.test.tsx tests/android-network.test.ts tests/google-play-migration.test.ts",
     "test:google-play:browser": "npm run android:build:web && node --import tsx scripts/check-google-play-ui.tsx",
