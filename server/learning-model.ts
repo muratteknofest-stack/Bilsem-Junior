@@ -22,7 +22,7 @@ export function prepareLearningQuestions(questions: BaseQuestion[]): BaseQuestio
   return questions.map(q => ({ ...structuredClone(q), id: randomUUID() }));
 }
 export function publicLearningQuestion(q: BaseQuestion): PublicLearningQuestion {
-  return { id: q.id, type: q.type, category: q.category, difficulty: q.difficulty, prompt: q.prompt,
+  return { id: q.id, type: q.type, category: q.category, difficulty: q.difficulty, prompt: q.prompt, ...(q.context?{context:q.context}:{}),
     ...(q.secondaryPrompt ? { secondaryPrompt: q.secondaryPrompt } : {}), visualConfig: publicVisualConfig(q), targetGrade: q.targetGrade,
     options: q.options.map(({ id, label, visualData }) => ({ id, label, visualData })) };
 }

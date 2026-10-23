@@ -441,6 +441,9 @@ export interface VisualExplanation {
 }
 
 export interface BaseQuestion {
+  reviewPolicy?: 'professional-v2';
+  context?: {title:string;story:string};
+  editorialReviewMode?: 'individual'|'bulk';
   id: string;
   version: number;
   type: QuestionType;
@@ -491,6 +494,8 @@ export interface BaseQuestion {
   };
   /** AI generation metadata — only present on AI-generated questions */
   aiMeta?: {
+    usage?: import('./features/questions/ai-contracts').AiUsageCall[];
+    roleModels?: import('./features/questions/ai-contracts').AiRoleModels;
     generationId: string;
     model: string;
     promptVersion: string;

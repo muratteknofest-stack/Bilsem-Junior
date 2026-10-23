@@ -1,3 +1,5 @@
+import {type AnswerEvidence} from '../src/features/questions/adaptive-difficulty';
+import { orderTestQuestions } from '../src/features/questions/test-assembly';
 import { randomInt } from 'node:crypto';
 import { generateQuestion, STUDENT_CATEGORY_TYPES } from '../src/features/questions/generators';
 import { professionalGradeTypes } from '../src/features/questions/reasoning-profile';
@@ -11,20 +13,21 @@ import { getServiceClient } from './supabase-admin';
 import { LearningError } from './learning-model';
 import { generateProfessionalQuestion as generateLegacyProfessional } from '../src/features/questions/professional-engine-v7';
 import { isQuestionReadyForStudents } from '../src/features/questions/quality';
-import { LEARNING_QUESTION_FORMAT, needsReasoningFormat } from '../src/features/student/learning-question-format';
+import { LEARNING_QUESTION_FORMAT, supportsReasoningFormat, needsProfessionalV2Format, needsReasoningFormat } from '../src/features/student/learning-question-format';
 
 export const RECENT_SESSION_LIMIT = 30;
 export const RECENT_HISTORY_DAYS = 30;
-type RecentSession = { questions: BaseQuestion[]; created_at: string };
+type RecentSession = { questions: BaseQuestion[]; answers?: Record<string,{correct?:boolean}>; created_at: string };
 
 export function assertLearningQuestionFormat(questions:BaseQuestion[],format:unknown) {
-  if(format!==LEARNING_QUESTION_FORMAT&&questions.some(needsReasoningFormat))throw new LearningError('Bu çalışmadaki yeni soru türleri için uygulamayı güncellemelisin. Önceki cevapların korunuyor.',426);
+  if(questions.some(q=>needsProfessionalV2Format(q)?format!==LEARNING_QUESTION_FORMAT:needsReasoningFormat(q)&&!supportsReasoningFormat(format)))throw new LearningError('Bu çalışmadaki yeni soru türleri için uygulamayı güncellemelisin. Önceki cevapların korunuyor.',426);
 }
 
 export function currentReasoningCandidate(q:BaseQuestion,grade:SchoolGrade,modern:boolean):boolean {
   if(!professionalGradeTypes(grade).includes(q.type))return false;
   if(!modern)return !needsReasoningFormat(q);
   const mode=(q.visualConfig as Record<string,unknown>).displayMode;
+  if(mode==='symbolic_v2')return modern&&q.authoring?.engine==='symbolic-v2';
   return mode==='verified_board'?['verified-8','verified-4'].includes(q.authoring?.engine||''):
     mode==='colorful_board'?q.authoring?.engine==='colorful-3':mode==='workshop_board'&&(q.authoring?.engine==='workshop-3'||q.type==='word_scramble_logic'&&q.authoring?.engine==='workshop-reading-1');
 }
@@ -47,13 +50,15 @@ export function recentQuestionExposure(sessions: RecentSession[], includeReasoni
   return exposure;
 }
 
-export async function loadRecentQuestionExposure(studentId: string, now = Date.now()) {
-  const { data, error } = await getServiceClient().from('learning_sessions').select('questions,created_at')
-    .eq('student_id', studentId).gte('created_at', new Date(now - RECENT_HISTORY_DAYS * 86400_000).toISOString())
-    .order('created_at', { ascending: false }).order('id', { ascending: false }).limit(RECENT_SESSION_LIMIT);
-  if (error || !data) throw new LearningError('Çalışma geçmişin okunamadı. Soruları hazırlamak için yeniden dene.', 503);
-  return recentQuestionExposure(data as RecentSession[],true);
+export function recentAnswerEvidence(sessions:RecentSession[]):AnswerEvidence[]{
+ return sessions.filter(s=>Number.isFinite(Date.parse(s.created_at))).sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at)).flatMap(s=>Array.isArray(s.questions)?s.questions.flatMap((q,index)=>{const correct=(s.answers?.[String(index)]||s.answers?.[q.id])?.correct;return q.targetGrade&&typeof correct==='boolean'?[{grade:q.targetGrade,difficulty:q.difficulty,correct}]:[];}):[]);
 }
+export async function loadRecentLearningContext(studentId:string,now=Date.now()){
+ const {data,error}=await getServiceClient().from('learning_sessions').select('questions,answers,created_at').eq('student_id',studentId).gte('created_at',new Date(now-RECENT_HISTORY_DAYS*86400000).toISOString()).order('created_at',{ascending:false}).order('id',{ascending:false}).limit(RECENT_SESSION_LIMIT);
+ if(error||!data)throw new LearningError('Çalışma geçmişin okunamadı. Yeniden dene.',503);
+ const sessions=data as RecentSession[];return {exposure:recentQuestionExposure(sessions,true),answers:recentAnswerEvidence(sessions)};
+}
+export async function loadRecentQuestionExposure(studentId:string,now=Date.now()){return (await loadRecentLearningContext(studentId,now)).exposure;}
 
 function shuffle<T>(items: T[], randomIndex: (max: number) => number) {
   const shuffled = [...items];
@@ -88,7 +93,9 @@ export function selectLearningQuestions(options: {
   count: number; category: CognitiveCategory | 'mixed'; candidates: BaseQuestion[];
   exposure: ReadonlyMap<string, number>; canUse: (question: BaseQuestion) => boolean;
   generate: (category: CognitiveCategory, typeCounts: ReadonlyMap<QuestionType,number>, difficulty?: DifficultyLevel, reasoningCounts?: ReadonlyMap<string,number>) => BaseQuestion; preferDiverseTypes?: boolean; randomIndex?: (max: number) => number; categories?: CognitiveCategory[]; allowGeneration?: boolean; difficultyPlan?: readonly DifficultyLevel[];
+  repeatPolicy?: 'unseen' | 'oldest-first';
 }) {
+  if (!Number.isInteger(options.count) || options.count < 1 || options.count > 50) throw new LearningError('Çalışma uzunluğu 1–50 arasında olmalı.', 422);
   const randomIndex = options.randomIndex || randomInt;
   const configured = options.category === 'mixed' && options.categories ? shuffle([...new Set(options.categories)], randomIndex) : undefined;
   if (configured && !configured.length) throw new LearningError('No verified activities are available.');
@@ -97,13 +104,14 @@ export function selectLearningQuestions(options: {
   const groups = new Map<CognitiveCategory, Array<{ question: BaseQuestion; key: string; lastAssigned: number }>>();
   for (const question of shuffle(options.candidates, randomIndex)) {
     try {
+      if (!options.canUse(question)) continue;
       const key = questionStimulusKey(question), group = groups.get(question.category) || [];
-      group.push({ question, key, lastAssigned: options.exposure.get(key) || options.exposure.get(questionVisualKey(question)) || 0 });
+      group.push({ question, key, lastAssigned: Math.max(options.exposure.get(key) || 0, options.exposure.get(questionVisualKey(question)) || 0) });
       groups.set(question.category, group);
     } catch { /* Invalid candidates still cannot bypass canUse during selection. */ }
   }
   for (const group of groups.values()) group.sort((a, b) => a.lastAssigned - b.lastAssigned);
-  const seen = new Set<string>(), selected: BaseQuestion[] = [];
+  const seen = new Set<string>(), seenVisuals = new Set<string>(), selected: BaseQuestion[] = [];
   const typeCounts = new Map<BaseQuestion['type'], number>();
   const reasoningCounts = new Map<string,number>();
   const take = (category: CognitiveCategory, allowRecent: boolean, unusedOnly=false, difficulty?:DifficultyLevel) => {
@@ -119,8 +127,10 @@ export function selectLearningQuestions(options: {
       const rank=(q:BaseQuestion)=>{try{const key=questionReasoningKey(q);return [typeCounts.get(q.type)||0,reasoningCounts.get(key)||0,options.exposure.get(key)||0];}catch{return [Infinity,Infinity,Infinity];}};
       const item = eligible.reduce((best, next) => {const a=rank(next.question),b=rank(best.question);const index=a.findIndex((n,i)=>n!==b[i]);return index>=0&&a[index]<b[index]?next:best;});
       group.splice(group.indexOf(item), 1);
-      if (seen.has(item.key) || !options.canUse(item.question)) continue;
+      const visual = questionVisualKey(item.question);
+      if (seen.has(item.key) || seenVisuals.has(visual) || !options.canUse(item.question)) continue;
       seen.add(item.key);
+      seenVisuals.add(visual);
       return item.question;
     }
     return undefined;
@@ -134,22 +144,19 @@ export function selectLearningQuestions(options: {
         const question = options.generate(category,typeCounts,difficulty,reasoningCounts);
         if (question.category !== category || !options.canUse(question)) continue;
         if(difficulty!==undefined&&question.difficulty!==difficulty)continue;
-        const key = questionStimulusKey(question);
-        if (seen.has(key) || options.exposure.has(key) || options.exposure.has(questionVisualKey(question))) continue;
-        seen.add(key); chosen = question;
+        const key = questionStimulusKey(question), visual = questionVisualKey(question);
+        if (seen.has(key) || seenVisuals.has(visual) || options.exposure.has(key) || options.exposure.has(visual)) continue;
+        seen.add(key); seenVisuals.add(visual); chosen = question;
       } catch { /* Try another seed; no answer correction or quality gate relaxation. */ }
     }
     chosen ||= take(category, false,false,difficulty);
-    chosen ||= take(category, true,false,difficulty);
+    if (options.repeatPolicy === 'oldest-first') chosen ||= take(category, true,false,difficulty);
     if (!chosen) throw new LearningError('Bu çalışma için yeterli farklı ve doğrulanmış soru hazır değil.');
     selected.push(chosen);
     typeCounts.set(chosen.type, (typeCounts.get(chosen.type) || 0) + 1);
     const key=questionReasoningKey(chosen);reasoningCounts.set(key,(reasoningCounts.get(key)||0)+1);
   }
-  // Keep different areas/templates apart after shuffling, rather than recreating runs.
-  const pending=shuffle(selected,randomIndex),ordered:BaseQuestion[]=[];
-  while(pending.length){const last=ordered.at(-1);let i=pending.findIndex(q=>!last||q.category!==last.category&&q.type!==last.type);if(i<0)i=pending.findIndex(q=>q.type!==last?.type);ordered.push(pending.splice(Math.max(0,i),1)[0]);}
-  return ordered;
+  return orderTestQuestions(shuffle(selected, randomIndex), options.difficultyPlan);
 }
 
 /** Prefer an unused, independently proved topic before repeating a template in that area. */

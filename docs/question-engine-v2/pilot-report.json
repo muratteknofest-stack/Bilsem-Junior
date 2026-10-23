@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "batch": "professional-v2-pilot-20261021",
+  "count": 100,
+  "gradeCounts": {
+    "1": 25,
+    "2": 25,
+    "3": 25,
+    "4": 25
+  },
+  "automaticChecksPassed": 100,
+  "aiBlindReview": "pending",
+  "aiPedagogyReview": "pending",
+  "humanExpertReview": "pending",
+  "published": 0,
+  "storage": {
+    "saved": 100,
+    "replayAcknowledged": 10,
+    "afterReplay": 100,
+    "anonymousVisible": 0,
+    "existingUsers": 9,
+    "existingProfiles": 9,
+    "xp": 5380
+  },
+  "scope": "Existing proved generators with reasoning-family balancing; no AI provider results have been simulated."
+}

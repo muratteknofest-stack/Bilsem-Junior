@@ -1,0 +1,59 @@
+{
+  "checkedAt": "2026-10-22T05:19:33.712568+00:00",
+  "implementation": "sequential-revision-locked-review-1",
+  "validation": {
+    "regression": {
+      "tests": 466,
+      "passed": 466,
+      "failed": 0
+    },
+    "focusedReviewTests": {
+      "tests": 10,
+      "passed": 10,
+      "failed": 0
+    },
+    "typescript": "passed",
+    "vercelBuild": "passed",
+    "publicAssetsChecked": 148,
+    "mobile": {
+      "checks": 15,
+      "viewports": 3,
+      "scope": "Real review progress component; layout fixture only, no AI or database writes",
+      "errors": [],
+      "failures": []
+    }
+  },
+  "liveDatabase": {
+    "total": 100,
+    "review": 100,
+    "published": 0,
+    "eligible": 0,
+    "humanReviewed": 0,
+    "mutationsPerformed": false
+  },
+  "providerVerification": {
+    "method": "Vercel project Environment Variables UI, all environments and variables",
+    "configuredTextProviderKeysObserved": [],
+    "realProviderReviewsCompleted": 0
+  },
+  "remaining": [
+    "A reviewer provider server API key must be configured privately on the trusted Preview branch. Supabase credentials are not AI credentials.",
+    "Independent provider review and an actual editor decision remain necessary before publication.",
+    "GitHub Actions still fail before a runner executes steps; cause not exposed by the available connector.",
+    "Authenticated administrator end-to-end review has not been run; unit contract fixtures and the real progress component were tested locally."
+  ],
+  "preview": {
+    "runtimeCommit": "7ca74e8e2cf764263665d938386b752f12fcbb5c",
+    "deploymentState": "READY",
+    "previewUrl": "https://zekapark-bltrki1rr-dyds-projects-c415ba7a.vercel.app/",
+    "buildDuration": "8m 50s",
+    "apiHealth": {
+      "status": "ok",
+      "database": "ready",
+      "version": "1.0.0",
+      "projectRef": "vtcsoqohkiagbwatlabk",
+      "commit": "7ca74e8e2cf764263665d938386b752f12fcbb5c",
+      "timestamp": 1792646973590
+    }
+  }
+}

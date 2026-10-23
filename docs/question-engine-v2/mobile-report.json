@@ -1,0 +1,11 @@
+{
+  "checks": 348,
+  "persistedPilotQuestions": 100,
+  "additionalAuthoringAndContextCases": 16,
+  "viewports": 3,
+  "webgl": true,
+  "contextFallback": true,
+  "pixelDifferenceRatio": 0,
+  "errors": [],
+  "failures": []
+}

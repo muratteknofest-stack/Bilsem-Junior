@@ -1,3 +1,6 @@
+import {assessCandidate} from '../../features/questions/multi-stage-quality';
+import {gradeDifficulty} from '../../features/questions/quality-policy';
+import {BulkQuestionSaveError} from '../../services/durable-question-batch';
 import { isQuestionReadyForStudents } from '../../features/questions/quality';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
@@ -50,7 +53,7 @@ import {
   ALL_COGNITIVE_CATEGORIES,
 } from '../../types';
 import {
-  generateQuestionByType,
+  generateDiverseQuestion,
   ALL_QUESTION_TYPES,
   CATEGORY_TYPES_MAP,
 } from '../../features/questions/generators';
@@ -85,7 +88,7 @@ const PRESET_SCENARIOS = [
     count: 40,
     grade: 'balanced' as GradeSelection,
     difficulty: 'gauss' as DifficultyStrategy,
-    description: '40 Soru • 1-4. Sınıf Dengeli • BİLSEM MEB Standart Dağılımı',
+    description: '40 Soru • 1-4. Sınıf Dengeli • Bağımsız hazırlık içeriği',
     icon: '📱',
     badge: 'Önerilen',
     badgeColor: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
@@ -96,7 +99,7 @@ const PRESET_SCENARIOS = [
     count: 20,
     grade: 'balanced' as GradeSelection,
     difficulty: 'gauss' as DifficultyStrategy,
-    description: '20 Soru • Karma Tipler • Anında Havuza Aktarım',
+    description: '20 Soru • Karma Tipler • İnceleme için taslak kaydı',
     icon: '⚡',
     badge: 'Hızlı',
     badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
@@ -150,6 +153,9 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generationProgress, setGenerationProgress] = useState<number>(0);
   const [generatedQuestions, setGeneratedQuestions] = useState<BaseQuestion[]>([]);
+  const [pendingSave,setPendingSave]=useState<BaseQuestion[]>([]);
+  const [generationErrors,setGenerationErrors]=useState<string[]>([]);
+  const [isSaving,setIsSaving]=useState(false);
   const [generationLogs, setGenerationLogs] = useState<GenerationLogItem[]>([]);
   const [previewQuestion, setPreviewQuestion] = useState<BaseQuestion | null>(null);
   const [notificationMsg, setNotificationMsg] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
@@ -246,11 +252,12 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
     setIsGenerating(true);
     setGenerationProgress(0);
     setGeneratedQuestions([]);
-    setGenerationLogs([]);
+    setGenerationLogs([]);setPendingSave([]);setGenerationErrors([]);
 
     const totalToGenerate = questionCount;
     const batchResult: BaseQuestion[] = [];
-    const logItems: GenerationLogItem[] = [];
+    const logItems:GenerationLogItem[]=[],failures:string[]=[];
+    const history=questionBankService.getAll(),sourceBatch='professional-v2-'+crypto.randomUUID();
 
     // Candidate types from selected categories
     const candidateTypes: QuestionType[] = [];
@@ -285,32 +292,14 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
       const chosenType = typePool[Math.floor(Math.random() * typePool.length)];
 
       // 3. Determine Difficulty
-      const chosenDiff = pickDifficulty(difficultyStrategy, i, totalToGenerate);
-
-      // 4. Generate with unique deterministic seed
-      const seed = saltSeedBase + i * 173 + Math.floor(Math.random() * 997);
-      let q: BaseQuestion;
-      try {
-        q = generateQuestionByType(chosenType, seed, chosenDiff);
-      } catch (e) {
-        // Fallback to visual sequence if generator threw
-        q = generateQuestionByType('visual_sequence', seed, chosenDiff);
-      }
-
-      // Adjust grade and metadata
-      q.id = `q_bulk_${targetGrade}_${Date.now()}_${i + 1}`;
-      q.targetGrade = targetGrade;
-      q.targetGrades = [targetGrade];
-      q.ageGroup = targetGrade <= 2 ? '1-2' : '3-4';
-      q.estimatedSeconds = gradeCfg.timeLimitSeconds;
-      q.createdAt = new Date().toISOString();
-      q.isCustom = true;
-
-      // 5. Validation Check
-      const val = validateQuestion(q);
-      const isValid = val.isValid && isQuestionReadyForStudents(q);
-      q.status = isValid ? 'draft' : 'review';
-
+      const chosenDiff=gradeDifficulty(targetGrade,pickDifficulty(difficultyStrategy,i,totalToGenerate));
+      const seed=saltSeedBase+i*173;let q:BaseQuestion;
+      try{
+        q=generateDiverseQuestion({profile:'professional-v2',type:chosenType,seed,targetGrade,difficulty:chosenDiff},[...history,...batchResult]);
+        q.id='bulk-'+crypto.randomUUID();q.createdAt=new Date().toISOString();q.isCustom=true;q.reviewPolicy='professional-v2';q.sourceBatch=sourceBatch;
+        q.qualityReport=assessCandidate(q,{grade:targetGrade,difficulty:chosenDiff},[...history,...batchResult]);q.status='review';
+      }catch(error){failures.push(`${i+1}. soru (${chosenType}, tohum ${seed}): ${error instanceof Error?error.message:'Üretim doğrulanamadı.'}`);setGenerationErrors([...failures]);await new Promise(r=>setTimeout(r,0));continue;}
+      const isValid=validateQuestion(q).isValid&&!q.qualityReport.stages.some(stage=>stage.status==='failed');
       batchResult.push(q);
 
       const logItem: GenerationLogItem = {
@@ -333,40 +322,16 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
       }
     }
 
-    const elapsed = Date.now() - startTime;
-    setGeneratedQuestions(batchResult);
-    setIsGenerating(false);
-    setGenerationProgress(100);
-
-    // Auto-save if toggle was active
-    if (autoSaveToBank) {
-      questionBankService.addBulkQuestions(batchResult);
-      sound.playSuccess();
-      confetti({ particleCount: 60, spread: 70, origin: { y: 0.5 } });
-      showNotification(
-        `${batchResult.length} soru üretildi ve ana soru havuzuna kaydedildi! (${elapsed}ms)`,
-        'success'
-      );
-    } else {
-      sound.playSuccess();
-      showNotification(
-        `${batchResult.length} soru başarıyla oluşturuldu! Havuza eklemek için aşağıdaki butonu kullanabilirsiniz.`,
-        'info'
-      );
-    }
+    setGeneratedQuestions(batchResult);setPendingSave(batchResult);setGenerationLogs(logItems);setGenerationProgress(100);
+    try{if(autoSaveToBank&&batchResult.length)await saveQuestions(batchResult);else showNotification(`${batchResult.length} inceleme taslağı hazırlandı; ${failures.length} üretim başarısız.`, 'info');}finally{setIsGenerating(false);}
   };
-
-  // Save all generated questions to the central bank
-  const handleSaveToBank = () => {
-    if (generatedQuestions.length === 0) return;
-    sound.playSuccess();
-    const count = questionBankService.addBulkQuestions(generatedQuestions);
-    confetti({ particleCount: 80, spread: 80, origin: { y: 0.4 } });
-    showNotification(
-      `${count} yeni soru BİLSEM Soru Havuzuna başarıyla eklendi!`,
-      'success'
-    );
+  const saveQuestions=async(questions:BaseQuestion[])=>{
+    if(!questions.length||isSaving)return;setIsSaving(true);
+    try{const count=await questionBankService.addBulkQuestions(questions);setPendingSave([]);sound.playSuccess();showNotification(`${count} taslak veritabanına kaydedildi. Yayın için AI ve insan incelemesi gerekir.`,'success');}
+    catch(error){setPendingSave(error instanceof BulkQuestionSaveError?error.failedQuestions:questions);showNotification(error instanceof Error?error.message:'Kayıt doğrulanamadı. Yeniden deneyin.','error');}
+    finally{setIsSaving(false);}
   };
+  const handleSaveToBank=async()=>saveQuestions(pendingSave);
 
   // Export JSON
   const handleExportJson = () => {
@@ -512,6 +477,7 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
         )}
       </AnimatePresence>
 
+      {generationErrors.length>0&&<details className="rounded-xl bg-red-950/40 p-4 text-red-200"><summary>{generationErrors.length} soru üretilemedi.</summary>{generationErrors.map((error,index)=><p key={index}>{error}</p>)}</details>}
       {/* Hero Header */}
       <div className="p-6 md:p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800/80 shadow-xl relative overflow-hidden">
         <div className="absolute -right-10 -top-10 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -530,7 +496,7 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
               Toplu Soru Oluşturma & Üretim Fabrikası
             </h2>
             <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-3xl leading-relaxed">
-              Tek tıklamayla 1-4. sınıflar için BİLSEM standartlarında onlarca veya yüzlerce özgün, deterministik
+              Tek tıklamayla 1-4. sınıflar için bağımsız doğrulanan, farklı mantık ailelerinden
               algoritmik soru oluşturun, doğrulayın, inceleyin ve doğrudan soru havuzuna ekleyin.
             </p>
           </div>
@@ -967,7 +933,7 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
                   Üretilen Soru Havuzu ({generatedQuestions.length} Adet)
                 </h3>
                 <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-bold border border-emerald-500/30">
-                  Doğrulandı
+                  İnceleme taslağı
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-1">
@@ -979,10 +945,11 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
             <div className="flex flex-wrap items-center gap-2.5">
               <button
                 onClick={handleSaveToBank}
+                disabled={isSaving||isGenerating||pendingSave.length===0}
                 className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-lg shadow-emerald-600/30 transition-all cursor-pointer flex items-center gap-2"
               >
                 <HardDrive className="w-4 h-4" />
-                <span>Havuza Kaydet ({generatedQuestions.length})</span>
+                <span>{isSaving?'Kaydediliyor…':`Bekleyenleri kaydet / yeniden dene (${pendingSave.length})`}</span>
               </button>
 
               <button

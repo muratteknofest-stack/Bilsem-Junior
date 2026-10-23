@@ -33,9 +33,7 @@ export function CompleteOption({value}:{value:CompleteValue}){
 const Badge=({children}:{children:React.ReactNode})=><span className="zp-curriculum-number rounded-xl border-2 border-indigo-200 bg-white px-3 py-2 font-bold text-indigo-950 text-base sm:text-xl">{typeof children==='number'&&!Number.isFinite(children)?'?':children}</span>;
 function Equation({row,scale=false}:{row:number[];scale?:boolean}){
   return <div className={`flex flex-wrap justify-center items-center gap-2 ${scale?'border-b-4 border-amber-500 pb-2':''}`}>
-    {Array.from({length:row[0]},(_,i)=><CompleteToken key={`s${i}`} shape={2} color={0}/>)}
-    {row[0]>0&&row[1]>0&&<span>+</span>}
-    {Array.from({length:row[1]},(_,i)=><CompleteToken key={`c${i}`} shape={0} color={1}/>)}
+    {[...Array.from({length:row[0]},()=>({shape:2,color:0})),...Array.from({length:row[1]},()=>({shape:0,color:1}))].map((token,i)=><React.Fragment key={i}>{i>0&&<span className="font-bold">+</span>}<CompleteToken {...token}/></React.Fragment>)}
     <span className="font-bold">=</span><Badge>{row[2]}</Badge>
   </div>;
 }

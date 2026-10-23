@@ -1,0 +1,19 @@
+{
+  "scope": "Real Chromium HTTP cookie forwarding; not deployed Vercel or account login acceptance",
+  "omittedCookieControl": {
+    "protectionCookiePresent": false,
+    "bearerPreserved": true
+  },
+  "sameOrigin": {
+    "protectionCookiePresent": true,
+    "bearerPreserved": true
+  },
+  "explicitSameOrigin": {
+    "protectionCookiePresent": true,
+    "bearerPreserved": true
+  },
+  "crossOrigin": {
+    "protectionCookiePresent": false,
+    "bearerPreserved": true
+  }
+}

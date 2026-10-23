@@ -19,7 +19,7 @@ test('password requests use the app origin with the exact credentials, query, pu
     assert.equal(request.headers.get('apikey'), 'sb_publishable_fixture');
     assert.equal(request.headers.get('authorization'), 'Bearer fixture-user');
     assert.deepEqual(await request.json(), { email: 'parent@example.test', password: 'fixture-password' });
-    assert.equal(request.credentials, 'omit'); assert.equal(request.redirect, 'error'); assert.equal(request.cache, 'no-store');
+    assert.equal(request.credentials, 'same-origin'); assert.equal(request.redirect, 'error'); assert.equal(request.cache, 'no-store');
     assert.equal(request.headers.get('cookie'), null);
     return Response.json({ error_code: 'invalid_credentials', msg: 'Invalid login credentials' }, { status: 400 });
   }));
@@ -56,9 +56,24 @@ test('refresh requests preserve their token and run once; a network error never 
 
 test('the native API host is used explicitly while Supabase remains the session project', async () => {
   const transport = createSupabaseTransport({ ...config(async request => {
+    assert.equal(request.credentials, 'omit');
     assert.equal(request.url, web + '/api/supabase/auth/v1/user'); return Response.json({ id: 'fixture' });
   }), pageOrigin: 'https://localhost', apiBaseUrl: web });
   await transport(project + '/auth/v1/user');
+});
+
+test('protected same-origin previews retain platform cookies while cross-origin relays omit them', async () => {
+  const preview = 'https://preview.example.test';
+  for (const [apiBaseUrl, credentials] of [['', 'same-origin'], [preview, 'same-origin'], [web, 'omit']]) {
+    const transport = createSupabaseTransport({ supabaseUrl: project, pageOrigin: preview, apiBaseUrl,
+      relayFetch: async request => {
+        assert.equal(request.credentials, credentials);
+        assert.equal(request.headers.get('cookie'), null, 'manual cookies cannot be forwarded');
+        assert.equal(request.headers.get('authorization'), 'Bearer account-token');
+        return Response.json({ checked: true });
+      } });
+    await transport(project + '/auth/v1/user', { headers: { Cookie: 'do-not-forward', Authorization: 'Bearer account-token' } });
+  }
 });
 
 test('unknown hosts, credentials, fragments and non-Supabase paths cannot receive account headers', async () => {
@@ -167,4 +182,13 @@ test('Vercel routes Auth and REST before the generic API function with no privat
   const headers = configuration.headers.find(rule => rule.source === '/api/supabase/:path*').headers;
   for (const key of ['Cache-Control', 'CDN-Cache-Control', 'Vercel-CDN-Cache-Control']) assert.match(headers.find(header => header.key === key).value, /no-store/);
   assert.equal(headers.find(header => header.key === 'x-vercel-enable-rewrite-caching').value, '0');
+  // Strip platform cookies before the external rewrite reaches Supabase.
+  const stripping = configuration.routes.find(route => route.transforms?.some(transform =>
+    transform.type === 'request.headers' && transform.op === 'delete' && transform.target?.key === 'cookie'));
+  assert.ok(stripping);
+  assert.equal(stripping.continue, true);
+  const pattern = new RegExp('^' + stripping.src + '$');
+  assert.ok(pattern.test('/api/supabase/auth/v1/token'));
+  assert.ok(pattern.test('/api/supabase/rest/v1/profiles'));
+  assert.equal(pattern.test('/api/auth/change-password'), false);
 });

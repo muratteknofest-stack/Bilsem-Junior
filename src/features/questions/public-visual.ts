@@ -9,6 +9,7 @@ export type DisplayColorfulBoard = Pick<ColorfulBoard, 'displayMode' | 'kind' | 
 /** Hidden givens belong to the server snapshot, never to the student DTO. */
 export function publicVisualConfig(question: Pick<BaseQuestion, 'visualConfig'>): BaseQuestion['visualConfig'] {
   const visual = structuredClone(question.visualConfig);
+  if(visual&&typeof visual==='object'&&(visual as Record<string,unknown>).displayMode==='symbolic_v2'){delete (visual as Record<string,unknown>).mechanic;delete (visual as Record<string,unknown>).queryMode;}
   const board = visual as unknown as DisplayColorfulBoard | null;
   if (board?.displayMode === 'colorful_board' && board.kind === 'figure_completion') {
     if (board.source?.art === 'mosaic' && Number.isInteger(board.missing)) {

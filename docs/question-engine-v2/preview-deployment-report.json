@@ -1,0 +1,72 @@
+{
+  "checkedAt": "2026-10-22T17:30:36.131287+00:00",
+  "runtimeCommit": "7ca74e8e2cf764263665d938386b752f12fcbb5c",
+  "deploymentId": "dpl_CzFEwir6vNA337MyZz4VtV5UGbuT",
+  "deploymentState": "READY",
+  "previewUrl": "https://zekapark-bltrki1rr-dyds-projects-c415ba7a.vercel.app/",
+  "deploymentUrl": "https://vercel.com/dyds-projects-c415ba7a/zekapark/CzFEwir6vNA337MyZz4VtV5UGbuT",
+  "buildDuration": "8m 50s",
+  "buildVerification": "Full npm run vercel-build completed on Vercel; exact question test total was not extracted from the browser log.",
+  "startupTests": {
+    "passed": 74,
+    "failed": 0
+  },
+  "newReviewTests": "All ten new review contract/error tests visibly passed in the Vercel log. Fixtures are not real provider approvals.",
+  "typescript": "passed locally and in the completed Vercel build",
+  "publicAssetsCheckedLocally": 148,
+  "publicHomepage": "rendered in authorized browser; startup screen resolved",
+  "apiHealth": {
+    "status": "ok",
+    "database": "ready",
+    "version": "1.0.0",
+    "projectRef": "vtcsoqohkiagbwatlabk",
+    "commit": "7ca74e8e2cf764263665d938386b752f12fcbb5c",
+    "timestamp": 1792646973590
+  },
+  "apiHealthReadChecks": [
+    "profiles",
+    "learning_sessions",
+    "platform_settings"
+  ],
+  "serviceCredentialScope": {
+    "previewBranch": "codex/question-engine-v2-20261021",
+    "productionCredential": "retained without modification",
+    "allPreviewBranches": false,
+    "development": false
+  },
+  "credentialValues": "omitted",
+  "authenticatedUserLogin": "not verified",
+  "productionRelease": "not performed",
+  "localRegression": {
+    "passed": 466,
+    "failed": 0
+  },
+  "reviewMobile": {
+    "checks": 15,
+    "viewports": 3,
+    "scope": "Real review progress component; layout fixture only, no AI or database writes",
+    "errors": [],
+    "failures": []
+  },
+  "githubActions": {
+    "runId": 39727434596,
+    "commit": "7ca74e8e2cf764263665d938386b752f12fcbb5c",
+    "conclusion": "failure",
+    "jobId": 119654478264,
+    "runnerId": 0,
+    "steps": []
+  },
+  "publication": {
+    "total": 100,
+    "review": 100,
+    "eligible": 0,
+    "published": 0,
+    "writes": 0
+  },
+  "remaining": [
+    "Configure a real AI provider key privately on the trusted branch.",
+    "Complete independent provider and actual editor pilot review.",
+    "Verify authenticated real-user/admin flows.",
+    "Resolve GitHub Actions pre-runner failure; cause not accessible via connector."
+  ]
+}

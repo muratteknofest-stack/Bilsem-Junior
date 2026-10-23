@@ -1,6 +1,6 @@
 import type { BaseQuestion, CognitiveCategory, VisualExplanation } from '../../types';
 export type LearningMode = 'practice' | 'adaptive' | 'exam';
-export type PublicLearningQuestion = Pick<BaseQuestion, 'id' | 'type' | 'category' | 'difficulty' | 'prompt' | 'secondaryPrompt' | 'visualConfig' | 'targetGrade'> & {
+export type PublicLearningQuestion = Pick<BaseQuestion, 'id' | 'type' | 'category' | 'difficulty' | 'prompt' | 'secondaryPrompt' | 'context' | 'visualConfig' | 'targetGrade'> & {
   options: Array<Pick<BaseQuestion['options'][number], 'id' | 'label' | 'visualData'>>;
 };
 export const LEARNING_EXAMS = [

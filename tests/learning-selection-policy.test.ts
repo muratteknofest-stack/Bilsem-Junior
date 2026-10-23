@@ -76,7 +76,7 @@ test('unassigned questions are selected first; finite pools reuse the oldest ass
   const recent = numeric(21), old = numeric(42), unseen = numeric(63);
   const exposure = new Map([[questionVisualKey(recent), 200], [questionVisualKey(old), 100]]);
   const selected = selectLearningQuestions({ count: 2, category: 'numerical', candidates: [recent, old, unseen],
-    exposure, canUse: isQuestionReadyForStudents, generate: cannotGenerate, randomIndex: () => 0 });
+    exposure, canUse: isQuestionReadyForStudents, generate: cannotGenerate, randomIndex: () => 0, repeatPolicy: 'oldest-first' });
   assert.equal(selected.length, 2);
   assert.ok(selected.some(q => q.id === unseen.id));
   assert.ok(selected.some(q => q.id === old.id));

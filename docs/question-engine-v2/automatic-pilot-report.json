@@ -1,0 +1,16 @@
+{
+  "questions": 100,
+  "gradeCounts": {
+    "1": 25,
+    "2": 25,
+    "3": 25,
+    "4": 25
+  },
+  "reasoningFamilies": 47,
+  "rendered": 500,
+  "failures": [],
+  "aiBlindReview": "pending",
+  "aiPedagogyReview": "pending",
+  "expertReview": "pending",
+  "published": 0
+}

@@ -1,3 +1,11 @@
+import {AiRoleControls} from './AiRoleControls';
+import {QuestionReviewBatchPanel} from './QuestionReviewBatchPanel';
+import {reviewConfigurationReady,runQuestionReviewBatch,type ReviewBatchProgress} from '../../lib/question-review-batch';
+import {AiUsagePanel} from './AiUsagePanel';
+import {QuestionDecorationControl} from './QuestionDecorationControl';
+import {EngineOperationsPanel} from './EngineOperationsPanel';
+import {aiCapabilitiesSchema,aiRoleModelsSchema,type AiCapabilities,type AiRoleModels} from '../../features/questions/ai-contracts';
+import {aiGenerationResponseSchema,type AiGenerationResponse} from '../../lib/ai-generation-response';
 import { EDUCATION_PROFILES, gradeDifficulty, type QuestionQualityReport, type GenerationAttempt } from '../../features/questions/quality-policy';
 import { QuestionQualityPanel } from './QuestionQualityPanel';
 import { QuestionRenderer } from '../../features/questions/renderers/QuestionRenderer';
@@ -84,7 +92,20 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
   const [difficulty, setDifficulty] = useState<DifficultyLevel>(3);
   const [questionCount, setQuestionCount] = useState<number>(5);
   const [minQuality, setMinQuality] = useState<number>(85);
-  const [selectedAiModel, setSelectedAiModel] = useState<string>('');
+  const [capabilities,setCapabilities]=useState<AiCapabilities|null>(null);
+  const [roleModels,setRoleModels]=useState<AiRoleModels|null>(null);
+  const [previewMethod,setPreviewMethod]=useState<'svg'|'webgl'>('svg');
+  const [perspective,setPerspective]=useState(false);
+  const [selectedIds,setSelectedIds]=useState<Set<string>>(new Set());
+  const [bulkConfirmed,setBulkConfirmed]=useState(false);
+  const [reviewBusy,setReviewBusy]=useState(false);
+  const [reviewProgress,setReviewProgress]=useState<ReviewBatchProgress|null>(null);
+  const [batchRunning,setBatchRunning]=useState(false);
+  const reviewGate=useRef(false);
+  const stopReview=useRef(false);
+  const mounted=useRef(true);
+  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;stopReview.current=true;};},[]);
+  useEffect(()=>{const controller=new AbortController();authenticatedFetch('/api/admin/ai-capabilities',{signal:controller.signal}).then(async response=>{if(!response.ok)throw Error('Model ayarları yüklenemedi.');const parsed=aiCapabilitiesSchema.parse(await response.json());setCapabilities(parsed);setRoleModels(parsed.defaults);}).catch(()=>{if(!controller.signal.aborted)setErrorMessage('AI ayarları yüklenemedi. Sayfayı yeniden açın.');});return()=>controller.abort();},[]);
 
   const [targetAge, setTargetAge] = useState<number | undefined>();
   const [maxAttempts, setMaxAttempts] = useState(3);
@@ -99,7 +120,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
   const [errorMessage, setErrorMessage] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const toResult = (data: any): GeneratedQuestionResult | null => {
+  const toResult = (data: AiGenerationResponse): GeneratedQuestionResult | null => {
     const q = data.question;
     if (!q) return null;
     return { id: q.id, prompt: q.prompt, type: q.type, category: q.category,
@@ -118,17 +139,19 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
     const id = `request-${Date.now()}`;
     setJobStatus({ id, status: 'generating', progress: 0, total: questionCount, completed: 0, approved: 0, rejected: 0, failed: 0, averageQuality: 0 });
     try {
+      const selectedModels=aiRoleModelsSchema.parse(roleModels);
+      if(Object.values(selectedModels).some(m=>!capabilities?.providers.find(p=>p.provider===m.provider)?.configured))throw Error('Seçilen sağlayıcının sunucu anahtarı tanımlı değil.');
       // Await each durable request. No simulated AI, invented scores or background
       // in-memory polling that can disappear when a Vercel Function shuts down.
       for (let i = 0; i < questionCount; i++) {
         const response = await authenticatedFetch('/api/admin/ai-generate-question', {
           method: 'POST', body: JSON.stringify({ category: selectedCategory,
             questionType: selectedType === 'auto' ? undefined : selectedType,
-            targetGrade, targetAge, maxAttempts, difficulty, minQualityScore: minQuality, aiModel: selectedAiModel || undefined }) });
+            targetGrade, targetAge, maxAttempts, difficulty, minQualityScore: minQuality, generationMode:'designed',roleModels:selectedModels,requestId:crypto.randomUUID() }) });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Soru servisine ulaşılamadı.');
         setIsApiAvailable(true);
-        const item = toResult(data);
+        const item = toResult(aiGenerationResponseSchema.parse(data));
         if (item) setResults(previous => [...previous, item]);
         if (data.success) approved++; else rejected++;
         qualityTotal += data.qualityScore || 0;
@@ -144,26 +167,61 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
     } finally { setIsGenerating(false); }
   };
 
-  const handleReview = async (id: string, action: 'approve' | 'reject' | 'regenerate') => {
+  const handleReview = async (id: string, action: 'approve' | 'reject' | 'regenerate',reviewMode:'individual'|'bulk'='individual') => {
     setErrorMessage('');
     try {
       const reviewed = results.find(item => item.id === id)?.rawOutput;
       if (!reviewed) throw new Error('Önce soruyu yükleyip inceleyin.');
       const response = await authenticatedFetch('/api/admin/ai-question-review', {
-        method: 'POST', body: JSON.stringify({ questionId: id, action, expectedRevision: reviewed.revision ?? 0 }) });
+        method: 'POST', body: JSON.stringify({ questionId: id, action, reviewMode, expectedRevision: reviewed.revision ?? 0 }) });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error([data.error || data.message || 'İşlem tamamlanamadı.', ...(data.details || [])].join(' '));
       if (action === 'regenerate' && data.question) {
-        const replacement = toResult({ ...data, solverVerified: data.question.aiMeta?.solverVerified });
+        const replacement = toResult(aiGenerationResponseSchema.parse({ ...data, solverVerified: data.question.aiMeta?.solverVerified }));
         if (replacement) setResults(previous => previous.map(item => item.id === id ? replacement : item));
       } else setResults(previous => previous.map(item => item.id === id ? { ...item,
         status: action === 'approve' ? 'approved' : 'rejected', rawOutput: data.question || item.rawOutput } : item));
-    } catch (error) { setErrorMessage(error instanceof Error ? error.message : 'İşlem tamamlanamadı.'); }
+      return true;
+    } catch (error) { setErrorMessage(error instanceof Error ? error.message : 'İşlem tamamlanamadı.');return false; }
+  };
+
+  const loadQueue=async()=>{
+    setReviewBusy(true);setErrorMessage('');
+    try{const response=await authenticatedFetch('/api/admin/question-review-queue');if(!response.ok)throw Error('İnceleme kuyruğu yüklenemedi.');const payload:unknown=await response.json();if(!payload||typeof payload!=='object'||!('questions' in payload)||!Array.isArray(payload.questions))throw Error('Geçersiz kuyruk yanıtı.');const items=payload.questions.map(q=>toResult(aiGenerationResponseSchema.parse({success:false,question:q,qualityScore:0}))).filter((q):q is GeneratedQuestionResult=>q!==null).map(q=>({...q,status:'draft' as const,solverVerified:q.rawOutput?.aiMeta?.solverVerified===true}));setResults(items);setSelectedIds(new Set());setBulkConfirmed(false);setReviewProgress(null);}
+    catch(error){setErrorMessage(error instanceof Error?error.message:'Kuyruk yüklenemedi.');}finally{setReviewBusy(false);}
+  };
+  const validateExisting=async(ids:string[])=>{
+    if(reviewGate.current||isGenerating||!roleModels)return;
+    if(!reviewConfigurationReady(capabilities,roleModels)){setErrorMessage('Bağımsız çözücü ve pedagojik denetçi için seçilen sağlayıcının sunucu API anahtarı gerekli. Supabase anahtarı AI anahtarı değildir.');return;}
+    const questions=ids.map(id=>results.find(q=>q.id===id)?.rawOutput);
+    if(questions.some(q=>!q)){setErrorMessage('Önce inceleme kuyruğunu yenileyin.');return;}
+    reviewGate.current=true;stopReview.current=false;setBatchRunning(true);setReviewBusy(true);setErrorMessage('');setBulkConfirmed(false);
+    try{
+      await runQuestionReviewBatch({targets:questions.map(q=>({id:q!.id,revision:q!.revision||0})),models:roleModels,
+        shouldStop:()=>stopReview.current||!mounted.current,
+        request:(target,models,signal)=>authenticatedFetch('/api/admin/ai-validate-question',{method:'POST',signal,body:JSON.stringify({questionId:target.id,expectedRevision:target.revision,roleModels:models})}),
+        changed:progress=>{if(mounted.current)setReviewProgress(progress);},
+        saved:question=>{
+          if(!mounted.current)return;
+          const item=toResult(aiGenerationResponseSchema.parse({success:question.qualityReport?.eligible===true,question,qualityScore:question.qualityReport?.score||0,solverVerified:question.aiMeta?.solverVerified}));
+          if(item)setResults(previous=>previous.map(q=>q.id===question.id?{...item,status:'draft'}:q));
+          setSelectedIds(previous=>{const next=new Set(previous);next.delete(question.id);return next;});
+        }});
+    }catch(error){if(mounted.current)setErrorMessage(error instanceof Error?error.message:'AI denetimi tamamlanamadı.');}
+    finally{reviewGate.current=false;if(mounted.current){setReviewBusy(false);setBatchRunning(false);}}
+  };
+  const handleBulk=async(action:'approve'|'reject')=>{
+    if(!selectedIds.size||selectedIds.size>20||action==='approve'&&!bulkConfirmed)return;setReviewBusy(true);
+    try{for(const id of selectedIds){if(await handleReview(id,action,'bulk'))setSelectedIds(previous=>{const next=new Set(previous);next.delete(id);return next;});}}
+    finally{setReviewBusy(false);setBulkConfirmed(false);}
   };
 
   return (
     <div className="space-y-6">
       {errorMessage && <p role="alert" className="rounded-xl border border-red-400/40 bg-red-950/40 p-4 text-red-200">{errorMessage}</p>}
+      <EngineOperationsPanel/>
+      <div className="space-y-2 rounded-xl border border-slate-700 p-3 text-xs text-slate-300"><button disabled={reviewBusy||isGenerating} onClick={loadQueue} className="rounded-lg bg-indigo-700 px-3 py-2 text-white">İnceleme kuyruğunu yükle (son 100)</button><p>{selectedIds.size} seçili · toplu işlem sınırı 20.</p><div className="flex flex-wrap gap-2"><button type="button" disabled={reviewBusy||isGenerating||!results.length} onClick={()=>{setSelectedIds(new Set(results.filter(q=>!['approved','rejected'].includes(q.status)&&q.rawOutput?.reviewPolicy==='professional-v2'&&!q.solverVerified).slice(0,20).map(q=>q.id)));setBulkConfirmed(false);}} className="min-h-11 rounded-lg bg-slate-700 px-3 py-2">İlk 20 taslağı seç</button><button type="button" disabled={reviewBusy||isGenerating||!selectedIds.size||selectedIds.size>20||!reviewConfigurationReady(capabilities,roleModels)} onClick={()=>validateExisting([...selectedIds])} className="min-h-11 rounded-lg bg-indigo-700 px-3 py-2">Seçilenleri bağımsız AI denetiminden geçir</button></div>{!reviewConfigurationReady(capabilities,roleModels)&&<p className="text-amber-200">AI incelemesi için çözücü ve pedagojik denetçi sağlayıcısının sunucu anahtarını tanımlayın. Supabase anahtarı bu görevi yapmaz.</p>}<label className="block"><input type="checkbox" checked={bulkConfirmed} disabled={reviewBusy||isGenerating} onChange={e=>setBulkConfirmed(e.target.checked)}/> Seçtiğim soruların yönerge, çözüm ve görsellerini inceledim.</label><div className="flex gap-2"><button disabled={reviewBusy||!bulkConfirmed||!selectedIds.size||selectedIds.size>20} onClick={()=>handleBulk('approve')} className="rounded-lg bg-emerald-800 px-3 py-2">Seçilenleri onayla ve yayımla</button><button disabled={reviewBusy||!selectedIds.size||selectedIds.size>20} onClick={()=>handleBulk('reject')} className="rounded-lg bg-red-900 px-3 py-2">Seçilenleri reddet</button></div><p>Toplu editör kararı kaydedilir; bireysel uzman incelemesi yapılmış sayılmaz. Eksik kalite aşaması olan soru yayımlanmaz.</p></div>
+      <QuestionReviewBatchPanel progress={reviewProgress} running={batchRunning} onStop={()=>{stopReview.current=true;}}/>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -172,7 +230,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
             Yapay Zeka Soru Üretim Motoru
           </h2>
           <p className="text-slate-400 text-sm mt-1">
-            Gelişmiş AI modelleri ile BİLSEM standartlarında yeni sorular tasarlayın.
+            Bağımsız kontrollerle sınıfa uygun soru taslakları hazırlayın.
           </p>
         </div>
 
@@ -196,7 +254,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
           <span className="text-2xl font-black text-white mt-1">{jobStatus?.completed || 0}</span>
         </div>
         <div className="bg-emerald-900/20 border border-emerald-800/40 rounded-xl p-4 flex flex-col">
-          <span className="text-emerald-400 text-xs font-bold uppercase">Onaylanan</span>
+          <span className="text-emerald-400 text-xs font-bold uppercase">AI kontrolünü geçen</span>
           <span className="text-2xl font-black text-emerald-300 mt-1">{jobStatus?.approved || 0}</span>
         </div>
         <div className="bg-red-900/20 border border-red-800/40 rounded-xl p-4 flex flex-col">
@@ -302,23 +360,16 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1.5">Yapay Zeka Motoru (2026 Dual Engine)</label>
-              <select
-                value={selectedAiModel}
-                onChange={e => setSelectedAiModel(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
-              >
-                <option value="">Sunucuda yapılandırılan model</option>
-                <option value="gemini-3.1-pro-preview">Google Gemini 3.1 Pro Preview</option>
-              </select>
-            </div>
+            {capabilities&&roleModels&&<AiRoleControls capabilities={capabilities} models={roleModels} onChange={setRoleModels} disabled={isGenerating||reviewBusy}/>}
+            <label className="block text-xs text-slate-300">Görsel önizleme yöntemi<select value={previewMethod} onChange={e=>setPreviewMethod(e.target.value as 'svg'|'webgl')} className="mt-1 block w-full rounded-xl bg-slate-800 p-2"><option value="svg">Net SVG · tüm cihazlar</option><option value="webgl">Blender / Three.js · küp sahneleri</option></select></label>
+            {previewMethod==='webgl'&&<label className="block text-xs text-slate-300"><input type="checkbox" checked={perspective} onChange={e=>setPerspective(e.target.checked)}/> Perspektif kamera (yalnız editör önizlemesi)</label>}
+            <p className="text-xs text-slate-400">AI süsleme görseli, detaylar ekranında ayrı bir taslak olarak üretilebilir. Matematiksel şekiller aynı kesin veriden çizilir.</p>
 
             <button
               onClick={handleGenerate}
-              disabled={isGenerating || !isApiAvailable}
+              disabled={isGenerating || !capabilities || !roleModels || reviewBusy}
               className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-black transition-all ${
-                isGenerating || !isApiAvailable
+                isGenerating || !capabilities || !roleModels || reviewBusy
                   ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
                   : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-500/25'
               }`}
@@ -371,7 +422,7 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                   <div className="p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <div className="flex flex-wrap items-center gap-2 mb-2"><label className="text-xs text-slate-300"><input type="checkbox" aria-label={`Toplu işlem için ${res.id}`} checked={selectedIds.has(res.id)} disabled={isGenerating||reviewBusy||['approved','rejected'].includes(res.status)} onChange={e=>{setSelectedIds(previous=>{const next=new Set(previous);if(e.target.checked)next.add(res.id);else next.delete(res.id);return next;});setBulkConfirmed(false);}}/> Seç</label>
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${DIFFICULTY_COLORS[res.difficulty]}`}>
                             {DIFFICULTY_LABELS[res.difficulty]}
                           </span>
@@ -424,16 +475,16 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                             <CheckCircle2 className="w-4 h-4" /> Onaylandı
                           </span>
                         ) : res.status === 'rejected' ? (
-                          <button onClick={() => handleReview(res.id, 'regenerate')} className="rounded-lg border border-amber-500/30 px-3 py-2 text-xs font-bold text-amber-300">Yeni varyasyonla tekrar dene</button>
+                          <button disabled={reviewBusy} onClick={() => handleReview(res.id, 'regenerate')} className="rounded-lg border border-amber-500/30 px-3 py-2 text-xs font-bold text-amber-300">Yeni varyasyonla tekrar dene</button>
                         ) : (
                           <>
-                            <button onClick={() => handleReview(res.id, 'regenerate')} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors" title="Yeniden Üret">
+                            <button disabled={reviewBusy} onClick={() => handleReview(res.id, 'regenerate')} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors" title="Yeniden Üret">
                               <RefreshCw className="w-4 h-4" />
                             </button>
                             <button onClick={() => handleReview(res.id, 'reject')} className="px-3 py-1.5 rounded-lg text-xs font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 transition-colors flex items-center gap-1">
                               <X className="w-3.5 h-3.5" /> Reddet
                             </button>
-                            <button disabled={!res.solverVerified} onClick={() => handleReview(res.id, 'approve')} className="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors flex items-center gap-1">
+                            <button disabled={reviewBusy||isGenerating||!res.solverVerified} onClick={() => handleReview(res.id, 'approve')} className="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors flex items-center gap-1">
                               <CheckCircle2 className="w-3.5 h-3.5" /> Onayla
                             </button>
                           </>
@@ -446,8 +497,8 @@ export const AdminAiQuestionEngine: React.FC<AdminAiQuestionEngineProps> = () =>
                   {expandedId === res.id && (
                     <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} className="border-t border-slate-800 bg-slate-900/50">
                       <div className="p-4 space-y-4 text-xs text-slate-300">
-                        <QuestionQualityPanel report={res.qualityReport} attempts={res.attempts} />
-                        {res.rawOutput && <div className="rounded-xl bg-white p-3"><QuestionRenderer question={res.rawOutput} /><div className="grid grid-cols-2 gap-3">{res.rawOutput.options.map(option => <OptionRenderer question={res.rawOutput} key={option.id} option={option} disabled showCorrect isCorrectOption={option.id === res.correctOptionId} />)}</div></div>}
+                        <button disabled={reviewBusy||isGenerating} onClick={()=>validateExisting([res.id])} className="rounded-lg bg-indigo-700 px-3 py-2 text-white">Mevcut soruyu bağımsız AI denetiminden geçir</button><QuestionQualityPanel report={res.qualityReport} attempts={res.attempts} /><AiUsagePanel usage={res.rawOutput?.aiMeta?.usage}/>{res.rawOutput&&<QuestionDecorationControl question={res.rawOutput} configured={capabilities?.imageGenerationConfigured===true}/>}
+                        {res.rawOutput && <div className="rounded-xl bg-white p-3"><QuestionRenderer key={previewMethod+String(perspective)+res.id} question={res.rawOutput} previewMethod={previewMethod} previewPerspective={perspective} /><div className="grid grid-cols-2 gap-3">{res.rawOutput.options.map(option => <OptionRenderer question={res.rawOutput} key={option.id} option={option} disabled showCorrect isCorrectOption={option.id === res.correctOptionId} />)}</div></div>}
                         {res.validationWarnings && res.validationWarnings.length > 0 && (
                           <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl space-y-1">
                             <strong className="text-amber-400 flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> Uyarılar:</strong>

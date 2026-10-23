@@ -6,7 +6,8 @@ import { transformTile, type Board, type Tile } from './professional-engine';
 export function questionReasoningKey(q: Pick<BaseQuestion,'type'|'visualConfig'>): string {
   const b=q.visualConfig as Record<string,unknown>;
   let rule: unknown;
-  if(b.displayMode==='verified_board') {
+  if(b.displayMode==='symbolic_v2')rule={kind:'symbolic-relations',mechanic:b.mechanic,variables:(b.symbols as string[]).length,queryMode:b.queryMode};
+  else if(b.displayMode==='verified_board') {
     const v=q.visualConfig as Board;
     if(v.kind==='matrix') {
       const t=v.tiles!;
