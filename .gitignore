@@ -63,3 +63,4 @@ dist-android/
 *.keystore
 *.p12
 keystore.properties
+upload-key.json

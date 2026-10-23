@@ -2,6 +2,39 @@
 
 Uygulama kimliği `com.quantumtech.bilsemjunior`, bu sürüm `1.0.28` / versionCode `29`.
 
+## Tekrarlanabilir yayın paketi — 23 Ekim 2026
+
+Web ve Android aynı kaynak kodunu, Supabase projesini ve sunucu soru değerlendirmesini kullanır. Android içindeki dosyalar `npm run android:sync` ile güncellenir; canlı web dağıtımı cihazda kurulu paketi kendiliğinden değiştirmez.
+
+Yerel Android hazırlığı:
+
+```bash
+npm ci
+npm run lint
+npm run test:google-play
+npm run android:sync
+cd android
+./gradlew --no-daemon :app:bundleRelease :app:assembleRelease :app:assembleDebug :app:writeReleaseDependencyInventory
+cd ..
+npm run android:candidate
+```
+
+JDK 21, Android SDK 36, Gradle eklentisinin kullandığı Build Tools 35.0.0 ve yayın doğrulamasının kullandığı 36.0.0 kurulu olmalı; `ANDROID_HOME` SDK dizinini göstermeli. Açık API/site/Supabase değerleri `.env.android` içinde bulunmalı. Üretim sırları burada kullanılmaz.
+
+`test-artifacts/android` dizinindeki aday paketi, imzasız AAB, 16 KB sayfa hizalaması denetlenmiş imzasız APK ve test APK'sıyla birlikte üretir. Ayrıca derlenmiş paket kimliği/güvenlik raporu, gerçek çözümlenmiş Maven bağımlılıkları, OSV sonucu, güncel web dosyalarıyla byte düzeyinde eşleşme raporu, SDK imzalayıcısı ve bütün dosyaların SHA-256 listesi bulunur. Herhangi bir kontrol eksikse geçerli aday oluşturulmuş sayılmaz. Yeniden çalıştırırken yeni/boş bir çıktı dizini kullanın; kısmi önceki çıktılar üzerine yazılmaz.
+
+GitHub `Google Play Android candidate` işi aynı komutlarla bu dosyaları üretir. Actions hizmetinin işi başlatamaması, testlerin geçmesi anlamına gelmez. Yerel doğrulama ve uzaktaki işin durumu ayrı kaydedilir.
+
+### Mevcut Play yükleme anahtarıyla imzalama
+
+Özel anahtarı güvenli makinenizde tutun. `PRIVATE_KEY_DIR` içinde mevcut `zekapark-upload.p12` ve `upload-key.json` bulunmalı. JSON alanları `alias`, `password`, `certificateSha256` olmalı. Sertifika özeti **Play Console'daki yükleme sertifikasının SHA-256 değeriyle** doldurulur; yeni rastgele anahtar oluşturulmaz. Parola ve özel dosyalar sohbete/GitHub'a gönderilmez.
+
+```bash
+python3 scripts/sign-android-release.py test-artifacts/android PRIVATE_KEY_DIR SIGNED_OUTPUT_DIR
+```
+
+İmzalayıcı önce bütün zorunlu dosyaların özetini, derlenmiş güvenlik ve bağımlılık raporunu, sonra mevcut yükleme sertifikasını kontrol eder. Boş veya eksik `SHA256SUMS` kabul edilmez. İmzalı AAB ve APK ayrı doğrulanır. Bu işlem Play Console'a yükleme veya mağaza onayı değildir. Play'in imzalı AAB kabulü ve gerçek cihazdaki lisans testleri ayrıca tamamlanmalıdır.
+
 ## 1.0.28 — sınıfa göre çok adımlı akıl yürütme
 
 - Karışık 20 soruluk çalışmada sınıfa özel sabit zorluk payları kullanılır: 1. sınıf 4/16 (düzey 1/2), 2. sınıf 6/14 (2/3), 3. sınıf 8/12 (3/4), 4. sınıf 4/7/9 (4/5/6). Öğrencinin seçtiği belirli düzey korunur.

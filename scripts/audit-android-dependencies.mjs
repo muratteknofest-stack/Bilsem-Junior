@@ -1,33 +1,26 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { auditQueries } from './osv-audit.mjs';
 
-/** Use Gradle's selected runtime versions, including transitive dependencies. */
-export function mavenQueries(report) {
-  if (/\bFAILED\b|Could not resolve/.test(report)) throw Error('Unresolved Gradle dependencies; audit incomplete');
-  const unique = new Map();
-  for (const line of report.split('\n')) {
-    const match = line.match(/[+\\]---\s+([\w.-]+):([\w.-]+):([^\s]+)(?:\s+->\s+([^\s]+))?/);
-    if (!match) continue;
-    const [, group, artifact, requested, selected] = match;
-    const version = selected || requested;
-    if (!/^[0-9][\w.+-]*$/.test(version)) throw Error('Unresolved Maven version; audit incomplete');
-    const name = `${group}:${artifact}`;
-    unique.set(`${name}@${version}`, { package: { ecosystem: 'Maven', name }, version });
+export function mavenQueries(inventory) {
+  if (!Array.isArray(inventory) || !inventory.length) throw Error('Resolved Android dependency inventory is missing');
+  const pairs = new Map();
+  for (const item of inventory) {
+    if (!item || !['group', 'name', 'version'].every(key => typeof item[key] === 'string' && /^[A-Za-z0-9_.+\-]+$/.test(item[key])))
+      throw Error('Invalid resolved Android dependency');
+    const name = `${item.group}:${item.name}`;
+    pairs.set(`${name}@${item.version}`, { package: { ecosystem: 'Maven', name }, version: item.version });
   }
-  if (!unique.size) throw Error('No resolved Maven inventory; audit incomplete');
-  return [...unique.values()];
+  if (![...pairs.values()].some(q => q.package.name === 'com.android.billingclient:billing')) throw Error('Billing dependency is missing');
+  return [...pairs.values()].sort((a, b) => a.package.name.localeCompare(b.package.name));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
-    if (!process.argv[2]) throw Error('Pass a resolved debugRuntimeClasspath report');
-    const queries = mavenQueries(await readFile(process.argv[2], 'utf8'));
-    const result = await auditQueries(queries);
-    console.log(JSON.stringify({ ecosystem: 'Maven', ...result, inventory: queries }, null, 2));
-    if (result.findings.length) process.exitCode = 1;
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : 'Maven audit incomplete');
-    process.exitCode = 1;
-  }
+    if (process.argv.length !== 4) throw Error('Pass resolved inventory and report paths');
+    const report = { ecosystem: 'Maven', ...await auditQueries(mavenQueries(JSON.parse(await readFile(process.argv[2], 'utf8')))) };
+    await writeFile(process.argv[3], JSON.stringify(report, null, 2) + '\n');
+    console.log(`Android dependency audit: ${report.count} resolved pairs; ${report.findings.length} findings.`);
+    if (report.findings.length) process.exitCode = 1;
+  } catch { console.error('Android dependency audit incomplete; candidate release blocked.'); process.exitCode = 1; }
 }

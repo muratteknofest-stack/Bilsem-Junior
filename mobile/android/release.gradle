@@ -7,3 +7,18 @@ android {
         }
     }
 }
+
+// Inspect the resolved release graph, including transitive libraries, rather than source declarations.
+tasks.register('writeReleaseDependencyInventory') {
+    doLast {
+        def inventory = configurations.releaseRuntimeClasspath.incoming.resolutionResult.allComponents
+            .findAll { it.moduleVersion != null }
+            .collect { [group: it.moduleVersion.group, name: it.moduleVersion.name, version: it.moduleVersion.version] }
+            .findAll { it.group != rootProject.name && it.group != '' && it.version != 'unspecified' }
+            .unique { "${it.group}:${it.name}:${it.version}" }
+            .sort { "${it.group}:${it.name}:${it.version}" }
+        def destination = layout.buildDirectory.file('reports/release-dependencies.json').get().asFile
+        destination.parentFile.mkdirs()
+        destination.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(inventory))
+    }
+}

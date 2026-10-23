@@ -5,6 +5,10 @@ on:
     branches: [main, master]
 permissions:
   contents: read
+env:
+  VITE_PUBLIC_SITE_URL: https://bilsemjunior.vercel.app
+  VITE_SUPABASE_URL: https://vtcsoqohkiagbwatlabk.supabase.co
+  VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_J972I2--TwnuLkWjrRqENA_DxnBGjlz
 concurrency:
   group: quality-${{ github.ref }}
   cancel-in-progress: true
@@ -22,10 +26,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - name: Verify Cloud setup and Android artifact integrity checks
+        run: npm run test:google-play:cloud && npm run test:android-release
       - run: npm run test:student
       - run: npm audit --audit-level=moderate
+      - run: npm run security:audit
       - run: npm run vercel-build
-      - run: npm run security:http
+      - name: Verify the compiled production HTTP server
+        run: |
+          npx esbuild server.ts --bundle --platform=node --format=cjs --packages=external --outfile=build/server.cjs
+          node scripts/security-http-smoke.mjs
       - run: npm run test:load
       - name: Install Chromium for mobile and tablet layout checks
         run: npx playwright install --with-deps chromium

@@ -24,7 +24,7 @@ export function secretKinds(text) {
   return kinds;
 }
 
-async function checkDirectory(directory) {
+export async function checkDirectory(directory) {
   let count = 0;
   for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
     const file = path.join(directory, entry.name);
@@ -40,6 +40,6 @@ async function checkDirectory(directory) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  try { console.log(`Public assets: ${await checkDirectory('dist')} files checked; no recognized private credentials or source maps.`); }
+  try { console.log(`Public assets: ${await checkDirectory(process.argv[2] || 'dist')} files checked; no recognized private credentials or source maps.`); }
   catch (error) { console.error(error instanceof Error ? error.message : 'Public assets check failed.'); process.exitCode = 1; }
 }

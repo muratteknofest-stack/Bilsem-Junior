@@ -30,3 +30,11 @@
 
 /* Keep the complete public menu accessible when the longer wordmark needs room. */
 @media(max-width:1200px){.zp-landing .zp-public-links,.zp-landing .zp-desktop-setting,.zp-landing .zp-desktop-login{display:none}.zp-landing .zp-mobile-trigger{display:inline-flex}}
+
+/* Override the shared md logo at narrow widths while retaining 44px menu targets. */
+@media(max-width:360px){
+  .zp-landing .zp-public-nav{column-gap:6px}
+  .zp-landing .zp-public-nav .bj-logo[data-size=md] .bj-wordmark{font-size:18px}
+  .zp-landing .zp-public-nav .bj-logo[data-size=md] .bj-logo-symbol{width:34px;height:34px}
+  .zp-landing .zp-public-actions{gap:6px}
+}

@@ -31,6 +31,8 @@ jobs:
           echo "JAVA_HOME=$JAVA_HOME_21_X64" >> "$GITHUB_ENV"
           echo "$JAVA_HOME_21_X64/bin" >> "$GITHUB_PATH"
       - run: npm ci
+      - name: Install the exact Android release SDK
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0" "build-tools;36.0.0" "platforms;android-36"'
       - run: npm run lint && npm run test:google-play
       - run: npm run android:sync
       - name: Verify billing screens
@@ -41,15 +43,9 @@ jobs:
         run: npm run test:android-story
       - name: Compile Android Billing and release bundle
         working-directory: android
-        run: ./gradlew --no-daemon :app:bundleRelease :app:assembleRelease :app:assembleDebug
+        run: ./gradlew --no-daemon :app:bundleRelease :app:assembleRelease :app:assembleDebug :app:writeReleaseDependencyInventory
       - name: Verify release security
-        run: |
-          mkdir -p test-artifacts/android
-          cp android/app/build/outputs/bundle/release/app-release.aab test-artifacts/android/Bilsem-Junior-1.0.28-unsigned.aab
-          cp android/app/build/outputs/apk/debug/app-debug.apk test-artifacts/android/Bilsem-Junior-1.0.28-test.apk
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging android/app/build/outputs/apk/release/app-release-unsigned.apk > test-artifacts/android/package.txt
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree android/app/build/outputs/apk/release/app-release-unsigned.apk AndroidManifest.xml > test-artifacts/android/manifest.txt
-          node scripts/verify-android-release.mjs test-artifacts/android/manifest.txt test-artifacts/android/package.txt > test-artifacts/android/release-check.json
+        run: python3 scripts/package-android-candidate.py test-artifacts/android
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
