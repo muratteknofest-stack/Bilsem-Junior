@@ -3,6 +3,8 @@ import { STORY_QUESTION_COUNT, type StoryStage, type StoryReward } from '../feat
 import { StoryResultCelebration, StoryAnswerReview } from './student/StoryStars';
 import { apiFetch } from '../lib/api-fetch';
 import { LearningSetupPanel } from './student/LearningSetupPanel';
+import { DiversityRecoveryNotice } from './student/DiversityRecoveryNotice';
+import { QuestionDiversityError } from '../features/questions/test-diversity';
 import { useStudentReducedMotion } from '../features/student/experience-preferences';
 import { sound } from '../lib/sound';
 import { AnswerFeedbackLedger, feedbackDuration, type AnswerFeedback } from '../features/student/answer-feedback';
@@ -55,6 +57,7 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
   const [response, setResponse] = useState<QuestionResponse | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [diversityError,setDiversityError]=useState<QuestionDiversityError|null>(null);
   const [remaining, setRemaining] = useState(0);
   const [reportStatus, setReportStatus] = useState('');
   const [reportBusy, setReportBusy] = useState(false);
@@ -69,11 +72,11 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
   const run = async (action: () => Promise<LearningSessionView>) => {
     try { return await gate.current.run(async () => {
       if (!mounted.current) return null;
-      setBusy(true); setError('');
+      setBusy(true); setError(''); setDiversityError(null);
       try { const saved = await action(); if (mounted.current) setSession(saved); return saved; }
       finally { if (mounted.current) setBusy(false); }
     }); }
-    catch (err) { if (mounted.current) setError(err instanceof Error ? err.message : 'İşlem tamamlanamadı. Yeniden dene.'); return null; }
+    catch (err) { if (mounted.current) {setError(err instanceof Error ? err.message : 'İşlem tamamlanamadı. Yeniden dene.');if(err instanceof QuestionDiversityError)setDiversityError(err);} return null; }
   };
   const start = async () => { if (mode === 'adaptive' && !validQuestionCount) return; sound.unlock(); const saved = await run(() => {
     return reviewMistakeId ? learningService.review(reviewMistakeId) : learningService.start(mode, storyStage?.category || topicCategory(topic, category), exam, difficulty, undefined, storyStage?'mixed':topic, storyStage?STORY_QUESTION_COUNT:Number(questionCount), !!storyStage);
@@ -153,7 +156,12 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
     if (index < session.questions.length - 1) setIndex(index + 1);
     else await finish();
   };
-  const restart = () => { feedbackLedger.current.reset(); setFeedback(null); setSession(null); setResponse(null); setIndex(0); setError(''); };
+  const restart = () => { feedbackLedger.current.reset(); setFeedback(null); setSession(null); setResponse(null); setIndex(0); setError(''); setDiversityError(null); };
+  const shortestExam=[...exams].sort((a,b)=>a.count-b.count)[0];
+  const shorterExam=diversityError?[...exams].filter(item=>item.count<diversityError.requestedCount&&item.count<=diversityError.preparedCount).sort((a,b)=>b.count-a.count)[0]:undefined;
+  const shorterCount=diversityError&&mode==='adaptive'?Math.min(5,diversityError.preparedCount):
+    mode==='exam'&&shorterExam?shorterExam.count:0;
+  const resetDiversityNotice=()=>{setError('');setDiversityError(null);};
   const chooseNewDifficulty = async () => {
     if (!session || busy || !await savePending()) return;
     const completed = session.result ? session : await run(() => learningService.finish(session.id));
@@ -193,7 +201,10 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
     <div className="zp-screen">
     <LearningRefreshNotice/>
     <div className="zp-screen-bar"><span>{isExam ? <Tablet size={17} aria-hidden="true" /> : <Gamepad2 size={19} aria-hidden="true" />} {isExam ? 'BİLSEM JUNIOR / DENEME' : 'KEŞFET · DÜŞÜN · ÇÖZ'}</span><span>{grade}. SINIF</span></div>
-    {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{error}</div>}
+    {diversityError&&!session&&!storyStage?<DiversityRecoveryNotice error={diversityError} busy={busy}
+      mixedCount={mode==='exam'?shortestExam?.count||15:5}
+      onMixed={()=>{setTopic('mixed');setCategory('mixed');setQuestionCount('5');if(shortestExam)setExam(shortestExam.id);resetDiversityNotice();}}
+      shorterCount={shorterCount||undefined} onShorter={shorterCount?()=>{if(mode==='adaptive')setQuestionCount(String(shorterCount));else if(shorterExam)setExam(shorterExam.id);resetDiversityNotice();}:undefined}/>:error&&<div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{error}</div>}
     <AnswerHistory items={history} />
     {!session && storyStage ? <section className="bj-story-setup" aria-label="Hikâye görevi"><img src="/brand/junior-fox.svg" alt="Junior rehber"/><p>HİKÂYE MODU · {grade}. SINIF</p><h2>{storyStage.title}</h2>{storyStage.narrative&&<p>{storyStage.narrative}</p>}<p>{storyStage.task} {STORY_QUESTION_COUNT} soruyu tamamla, yıldızlarını kazan ve sıradaki durağı aç. Cevaplarını birlikte inceleyelim.</p><button type="button" className={button} disabled={busy} onClick={()=>void start()}>{busy?'Görev hazırlanıyor…':'Maceraya başla'}</button></section> : !session ? <LearningSetupPanel mode={mode} grade={grade} review={!!reviewMistakeId} busy={busy} topic={topic} onTopic={setTopic} category={category} onCategory={setCategory} difficulty={difficulty} onDifficulty={setDifficulty} questionCount={questionCount} onCount={setQuestionCount} validCount={validQuestionCount} exam={exam} onExam={setExam} exams={exams} onStart={() => void start()} /> : <>
       {session.result && <section aria-label="Çalışma sonucu" className={`zp-result ${storyStage?'bj-story-result':''} space-y-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-5`}>

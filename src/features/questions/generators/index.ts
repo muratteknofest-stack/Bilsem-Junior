@@ -19,10 +19,10 @@ export const ALL_QUESTION_TYPES = ALL_TOPIC_TYPES;
 export const STUDENT_CATEGORY_TYPES = TOPIC_CATEGORY_TYPES;
 export const CATEGORY_TYPES_MAP = TOPIC_CATEGORY_TYPES;
 
-export function generateDiverseQuestion(options:Parameters<typeof generateQuestion>[0],history:readonly QuestionVisualReference[]=[]):BaseQuestion {
+export function generateDiverseQuestion(options:Parameters<typeof generateQuestion>[0],history:readonly QuestionVisualReference[]=[],requireDistinctStyles=false):BaseQuestion {
  const seed=options.seed??Math.floor(Math.random()*2147483646)+1,candidates:BaseQuestion[]=[];
- for(let attempt=0;attempt<16;attempt++){try{candidates.push(generateQuestion({...options,seed:(seed+attempt*10007)%2147483647||1}));}catch{/* Failed proofs never enter selection. */}}
- return chooseDiverseCandidate(candidates,history);
+ for(let attempt=0;attempt<(requireDistinctStyles?64:16);attempt++){try{candidates.push(generateQuestion({...options,seed:(seed+attempt*10007)%2147483647||1}));}catch{/* Failed proofs never enter selection. */}}
+ return chooseDiverseCandidate(candidates,history,requireDistinctStyles);
 }
 
 export function generateQuestionByType(

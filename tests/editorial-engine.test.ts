@@ -7,6 +7,7 @@ import { auditQuestion, questionVisualKey, questionContentKey } from '../src/fea
 import { parseQuestionImport, selectPublishedPool } from '../src/features/questions/editorial-data.ts';
 import { ProfessionalBoard } from '../src/features/questions/renderers/ProfessionalBoard.tsx';
 import type { DifficultyLevel } from '../src/types.ts';
+import { generateQuestion } from '../src/features/questions/generators';
 
 test('11 upgraded engines produce deterministic, uniquely solvable items over 3300 cases', () => {
   for (const type of VERIFIED_TYPES) for (let d = 1; d <= 6; d++) for (let seed = 1; seed <= 50; seed++) {
@@ -62,22 +63,24 @@ test('novelty ignores seed, IDs and shuffled options; imports are atomic drafts'
 test('published pool excludes drafts and wrong grades and avoids duplicates', () => {
   const q = { ...generateProfessionalQuestion('number_pattern', 5, 2), targetGrade: 2 as const };
   const published = { ...q, id: 'published', status: 'published' as const };
-  const selected = selectPublishedPool([q, q], [published, { ...published, id: 'draft', status: 'draft' }]);
-  assert.equal(selected[0].id, 'published'); assert.equal(selected[1].id, q.id);
+  const different = {...generateQuestion({type:'number_pyramid',targetGrade:2,seed:7919,difficulty:2}),status:'published' as const};
+  const selected = selectPublishedPool([q, q], [published, different, { ...published, id: 'draft', status: 'draft' }]);
+  assert.deepEqual(new Set(selected.map(q=>q.id)),new Set(['published',different.id]));
+  assert.throws(()=>selectPublishedPool([q,q],[published]),/farklı soru tarzı/);
   assert.equal(selectPublishedPool([q], [{ ...published, targetGrade: 4 }])[0].id, q.id);
 });
 
 test('a large approved pool rotates across sessions and never repeats a published visual', () => {
-  const approved = [101, 202, 303, 404, 505, 606].map(seed => ({
-    ...generateProfessionalQuestion('matrix_2x2', seed, 2),
+  const approved = (['figure_rotation','mirror_reflection','spatial_relationship','direction_path','dice_unfold','top_view'] as const).map((type,index) => ({
+    ...generateQuestion({type,targetGrade:2,seed:101+index*101,difficulty:2}),
     targetGrade: 2 as const, status: 'published' as const,
   }));
   const sessions = [701, 702, 703, 704, 705, 706].map(seed => {
-    const fallback = { ...generateProfessionalQuestion('matrix_2x2', seed, 2), targetGrade: 2 as const };
+    const fallback = { ...generateProfessionalQuestion('figure_rotation', seed, 2), targetGrade: 2 as const };
     return selectPublishedPool([fallback], approved)[0].id;
   });
   assert.ok(new Set(sessions).size >= 3, 'later approved questions should be reachable');
-  const repeated = { ...generateProfessionalQuestion('matrix_2x2', 811, 2), targetGrade: 2 as const };
+  const repeated = { ...generateProfessionalQuestion('figure_rotation', 811, 2), targetGrade: 2 as const };
   const batch = selectPublishedPool(Array(approved.length).fill(repeated), approved);
   assert.equal(new Set(batch.map(q => q.id)).size, approved.length);
   assert.equal(new Set(batch.map(questionVisualKey)).size, approved.length);

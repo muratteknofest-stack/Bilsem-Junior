@@ -59,7 +59,8 @@
     "test:preview-auth:browser": "node scripts/check-protected-preview-auth.mjs",
     "audit:test-assembly": "node --import tsx scripts/audit-test-assembly.ts",
     "test:review-batch:browser": "node scripts/check-review-batch-ui.mjs",
-    "audit:session-diversity": "node --import tsx scripts/audit-session-diversity.ts"
+    "audit:session-diversity": "node --import tsx scripts/audit-session-diversity.ts",
+    "audit:strict-test-diversity": "node --import tsx scripts/audit-strict-test-diversity.ts"
   },
   "dependencies": {
     "@capacitor/android": "8.5.3",

@@ -1,5 +1,6 @@
 import {type AnswerEvidence} from '../src/features/questions/adaptive-difficulty';
 import { orderTestQuestions } from '../src/features/questions/test-assembly';
+import { QuestionDiversityError } from '../src/features/questions/test-diversity';
 import { randomInt } from 'node:crypto';
 import { generateQuestion, STUDENT_CATEGORY_TYPES } from '../src/features/questions/generators';
 import { professionalGradeTypes } from '../src/features/questions/reasoning-profile';
@@ -96,6 +97,7 @@ export function selectLearningQuestions(options: {
   repeatPolicy?: 'unseen' | 'oldest-first';
   /** Mixed tests may transfer a repeated-style slot to another eligible area. */
   redistributeRepeatedCategories?: boolean;
+  requireDistinctStyles?: boolean;
 }) {
   if (!Number.isInteger(options.count) || options.count < 1 || options.count > 50) throw new LearningError('Çalışma uzunluğu 1–50 arasında olmalı.', 422);
   const randomIndex = options.randomIndex || randomInt;
@@ -128,6 +130,7 @@ export function selectLearningQuestions(options: {
     return index>=0&&a[index]<b[index];
   };
   const available=(item:Candidate,difficulty?:DifficultyLevel)=>!seen.has(item.key)&&!seenVisuals.has(item.visual)&&
+    (!options.requireDistinctStyles||!reasoningCounts.has(item.rule)&&!reasoningCounts.has(item.style))&&
     (difficulty===undefined||item.question.difficulty===difficulty);
   for (const [index,category] of plan.entries()) {
     const difficulty=options.difficultyPlan?.[index];
@@ -143,6 +146,7 @@ export function selectLearningQuestions(options: {
           const q=options.generate(area,typeCounts,difficulty,reasoningCounts);
           if(q.category!==area||!options.canUse(q))continue;
           const item=describe(q);
+          if(options.requireDistinctStyles&&(reasoningCounts.has(item.rule)||reasoningCounts.has(item.style))){if(attempt>=1)break;continue;}
           if(item.lastAssigned||!available(item,difficulty))continue;
           if(!best||better(item,best))best=item;
           break;
@@ -165,11 +169,19 @@ export function selectLearningQuestions(options: {
       }
     }
     if(!chosen&&options.repeatPolicy==='oldest-first') {
-      const recent=(groups.get(category)||[]).filter(item=>available(item,difficulty));
-      chosen=recent.reduce<Candidate|undefined>((best,next)=>!best||next.lastAssigned<best.lastAssigned||
-        next.lastAssigned===best.lastAssigned&&better(next,best)?next:best,undefined);
+      const areas=options.category==='mixed'&&options.redistributeRepeatedCategories?
+        [category,...(configured||AVAILABLE_CATEGORIES).filter(area=>area!==category)]:[category];
+      for(const area of areas){
+        const recent=(groups.get(area)||[]).filter(item=>available(item,difficulty));
+        chosen=recent.reduce<Candidate|undefined>((best,next)=>!best||next.lastAssigned<best.lastAssigned||
+          next.lastAssigned===best.lastAssigned&&better(next,best)?next:best,undefined);
+        if(chosen)break;
+      }
     }
-    if(!chosen)throw new LearningError('Bu çalışma için yeterli farklı ve doğrulanmış soru hazır değil.');
+    if(!chosen) {
+      if(options.requireDistinctStyles)throw new QuestionDiversityError(options.count,selected.length);
+      throw new LearningError('Bu çalışma için yeterli farklı ve doğrulanmış soru hazır değil.');
+    }
     seen.add(chosen.key);seenVisuals.add(chosen.visual);selected.push(chosen.question);
     typeCounts.set(chosen.question.type,(typeCounts.get(chosen.question.type)||0)+1);
     categoryCounts.set(chosen.question.category,(categoryCounts.get(chosen.question.category)||0)+1);

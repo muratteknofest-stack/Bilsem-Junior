@@ -8,7 +8,7 @@ import { defaultPlatformSettings } from '../src/lib/platform-settings';
 import { generateQuestion } from '../src/features/questions/generators';
 import { ALL_QUESTION_TYPES } from '../src/features/questions/generators';
 import { EDUCATION_PROFILES } from '../src/features/questions/quality-policy';
-import { LEARNING_TOPICS, topicCategory, topicQuestionCount } from '../src/features/student/learning-topics';
+import { LEARNING_TOPICS, topicCategory } from '../src/features/student/learning-topics';
 import { DEFAULT_ADAPTIVE_COUNT, fitsLearningSelection, learningStartSchema, sameLearningSelection, type LearningSelection } from '../src/features/student/learning-selection';
 import { selectLearningQuestions } from '../server/learning-question-selection';
 import { isQuestionReadyForStudents, questionVisualKey } from '../src/features/questions/quality';
@@ -47,7 +47,6 @@ test('topic changes never resume another topic and legacy mixed sessions remain 
   assert.equal(sameLearningSelection({ ...old, topic: 'paper_folding' }, { ...old, topic: 'punch_folding' }), false);
   assert.equal(learningStartSchema.parse({ mode: 'practice' }).topic, 'mixed');
   assert.equal(learningStartSchema.safeParse({ mode: 'practice', topic: 'invented-topic' }).success, false);
-  assert.equal(topicQuestionCount([] , 5, 'paper_folding'), 0);
 });
 
 test('topic practice reuses reviewed bank questions without generating another topic', () => {
@@ -67,7 +66,7 @@ test('adaptive question counts are bounded integers and participate in saved sel
   assert.equal(sameLearningSelection({ ...selection, count: 10 }, selection), false);
 });
 
-test('real authenticated learning API isolates published topics in all grades, caps small pools and rejects invalid scopes', async () => {
+test('real authenticated learning API isolates published topics in all grades, rejects repeated styles without changing active sessions or requested length', async () => {
   const originalFetch = globalThis.fetch;
   const priorUrl = process.env.SUPABASE_URL, priorKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   process.env.SUPABASE_URL = 'https://topic-api-fixture.invalid';
@@ -126,7 +125,7 @@ test('real authenticated learning API isolates published topics in all grades, c
         // Same-category distractor and draft rows must never enter the topic session.
         const other = generateQuestion({ profile: 'complete', targetGrade: grade, type: topic === 'paper_folding' ? 'mirror_reflection' : 'paper_folding', difficulty: 1, seed: 7181 });
         bank = [q, { ...q, id: 'draft-only', status: 'draft' }, { ...other, status: 'published' }];
-        const result = await start({ mode: 'practice', topic, category: 'mixed', difficulty: 1, expectedGrade: grade });
+        const result = await start({ mode: 'adaptive', questionCount: 1, topic, category: 'mixed', difficulty: 1, expectedGrade: grade });
         assert.equal(result.status, 201, `${grade}/${topic}: ${JSON.stringify(result.body)}`);
         assert.equal(result.body.questions.length, 1);
         assert.equal(rows[0].selection.topic, topic);
@@ -140,38 +139,48 @@ test('real authenticated learning API isolates published topics in all grades, c
     const first = { ...generateQuestion({ profile: 'complete', targetGrade: 1, type: 'paper_folding', difficulty: 1, seed: 5551 }), status: 'published' as const };
     const second = { ...generateQuestion({ profile: 'complete', targetGrade: 1, type: 'mirror_reflection', difficulty: 1, seed: 5552 }), status: 'published' as const };
     bank = [first, second];
-    const a = await start({ mode: 'practice', topic: first.type });
-    const b = await start({ mode: 'practice', topic: second.type });
+    const a = await start({ mode: 'adaptive', questionCount: 1, topic: first.type });
+    const b = await start({ mode: 'adaptive', questionCount: 1, topic: second.type });
     assert.equal(a.status, 201); assert.equal(b.status, 201); assert.notEqual(a.body.id, b.body.id);
     assert.equal(rows[0].result.totalQuestions, 1); assert.equal(b.body.questions[0].type, second.type);
     const exam = await start({ mode: 'exam', topic: first.type, exam: 'standard' });
-    assert.equal(exam.status, 201); assert.equal(exam.body.questions.length, 1); assert.equal(exam.body.questions[0].type, first.type);
+    assert.equal(exam.status, 422); assert.equal(exam.body.code, 'INSUFFICIENT_DISTINCT_QUESTIONS'); assert.equal(exam.body.requestedCount, 30); assert.equal(exam.body.preparedCount, 1);
     const adaptive = await start({ mode: 'adaptive', topic: first.type });
-    assert.equal(adaptive.status, 201); assert.equal(adaptive.body.questions[0].type, first.type);
+    assert.equal(adaptive.status, 422); assert.equal(adaptive.body.requestedCount, 10); assert.equal(rows.length, 2);
     assert.equal((await start({ mode: 'practice', topic: first.type, difficulty: 2 })).status, 422);
     assert.equal((await start({ mode: 'practice', topic: first.type, difficulty: 3 })).status, 400);
     assert.equal((await start({ mode: 'practice', topic: 'invented' })).status, 400);
     assert.equal((await start({ mode: 'practice', topic: first.type, expectedGrade: 2 })).status, 409);
     assert.equal((await start({ mode: 'practice', topic: first.type, locale: 'en' })).status, 400);
-    // Every normal start is a new shuffled draw, including when an identical test is unfinished.
+    // Many seeds of one template must be refused in every test mode. Failed preparations preserve active answers; successful single-question starts still draw fresh content.
     for (const g of [1, 2, 3, 4] as const) {
       grade = g;
       bank = Array.from({ length: 80 }, (_, i) => ({ ...generateQuestion({ profile: 'complete', targetGrade: grade, type: 'matrix_3x3', difficulty: 1, seed: 51000 + i * 997 }), status: 'published' as const }));
       for (const mode of ['practice', 'adaptive', 'exam'] as const) {
         rows = [];
         const body = { mode, topic: 'matrix_3x3', difficulty: 1, expectedGrade: grade, questionCount: 7 };
-        const a = await start(body), count = mode === 'practice' ? 5 : mode === 'exam' ? 15 : 7;
-        assert.equal(a.status, 201, `${grade}/${mode}: ${JSON.stringify(a.body)}`); assert.equal(a.body.questions.length, count);
+        const rejected = await start(body);
+        assert.equal(rejected.status, 422);
+        assert.equal(rejected.body.code, 'INSUFFICIENT_DISTINCT_QUESTIONS');
+        assert.equal(rejected.body.preparedCount, 1);
+        assert.equal(rejected.body.requestedCount, mode === 'practice' ? 5 : mode === 'exam' ? 15 : 7);
+        assert.deepEqual(Object.keys(rejected.body).sort(), ['code','error','preparedCount','requestedCount']);
+        assert.equal(rows.length, 0, 'A failed preparation cannot insert a partial test');
+        const single = {...body, mode: 'adaptive', questionCount: 1};
+        const a = await start(single), count = 1;
+        assert.equal(a.status, 201, JSON.stringify(a.body));
         const snapshot = structuredClone(a.body.questions);
         const response = { mode: 'choice', optionId: rows[0].questions[0].correctOptionId };
         const answer = await originalFetch(`${origin}/api/learning/${a.body.id}/answer`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` }, body: JSON.stringify({ index: 0, response }) });
         assert.equal(answer.status, 200);
-        const b = await start(body);
+        const activeBefore = JSON.stringify(rows);
+        assert.equal((await start(body)).status, 422);
+        assert.equal(JSON.stringify(rows), activeBefore, 'Rejection must preserve active answers and rewards');
+        const b = await start(single);
         assert.equal(b.status, 201); assert.notEqual(b.body.id, a.body.id); assert.equal(b.body.questions.length, count);
-        assert.equal(rows[0].result.correctAnswers, 1); assert.equal(rows[0].result.blankAnswers, count - 1);
-        assert.equal(new Set(rows[1].questions.map(questionVisualKey)).size, count);
+        assert.equal(rows[0].result.correctAnswers, 1); assert.equal(rows[0].result.blankAnswers, 0);
         const oldKeys = new Set(rows[0].questions.map(questionVisualKey));
-        assert.ok(rows[1].questions.every((q: BaseQuestion) => !oldKeys.has(questionVisualKey(q))), `${grade}/${mode} must prefer unseen questions`);
+        assert.ok(rows[1].questions.every((q: BaseQuestion) => !oldKeys.has(questionVisualKey(q))));
         const resumed = await originalFetch(`${origin}/api/learning/${a.body.id}`, { headers: { Authorization: `Bearer ${token()}` } });
         const saved = await resumed.json() as any;
         assert.deepEqual(saved.questions, snapshot); assert.deepEqual(saved.answers['0'].response, response);
@@ -179,9 +188,10 @@ test('real authenticated learning API isolates published topics in all grades, c
     }
     rows = [];
     const maxCount = await start({ mode: 'adaptive', topic: 'matrix_3x3', questionCount: 50 });
-    assert.equal(maxCount.status, 201); assert.equal(maxCount.body.questions.length, 50);
+    assert.equal(maxCount.status, 422); assert.equal(maxCount.body.requestedCount, 50); assert.equal(rows.length, 0);
     const defaultCount = await start({ mode: 'adaptive', topic: 'matrix_3x3' });
-    assert.equal(defaultCount.status, 201); assert.equal(defaultCount.body.questions.length, 10);
+    assert.equal(defaultCount.status, 422); assert.equal(defaultCount.body.requestedCount, 10); assert.equal(rows.length, 0);
+    assert.equal((await start({ mode: 'adaptive', requireDistinctStyles: false })).status, 400, 'Clients cannot turn off the server diversity policy');
     for (const questionCount of [0, 51, 2.5, '5']) assert.equal((await start({ mode: 'adaptive', questionCount })).status, 400);
     assert.ok(reads >= 176);
     // Exercise the production route, authentication, bank policy and DTO together.

@@ -1,3 +1,39 @@
+# Güncel politika: kesin tarz tekrarı engeli
+
+23 Ekim 2026 güncellemesi `distinct-styles-3`, önceki yumuşak çeşitlendirme politikasının yerini alır. Aşağıdaki %93 karşılaştırması tarihsel rapordur; güncel davranış benzer soru kabul ederek istenen sayıyı doldurmak değildir.
+
+- Başarıyla hazırlanan bir testte hem kural hem geniş soru tarzı kimliği benzersiz olmak zorundadır. Banka, üretilmiş soru, eski istemci ve geçmişi en eski olandan tekrar kullanma politikası bu engeli aşamaz.
+- Renk, sayı, sözcük, hücre büyüklüğü, dönüş açısı/ekseni ve motor sürümü aynı görevi yeni bir tarz yapmaz. Katlama/delme/simetri tamamlama, küp açılımı/origami, farklı motorlarda döndürme/ayna, aynı harf kodu, sayı piramidi ve gölge eşleme ortak tarzlarla değerlendirilir. Gerçekten farklı kural aileleri ayrı kalır.
+- Uygun farklı tarz bulunamazsa HTTP 422 `INSUFFICIENT_DISTINCT_QUESTIONS` ile istenen sayı ve o hazırlamada bulunabilen sayı döner. Kısmi oturum eklenmez, mevcut oturum bitirilmez, yanıtlar/puanlar değiştirilmez. İstenen uzunluk veya seçilen konu sessizce değiştirilmez.
+- Seçim ekranında kullanıcı daha kısa hedefi veya tüm alanlardan karışık testi seçebilir; sonraki başlatma bu tercihi kullanır. Tek konu çalışmalarında o konunun az sayıdaki farklı tarzı aynı testte tekrar kullanılamaz. Tek soru hedefiyle 44 konunun tamamına erişim korunur.
+- Günlük üç görev, misafir demo ve eski yayımlanmış havuz seçicisinde de tekrar engeli vardır. Soru bankası üretimi/yönetici atölyesi çok sayıda alıştırma varyantı oluşturabilir; bunlar öğrenci testinde aynı tarzı tekrar ettiremez.
+- İngilizce hesap testleri de aynı kurala tabidir. Sonlu İngilizce havuzunda uzun test hazırlanamazsa tekrarlarla doldurulmaz; beş farklı tarz içeren karışık pratiğe geçme seçeneği gösterilir. Mevcut kaydedilmiş oturumlar ve geçmiş yanıtlar yeniden yazılmaz.
+
+## Güncel denetim
+
+`strict.json`: 8.000 bank sorusu kalite kapısından geçti. Dört sınıf, tüm 44 konu, alan filtreleri, banka/üretim, zorluk planları, oturum geçmişi, İngilizce hesap pratiği, günlük görev ve demo için 500 hazırlama isteği denetlendi.
+
+| Sonuç | Sayı |
+|---|---:|
+| İstenen uzunlukta oluşturulan test | 272 |
+| Yeterli farklı tarz bulunmadığı için açıkça reddedilen istek | 228 |
+| Oluşturulan testlerde kontrol edilen soru | 1.440 |
+| Tekrarlanan kural / tarz | 0 / 0 |
+| Tamamlanan 20 soruluk macera senaryosu | 16 / 16 |
+| Beklenmeyen doğrulama hatası | 0 |
+
+Banka ve üretimle, ardışık geçmişli tüm sınıflarda 5/15/20/30 soruluk karışık örnekler tamamlandı. 45 soruluk örnekler, 15 soruluk tek konu örnekleri ve kısıtlı alan/havuz örneklerinin bir kısmı bilerek reddedildi. Bu sayılar 228 testin hazır olduğu anlamına gelmez; tekrar içeren veya kısaltılmış test yayımlanmasını engellediğimiz durumlardır. Yeni soru tarzları yazılmadan bu havuzlarda her uzunluk sunulamaz. Algoritmik tarz sınıflandırması insan/psikometrik inceleme yerine geçmez.
+
+479 yazılım testi geçti. Gerçek öğrenme rotasının kimlik doğrulama, soru bankası ve oturum DTO zinciriyle yapılan testler, başarısız hazırlığın eski yanıtları koruduğunu ve istemcinin bu engeli kapatamadığını doğrular. Yeni politika için biçim/metin kimlikleri aynı sayılan gerçek motor örnekleri ve kullanıcıya gösterilen kurtarma seçenekleri de kontrol edilir.
+
+```sh
+npm run audit:strict-test-diversity -- /path/to/owner-bank.json /path/to/strict-report.json
+```
+
+---
+
+## Önceki sürümün tarihsel incelemesi
+
 # Test içi soru çeşitliliği — 23 Ekim 2026
 
 Aynı testte benzer görevler görülüyordu. Önceki seçim önce soru türü sayısını dengeliyor, aynı kuralı kullanan başka bir türü yeni görev sayabiliyordu. Sabit alan kotaları da tek tarzı olan bellek/sözel alanlarını tekrar ettiriyordu. Rastgele tohum, değişen sözcük, renk, hücre sayısı veya seçenek sırası bu sorunu çözmüyordu.

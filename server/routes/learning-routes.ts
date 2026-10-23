@@ -14,7 +14,7 @@ import { requireSupabaseAuth, requireVerifiedEmail, requireProfileRole, type Aut
 import { authenticatedRateLimitKey } from '../rate-limiters';
 import { EDUCATION_PROFILES, isSchoolGrade } from '../../src/features/questions/quality-policy';
 import { DEFAULT_ADAPTIVE_COUNT, fitsLearningSelection, learningStartSchema, sameLearningSelection, selectSessionCategory, type LearningDifficulty, type LearningSelection } from '../../src/features/student/learning-selection';
-import { topicCategory, topicQuestionCount } from '../../src/features/student/learning-topics';
+import { topicCategory } from '../../src/features/student/learning-topics';
 import { questionStimulusKey } from '../../src/features/questions/quality';
 import { loadPublishedLearningBank } from '../learning-bank';
 import { isQuestionReadyForStudents } from '../../src/features/questions/quality';
@@ -31,6 +31,7 @@ import type { UserProfile } from '../../src/types';
 import { createLockedAchievements } from '../../src/services/modules/shared';
 import { readPlatformSettings } from '../platform-settings';
 import { configuredExams } from '../../src/lib/platform-settings';
+import { QuestionDiversityError } from '../../src/features/questions/test-diversity';
 
 const routes = Router();
 routes.use('/learning', requireSupabaseAuth, requireVerifiedEmail, requireProfileRole('student'), sharedRateLimit('student-learning', 600, 600), rateLimit({ windowMs: 10 * 60_000, limit: 600, standardHeaders: 'draft-8', legacyHeaders: false, keyGenerator: authenticatedRateLimitKey, message: { error: 'Çalışma istek sınırına ulaşıldı. Biraz sonra yeniden dene.' } }));
@@ -62,6 +63,8 @@ async function commit(student: string, id: string, change: (s: LearningSession) 
   throw new LearningError('Başka cihazdaki değişiklik kaydediliyor. Yeniden dene.', 409);
 }
 function handleError(error: unknown, res: import('express').Response) {
+  if(error instanceof QuestionDiversityError)return res.status(422).json({error:error.message,code:error.code,
+    requestedCount:error.requestedCount,preparedCount:error.preparedCount});
   if (error instanceof LearningError || error instanceof GooglePlayError) return res.status(error.status).json({ error: error.message });
   throw error;
 }
@@ -108,8 +111,8 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
       if (seen.has(key)) return false;
       seen.add(key); return true;
     });
-    const count = topicQuestionCount(topicCandidates, requestedCount, topic);
-    if (!count) throw new LearningError('Seçilen sınıf, konu ve zorlukta yayımlanmış soru yok. Zorluk filtresini değiştirip yeniden dene.', 422);
+    const count = requestedCount;
+    if (topic!=='mixed'&&!topicCandidates.length) throw new LearningError('Seçilen sınıf, konu ve zorlukta yayımlanmış soru yok. Zorluk filtresini değiştirip yeniden dene.', 422);
     const modern = supportsReasoningFormat(req.query.questionFormat);
     const selection: LearningSelection = { ...(modern?{questionFormat:req.query.questionFormat as 'reasoning-8'|'professional-v2'}:{}), ...(parsed.data.mixCategories ? {mixCategories:true} : {}), topic, grade: profile.data.grade, difficulty, category, exam: mode === 'exam' ? exam : '', count, bankVersion: bank.bankVersion, ...(locale === 'en' ? { locale } : {}) };
     const active = await client.from('learning_sessions').select('*').eq('student_id', student).eq('mode', mode).is('finished_at', null).maybeSingle();
@@ -128,8 +131,9 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const candidates = topicCandidates.filter(q => fitsLearningSelection(q, selection) && gradeAppropriate(q) && formatReady(q)&&reasoningReady(q) && (locale !== 'en' || englishReady(q)));
     if (locale === 'en' && candidates.length < count) throw new LearningError('This activity is not available in English at this level. Try mixed practice.', 422);
     const exposure = recent.exposure;
-    const questions = selectLearningQuestions({ count, preferDiverseTypes:topic === 'mixed' && locale !== 'en', allowGeneration: topic === 'mixed', category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number],
-      redistributeRepeatedCategories: locale !== 'en' && topic === 'mixed' && category === 'mixed',
+    const questions = selectLearningQuestions({ count, preferDiverseTypes:topic === 'mixed' && locale !== 'en', allowGeneration: topic === 'mixed'&&locale!=='en', category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number],
+      requireDistinctStyles: true,
+      redistributeRepeatedCategories: topic === 'mixed' && category === 'mixed',
       ...(challengeMode?{difficultyPlan:scaffoldDifficultyPlan(adaptDifficultyPlan(grade,reasoningDifficultyPlan(grade,count,randomInt),recommendation))}:{}),
       // Finite, deliberately chosen topic exercises keep their approved review pool.
       // Mixed Turkish tests and adventures always require unseen content.

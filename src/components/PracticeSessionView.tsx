@@ -11,6 +11,7 @@ import {
   UserProfile
 } from '../types';
 import { generateDiverseQuestion, STUDENT_CATEGORY_TYPES } from '../features/questions/generators';
+import { QuestionDiversityError } from '../features/questions/test-diversity';
 import { demoQuestionsRemaining, isDemoUser, useDemoQuestion } from '../lib/demo-access';
 import { loadPublishedQuestionsForGrade, usePublishedQuestions } from '../features/questions/use-published-questions';
 import { selectPublishedPool } from '../features/questions/editorial-data';
@@ -257,7 +258,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
           category: selectedCategory,
           difficulty: diff,
           seed: Math.floor(Math.random() * 900000) + 100000 + i * 31,
-        }, qList);
+        }, qList, true);
         qList.push(q);
       }
   
@@ -282,7 +283,7 @@ export const PracticeSessionView: React.FC<PracticeSessionViewProps> = ({
       setInSetup(false);
     } catch (error) {
       console.warn('Practice question load failed:', error);
-      setStartError(error instanceof Error && (error.message.startsWith('Sınıf') || error.message.startsWith('Sınıfınıza'))
+      setStartError(error instanceof QuestionDiversityError ? error.message : error instanceof Error && (error.message.startsWith('Sınıf') || error.message.startsWith('Sınıfınıza'))
         ? error.message : 'Sorular yüklenemedi. Lütfen tekrar deneyin.');
     } finally {
       startingRef.current = false;

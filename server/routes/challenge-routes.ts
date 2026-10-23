@@ -7,6 +7,7 @@ import { aiLimiter } from '../rate-limiters';
 import { sharedRateLimit } from '../shared-rate-limit';
 import { generateDiverseQuestion } from '../../src/features/questions/generators';
 import type { BaseQuestion } from '../../src/types';
+import { QuestionDiversityError } from '../../src/features/questions/test-diversity';
 import { isSchoolGrade } from '../../src/features/questions/quality-policy';
 import { prepareQuestionReport } from '../support-validation';
 import { publicChallenge, answeredChallenge } from '../challenge-validation';
@@ -29,8 +30,10 @@ routes.post('/challenges/start', async (req: AuthenticatedRequest,res) => {
   const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Istanbul'}).format(new Date());
   const history=await client.from('daily_challenge_attempts').select('question').eq('student_id',req.authUser!.uid).eq('day',day);
   if(history.error)throw history.error;
-  const question=generateDiverseQuestion({profile:'professional',targetGrade:profile.grade,seed:randomInt(1,2147483647)},
-    (history.data||[]).map(row=>row.question as BaseQuestion));
+  let question:BaseQuestion;
+  try {question=generateDiverseQuestion({profile:'professional',targetGrade:profile.grade,seed:randomInt(1,2147483647)},
+    (history.data||[]).map(row=>row.question as BaseQuestion),true);}
+  catch(error){if(error instanceof QuestionDiversityError)return res.status(422).json({error:'Bugün için farklı bir görev hazırlanamadı. Biraz sonra yeniden dene.'});throw error;}
   const result=await client.rpc('issue_daily_challenge',{p_student:req.authUser!.uid,p_grade:profile.grade,p_question:question});
   if(result.error) throw result.error;
   if(!result.data) return res.status(409).json({error:'Bugünün üç görevi tamamlandı. Yarın yeniden görüşelim.'});

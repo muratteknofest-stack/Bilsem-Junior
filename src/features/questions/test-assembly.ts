@@ -1,7 +1,7 @@
 import type { BaseQuestion, DifficultyLevel } from '../../types';
 import { questionReasoningKey, questionStyleKey } from './reasoning-identity';
 
-export const TEST_ASSEMBLY_VERSION = 'diverse-mechanics-2';
+export const TEST_ASSEMBLY_VERSION = 'distinct-styles-3';
 
 /** Keep exact grade quotas, with a short introduction and consolidation item. */
 export function scaffoldDifficultyPlan(plan: readonly DifficultyLevel[]): DifficultyLevel[] {

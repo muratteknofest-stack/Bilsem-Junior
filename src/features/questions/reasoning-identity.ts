@@ -50,21 +50,42 @@ export function questionReasoningKey(q: Pick<BaseQuestion,'type'|'visualConfig'>
 export function questionStyleKey(q: Pick<BaseQuestion,'type'|'visualConfig'>): string {
   const b=q.visualConfig as Record<string,unknown>;
   let style: unknown = q.type;
-  if (b.displayMode==='symbolic_v2') style={kind:'symbolic',mechanic:b.mechanic,query:b.queryMode};
+  if (['dice_unfold','spatial_origami'].includes(q.type)) style='cube-opposite-face';
+  else if (['paper_folding','punch_folding','symmetry_completion'].includes(q.type)) style='reflection-completion';
+  else if (q.type==='visual_memory') style='memory-pattern';
+  else if (q.type==='shadow_matching') style='shadow-match';
+  else if (q.type==='word_scramble_logic') style='letter-order-code';
+  else if (q.type==='number_pyramid') style='sum-pyramid';
+  else if (q.type==='gear_rotation') style='gear-chain';
+  else if (q.type==='tangram_puzzle') style='match-missing-piece';
+  else if (b.displayMode==='symbolic_v2') style={kind:'symbolic',mechanic:b.mechanic,query:b.queryMode};
   else if (b.displayMode==='verified_board') {
     const v=q.visualConfig as Board;
-    style=v.kind==='transform' ? {kind:v.kind,sequence:!!v.sequence,operations:(v.transformSteps||[{operation:v.operation}]).map(s=>s.operation)} :
-      v.kind==='numbers' ? {kind:v.kind,rule:v.rule} :
-      v.kind==='matrix' ? {kind:v.kind,combined:!!v.matrixMode} :
-      v.kind==='machine' ? {kind:v.kind,query:v.machineQuery||'output'} :
-      v.kind==='order' ? {kind:v.kind,deduction:!!v.constraints} : {kind:v.kind,scope:v.countScope};
+    const operations=v.transformSteps||[{operation:v.operation}];
+    style=v.kind==='transform' ? {kind:'tile-transform',sequence:!!v.sequence,
+      operation:operations.length>1?'compose':v.operation==='rotate'?'rotate':'mirror'} :
+      v.kind==='numbers' ? {kind:'number-sequence',rule:v.rule} :
+      v.kind==='matrix'||v.kind==='overlay' ? {kind:'tile-combination',rotated:!!v.matrixMode} :
+      v.kind==='machine' ? {kind:'machine',query:v.machineQuery||'output'} :
+      v.kind==='order' ? {kind:'order',deduction:!!v.constraints} : {kind:v.kind,scope:v.countScope};
   } else if (b.displayMode==='colorful_board') {
-    style=q.type==='mirror_reflection' ? {kind:'transform',sequence:false,operations:['mirrorX']} : {kind:q.type,rule:b.mosaicRule};
-  } else if (b.displayMode==='curriculum_board')style={kind:q.type,relation:b.relation,period:b.period,axis:b.axis};
-  else if (q.type==='visual_analogy') style={kind:q.type,task:b.figureTask||'legacy'};
-  else if (['dice_unfold','spatial_origami'].includes(q.type)) style='cube-opposite-face';
-  else if (['paper_folding','punch_folding'].includes(q.type)) style='fold-and-open';
+    style=q.type==='mirror_reflection' ? {kind:'tile-transform',sequence:false,operation:'mirror'} :
+      q.type==='figure_completion' ? {kind:'mosaic-rule',rule:String(b.mosaicRule||'repeat-row').startsWith('shift')?'shift':'repeat'} :
+      {kind:q.type,task:'layer-order'};
+  } else if (b.displayMode==='curriculum_board') {
+    style=q.type==='figure_rotation' ? {kind:'tile-transform',sequence:false,operation:'rotate'} :
+      q.type==='number_pattern' ? {kind:'number-sequence',rule:'add'} :
+      q.type==='operation_machine' ? {kind:'machine',query:'output'} :
+      q.type==='figure_completion'||q.type==='matrix_3x3' ? {kind:'mosaic-rule',rule:'shift'} :
+      q.type==='raven_matrix' ? 'two-attribute-matrix' :
+      q.type==='logical_sequence' ? {kind:'order',deduction:false} :
+      q.type==='shape_equation'||q.type==='balance_scale' ? 'symbol-equations' :
+      q.type==='verbal_analogy' ? {kind:q.type,relation:b.relation} :
+      q.type==='visual_sequence' ? 'repeating-token-sequence' : {kind:q.type,task:'count-property'};
+  } else if (q.type==='visual_analogy') style=b.figureTask==='half_completion'?'reflection-completion':{kind:q.type,task:b.figureTask||'legacy'};
+  else if (q.type==='shape_equation') style='symbol-equations';
   else if (q.type==='cryptogram') style={kind:q.type,deduction:!!b.cipherRows};
   else if (q.type==='story_logic'||q.type==='weight_comparison') style={kind:'order',deduction:false};
+  else if (q.type==='spatial_relationship') style='grid-neighbour';
   return 'style:'+generateVisualFingerprint(style);
 }

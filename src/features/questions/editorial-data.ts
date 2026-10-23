@@ -1,6 +1,7 @@
 import type { BaseQuestion } from '../../types';
 import { auditQuestion, questionVisualKey, isQuestionReadyForStudents, assertQuestionReadyForStudents } from './quality';
 import { chooseDiverseCandidate } from './novelty';
+import { QuestionDiversityError } from './test-diversity';
 
 export function selectPublishedPool(generated: BaseQuestion[], published: BaseQuestion[]): BaseQuestion[] {
   const used = new Set<string>();
@@ -12,15 +13,13 @@ export function selectPublishedPool(generated: BaseQuestion[], published: BaseQu
     const candidates = published.filter(q => !used.has(q.id) && !usedVisuals.has(questionVisualKey(q)) && q.category === fallback.category &&
       q.difficulty === fallback.difficulty &&
       (!fallback.targetGrade || q.targetGrade === fallback.targetGrade || q.targetGrades?.includes(fallback.targetGrade)));
-    if (!candidates.length) {
-      usedVisuals.add(questionVisualKey(fallback));
-      selected.push(fallback);
-      return fallback;
-    }
     // Generated seeds vary by session; rotate through the approved bank rather
     // than giving every student the first matching question on every attempt.
     const offset = ((fallback.seed ?? index) + index * 101) >>> 0;
-    const matching = chooseDiverseCandidate([...candidates.slice(offset % candidates.length),...candidates.slice(0,offset % candidates.length)],selected);
+    const start=candidates.length?offset%candidates.length:0;
+    let matching:BaseQuestion;
+    try {matching=chooseDiverseCandidate([...candidates.slice(start),...candidates.slice(0,start),fallback],selected,true);}
+    catch(error){if(error instanceof QuestionDiversityError)throw new QuestionDiversityError(generated.length,selected.length);throw error;}
     used.add(matching.id);
     usedVisuals.add(questionVisualKey(matching));
     selected.push(matching);

@@ -15,6 +15,10 @@ import { professionalGradeTypes } from '../src/features/questions/reasoning-prof
 import { STUDENT_CATEGORY_TYPES } from '../src/features/questions/generators';
 import { generateProfessionalQuestion } from '../src/features/questions/professional-engine';
 import { chooseDiverseCandidate } from '../src/features/questions/novelty';
+import { QuestionDiversityError,readQuestionDiversityError } from '../src/features/questions/test-diversity';
+import { DiversityRecoveryNotice } from '../src/components/student/DiversityRecoveryNotice';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 function seededRandom(seed: number) {
   return (maximum: number) => {
@@ -153,13 +157,56 @@ test('mixed adventures transfer exhausted area quotas while retaining grade, len
   for(const grade of [1,2,3,4] as const) {
     const randomIndex=seededRandom(grade*971),plan=scaffoldDifficultyPlan(reasoningDifficultyPlan(grade,20,randomIndex));
     let seed=grade*100003;
-    const questions=selectLearningQuestions({count:20,category:'mixed',redistributeRepeatedCategories:true,
+    const questions=selectLearningQuestions({count:20,category:'mixed',redistributeRepeatedCategories:true,requireDistinctStyles:true,
       candidates:[],exposure:new Map(),difficultyPlan:plan,canUse:q=>q.targetGrade===grade&&isQuestionReadyForStudents(q),randomIndex,
       generate:(category,typeCounts,difficulty,reasoningCounts)=>generateVariedLearningQuestion({grade,category,difficulty:difficulty!,typeCounts,reasoningCounts,seed:++seed,randomIndex})});
     assert.deepEqual(questions.map(q=>q.difficulty),plan);
     assert.equal(new Set(questions.map(questionReasoningKey)).size,20);
+    assert.equal(new Set(questions.map(questionStyleKey)).size,20);
     assert.equal(new Set(questions.map(q=>q.category)).size,10);
   }
+});
+
+test('strict selection refuses a repeated style even with fresh IDs, new angles and explicit history reuse', () => {
+  const candidates=Array.from({length:40},(_,i)=>generateQuestion({targetGrade:4,type:'figure_rotation',difficulty:2,seed:(i+1)*7919}));
+  const input=JSON.stringify(candidates);
+  for(const repeatPolicy of ['unseen','oldest-first'] as const)assert.throws(()=>selectLearningQuestions({
+    count:2,category:'spatial',candidates,requireDistinctStyles:true,repeatPolicy,
+    exposure:new Map(),canUse:isQuestionReadyForStudents,generate:()=>candidates[30],
+  }),error=>error instanceof QuestionDiversityError&&error.preparedCount===1&&error.requestedCount===2);
+  assert.equal(JSON.stringify(candidates),input);
+  assert.throws(()=>chooseDiverseCandidate(candidates.slice(1),[candidates[0]],true),QuestionDiversityError);
+});
+
+test('engine changes and superficial transform changes cannot create a new style', () => {
+  const question=(type:BaseQuestion['type'],profile:'professional'|'complete',seed=7919)=>generateQuestion({type,profile,targetGrade:4,difficulty:4,seed});
+  for(const type of ['figure_rotation','number_pattern','number_pyramid','shape_equation','shadow_matching','word_scramble_logic','paper_folding'] as const){
+    const normal=question(type,'professional'),complete=question(type,'complete');
+    if(type==='figure_rotation') {
+      const direct=Array.from({length:40},(_,i)=>question(type,'professional',(i+1)*997)).find(q=>!(q.visualConfig as {transformSteps?:unknown}).transformSteps)!;
+      assert.equal(questionStyleKey(direct),questionStyleKey(complete));
+    } else if(type==='number_pattern') {
+      const easy=generateQuestion({type,profile:'professional',targetGrade:4,difficulty:1,seed:7919});
+      assert.equal(questionStyleKey(easy),questionStyleKey(complete));
+    } else assert.equal(questionStyleKey(normal),questionStyleKey(complete),type);
+  }
+  const left=question('dice_unfold','professional'),right=question('spatial_origami','professional',19937);
+  assert.equal(questionStyleKey(left),questionStyleKey(right));
+  const folds=question('punch_folding','professional');
+  assert.equal(questionStyleKey(folds),questionStyleKey({...folds,visualConfig:{...folds.visualConfig,folds:['y','x'],size:3}}));
+});
+
+test('diversity shortage metadata is bounded and recovery choices do not silently start or truncate a test', () => {
+  const error=new QuestionDiversityError(45,23);
+  const restored=readQuestionDiversityError({code:error.code,requestedCount:45,preparedCount:23});
+  assert.ok(restored instanceof QuestionDiversityError);
+  for(const payload of [null,{code:error.code,requestedCount:51,preparedCount:3},{code:error.code,requestedCount:5,preparedCount:5},
+    {code:error.code,requestedCount:'5',preparedCount:2},{code:error.code,requestedCount:5,preparedCount:-1}])assert.equal(readQuestionDiversityError(payload),null);
+  let starts=0;
+  const html=renderToStaticMarkup(React.createElement(DiversityRecoveryNotice,{error,busy:false,shorterCount:15,onMixed:()=>starts++,onShorter:()=>starts++}));
+  assert.equal(starts,0);
+  assert.match(html,/45/);assert.match(html,/23/);assert.match(html,/15 soruluk hedef seç/);
+  assert.match(html,/kendiliğinden değiştirilmez/);
 });
 
 test('limited topic pools spread all eligible rules before repeating one', () => {
