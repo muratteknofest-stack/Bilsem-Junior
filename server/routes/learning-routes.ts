@@ -36,6 +36,21 @@ import { configuredExams } from '../../src/lib/platform-settings';
 import { QuestionDiversityError } from '../../src/features/questions/test-diversity';
 
 const routes = Router();
+// Start timing before authentication so slow network/authorization reads are
+// visible as well as generation. Never log account IDs, tokens or question data.
+routes.post('/learning/start', (_req, res, next) => {
+  const started = performance.now();
+  let previous = started;
+  const stages: Record<string, number> = {};
+  res.locals.startTiming = (stage: string) => {
+    const now = performance.now();
+    stages[stage] = Math.round((now - previous) * 10) / 10;
+    previous = now;
+    res.setHeader('Server-Timing', [...Object.entries(stages).map(([name, ms]) => `${name};dur=${ms}`), `total;dur=${Math.round(now - started)}`].join(', '));
+  };
+  res.once('finish', () => console.info('[learning-start]', JSON.stringify({ status: res.statusCode, milliseconds: Math.round(performance.now() - started), stages })));
+  next();
+});
 routes.use('/learning', requireSupabaseAuth, requireVerifiedEmail, requireProfileRole('student'), sharedRateLimit('student-learning', 600, 600), rateLimit({ windowMs: 10 * 60_000, limit: 600, standardHeaders: 'draft-8', legacyHeaders: false, keyGenerator: authenticatedRateLimitKey, message: { error: 'Çalışma istek sınırına ulaşıldı. Biraz sonra yeniden dene.' } }));
 const startSchema = learningStartSchema;
 const responseSchema = z.discriminatedUnion('mode', [
@@ -82,9 +97,12 @@ routes.patch('/learning/grade', async (req: AuthenticatedRequest, res) => {
 });
 routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, keyGenerator: authenticatedRateLimitKey, message: { error: 'Biraz dinlenip yeniden çalışmaya başlayabilirsin.' } }), async (req: AuthenticatedRequest, res) => {
   try {
+    const timing = res.locals.startTiming as (stage: string) => void;
+    timing('auth');
     const parsed = startSchema.safeParse(req.body);
     if (!parsed.success) throw new LearningError('Çalışma seçenekleri geçersiz.', 400);
     await requireLearningAccess(req.authUser!.uid);
+    timing('access');
     const { mode, exam, locale, topic } = parsed.data, student = req.authUser!.uid, client = getServiceClient();
     // These reads are independent, account-scoped, and run only after access is checked.
     const [profile, configuration, active, recent] = await Promise.all([
@@ -93,6 +111,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
       client.from('learning_sessions').select('*').eq('student_id', student).eq('mode', mode).is('finished_at', null).maybeSingle(),
       loadRecentLearningContext(student),
     ]);
+    timing('context');
     if (profile.error) throw profile.error;
     if (active.error) throw active.error;
     if (!isSchoolGrade(profile.data.grade)) throw new LearningError('Çalışma için 1–4. sınıf bilgisi gerekli.');
@@ -115,6 +134,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
       ...(modern && topic === 'mixed' ? {types:professionalGradeTypes(grade),engines:CURRENT_REASONING_ENGINES} : {}),
       ...(challengeMode ? {minDifficulty:challengeFloor} : {}),
     });
+    timing('bank');
     const seen = new Set<string>();
     const topicCandidates = topic === 'mixed' ? bank.questions : bank.questions.filter(q => {
       if (q.type !== topic || q.targetGrade !== grade || q.category !== category || q.difficulty > EDUCATION_PROFILES[grade].maxDifficulty || (difficulty !== 'mixed' && q.difficulty !== difficulty) || !isQuestionReadyForStudents(q)) return false;
@@ -164,6 +184,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
         return generateVariedLearningQuestion({grade,category:nextCategory,difficulty:nextDifficulty,seed,typeCounts,reasoningCounts,exposure,acceptCandidate,legacy:!modern,lab:req.query.questionFormat===LEARNING_QUESTION_FORMAT});
       },
     });
+    timing('assembly');
     const latestProfile = await client.from('profiles').select('grade').eq('id', student).single();
     if (latestProfile.error) throw latestProfile.error;
     if (latestProfile.data.grade !== selection.grade) throw new LearningError('Sınıfın değişti. Yeni sınıfınla tekrar başla.', 409);
@@ -173,6 +194,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const inserted = await client.from('learning_sessions').insert({ ...session, selection }).select('*').single();
     if (inserted.error?.code === '23505') { const concurrent = await client.from('learning_sessions').select('*').eq('student_id', student).eq('mode', mode).is('finished_at', null).single(); if (concurrent.error) throw concurrent.error; if (!sameLearningSelection(concurrent.data.selection, selection)) throw new LearningError('Başka bir ekranda farklı bir çalışma başlatıldı. Yeniden dene.', 409); return res.json(learningView(concurrent.data as LearningSession)); }
     if (inserted.error) throw inserted.error;
+    timing('save');
     return res.status(201).json(learningView(inserted.data as LearningSession));
   } catch (error) { return handleError(error, res); }
 });

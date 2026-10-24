@@ -19,6 +19,48 @@ import { QuestionDiversityError,readQuestionDiversityError } from '../src/featur
 import { DiversityRecoveryNotice } from '../src/components/student/DiversityRecoveryNotice';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { readQuestionPages } from '../server/question-pages';
+
+test('a short test audits chosen bank candidates rather than every unused variant', () => {
+  const candidates=Array.from({length:100},(_,i)=>generateQuestion({targetGrade:2,type:'number_pattern',difficulty:2,seed:(i+1)*7919}));
+  let audits=0;
+  const selected=selectLearningQuestions({count:1,category:'numerical',candidates,allowGeneration:false,
+    exposure:new Map(),randomIndex:max=>max-1,
+    canUse:q=>{audits++;return isQuestionReadyForStudents(q);},generate:()=>{throw Error('disabled');}});
+  assert.equal(selected.length,1);
+  assert.equal(audits,1,'Unselected questions must not block the start with full solution audits');
+  assert.ok(isQuestionReadyForStudents(selected[0]));
+});
+
+test('lazy bank proofs reject invalid candidates in fresh and explicit history-reuse paths', () => {
+  const valid=generateQuestion({targetGrade:2,type:'number_pattern',difficulty:2,seed:7919});
+  const bad={...valid,id:'bad-answer',correctOptionId:'impossible'};
+  const wrongGrade={...valid,id:'wrong-grade',targetGrade:1 as const};
+  for(const reuse of [false,true]) {
+    const audits=new Map<string,number>();
+    const selected=selectLearningQuestions({count:1,category:'numerical',candidates:[bad,wrongGrade,valid],allowGeneration:false,
+      exposure:reuse?new Map([[questionStimulusKey(valid),100]]):new Map(),repeatPolicy:reuse?'oldest-first':'unseen',
+      randomIndex:max=>max-1,canUse:q=>{audits.set(q.id,(audits.get(q.id)||0)+1);return q.targetGrade===2&&isQuestionReadyForStudents(q);},
+      generate:()=>{throw Error('disabled');}});
+    assert.equal(selected[0],valid);
+    assert.equal(audits.get(bad.id),1);assert.equal(audits.get(wrongGrade.id),1);
+    assert.equal(audits.get(valid.id),1);
+    assert.throws(()=>selectLearningQuestions({count:1,category:'numerical',candidates:[bad],allowGeneration:false,
+      exposure:new Map(),canUse:()=>{throw Error('proof unavailable');},generate:()=>{throw Error('disabled');}}),QuestionDiversityError);
+  }
+});
+
+test('exact keyset counts avoid an empty query without truncating provider-capped pages', async () => {
+  const all=Array.from({length:7},(_,i)=>({id:String(i)}));
+  for(const exact of [true,false]) {
+    let reads=0;
+    const rows=await readQuestionPages(async after=>{
+      reads++;const remaining=all.filter(row=>after===null||row.id>after);
+      return {data:remaining.slice(0,3),error:null,...(exact?{count:remaining.length}:{})};
+    },'read failed',1000);
+    assert.deepEqual(rows,all);assert.equal(reads,exact?3:4);
+  }
+});
 
 function seededRandom(seed: number) {
   return (maximum: number) => {

@@ -81,6 +81,7 @@ test('real authenticated learning API preserves mixed choices, permits practice 
     const request = new Request(input as RequestInfo, init), u = new URL(request.url);
     if (u.hostname !== 'topic-api-fixture.invalid') return originalFetch(input, init);
     let value: unknown;
+    const headers=new Headers({'Content-Type':'application/json'});
     if (u.pathname === '/auth/v1/user') value = { id: userId(), email: 'student@example.invalid', email_confirmed_at: new Date().toISOString(), app_metadata: { role: 'student' } };
     else if (u.pathname === '/rest/v1/rpc/is_user_session_active' || u.pathname === '/rest/v1/rpc/consume_api_limit') value = true;
     else if (u.pathname === '/rest/v1/profiles') {
@@ -102,10 +103,14 @@ test('real authenticated learning API preserves mixed choices, permits practice 
       const level = u.searchParams.get('difficulty');
       if(level)assert.ok(level.startsWith('eq.') || level.startsWith('gte.'));
       const offset = Number(u.searchParams.get('offset') || 0), limit = Number(u.searchParams.get('limit') || 1000);
-      value = bank.filter(q => q.status === 'published' && q.targetGrade === grade && (!types.length || types.includes(q.type)) && q.id > (u.searchParams.get('id')?.slice(3) || '') &&
+      const matching = bank.filter(q => q.status === 'published' && q.targetGrade === grade && (!types.length || types.includes(q.type)) && q.id > (u.searchParams.get('id')?.slice(3) || '') &&
         (!engines || engines.includes(q.authoring?.engine || '')) &&
         (!level || (level.startsWith('gte.') ? q.difficulty >= Number(level.slice(4)) : q.difficulty === Number(level.slice(3)))) &&
-        (!u.searchParams.has('category') || `eq.${q.category}` === u.searchParams.get('category'))).sort((a,b) => a.id.localeCompare(b.id)).slice(offset,offset+limit).map(q => ({ id: q.id, data: q }));
+        (!u.searchParams.has('category') || `eq.${q.category}` === u.searchParams.get('category'))).sort((a,b) => a.id.localeCompare(b.id));
+      const page=matching.slice(offset,offset+limit);
+      value=page.map(q=>({id:q.id,data:q}));
+      assert.ok(request.headers.get('prefer')?.includes('count=exact'));
+      headers.set('content-range',`${page.length?`${offset}-${offset+page.length-1}`:'*'}/${matching.length}`);
     } else if(u.pathname==='/rest/v1/user_private_state')value={values:{}};
     else if (u.pathname === '/rest/v1/learning_sessions') {
       if (request.method === 'POST') {
@@ -117,7 +122,7 @@ test('real authenticated learning API preserves mixed choices, permits practice 
       const body = await request.json(), row = rows.find(r => r.id === body.p_session);
       Object.assign(row, { answers: body.p_answers, result: body.p_result, finished_at: body.p_finished ? new Date().toISOString() : null, revision: row.revision + 1 }); value = row;
     } else throw Error(`Unexpected fixture request: ${request.method} ${u.pathname}`);
-    return new Response(JSON.stringify(value), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify(value), { status: 200, headers });
   }) as typeof fetch;
   const app = express(); app.use(express.json()); app.use('/api', learningRoutes);
   app.use((err: any, _req: any, res: any, _next: any) => res.status(500).json({ error: err.message }));
@@ -125,7 +130,7 @@ test('real authenticated learning API preserves mixed choices, permits practice 
   const origin = `http://127.0.0.1:${(server.address() as any).port}`;
   const start = async (body: object, authenticated = true, modern: boolean | string = false) => {
     const res = await originalFetch(`${origin}/api/learning/start${modern?'?questionFormat='+(typeof modern==='string'?modern:LEARNING_QUESTION_FORMAT):''}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(authenticated ? { Authorization: `Bearer ${token()}` } : {}) }, body: JSON.stringify(body) });
-    return { status: res.status, body: await res.json() as any };
+    return { status: res.status, timing:res.headers.get('server-timing'), body: await res.json() as any };
   };
   try {
     assert.equal((await start({ mode: 'practice', topic: 'paper_folding' }, false)).status, 401);
@@ -138,8 +143,11 @@ test('real authenticated learning API preserves mixed choices, permits practice 
         // Same-category distractor and draft rows must never enter the topic session.
         const other = generateQuestion({ profile: 'complete', targetGrade: grade, type: topic === 'paper_folding' ? 'mirror_reflection' : 'paper_folding', difficulty: 1, seed: 7181 });
         bank = [q, { ...q, id: 'draft-only', status: 'draft' }, { ...other, status: 'published' }];
+        const beforeReads=reads;
         const result = await start({ mode: 'practice', questionCount: 1, topic, category: 'mixed', difficulty: 1, expectedGrade: grade });
         assert.equal(result.status, 201, `${grade}/${topic}: ${JSON.stringify(result.body)}`);
+        assert.equal(reads,beforeReads+1,'Exact count must avoid the empty end-of-bank round trip');
+        for(const stage of ['auth','access','context','bank','assembly','save','total'])assert.ok(result.timing?.includes(`${stage};dur=`));
         assert.equal(result.body.questions.length, 1);
         assert.equal(rows[0].selection.topic, topic);
         for (const question of result.body.questions) {

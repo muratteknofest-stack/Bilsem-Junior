@@ -130,11 +130,31 @@ export function selectLearningQuestions(options: {
   const groups = new Map<CognitiveCategory, Candidate[]>();
   for (const question of shuffle(options.candidates, randomIndex)) {
     try {
-      if (!options.canUse(question)) continue;
+      // Identity/ranking is cheap. Proving every unused bank item blocks start
+      // on the size of the entire bank, rather than the requested test length.
       const group=groups.get(question.category)||[];
       group.push(describe(question));groups.set(question.category,group);
     } catch { /* Invalid content cannot enter a selection pool. */ }
   }
+  const audited=new WeakMap<BaseQuestion,boolean>();
+  const canUse=(question:BaseQuestion)=>{
+    const previous=audited.get(question);
+    if(previous!==undefined)return previous;
+    let valid=false;
+    try{valid=options.canUse(question);}catch{/* A failed proof is not eligible. */}
+    audited.set(question,valid);return valid;
+  };
+  // Audit the best-ranked eligible candidate, then try the next on failure.
+  // Every return path (including explicit history reuse) uses this gate.
+  const provedBest=(items:Candidate[],better:(next:Candidate,best:Candidate)=>boolean)=>{
+    const remaining=[...items];
+    while(remaining.length){
+      const best=remaining.reduce((best,next)=>better(next,best)?next:best);
+      if(canUse(best.question))return best;
+      remaining.splice(remaining.indexOf(best),1);
+    }
+    return undefined;
+  };
   const seen=new Set<string>(),seenVisuals=new Set<string>(),selected:BaseQuestion[]=[];
   const typeCounts=new Map<QuestionType,number>(),reasoningCounts=new Map<string,number>();
   const categoryCounts=new Map<CognitiveCategory,number>();
@@ -154,7 +174,7 @@ export function selectLearningQuestions(options: {
     const inspect=(area:CognitiveCategory):Candidate|undefined=>{
       if(inspected.has(area))return inspected.get(area);
       const fresh=(groups.get(area)||[]).filter(item=>!item.lastAssigned&&available(item,difficulty));
-      let best=fresh.reduce<Candidate|undefined>((best,next)=>!best||better(next,best)?next:best,undefined);
+      let best=provedBest(fresh,better);
       if(options.allowGeneration!==false&&(!best||rank(best).some(value=>value>0))) {
         // The generator searches every eligible type, rather than locking onto
         // one underused type whose remaining seeds all repeat the same rule.
@@ -162,9 +182,9 @@ export function selectLearningQuestions(options: {
           const q=options.generate(area,typeCounts,difficulty,reasoningCounts,question=>{
             if(question.category!==area)return false;
             const candidate=describe(question);
-            return !candidate.lastAssigned&&available(candidate,difficulty)&&options.canUse(question);
+            return !candidate.lastAssigned&&available(candidate,difficulty)&&canUse(question);
           });
-          if(q.category!==area||!options.canUse(q))continue;
+          if(q.category!==area||!canUse(q))continue;
           const item=describe(q);
           if(options.requireDistinctStyles&&(reasoningCounts.has(item.rule)||reasoningCounts.has(item.style))){if(attempt>=1)break;continue;}
           if(item.lastAssigned||!available(item,difficulty))continue;
@@ -197,8 +217,8 @@ export function selectLearningQuestions(options: {
         [category,...(configured||AVAILABLE_CATEGORIES).filter(area=>area!==category)]:[category];
       for(const area of areas){
         const recent=(groups.get(area)||[]).filter(item=>available(item,difficulty));
-        chosen=recent.reduce<Candidate|undefined>((best,next)=>!best||next.lastAssigned<best.lastAssigned||
-          next.lastAssigned===best.lastAssigned&&better(next,best)?next:best,undefined);
+        chosen=provedBest(recent,(next,best)=>next.lastAssigned<best.lastAssigned||
+          next.lastAssigned===best.lastAssigned&&better(next,best));
         if(chosen)break;
       }
     }

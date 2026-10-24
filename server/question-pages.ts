@@ -1,4 +1,4 @@
-type Page<T> = { data: T[] | null; error: unknown };
+type Page<T> = { data: T[] | null; error: unknown; count?: number | null };
 
 /** Keyset pagination cannot silently truncate the bank at a provider row limit. */
 export async function readQuestionPages<T extends { id: string }>(
@@ -11,7 +11,7 @@ export async function readQuestionPages<T extends { id: string }>(
   const seen = new Set<string>();
   let afterId: string | null = null;
   for (;;) {
-    const { data, error } = await fetchPage(afterId, pageSize);
+    const { data, error, count } = await fetchPage(afterId, pageSize);
     if (error || !Array.isArray(data)) throw new Error(failureMessage);
     if (!data.length) return rows;
     for (const row of data) {
@@ -20,7 +20,11 @@ export async function readQuestionPages<T extends { id: string }>(
       rows.push(row);
     }
     if (rows.length > maxRows) throw new Error(failureMessage);
+    // An exact count covers this keyset query (including its afterId filter).
+    // Unlike a short page, it proves exhaustion even when the provider caps rows.
+    if (Number.isSafeInteger(count) && count === data.length) return rows;
     afterId = data[data.length - 1].id;
     // Always ask for the next page, even if the provider capped this page below our request.
   }
 }
+
