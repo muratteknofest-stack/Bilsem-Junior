@@ -1,0 +1,39 @@
+{
+  "schema": "bilsem-privacy-preparation-v1",
+  "status": "draft_not_activated",
+  "preparedAt": "2026-10-24",
+  "operator": {
+    "name": "Quantum tech",
+    "address": "Trabzon tekno kent",
+    "email": "zeka.kupu.test@gmail.com"
+  },
+  "retentionProposal": {
+    "inactiveAccountReviewMonths": 12,
+    "parentNoticeBeforeInactiveDeletionDays": 30,
+    "subjectRequestMaximumDays": 30,
+    "closedSupportTicketDays": 90,
+    "applicationSecurityLogTargetDays": 90,
+    "applicationEncryptedBackupDays": 30,
+    "providerBackupRetention": "requires_plan_and_contract_confirmation",
+    "billingRetention": "determine_by_document_type_before_sales"
+  },
+  "automationStatus": "No automatic purge or new scheduled notification was enabled by preparing this file.",
+  "transferStatus": {
+    "vercel": "DPA plan coverage and Turkish transfer mechanism require confirmation; annexes drafted.",
+    "supabase": "Selected database region eu-central-1; DPA and Turkish transfer mechanism require confirmation; annexes drafted.",
+    "otherProviders": "SMTP, Wordwall, Pexels, Google Fonts and password-checking flows require purpose/role review."
+  },
+  "approvalRequiredBeforeActivation": [
+    "Full legal identity and service address verified",
+    "Operator adopts retention and assigns daily/monthly review owners",
+    "Supplier agreement scope and transfer mechanism documented",
+    "Parental notice and valid child-data processing mechanism implemented and checked",
+    "Google Play operator declaration approved by authorized operator"
+  ],
+  "neverInclude": [
+    "Passwords",
+    "Secret API keys",
+    "Actual student records",
+    "Fabricated signatures or contract dates"
+  ]
+}
