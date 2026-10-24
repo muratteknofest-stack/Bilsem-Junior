@@ -8,6 +8,7 @@ import { parseQuestionImport, selectPublishedPool } from '../src/features/questi
 import { ProfessionalBoard } from '../src/features/questions/renderers/ProfessionalBoard.tsx';
 import type { DifficultyLevel } from '../src/types.ts';
 import { generateQuestion } from '../src/features/questions/generators';
+import { QuestionDiversityError } from '../src/features/questions/test-diversity';
 
 test('11 upgraded engines produce deterministic, uniquely solvable items over 3300 cases', () => {
   for (const type of VERIFIED_TYPES) for (let d = 1; d <= 6; d++) for (let seed = 1; seed <= 50; seed++) {
@@ -66,7 +67,7 @@ test('published pool excludes drafts and wrong grades and avoids duplicates', ()
   const different = {...generateQuestion({type:'number_pyramid',targetGrade:2,seed:7919,difficulty:2}),status:'published' as const};
   const selected = selectPublishedPool([q, q], [published, different, { ...published, id: 'draft', status: 'draft' }]);
   assert.deepEqual(new Set(selected.map(q=>q.id)),new Set(['published',different.id]));
-  assert.throws(()=>selectPublishedPool([q,q],[published]),/farklı soru tarzı/);
+  assert.throws(()=>selectPublishedPool([q,q],[published]), (error: unknown) => error instanceof QuestionDiversityError && error.requestedCount === 2 && error.preparedCount === 1);
   assert.equal(selectPublishedPool([q], [{ ...published, targetGrade: 4 }])[0].id, q.id);
 });
 
@@ -101,4 +102,5 @@ test('different seeds provide substantive variety', () => {
     assert.ok(keys.size >= 90, type + ': ' + keys.size + '/100 unique questions');
   }
 });
+
 

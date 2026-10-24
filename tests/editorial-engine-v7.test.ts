@@ -8,6 +8,7 @@ import { independentlySolveBoard } from '../src/features/questions/independent-b
 import { auditQuestion, isQuestionReadyForStudents, questionStimulusKey } from '../src/features/questions/quality';
 import { recentQuestionExposure, selectLearningQuestions } from '../server/learning-question-selection';
 import { generateQuestion } from '../src/features/questions/generators';
+import { QuestionDiversityError } from '../src/features/questions/test-diversity';
 
 test('interleaved sequence solvers predict a seventh term from six visible givens', () => {
   const board: Board = { displayMode: 'verified_board', kind: 'numbers', rule: 'interleaved', values: [2, 10, 5, 15, 8, 20] };
@@ -89,7 +90,7 @@ test('visible givens define exposure even with fresh wrong choices or a differen
   const recollected = structuredClone(numeric); recollected.id = 'new'; recollected.options.reverse();
   // Changing only wrong answers must not fill two session places.
   const wrong = recollected.options.find(o => o.id !== recollected.correctOptionId)!; wrong.visualData = { textNumber: 99 };
-  assert.throws(() => selectLearningQuestions({ count: 2, category: 'numerical', candidates: [numeric, recollected], exposure: new Map(), canUse: () => true, generate: () => { throw Error('No new content'); } }), /yeterli farklı/);
+  assert.throws(() => selectLearningQuestions({ count: 2, category: 'numerical', candidates: [numeric, recollected], exposure: new Map(), canUse: () => true, generate: () => { throw Error('No new content'); } }), (error: unknown) => error instanceof QuestionDiversityError && error.requestedCount === 2 && error.preparedCount === 1);
 });
 
 test('saved previous engine versions retain their original templates and keys', () => {
@@ -104,3 +105,4 @@ test('saved previous engine versions retain their original templates and keys', 
     assert.equal(isQuestionReadyForStudents(old), true, old.id);
   }
 });
+

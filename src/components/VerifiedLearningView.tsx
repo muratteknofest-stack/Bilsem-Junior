@@ -3,6 +3,7 @@ import { STORY_QUESTION_COUNT, type StoryStage, type StoryReward } from '../feat
 import { StoryResultCelebration, StoryAnswerReview } from './student/StoryStars';
 import { apiFetch } from '../lib/api-fetch';
 import { LearningSetupPanel } from './student/LearningSetupPanel';
+import { StoryMissionIntro } from './student/StoryMissionIntro';
 import { DiversityRecoveryNotice } from './student/DiversityRecoveryNotice';
 import { QuestionDiversityError } from '../features/questions/test-diversity';
 import { useStudentReducedMotion } from '../features/student/experience-preferences';
@@ -213,7 +214,7 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
       onMixed={()=>{setTopic('mixed');setCategory('mixed');setQuestionCount('5');if(shortestExam)setExam(shortestExam.id);resetDiversityNotice();}}
       shorterCount={shorterCount||undefined} onShorter={shorterCount?()=>{if(mode!=='exam')setQuestionCount(String(shorterCount));else if(shorterExam)setExam(shorterExam.id);resetDiversityNotice();}:undefined}/>:error&&<div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{error}</div>}
     <AnswerHistory items={history} />
-    {!session && storyStage ? <section className="bj-story-setup" aria-label="Hikâye görevi"><img src="/brand/junior-fox.svg" alt="Junior rehber"/><p>HİKÂYE MODU · {grade}. SINIF</p><h2>{storyStage.title}</h2>{storyStage.narrative&&<p>{storyStage.narrative}</p>}<p>{storyStage.task} {STORY_QUESTION_COUNT} soruyu tamamla, yıldızlarını kazan ve sıradaki durağı aç. Cevaplarını birlikte inceleyelim.</p><button type="button" className={button} disabled={busy} onClick={()=>void start()}>{busy?'Görev hazırlanıyor…':'Maceraya başla'}</button></section> : !session ? <LearningSetupPanel mode={mode} grade={grade} review={!!reviewMistakeId} busy={busy} topic={topic} onTopic={setTopic} category={category} onCategory={setCategory} difficulty={difficulty} onDifficulty={setDifficulty} questionCount={questionCount} onCount={setQuestionCount} validCount={validQuestionCount} exam={exam} onExam={setExam} exams={exams} onStart={() => void start()} /> : <>
+    {!session && storyStage ? <StoryMissionIntro stage={storyStage} grade={grade} questionCount={STORY_QUESTION_COUNT} busy={busy} onStart={() => void start()} /> : !session ? <LearningSetupPanel mode={mode} grade={grade} review={!!reviewMistakeId} busy={busy} topic={topic} onTopic={setTopic} category={category} onCategory={setCategory} difficulty={difficulty} onDifficulty={setDifficulty} questionCount={questionCount} onCount={setQuestionCount} validCount={validQuestionCount} exam={exam} onExam={setExam} exams={exams} onStart={() => void start()} /> : <>
       {session.result && <section aria-label="Çalışma sonucu" className={`zp-result ${storyStage?'bj-story-result':''} space-y-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-5`}>
         {!storyStage&&<Trophy size={38} aria-hidden="true" />}
         <h2 className="text-xl font-extrabold">Çalışman tamamlandı</h2><p>{session.result.correctAnswers} doğru · {session.result.wrongAnswers} yanlış · {session.result.blankAnswers} boş · %{session.result.scorePercentage} başarı</p><p className="font-bold text-emerald-800">{session.result.xp} XP kazandın</p>{storyStage&&<StoryResultCelebration key={session.id} correct={session.result.correctAnswers} total={session.result.totalQuestions} bestCorrect={storyReward?.sessionId===session.id?storyReward.bestCorrect:undefined}/>}
@@ -255,4 +256,5 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
     </div>
   </main>;
 }
+
 
