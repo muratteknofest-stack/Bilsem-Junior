@@ -9,7 +9,9 @@
         {
           "type": "request.headers",
           "op": "delete",
-          "target": { "key": "cookie" }
+          "target": {
+            "key": "cookie"
+          }
         }
       ],
       "continue": true
@@ -226,5 +228,8 @@
     "api/index.js": {
       "maxDuration": 60
     }
-  }
+  },
+  "regions": [
+    "fra1"
+  ]
 }
