@@ -26,3 +26,10 @@ test('invalid custom counts and busy requests cannot launch another session', ()
     assert.match(html, /<button[^>]+aria-label="Yeni testi başlat"[^>]+disabled=""/);
   }
 });
+
+test('a focused area is labelled honestly instead of pretending to be an all-area mixture', () => {
+  const html = renderToStaticMarkup(<LearningSetupPanel mode="adaptive" grade={1} review={false} busy={false} topic="mixed" onTopic={noop} category="numerical" onCategory={noop} difficulty="mixed" onDifficulty={noop} questionCount="20" onCount={noop} validCount exam="mini" onExam={noop} exams={[]} onStart={noop} />);
+  assert.match(html, /Seçtiğin alandan farklı sorular/);
+  assert.ok(!html.includes('her soru tarzı bir kez'));
+  assert.ok(html.includes('Aynı soru test içinde tekrarlanmaz'));
+});

@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import vm from 'node:vm';
 import { blogConfig, BLOG_CATEGORIES, readArticles, renderBlog } from '../scripts/blog-engine';
 import { blogPlugin } from '../scripts/blog-vite-plugin';
@@ -8,6 +10,20 @@ import { PLATFORM_INFO } from '../src/content/platform-info';
 
 const origin = 'https://example.org';
 const production = { PUBLIC_SITE_URL: origin, VERCEL_ENV: 'production' };
+
+test('editorial articles parse identically with Windows and Unix line endings', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bilsem-blog-lines-'));
+  try {
+    const directory = path.join(root, 'content', 'blog');
+    fs.mkdirSync(directory, { recursive: true });
+    const name = '1-sinif-dusunme-oyunlari.md';
+    const source = fs.readFileSync(path.join('content', 'blog', name), 'utf8').replace(/\r\n?/g, '\n');
+    fs.writeFileSync(path.join(directory, name), source);
+    const unix = readArticles(root);
+    fs.writeFileSync(path.join(directory, name), source.replace(/\n/g, '\r\n'));
+    assert.deepEqual(readArticles(root), unix);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
 
 test('production cannot publish static copies of database-backed policy pages', () => {
   const emitted: string[] = [];

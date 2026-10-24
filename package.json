@@ -27,6 +27,8 @@
     "backup:database": "node scripts/backup-database.mjs",
     "monitor:site": "node scripts/monitor-site.mjs",
     "test:layout": "node scripts/check-question-layout.mjs",
+    "test:test-experience": "node scripts/check-test-experience.mjs",
+    "test:capacity-ui": "node scripts/check-learning-capacity-ui.mjs",
     "test:question-art": "node scripts/check-question-art.mjs",
     "test:smtp": "node --import tsx scripts/test-smtp.ts",
     "pilot:e2e": "node --import tsx scripts/pilot-family-e2e.ts",

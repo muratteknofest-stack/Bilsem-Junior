@@ -11,7 +11,8 @@ import { EDUCATION_PROFILES } from '../src/features/questions/quality-policy';
 import { LEARNING_TOPICS, topicCategory } from '../src/features/student/learning-topics';
 import { DEFAULT_ADAPTIVE_COUNT, fitsLearningSelection, learningStartSchema, sameLearningSelection, type LearningSelection } from '../src/features/student/learning-selection';
 import { selectLearningQuestions } from '../server/learning-question-selection';
-import { isQuestionReadyForStudents, questionVisualKey } from '../src/features/questions/quality';
+import { isQuestionReadyForStudents, questionVisualKey, questionStimulusKey } from '../src/features/questions/quality';
+import { AVAILABLE_CATEGORIES } from '../src/features/student/available-categories';
 import { StudentTopicPractice } from '../src/components/student/StudentTopicPractice';
 import type { BaseQuestion, DifficultyLevel } from '../src/types';
 import { needsReasoningFormat, LEARNING_QUESTION_FORMAT, PREVIOUS_PROFESSIONAL_QUESTION_FORMAT, LEGACY_REASONING_QUESTION_FORMAT } from '../src/features/student/learning-question-format';
@@ -68,7 +69,7 @@ test('adaptive question counts are bounded integers and participate in saved sel
   assert.equal(sameLearningSelection({ ...selection, count: 10 }, selection), false);
 });
 
-test('real authenticated learning API isolates published topics in all grades, rejects repeated styles without changing active sessions or requested length', async () => {
+test('real authenticated learning API preserves mixed choices, permits practice variants, and rejects duplicate puzzles without changing active sessions', async () => {
   const originalFetch = globalThis.fetch;
   const priorUrl = process.env.SUPABASE_URL, priorKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   process.env.SUPABASE_URL = 'https://topic-api-fixture.invalid';
@@ -154,17 +155,20 @@ test('real authenticated learning API isolates published topics in all grades, r
     assert.equal((await start({ mode: 'practice', topic: 'invented' })).status, 400);
     assert.equal((await start({ mode: 'practice', topic: first.type, expectedGrade: 2 })).status, 409);
     assert.equal((await start({ mode: 'practice', topic: first.type, locale: 'en' })).status, 400);
-    // Many seeds of one template must be refused in every test mode. Failed preparations preserve active answers; successful single-question starts still draw fresh content.
+    // Repeating IDs or options cannot turn two displayed puzzles into a full test.
+    // Failures preserve active answers; a successful restart still prefers a fresh puzzle.
     for (const g of [1, 2, 3, 4] as const) {
       grade = g;
-      bank = Array.from({ length: 80 }, (_, i) => ({ ...generateQuestion({ profile: 'complete', targetGrade: grade, type: 'matrix_3x3', difficulty: 1, seed: 51000 + i * 997 }), status: 'published' as const }));
+      const originals = [51000, 51997].map(seed => generateQuestion({ profile: 'complete', targetGrade: grade, type: 'matrix_3x3', difficulty: 1, seed }));
+      assert.equal(new Set(originals.map(questionStimulusKey)).size, 2);
+      bank = Array.from({ length: 80 }, (_, i) => ({ ...originals[i % 2], id: `duplicate-${i}`, status: 'published' as const }));
       for (const mode of ['practice', 'adaptive', 'exam'] as const) {
         rows = [];
         const body = { mode, topic: 'matrix_3x3', difficulty: 1, expectedGrade: grade, questionCount: mode==='practice'?5:7 };
         const rejected = await start(body);
         assert.equal(rejected.status, 422);
         assert.equal(rejected.body.code, 'INSUFFICIENT_DISTINCT_QUESTIONS');
-        assert.equal(rejected.body.preparedCount, 1);
+        assert.equal(rejected.body.preparedCount, 2);
         assert.equal(rejected.body.requestedCount, mode === 'practice' ? 5 : mode === 'exam' ? 15 : 7);
         assert.deepEqual(Object.keys(rejected.body).sort(), ['code','error','preparedCount','requestedCount']);
         assert.equal(rows.length, 0, 'A failed preparation cannot insert a partial test');
@@ -196,6 +200,25 @@ test('real authenticated learning API isolates published topics in all grades, r
     assert.equal((await start({ mode: 'adaptive', requireDistinctStyles: false })).status, 400, 'Clients cannot turn off the server diversity policy');
     for (const questionCount of [0, 51, 2.5, '5']) assert.equal((await start({ mode: 'adaptive', questionCount })).status, 400);
     assert.ok(reads >= 176);
+    // Reproduce the first-grade UI: a mixed adaptive request without the story-only flag.
+    // An empty published bank must still produce the full requested verified session.
+    grade=1;bank=[];
+    for(const difficulty of [1,2,'mixed'] as const)for(const questionCount of [20,50]) {
+      rows=[];
+      const result=await start({mode:'adaptive',category:'mixed',difficulty,questionCount,expectedGrade:1},true,true);
+      assert.equal(result.status,201,JSON.stringify(result.body));
+      assert.equal(result.body.questions.length,questionCount);
+      assert.equal(rows[0].selection.category,'mixed');
+      assert.equal(new Set(rows[0].questions.map((q:BaseQuestion)=>q.category)).size,AVAILABLE_CATEGORIES.length);
+      assert.equal(new Set(rows[0].questions.map(questionStimulusKey)).size,questionCount);
+      assert.ok(rows[0].questions.every((q:BaseQuestion)=>q.targetGrade===1&&isQuestionReadyForStudents(q)));
+    }
+    // One topic may use different verified examples of the same skill.
+    rows=[];bank=Array.from({length:80},(_,i)=>({...generateQuestion({profile:'complete',targetGrade:1,type:'number_pattern',difficulty:1,seed:61001+i*997}),status:'published' as const}));
+    const focused=await start({mode:'adaptive',topic:'number_pattern',difficulty:1,questionCount:20,expectedGrade:1},true,true);
+    assert.equal(focused.status,201,JSON.stringify(focused.body));
+    assert.equal(focused.body.questions.length,20);
+    assert.ok(focused.body.questions.every((q:BaseQuestion)=>q.type==='number_pattern'&&q.difficulty===1));
     // Exercise the production route, authentication, bank policy and DTO together.
     // An old published bank must not starve the new reasoning variants.
     for(const g of [1,2,3,4] as const){

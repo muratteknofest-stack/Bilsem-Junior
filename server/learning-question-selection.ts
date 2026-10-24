@@ -21,6 +21,14 @@ export const RECENT_SESSION_LIMIT = 30;
 export const RECENT_HISTORY_DAYS = 30;
 type RecentSession = { questions: BaseQuestion[]; answers?: Record<string,{correct?:boolean}>; created_at: string };
 
+/** Renaming an equivalent topic cannot make the same displayed task fresh. */
+export function learningStimulusKey(question: Pick<BaseQuestion,'type'|'visualConfig'>) {
+  const type = ['dice_unfold','spatial_origami'].includes(question.type) ? 'dice_unfold' :
+    ['paper_folding','punch_folding'].includes(question.type) ? 'paper_folding' :
+    ['matrix_3x3','raven_matrix'].includes(question.type) ? 'matrix_3x3' : question.type;
+  return questionStimulusKey({ ...question, type });
+}
+
 export function assertLearningQuestionFormat(questions:BaseQuestion[],format:unknown) {
   if(questions.some(q=>needsCurrentQuestionFormat(q)?format!==LEARNING_QUESTION_FORMAT:needsProfessionalV2Format(q)?!supportsProfessionalV2Format(format):needsReasoningFormat(q)&&!supportsReasoningFormat(format)))throw new LearningError('Bu çalışmadaki yeni soru türleri için uygulamayı güncellemelisin. Önceki cevapların korunuyor.',426);
 }
@@ -44,8 +52,8 @@ export function recentQuestionExposure(sessions: RecentSession[], includeReasoni
     for (const question of session.questions) {
       try {
         if (!question?.type || !question.visualConfig || !Array.isArray(question.options)) continue;
-        const key = questionStimulusKey(question);
-        exposure.set(key, Math.max(exposure.get(key) || 0, assignedAt));
+        for(const key of [questionStimulusKey(question),learningStimulusKey(question)])
+          exposure.set(key, Math.max(exposure.get(key) || 0, assignedAt));
         if(includeReasoning)for(const rule of [questionReasoningKey(question),questionStyleKey(question)])exposure.set(rule,Math.max(exposure.get(rule)||0,assignedAt));
       } catch { /* A damaged historical snapshot cannot establish exposure. */ }
     }
@@ -99,7 +107,7 @@ export function balancedCategoryPlan(count: number, category: CognitiveCategory 
 export function selectLearningQuestions(options: {
   count: number; category: CognitiveCategory | 'mixed'; candidates: BaseQuestion[];
   exposure: ReadonlyMap<string, number>; canUse: (question: BaseQuestion) => boolean;
-  generate: (category: CognitiveCategory, typeCounts: ReadonlyMap<QuestionType,number>, difficulty?: DifficultyLevel, reasoningCounts?: ReadonlyMap<string,number>) => BaseQuestion; preferDiverseTypes?: boolean; randomIndex?: (max: number) => number; categories?: CognitiveCategory[]; allowGeneration?: boolean; difficultyPlan?: readonly DifficultyLevel[];
+  generate: (category: CognitiveCategory, typeCounts: ReadonlyMap<QuestionType,number>, difficulty?: DifficultyLevel, reasoningCounts?: ReadonlyMap<string,number>, acceptCandidate?: (question: BaseQuestion) => boolean) => BaseQuestion; preferDiverseTypes?: boolean; randomIndex?: (max: number) => number; categories?: CognitiveCategory[]; allowGeneration?: boolean; difficultyPlan?: readonly DifficultyLevel[];
   repeatPolicy?: 'unseen' | 'oldest-first';
   /** Mixed tests may transfer a repeated-style slot to another eligible area. */
   redistributeRepeatedCategories?: boolean;
@@ -113,9 +121,9 @@ export function selectLearningQuestions(options: {
   if(options.difficultyPlan && options.difficultyPlan.length!==options.count)throw new LearningError('Zorluk planı çalışma uzunluğuyla uyuşmuyor.');
   type Candidate = { question: BaseQuestion; key: string; visual: string; rule: string; style: string; lastAssigned: number };
   const describe = (question: BaseQuestion): Candidate => {
-    const key=questionStimulusKey(question), visual=questionVisualKey(question);
+    const key=learningStimulusKey(question), visual=questionVisualKey(question);
     return {question,key,visual,rule:questionReasoningKey(question),style:questionStyleKey(question),
-      lastAssigned:Math.max(options.exposure.get(key)||0,options.exposure.get(visual)||0)};
+      lastAssigned:Math.max(options.exposure.get(key)||0,options.exposure.get(questionStimulusKey(question))||0,options.exposure.get(visual)||0)};
   };
   const groups = new Map<CognitiveCategory, Candidate[]>();
   for (const question of shuffle(options.candidates, randomIndex)) {
@@ -149,7 +157,11 @@ export function selectLearningQuestions(options: {
         // The generator searches every eligible type, rather than locking onto
         // one underused type whose remaining seeds all repeat the same rule.
         for(let attempt=0;attempt<8;attempt++)try {
-          const q=options.generate(area,typeCounts,difficulty,reasoningCounts);
+          const q=options.generate(area,typeCounts,difficulty,reasoningCounts,question=>{
+            if(question.category!==area)return false;
+            const candidate=describe(question);
+            return !candidate.lastAssigned&&available(candidate,difficulty)&&options.canUse(question);
+          });
           if(q.category!==area||!options.canUse(q))continue;
           const item=describe(q);
           if(options.requireDistinctStyles&&(reasoningCounts.has(item.rule)||reasoningCounts.has(item.style))){if(attempt>=1)break;continue;}
@@ -161,7 +173,11 @@ export function selectLearningQuestions(options: {
       inspected.set(area,best);return best;
     };
     let chosen=inspect(category);
-    if(options.category==='mixed'&&options.redistributeRepeatedCategories&&(!chosen||rank(chosen)[0]>0||rank(chosen)[1]>0)) {
+    // Ordinary practice keeps balanced area quotas. A familiar skill is useful
+    // reinforcement, not a reason to search every other area again. Strict
+    // assemblies may redistribute styles; all mixed tests can recover a truly
+    // exhausted area without reusing an already displayed puzzle.
+    if(options.category==='mixed'&&options.redistributeRepeatedCategories&&(!chosen||options.requireDistinctStyles&&(rank(chosen)[0]>0||rank(chosen)[1]>0))) {
       const areas=shuffle(configured||[...AVAILABLE_CATEGORIES],randomIndex)
         .sort((a,b)=>(categoryCounts.get(a)||0)-(categoryCounts.get(b)||0));
       // Keep all ten areas represented, then use a different eligible mechanic
@@ -185,8 +201,7 @@ export function selectLearningQuestions(options: {
       }
     }
     if(!chosen) {
-      if(options.requireDistinctStyles)throw new QuestionDiversityError(options.count,selected.length);
-      throw new LearningError('Bu çalışma için yeterli farklı ve doğrulanmış soru hazır değil.');
+      throw new QuestionDiversityError(options.count,selected.length);
     }
     seen.add(chosen.key);seenVisuals.add(chosen.visual);selected.push(chosen.question);
     typeCounts.set(chosen.question.type,(typeCounts.get(chosen.question.type)||0)+1);
@@ -197,7 +212,7 @@ export function selectLearningQuestions(options: {
 }
 
 /** Prefer an unused, independently proved topic before repeating a template in that area. */
-export function generateVariedLearningQuestion(options:{grade:SchoolGrade; category:CognitiveCategory; difficulty:DifficultyLevel; seed:number; typeCounts:ReadonlyMap<QuestionType,number>; reasoningCounts?:ReadonlyMap<string,number>; exposure?:ReadonlyMap<string,number>; legacy?:boolean; lab?:boolean; randomIndex?:(max:number)=>number}) {
+export function generateVariedLearningQuestion(options:{grade:SchoolGrade; category:CognitiveCategory; difficulty:DifficultyLevel; seed:number; typeCounts:ReadonlyMap<QuestionType,number>; reasoningCounts?:ReadonlyMap<string,number>; exposure?:ReadonlyMap<string,number>; acceptCandidate?:(question:BaseQuestion)=>boolean; legacy?:boolean; lab?:boolean; randomIndex?:(max:number)=>number}) {
   const pool=professionalGradeTypes(options.grade).filter(type=>STUDENT_CATEGORY_TYPES[options.category].includes(type));
   if(!pool.length)throw new LearningError('Bu alan için doğrulanmış soru türü bulunamadı.');
   const variants=[...pool.map(type=>({type,mechanic:undefined as undefined|typeof LAB_MECHANICS[number]})),...(!options.legacy&&options.lab!==false?LAB_MECHANICS.filter(mechanic=>pool.includes(LAB_TOPICS[mechanic])).map(mechanic=>({type:LAB_TOPICS[mechanic],mechanic})):[])];
@@ -209,6 +224,9 @@ export function generateVariedLearningQuestion(options:{grade:SchoolGrade; categ
       const seed=(options.seed+i*10007+typeIndex*104729)%2147483647||1;
       let q=mechanic?generateLabQuestion(mechanic,seed,options.difficulty,options.grade):generateQuestion({profile:'professional',targetGrade:options.grade,category:options.category,type,difficulty:options.difficulty,seed});
       if(options.legacy&&q.authoring?.engine==='verified-8')q={...generateLegacyProfessional(q.type,q.seed,q.difficulty),targetGrade:options.grade,targetGrades:[options.grade],ageGroup:options.grade<=2?'1-2':'3-4'};
+      // A fresh seed may still draw a previously used stimulus. Search another
+      // seed or mechanic inside this pass instead of returning that dead end.
+      if(options.acceptCandidate&&!options.acceptCandidate(q))continue;
       if(!isQuestionReadyForStudents(q))continue;
       const key=questionReasoningKey(q),style=questionStyleKey(q);
       const rank=[options.reasoningCounts?.get(key)||0,options.reasoningCounts?.get(style)||0,options.typeCounts.get(type)||0,

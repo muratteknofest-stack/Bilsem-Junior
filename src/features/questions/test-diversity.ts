@@ -5,7 +5,7 @@ export class QuestionDiversityError extends Error {
   readonly code = DIVERSITY_ERROR_CODE;
   readonly status = 422;
   constructor(readonly requestedCount: number, readonly preparedCount: number) {
-    super(`Bu seçimde ${preparedCount} farklı soru tarzı hazırlanabildi. ${requestedCount} soruluk testi benzer kalıpları tekrarlamadan hazırlayamadık. Daha kısa bir hedef veya tüm alanlardan karışık test seçebilirsin.`);
+    super(`Bu seçim için ${preparedCount} farklı ve doğrulanmış soru hazırlanabildi. ${requestedCount} soruluk hedefini tamamlayacak kadar uygun soru bulunamadı. Daha kısa bir hedef, başka bir zorluk veya tüm alanlardan karışık test seçebilirsin.`);
     this.name = 'QuestionDiversityError';
   }
 }

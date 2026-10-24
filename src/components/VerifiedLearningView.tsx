@@ -8,11 +8,12 @@ import { QuestionDiversityError } from '../features/questions/test-diversity';
 import { useStudentReducedMotion } from '../features/student/experience-preferences';
 import { sound } from '../lib/sound';
 import { AnswerFeedbackLedger, feedbackDuration, type AnswerFeedback } from '../features/student/answer-feedback';
+import { sessionProgress } from '../features/student/session-progress';
 import { FocusedQuestionScreen } from './FocusedQuestionScreen';
 import { LearningRefreshNotice } from './LearningRefreshNotice';
 import { ArrowLeft, ArrowRight, Clock3, BookOpen, Gamepad2, Sparkles, Trophy, Tablet, CheckCircle2 } from 'lucide-react';
 import './VerifiedLearningView.css';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { BaseQuestion } from '../types';
 import { LEARNING_TOPICS, isLearningTopic, topicCategory, type LearningTopic } from '../features/student/learning-topics';
 import { COGNITIVE_CATEGORY_LABELS, QUESTION_TYPE_LABELS } from '../types';
@@ -37,6 +38,8 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
   const reducedMotion = useStudentReducedMotion();
   const feedbackLedger = useRef(new AnswerFeedbackLedger());
   const [feedback, setFeedback] = useState<AnswerFeedback | null>(null);
+  const feedbackWait = useRef<(() => void) | null>(null);
+  const continueFeedback = () => { feedbackWait.current?.(); };
   const celebratedResult = useRef('');
   const [category, setCategory] = useState<LearningCategory>(storyStage?.category || (isAvailableCategory(initialCategory) ? initialCategory : 'mixed'));
   const [topic, setTopic] = useState<LearningTopic>(isLearningTopic(initialTopic) ? initialTopic : 'mixed');
@@ -67,7 +70,7 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
   const deadlineGate = useRef(new DeadlineFinishGate());
   const mounted = useRef(true);
   const heading = useRef<HTMLHeadingElement>(null);
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; feedbackWait.current?.(); }; }, []);
   const title = mode === 'exam' ? 'Denemelerim' : mode === 'adaptive' ? 'Adaptif çalışma' : 'Zeka pratiğim';
   const run = async (action: () => Promise<LearningSessionView>) => {
     try { return await gate.current.run(async () => {
@@ -111,13 +114,13 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
     tick(); const timer = setInterval(tick, 1000); return () => clearInterval(timer);
   }, [session?.id, session?.expiresAt, session?.result]);
   const q = session?.questions[index], answer = session?.answers[String(index)];
-  const solution = session?.solutions?.[String(index)] || (answer?.correctOptionId && answer.explanation ? { correctOptionId: answer.correctOptionId, explanation: answer.explanation } : undefined);
+  const solution = useMemo(() => session?.solutions?.[String(index)] || (answer?.correctOptionId && answer.explanation ? { correctOptionId: answer.correctOptionId, explanation: answer.explanation } : undefined), [session?.solutions, index, answer]);
   const revealed = answer?.correct !== undefined;
   const submitted = !!session?.result || (mode !== 'exam' && revealed);
   const expired = !!session && !session.result && Date.now() >= Date.parse(session.expiresAt);
   const needsFinish = !!session && !session.result && (expired || nextUnansweredIndex(session) < 0);
   // Existing renderers only consume visible puzzle fields. They never score this DTO.
-  const renderQuestion = q ? { ...q, ...(solution || {}) } as BaseQuestion : null;
+  const renderQuestion = useMemo(() => q ? { ...q, ...(solution || {}) } as BaseQuestion : null, [q, solution]);
   const remember = (completed: LearningSessionView) => {
     if (!mounted.current) return;
     const entries = completed.questions.flatMap((question, i) => {
@@ -138,7 +141,11 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
         if (confirmed.kind === 'correct') sound.playSuccess();
         else if (confirmed.kind === 'incorrect') sound.playError();
         else sound.playClick();
-        await new Promise(resolve => setTimeout(resolve, feedbackDuration(reducedMotion)));
+        await new Promise<void>(resolve => {
+          const complete = () => { clearTimeout(timer); feedbackWait.current = null; resolve(); };
+          const timer = setTimeout(complete, feedbackDuration(reducedMotion, confirmed.kind));
+          feedbackWait.current = complete;
+        });
         if (mounted.current) setFeedback(null);
       });
       if (mounted.current) setIndex(advanced.index);
@@ -178,7 +185,7 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
   }, [session?.id, session?.result, mode, reviewMistakeId, storyStage, onStoryComplete]);
   if(session&&!session.result&&q&&renderQuestion) {
     const canVisit=(i:number)=>i>=0&&i<session.questions.length&&(mode==='exam'||!!session.answers[String(i)]||i===nextUnansweredIndex(session));
-    return <FocusedQuestionScreen adventureEffect={storyStage?(['burst','orbit','leaves'] as const)[Math.floor(index/5)%3]:undefined} feedback={feedback} question={renderQuestion} sessionKey={`${session.id}-${index}`} index={index} total={session.questions.length} remaining={remaining} busy={busy} submitted={submitted} expired={expired} response={response} error={error} onChange={changeResponse} onLeave={()=>void leave()} onPrevious={canVisit(index-1)?()=>void goTo(index-1):undefined} onNext={canVisit(index+1)?()=>void goTo(index+1):undefined} onRetry={needsFinish?()=>void finish():response?.mode==='choice'&&response.optionId?()=>void submit():undefined} onRetryLabel={needsFinish?'Sonuçları yükle':'Yeniden gönder'} onReloadResults={()=>void finish()} tools={<>
+    return <FocusedQuestionScreen mode={mode} progress={sessionProgress(session)} onContinueFeedback={continueFeedback} adventureEffect={storyStage?(['burst','orbit','leaves'] as const)[Math.floor(index/5)%3]:undefined} feedback={feedback} question={renderQuestion} sessionKey={`${session.id}-${index}`} index={index} total={session.questions.length} remaining={remaining} busy={busy} submitted={submitted} expired={expired} response={response} error={error} onChange={changeResponse} onLeave={()=>void leave()} onPrevious={canVisit(index-1)?()=>void goTo(index-1):undefined} onNext={canVisit(index+1)?()=>void goTo(index+1):undefined} onRetry={needsFinish?()=>void finish():response?.mode==='choice'&&response.optionId?()=>void submit():undefined} onRetryLabel={needsFinish?'Sonuçları yükle':'Yeniden gönder'} onReloadResults={()=>void finish()} tools={<>
       <LearningRefreshNotice/>
       <p>Şıkkı seçince cevabın kaydedilir ve sonraki soru açılır. {isExam?'Çözümler deneme bitince gösterilir.':'Önceki soruların çözümlerini buradan inceleyebilirsin.'}</p>
       <nav aria-label="Soru seçimi">{session.questions.map((item,i)=>{const saved=session.answers[String(i)];const label=saved?.correct===undefined?(saved?'Yanıtlandı':'Boş'):(saved.correct?'Doğru':'Yanlış');return <button key={item.id} disabled={busy||!canVisit(i)} aria-current={i===index?'step':undefined} onClick={()=>void goTo(i)} aria-label={`${i+1}. soru, ${label}`}>{i+1} · {label}</button>;})}</nav>

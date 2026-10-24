@@ -35,7 +35,7 @@ try {
    assert.equal(await dialog.isVisible(),false);
    assert.equal(await page.getByRole('button',{name:'Konu seç',exact:true}).getAttribute('data-current-topic'),'paper_folding');
    await begin.click();
-   assert.deepEqual(await page.evaluate(()=>window.launchSelection),{topic:'paper_folding',difficulty:1,count:20});
+   assert.deepEqual(await page.evaluate(()=>window.launchSelection),{topic:'paper_folding',category:'mixed',difficulty:1,count:20});
    const custom=page.getByRole('spinbutton',{name:'Soru sayısı',exact:true});
    for(const value of ['','0','51','2.5']) {await custom.fill(value);assert.equal(await begin.isDisabled(),true);}
    await custom.fill('10');

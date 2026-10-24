@@ -13,7 +13,7 @@ import { getServiceClient } from '../supabase-admin';
 import { requireSupabaseAuth, requireVerifiedEmail, requireProfileRole, type AuthenticatedRequest } from '../security';
 import { authenticatedRateLimitKey } from '../rate-limiters';
 import { EDUCATION_PROFILES, isSchoolGrade } from '../../src/features/questions/quality-policy';
-import { DEFAULT_ADAPTIVE_COUNT, fitsLearningSelection, learningStartSchema, sameLearningSelection, selectSessionCategory, type LearningDifficulty, type LearningSelection } from '../../src/features/student/learning-selection';
+import { DEFAULT_ADAPTIVE_COUNT, fitsLearningSelection, learningStartSchema, sameLearningSelection, type LearningDifficulty, type LearningSelection } from '../../src/features/student/learning-selection';
 import { topicCategory } from '../../src/features/student/learning-topics';
 import { questionStimulusKey } from '../../src/features/questions/quality';
 import { loadPublishedLearningBank } from '../learning-bank';
@@ -22,7 +22,7 @@ import { loadRecentLearningContext, selectLearningQuestions, generateVariedLearn
 import { reasoningDifficultyPlan } from '../../src/features/questions/reasoning-profile';
 import { LEARNING_QUESTION_FORMAT, supportsReasoningFormat, supportsProfessionalV2Format, needsCurrentQuestionFormat, needsProfessionalV2Format, needsReasoningFormat } from '../../src/features/student/learning-question-format';
 import { AVAILABLE_CATEGORIES } from '../../src/features/student/available-categories';
-import { QUESTION_TYPE_LABELS, COGNITIVE_CATEGORY_LABELS, type BaseQuestion, type SkillMastery } from '../../src/types';
+import { QUESTION_TYPE_LABELS, COGNITIVE_CATEGORY_LABELS, type BaseQuestion } from '../../src/types';
 import { prepareQuestionReport } from '../support-validation';
 import { LearningError, answerLearningSession, finishLearningSession, learningTotals, learningView, learningUpdateView, prepareLearningQuestions, type LearningSession } from '../learning-model';
 import { eligibleReward, type RewardFacts } from '../learning-rewards';
@@ -92,14 +92,9 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const difficulty = parsed.data.difficulty as LearningDifficulty;
     if (difficulty !== 'mixed' && difficulty > EDUCATION_PROFILES[profile.data.grade].maxDifficulty) throw new LearningError('Bu zorluk seçtiğin sınıf için uygun değil.', 400);
     if (locale === 'en' && topic !== 'mixed') throw new LearningError('Topic selection is available in the Turkish curriculum.', 400);
-    let category = topicCategory(topic, mode === 'exam' ? 'mixed' : parsed.data.category);
-    if (mode === 'adaptive' && locale !== 'en' && topic === 'mixed') {
-      const progress = await client.from('user_private_state').select('values').eq('user_id', student).maybeSingle();
-      if (progress.error) throw progress.error;
-      let masteries: SkillMastery[] = [];
-      try { masteries = JSON.parse(progress.data?.values?.yapyap_mastery || '[]'); } catch { /* Empty history. */ }
-      category = selectSessionCategory(category, masteries, parsed.data.mixCategories);
-    }
+    // A mixed route stays mixed, including older clients which omit mixCategories.
+    // Adaptation adjusts difficulty below; it must not replace the child's area choice.
+    const category = topicCategory(topic, mode === 'exam' ? 'mixed' : parsed.data.category);
     const configuration = await readPlatformSettings();
     const settings = configuredExams(configuration.settings).find(e => e.id === exam)!;
     const requestedCount = mode === 'exam' ? settings.count : mode === 'adaptive' ? parsed.data.questionCount ?? DEFAULT_ADAPTIVE_COUNT : parsed.data.questionCount ?? 5;
@@ -132,7 +127,9 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     if (locale === 'en' && candidates.length < count) throw new LearningError('This activity is not available in English at this level. Try mixed practice.', 422);
     const exposure = recent.exposure;
     const questions = selectLearningQuestions({ count, preferDiverseTypes:topic === 'mixed' && locale !== 'en', allowGeneration: topic === 'mixed'&&locale!=='en', category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number],
-      requireDistinctStyles: true,
+      // Prefer diverse mechanics, then reinforce them with different verified puzzles.
+      // One style per test makes long tests and single-topic practice impossible.
+      requireDistinctStyles: false,
       redistributeRepeatedCategories: topic === 'mixed' && category === 'mixed',
       ...(challengeMode?{difficultyPlan:scaffoldDifficultyPlan(adaptDifficultyPlan(grade,reasoningDifficultyPlan(grade,count,randomInt),recommendation))}:{}),
       // Finite, deliberately chosen topic exercises keep their approved review pool.
@@ -140,12 +137,12 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
       repeatPolicy: locale === 'en' || topic !== 'mixed' ? 'oldest-first' : 'unseen',
       ...(locale === 'en' ? {categories:[...new Set(candidates.map(q=>q.category))]} : {}),
       candidates, exposure, canUse: q => fitsLearningSelection(q, selection) && gradeAppropriate(q) && formatReady(q)&&reasoningReady(q)&&isQuestionReadyForStudents(q) && (locale !== 'en' || englishReady(q)),
-      generate: (nextCategory,typeCounts,plannedDifficulty,reasoningCounts) => {
+      generate: (nextCategory,typeCounts,plannedDifficulty,reasoningCounts,acceptCandidate) => {
         if (topic !== 'mixed') throw new LearningError('Seçilen konunun yayımlanmış soruları kullanılmalı.');
         if (locale === 'en') throw new LearningError('English practice is temporarily unavailable. Please try again.', 503);
         const nextDifficulty = plannedDifficulty ?? (difficulty === 'mixed' ? pickGradeChallenge(grade) : difficulty);
         const seed=randomInt(1,2147483647);
-        return generateVariedLearningQuestion({grade,category:nextCategory,difficulty:nextDifficulty,seed,typeCounts,reasoningCounts,exposure,legacy:!modern,lab:req.query.questionFormat===LEARNING_QUESTION_FORMAT});
+        return generateVariedLearningQuestion({grade,category:nextCategory,difficulty:nextDifficulty,seed,typeCounts,reasoningCounts,exposure,acceptCandidate,legacy:!modern,lab:req.query.questionFormat===LEARNING_QUESTION_FORMAT});
       },
     });
     const latestProfile = await client.from('profiles').select('grade').eq('id', student).single();

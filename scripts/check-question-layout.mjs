@@ -1,14 +1,14 @@
 // Local component fixture: real Chromium layout, no authenticated API/database claim.
-import {createServer} from 'vite';
+import {createQuestionFixtureServer} from './question-fixture-server.mjs';
 import {chromium} from 'playwright';
 import fs from 'node:fs/promises';
 const output=process.env.LAYOUT_OUTPUT||'/tmp/zekapark-layout';
 await fs.mkdir(output,{recursive:true});
-const server=await createServer({server:{host:'127.0.0.1',port:5182,strictPort:true}});
+const server=await createQuestionFixtureServer(5182);
 await server.listen();
-const browser=await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE,args:['--no-sandbox','--disable-dev-shm-usage']}: {})});
+const browser=await chromium.launch({headless:true,args:['--no-proxy-server'],...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE}: {})});
 const page=await browser.newPage({viewport:{width:360,height:640},deviceScaleFactor:1});const pageErrors=[];page.on('pageerror',e=>{pageErrors.push(e.message);console.log('ERROR',e.message);});
-await page.goto('http://127.0.0.1:5182/tests/browser/question-screen.html');await page.waitForSelector('.zp-answer-option');await page.screenshot({path:output+'/zekapark-mobile.png'});
+await page.goto('http://127.0.0.1:5182/tests/browser/question-screen.html',{waitUntil:'commit',timeout:30000});await page.waitForSelector('.zp-answer-option',{timeout:90000});await page.screenshot({path:output+'/zekapark-mobile.png'});
 
 const failures=[];let count=0;
 for(const [width,height] of [[320,480],[320,568],[360,560],[360,640],[390,844],[600,960],[667,375],[768,1024],[820,1180],[1024,1366],[1024,768]]){

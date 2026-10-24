@@ -20,7 +20,7 @@ interface Photo { source: string; title: string; image: string; license: string 
 export const escapeHtml = (value: string) => value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 export function readArticles(root = process.cwd()): BlogArticle[] {
   return fs.readdirSync(path.join(root, 'content/blog')).filter(f => f.endsWith('.md')).map(file => {
-    const [metaLine, ...lines] = fs.readFileSync(path.join(root, 'content/blog', file), 'utf8').split('\n');
+    const [metaLine, ...lines] = fs.readFileSync(path.join(root, 'content/blog', file), 'utf8').replace(/\r\n?/g, '\n').split('\n');
     const meta = JSON.parse(metaLine);
     const chunks = lines.join('\n').trim().split(/\n\n+/);
     const excerpt = chunks.shift()!, answer = chunks.shift()!;

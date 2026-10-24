@@ -34,10 +34,10 @@ export function LearningSetupPanel(props: Props) {
   const [filter, setFilter] = useState<LearningCategory>('mixed');
   const countHelp = useId();
   const topicHeading = useId();
-  const topicTitle = topic === 'mixed' ? 'Sürpriz karışım' : QUESTION_TYPE_LABELS[topic];
+  const topicTitle = topic !== 'mixed' ? QUESTION_TYPE_LABELS[topic] : category === 'mixed' ? 'Sürpriz karışım' : COGNITIVE_CATEGORY_LABELS[category];
   const visibleTopics = LEARNING_TOPICS.filter(type => (filter === 'mixed' || topicCategory(type, 'mixed') === filter) && QUESTION_TYPE_LABELS[type].toLocaleLowerCase('tr-TR').includes(query.trim().toLocaleLowerCase('tr-TR')));
   const closeTopics = () => { dialog.current?.close(); topicButton.current?.focus({ preventScroll: true }); };
-  const chooseTopic = (value: LearningTopic) => { tap(2); onTopic(value); closeTopics(); };
+  const chooseTopic = (value: LearningTopic) => { tap(2); if(value==='mixed')onCategory('mixed'); onTopic(value); closeTopics(); };
   return <section className="zp-launchpad" aria-label="Çalışma tercihleri">
     <div className="zp-launch-intro">
       <div className="zp-launch-toy" aria-hidden="true"><Gamepad2 size={38} /><Star className="zp-launch-star" size={17} /></div>
@@ -47,7 +47,7 @@ export function LearningSetupPanel(props: Props) {
       {!review && <fieldset className="zp-launch-group" disabled={busy}>
         <legend><span>1</span> Keşif rotan</legend>
         <button ref={topicButton} type="button" className="zp-topic-launch zp-toy-button" aria-label="Konu seç" data-current-topic={topic} onClick={() => { tap(); setQuery(''); setFilter('mixed'); dialog.current?.showModal(); }}>
-          <span className="zp-choice-glyph" aria-hidden="true">{topic === 'mixed' ? <Shuffle size={23} /> : <TopicGlyph topic={topic} />}</span><span><strong>{topicTitle}</strong><small>{topic === 'mixed' ? '44 konudan karışık sorular' : COGNITIVE_CATEGORY_LABELS[topicCategory(topic, 'mixed') as Exclude<LearningCategory, 'mixed'>]}</small></span><ChevronRight size={20} aria-hidden="true" />
+          <span className="zp-choice-glyph" aria-hidden="true">{topic === 'mixed' ? <Shuffle size={23} /> : <TopicGlyph topic={topic} />}</span><span><strong>{topicTitle}</strong><small>{topic === 'mixed' ? category === 'mixed' ? 'Tüm alanlardan dengeli sorular' : 'Seçtiğin alandan farklı sorular' : COGNITIVE_CATEGORY_LABELS[topicCategory(topic, 'mixed') as Exclude<LearningCategory, 'mixed'>]}</small></span><ChevronRight size={20} aria-hidden="true" />
         </button>
         {mode === 'practice' && topic === 'mixed' && <label className="zp-launch-category">Çalışma alanı<select aria-label="Çalışma alanı" value={category} onChange={event => { tap(1); onCategory(event.target.value as LearningCategory); }}><option value="mixed">Tüm alanlar</option>{AVAILABLE_CATEGORIES.map(value => <option key={value} value={value}>{COGNITIVE_CATEGORY_LABELS[value]}</option>)}</select></label>}
       </fieldset>}
@@ -64,22 +64,22 @@ export function LearningSetupPanel(props: Props) {
           {[5, 10, 20].map((count, index) => <button key={count} type="button" className="zp-toy-button" aria-label={`${count} soru seç`} aria-pressed={questionCount === String(count)} onClick={() => { tap(index + 2); onCount(String(count)); }}><strong>{count}</strong><small>{['Mini tur', 'Keşif turu', 'Uzun tur'][index]}</small></button>)}
           <label className="zp-custom-count">Özel<input aria-label="Soru sayısı" aria-describedby={countHelp} aria-invalid={!validCount} type="number" inputMode="numeric" min={1} max={MAX_LEARNING_QUESTIONS} step={1} value={questionCount} onChange={event => onCount(event.target.value)} /></label>
         </div>
-        <p id={countHelp} className={validCount ? 'zp-launch-hint' : 'zp-launch-hint is-invalid'}>{validCount ? `1–${MAX_LEARNING_QUESTIONS} soru seçebilirsin. Aynı testte her soru tarzı bir kez kullanılır; yeterli farklı tarz yoksa yeni bir seçim yapman istenir.` : `1–${MAX_LEARNING_QUESTIONS} arasında bir tam sayı yaz.`}</p>
+        <p id={countHelp} className={validCount ? 'zp-launch-hint' : 'zp-launch-hint is-invalid'}>{validCount ? `1–${MAX_LEARNING_QUESTIONS} soru seçebilirsin. Hedefin korunur; farklı sorular konu ve zorluk dengesiyle hazırlanır. Aynı soru test içinde tekrarlanmaz.` : `1–${MAX_LEARNING_QUESTIONS} arasında bir tam sayı yaz.`}</p>
       </fieldset>}
       {mode === 'exam' && <fieldset className="zp-launch-group" disabled={busy}><legend><span>3</span> Deneme süresi</legend><div className="zp-launch-exams">{exams.map(item => <label key={item.id} className={`zp-toy-button ${exam === item.id ? 'is-selected' : ''}`}><input type="radio" name="learning-exam" value={item.id} checked={exam === item.id} onChange={() => { tap(3); onExam(item.id); }} /><strong>{item.title}</strong><small>{item.count} soru · {item.seconds / 60} dk.</small></label>)}</div></fieldset>}
     </div>
     <div className="zp-launch-footer">
-      {mode==='practice'&&!review&&<p role="status" className="zp-launch-hint">Bu tur: {questionCount} soru · Her soru farklı bir tarzda.</p>}
+      {mode==='practice'&&!review&&<p role="status" className="zp-launch-hint">Bu tur: {questionCount} soru · Farklı örneklerle pekiştir.</p>}
       <button type="button" className="zp-launch-start zp-toy-button" aria-label="Yeni testi başlat" disabled={busy || (mode === 'adaptive' && !validCount)} onClick={() => { sound.unlock(); sound.playTransition(); onStart(); }}><Rocket size={23} aria-hidden="true" /><span>{busy ? 'Çalışman hazırlanıyor…' : review ? 'Birlikte tekrar bakalım' : 'Haydi, başlayalım!'}</span><ArrowRight size={19} aria-hidden="true" /></button>
       <div className="zp-launch-bottom"><span><Target size={14} aria-hidden="true" /> Her turda farklı sorular</span><StudentExperienceControls variant="playful" /></div>
-      <details className="zp-launch-info"><summary>Çalışmam nasıl hazırlanıyor?</summary><p>Aynı testte aynı soru tarzı tekrar kullanılmaz. Yalnızca sayı, renk veya yönü değişen benzer kalıplar da tekrar sayılır. Tek konu ve uzun test seçimlerinde yeterli farklı tarz yoksa daha kısa veya tüm alanlardan karışık test seçebilirsin. Sorular sınıfına ve seçtiğin konuya uygundur. Adaptif çalışmada geçmişine göre uygun alana öncelik verilir. Sonuç ve açıklamalar çalışmayı tamamladığında açılır. Sınıfını öğrenci profilinden değiştirebilirsin.</p></details>
+      <details className="zp-launch-info"><summary>Çalışmam nasıl hazırlanıyor?</summary><p>Sürpriz karışım tüm çalışma alanlarından sorular içerir. Sorular sınıfına, seçtiğin konuya ve zorluğa uygun hazırlanır; cevapları ve çözümleri kontrol edilir. Önce farklı soru tarzlarına yer verilir. Uzun testlerde veya tek konuda aynı beceriyi farklı örneklerle pekiştirebilirsin; aynı soru test içinde tekrar edilmez. Adaptif çalışmada geçmiş cevaplarına göre zorluk dengelenir. Seçtiğin soru sayısı kendiliğinden azaltılmaz. Sınıfını öğrenci profilinden değiştirebilirsin.</p></details>
     </div>
     <dialog ref={dialog} className="zp-topic-dialog" aria-labelledby={topicHeading} onCancel={() => topicButton.current?.focus({ preventScroll: true })}>
       <div className="zp-topic-dialog-heading"><div><p className="zp-launch-kicker">{grade}. SINIF · 44 KEŞİF</p><h3 id={topicHeading}>Bugün ne keşfedelim?</h3></div><button type="button" aria-label="Konu seçimini kapat" onClick={closeTopics}><X size={22} aria-hidden="true" /></button></div>
       <label className="zp-topic-search"><Search size={18} aria-hidden="true" /><input aria-label="Konu ara" type="search" placeholder="Örneğin: katlama, örüntü…" value={query} onChange={event => setQuery(event.target.value)} /></label>
       <label className="zp-topic-filter">Alan<select aria-label="Konu alanı" value={filter} onChange={event => setFilter(event.target.value as LearningCategory)}><option value="mixed">Tüm alanlar</option>{AVAILABLE_CATEGORIES.map(value => <option key={value} value={value}>{COGNITIVE_CATEGORY_LABELS[value]}</option>)}</select></label>
       <div className="zp-topic-grid" role="group" aria-label="Soru konuları">
-        {!query.trim() && filter === 'mixed' && <button type="button" className="zp-toy-button" data-topic="mixed" aria-pressed={topic === 'mixed'} onClick={() => chooseTopic('mixed')}><Shuffle size={24} aria-hidden="true" /><strong>Sürpriz karışım</strong><small>Hepsinden biraz</small>{topic === 'mixed' && <Check size={16} aria-hidden="true" />}</button>}
+        {!query.trim() && filter === 'mixed' && <button type="button" className="zp-toy-button" data-topic="mixed" aria-pressed={topic === 'mixed'&&category === 'mixed'} onClick={() => chooseTopic('mixed')}><Shuffle size={24} aria-hidden="true" /><strong>Sürpriz karışım</strong><small>Hepsinden biraz</small>{topic === 'mixed'&&category === 'mixed' && <Check size={16} aria-hidden="true" />}</button>}
         {visibleTopics.map((value, index) => <button key={value} type="button" className="zp-toy-button" data-topic={value} data-tone={index % 4} aria-pressed={topic === value} onClick={() => chooseTopic(value)}><TopicGlyph topic={value} /><strong>{QUESTION_TYPE_LABELS[value]}</strong><small>{COGNITIVE_CATEGORY_LABELS[topicCategory(value, 'mixed') as Exclude<LearningCategory, 'mixed'>]}</small>{topic === value && <Check size={16} aria-hidden="true" />}</button>)}
       </div>
       {visibleTopics.length === 0 && <p role="status">Bu aramada konu bulunamadı. Başka bir kelime dene.</p>}

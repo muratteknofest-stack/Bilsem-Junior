@@ -1,7 +1,7 @@
 import type { LearningSessionView } from './learning-contract';
 
 export type FeedbackKind = 'correct' | 'incorrect' | 'saved';
-export interface AnswerFeedback { id: string; kind: FeedbackKind; streak: number; xp: number; }
+export interface AnswerFeedback { id: string; kind: FeedbackKind; streak: number; xp: number; correctOptionId?: string; }
 
 /** Only acknowledged server answers may produce correctness feedback. */
 export class AnswerFeedbackLedger {
@@ -19,9 +19,13 @@ export class AnswerFeedbackLedger {
       ? 'saved' : answer.correct ? 'correct' : 'incorrect';
     if (kind === 'correct') this.streak++;
     else if (kind === 'incorrect') this.streak = 0;
-    return { id, kind, streak: this.streak, xp: kind === 'correct' && Number.isFinite(answer.xp) ? Math.max(0, answer.xp!) : 0 };
+    return { id, kind, streak: this.streak, xp: kind === 'correct' && Number.isFinite(answer.xp) ? Math.max(0, answer.xp!) : 0,
+      ...(kind === 'incorrect' && answer.correctOptionId ? { correctOptionId: answer.correctOptionId } : {}) };
   }
   reset() { this.seen.clear(); this.streak = 0; }
 }
 
-export function feedbackDuration(reducedMotion: boolean | null) { return reducedMotion ? 260 : 620; }
+/** Reduced motion changes animation, not the time a child has to read feedback. */
+export function feedbackDuration(_reducedMotion: boolean | null, kind: FeedbackKind = 'correct') {
+  return kind === 'incorrect' ? 3600 : kind === 'saved' ? 700 : 1400;
+}

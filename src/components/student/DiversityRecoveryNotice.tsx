@@ -5,7 +5,7 @@ export function DiversityRecoveryNotice({error,busy,onMixed,onShorter,shorterCou
   error:QuestionDiversityError;busy:boolean;onMixed:()=>void;onShorter?:()=>void;shorterCount?:number;mixedCount?:number;
 }) {
   return <section role="alert" className="rounded-2xl border border-amber-300 bg-amber-50 p-4 space-y-3">
-    <h2 className="font-bold">Benzer soru eklemeden hazırlayalım</h2>
+    <h2 className="font-bold">Bu seçim için daha fazla soru gerekiyor</h2>
     <p>{error.message}</p>
     <div className="flex flex-wrap gap-3">
       <button type="button" disabled={busy} onClick={onMixed} className="min-h-11 rounded-xl bg-indigo-700 px-4 py-2 font-bold text-white">Tüm alanlardan {mixedCount} soruluk test seç</button>

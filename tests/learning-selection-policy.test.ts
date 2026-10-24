@@ -6,6 +6,7 @@ import { DeadlineFinishGate } from '../src/features/student/answer-progression';
 import { generateQuestion } from '../src/features/questions/generators';
 import { isQuestionReadyForStudents, questionVisualKey, questionStimulusKey } from '../src/features/questions/quality';
 import { LearningError } from '../server/learning-model';
+import { QuestionDiversityError } from '../src/features/questions/test-diversity';
 import { EDUCATION_PROFILES } from '../src/features/questions/quality-policy';
 import { reasoningDifficultyPlan } from '../src/features/questions/reasoning-profile';
 import { SeededRNG } from '../src/lib/rng';
@@ -103,7 +104,7 @@ test('renamed duplicates and invalid candidates cannot fill a quota or relax the
   const q = numeric(21), wrong = { ...numeric(42), correctOptionId: 'INVALID' };
   assert.throws(() => selectLearningQuestions({ count: 2, category: 'numerical',
     candidates: [q, { ...q, id: 'same-visual-new-id' }, wrong], exposure: new Map(),
-    canUse: isQuestionReadyForStudents, generate: () => wrong }), LearningError);
+    canUse: isQuestionReadyForStudents, generate: () => wrong }), QuestionDiversityError);
 });
 
 test('balanced 45-question exams can be generated with independent proofs at every class level', () => {

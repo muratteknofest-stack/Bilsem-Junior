@@ -6,7 +6,7 @@ import { EDUCATION_PROFILES } from '../src/features/questions/quality-policy';
 import { generateQuestion } from '../src/features/questions/generators';
 import { isQuestionReadyForStudents, questionStimulusKey, questionVisualKey } from '../src/features/questions/quality';
 import { solveQuestion } from '../src/features/questions/universal-solver';
-import { recentQuestionExposure, selectLearningQuestions, generateVariedLearningQuestion } from '../server/learning-question-selection';
+import { recentQuestionExposure, selectLearningQuestions, generateVariedLearningQuestion, learningStimulusKey } from '../server/learning-question-selection';
 import { AVAILABLE_CATEGORIES } from '../src/features/student/available-categories';
 import type { BaseQuestion } from '../src/types';
 import { LearningError } from '../server/learning-model';
@@ -81,7 +81,7 @@ test('normal tests fail on exhausted fresh content; only an explicit repetition 
     canUse: isQuestionReadyForStudents, allowGeneration: false,
     generate: () => { throw Error('Generation was disabled'); },
   };
-  assert.throws(() => selectLearningQuestions(options), LearningError);
+  assert.throws(() => selectLearningQuestions(options), QuestionDiversityError);
   assert.equal(selectLearningQuestions({...options, repeatPolicy: 'oldest-first'})[0].id, q.id);
 });
 
@@ -226,4 +226,77 @@ test('shared daily/demo novelty selection prefers a different style over a new a
   assert.ok(related);
   const other=generateQuestion({targetGrade:4,type:'top_view',difficulty:4,seed:19937});
   assert.equal(chooseDiverseCandidate([related,other],[rotation]).id,other.id);
+});
+
+test('normal mixed sessions fill fifty verified slots for every grade without duplicate stimuli or changing the difficulty plan', () => {
+  for (const grade of [1, 2, 3, 4] as const) {
+    const randomIndex = seededRandom(grade * 10931);
+    const plan = scaffoldDifficultyPlan(reasoningDifficultyPlan(grade, 50, randomIndex));
+    let seed = grade * 100003;
+    const questions = selectLearningQuestions({
+      count: 50, category: 'mixed', candidates: [], exposure: new Map(), difficultyPlan: plan,
+      redistributeRepeatedCategories: true, randomIndex,
+      canUse: q => q.targetGrade === grade && isQuestionReadyForStudents(q),
+      generate: (category, typeCounts, difficulty, reasoningCounts, acceptCandidate) => generateVariedLearningQuestion({
+        grade, category, difficulty: difficulty!, seed: ++seed, typeCounts, reasoningCounts, acceptCandidate, randomIndex,
+      }),
+    });
+    assert.equal(questions.length, 50);
+    assert.deepEqual(questions.map(q => q.difficulty), plan);
+    assert.equal(new Set(questions.map(questionStimulusKey)).size, 50);
+    assert.equal(new Set(questions.map(questionVisualKey)).size, 50);
+    assert.equal(new Set(questions.map(q => q.category)).size, AVAILABLE_CATEGORIES.length);
+    const areaCounts = AVAILABLE_CATEGORIES.map(area => questions.filter(q => q.category === area).length);
+    assert.ok(Math.max(...areaCounts) - Math.min(...areaCounts) <= 1);
+    assert.ok(new Set(questions.map(questionStyleKey)).size >= 15);
+    for (const q of questions) {
+      const proof = solveQuestion(q);
+      assert.ok(proof.canSolve && proof.isMatch && !proof.ambiguityDetected);
+    }
+  }
+});
+
+test('generation searches other verified types when a seed cannot satisfy the current session constraints', () => {
+  let inspected = 0;
+  const q = generateVariedLearningQuestion({
+    grade: 1, category: 'numerical', difficulty: 1, seed: 29137,
+    typeCounts: new Map(), randomIndex: () => 0,
+    acceptCandidate: candidate => { inspected++; return candidate.type === 'number_pyramid'; },
+  });
+  assert.equal(q.type, 'number_pyramid');
+  assert.ok(inspected > 1);
+  assert.ok(isQuestionReadyForStudents(q));
+});
+
+test('twenty-question first-grade sessions remain fresh across repeated starts', () => {
+  const exposure = new Map<string, number>();
+  let seed = 700003;
+  for (let session = 0; session < 3; session++) {
+    const randomIndex = seededRandom(9001 + session);
+    const plan = scaffoldDifficultyPlan(reasoningDifficultyPlan(1, 20, randomIndex));
+    const questions = selectLearningQuestions({
+      count: 20, category: 'mixed', candidates: [], exposure, difficultyPlan: plan,
+      redistributeRepeatedCategories: true, randomIndex,
+      canUse: q => q.targetGrade === 1 && isQuestionReadyForStudents(q),
+      generate: (category, typeCounts, difficulty, reasoningCounts, acceptCandidate) => generateVariedLearningQuestion({
+        grade: 1, category, difficulty: difficulty!, seed: ++seed, typeCounts, reasoningCounts, acceptCandidate, exposure, randomIndex,
+      }),
+    });
+    assert.equal(questions.length, 20);
+    assert.ok(questions.every(q => !exposure.has(questionStimulusKey(q)) && !exposure.has(questionVisualKey(q))));
+    for (const [key, time] of recentQuestionExposure([{ questions, created_at: new Date(1700000000000 + session * 1000).toISOString() }], true)) exposure.set(key, time);
+  }
+});
+
+test('balanced practice rejects identical displayed tasks under different topic aliases, including history', () => {
+  const original = generateQuestion({ targetGrade: 2, type: 'dice_unfold', difficulty: 2, seed: 7919 });
+  const alias = { ...original, id: 'renamed-topic', type: 'spatial_origami' as const };
+  assert.equal(learningStimulusKey(original), learningStimulusKey(alias));
+  const base = { category: 'spatial' as const, candidates: [original, alias], allowGeneration: false,
+    canUse: () => true, generate: () => { throw Error('disabled'); }, randomIndex: () => 0 };
+  assert.throws(() => selectLearningQuestions({ ...base, count: 2, exposure: new Map() }),
+    error => error instanceof QuestionDiversityError && error.preparedCount === 1);
+  const exposure = recentQuestionExposure([{ questions: [original], created_at: '2026-10-24T09:00:00Z' }]);
+  assert.throws(() => selectLearningQuestions({ ...base, candidates: [alias], count: 1, exposure }),
+    error => error instanceof QuestionDiversityError && error.preparedCount === 0);
 });

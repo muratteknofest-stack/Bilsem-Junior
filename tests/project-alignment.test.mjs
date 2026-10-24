@@ -43,7 +43,7 @@ test('legacy account alignment preserves identities, passwords, XP and historica
     const before = (await db.query('select * from auth.users order by id')).rows;
     const sql = await buildBilsemAlignmentSQL();
     const committed = await readFile(new URL('../supabase/migrations/20261021060602_align_bilsem_account_project.sql', import.meta.url), 'utf8');
-    assert.equal(sql, committed, 'committed migration must match its reviewed source builder');
+    assert.equal(sql.replace(/\r\n?/g, '\n'), committed.replace(/\r\n?/g, '\n'), 'committed migration must match its reviewed source builder');
     await db.exec(sql);
     assert.deepEqual((await db.query('select * from auth.users order by id')).rows, before);
     assert.deepEqual((await db.query('select role,grade,xp,level,streak from public.profiles order by id')).rows, [

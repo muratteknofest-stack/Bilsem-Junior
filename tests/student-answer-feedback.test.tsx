@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { AnswerFeedbackLedger } from '../src/features/student/answer-feedback';
+import { AnswerFeedbackLedger, feedbackDuration } from '../src/features/student/answer-feedback';
+import { sessionProgress } from '../src/features/student/session-progress';
+import { LearningSessionProgress } from '../src/components/student/LearningSessionProgress';
 import { LearningAnswerFeedback } from '../src/components/student/LearningAnswerFeedback';
 import { saveAndAdvance } from '../src/features/student/answer-progression';
 import { SoundEngine } from '../src/lib/sound';
@@ -40,6 +42,47 @@ test('awaited feedback holds advancement after the saved answer without delaying
   }, async value => { acknowledged = value === saved; await new Promise<void>(resolve => { release = resolve; }); });
   await Promise.resolve(); assert.equal(acknowledged, true); assert.equal(finishes, 0);
   release(); await pending; assert.equal(finishes, 1);
+});
+
+test('progress counts acknowledged answers rather than visited questions and ignores out-of-range answers', () => {
+  const view = session();
+  view.questions = [{ id: 'first' }, { id: 'second' }, { id: 'third' }] as any;
+  assert.deepEqual(sessionProgress(view), { answered: 0, streak: 0, xp: 0 });
+  view.answers = {
+    '0': { response: {}, correct: true, xp: 15 },
+    '1': { response: {}, correct: true, xp: 20 },
+    '99': { response: {}, correct: true, xp: 999 },
+  };
+  assert.deepEqual(sessionProgress(view), { answered: 2, streak: 2, xp: 35 });
+  view.answers['2'] = { response: {}, correct: false, xp: 99 };
+  assert.deepEqual(sessionProgress(view), { answered: 3, streak: 0, xp: 35 });
+  view.answers['0'].xp = NaN;
+  view.answers['1'].xp = -5;
+  assert.equal(sessionProgress(view).xp, 0);
+});
+
+test('exam progress and feedback hide rewards, streaks and correct options even in an unexpected DTO', () => {
+  const view = session(false, 'exam');
+  view.answers['0'].correctOptionId = 'B';
+  view.answers['0'].xp = 150;
+  assert.deepEqual(sessionProgress(view), { answered: 1, streak: 0, xp: 0 });
+  const feedback = new AnswerFeedbackLedger().take(view, 0)!;
+  assert.equal(feedback.correctOptionId, undefined);
+  const html = renderToStaticMarkup(<LearningSessionProgress progress={{ answered: 1, streak: 9, xp: 150 }} total={15} exam />);
+  assert.ok(html.includes('aria-valuenow="1"'));
+  assert.ok(!html.includes('XP') && !html.includes('üst üste') && !html.includes('150'));
+});
+
+test('wrong feedback reveals only the acknowledged correct option and gives enough reading time in both motion settings', () => {
+  const view = session(false);
+  view.answers['0'].correctOptionId = 'C';
+  const feedback = new AnswerFeedbackLedger().take(view, 0)!;
+  assert.equal(feedback.correctOptionId, 'C');
+  const html = renderToStaticMarkup(<LearningAnswerFeedback feedback={feedback} onContinue={() => {}} />);
+  assert.ok(html.includes('Doğru seçenek:') && html.includes('<b>C</b>') && html.includes('Devam et'));
+  assert.ok(html.includes('--zp-feedback-duration:3600ms'));
+  assert.ok(feedbackDuration(false, 'incorrect') > feedbackDuration(false, 'correct'));
+  assert.equal(feedbackDuration(true, 'incorrect'), feedbackDuration(false, 'incorrect'));
 });
 test('sound activation precedes async feedback; mute stops new tones and unavailable audio is harmless', () => {
   const prior = (globalThis as any).window;
