@@ -91,11 +91,21 @@ test('real authenticated learning API preserves mixed choices, permits practice 
       reads++;
       assert.equal(u.searchParams.get('status'), 'eq.published');
       assert.equal(u.searchParams.get('target_grade'), `eq.${grade}`);
-      const type = u.searchParams.get('type')?.slice(3);
-      if(type)assert.ok(LEARNING_TOPICS.includes(type as any));
-      value = bank.filter(q => q.status === 'published' && q.targetGrade === grade && (!type || q.type === type) && q.id > (u.searchParams.get('id')?.slice(3) || '') &&
-        (!u.searchParams.has('difficulty') || `eq.${q.difficulty}` === u.searchParams.get('difficulty')) &&
-        (!u.searchParams.has('category') || `eq.${q.category}` === u.searchParams.get('category'))).sort((a,b) => a.id.localeCompare(b.id)).map(q => ({ id: q.id, data: q }));
+      // Emulate the real PostgREST filters, including the pushed-down start optimization.
+      const typeFilter = u.searchParams.get('type');
+      const types = typeFilter?.startsWith('in.(') ? typeFilter.slice(4,-1).split(',') : typeFilter ? [typeFilter.slice(3)] : [];
+      if(typeFilter)assert.ok(typeFilter.startsWith('eq.') || typeFilter.startsWith('in.('));
+      for(const type of types)assert.ok(LEARNING_TOPICS.includes(type as any));
+      const engineFilter = u.searchParams.get('data->authoring->>engine');
+      if(engineFilter)assert.ok(engineFilter.startsWith('in.('));
+      const engines = engineFilter?.slice(4,-1).split(',');
+      const level = u.searchParams.get('difficulty');
+      if(level)assert.ok(level.startsWith('eq.') || level.startsWith('gte.'));
+      const offset = Number(u.searchParams.get('offset') || 0), limit = Number(u.searchParams.get('limit') || 1000);
+      value = bank.filter(q => q.status === 'published' && q.targetGrade === grade && (!types.length || types.includes(q.type)) && q.id > (u.searchParams.get('id')?.slice(3) || '') &&
+        (!engines || engines.includes(q.authoring?.engine || '')) &&
+        (!level || (level.startsWith('gte.') ? q.difficulty >= Number(level.slice(4)) : q.difficulty === Number(level.slice(3)))) &&
+        (!u.searchParams.has('category') || `eq.${q.category}` === u.searchParams.get('category'))).sort((a,b) => a.id.localeCompare(b.id)).slice(offset,offset+limit).map(q => ({ id: q.id, data: q }));
     } else if(u.pathname==='/rest/v1/user_private_state')value={values:{}};
     else if (u.pathname === '/rest/v1/learning_sessions') {
       if (request.method === 'POST') {
@@ -262,3 +272,4 @@ test('real authenticated learning API preserves mixed choices, permits practice 
     if (priorKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = priorKey;
   }
 });
+
