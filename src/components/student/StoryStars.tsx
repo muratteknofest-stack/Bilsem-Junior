@@ -9,14 +9,14 @@ export function StoryStars({correct,total=STORY_QUESTION_COUNT,compact=false,lab
     {!compact&&<strong>{formatted}<span> / 5 yıldız</span></strong>}
   </span>;
 }
-export function StoryResultCelebration({correct,total=STORY_QUESTION_COUNT,bestCorrect}:{correct:number;total?:number;bestCorrect?:number}) {
+export function StoryResultCelebration({correct,total=STORY_QUESTION_COUNT,bestCorrect,bestTotal=total}:{correct:number;total?:number;bestCorrect?:number;bestTotal?:number}) {
   const kind=storyCelebration(correct,total);
   const titles={perfect:'Kusursuz macera!',sparkle:'Yıldızların parlıyor!',orbit:'Yeni bir yörünge keşfettin!',grow:'Her denemede yeni bir keşif!'};
   return <section className="bj-story-celebration" data-celebration={kind} aria-label="Macera yıldız sonucu">
     <div className="bj-story-celebration-art" aria-hidden="true"><span className="bj-celebration-ring"/><span className="bj-celebration-ring"/><img src="/brand/junior-fox.svg" alt="" width={92} height={100}/>{Array.from({length:12},(_,index)=><i key={index} style={{'--particle-index':index} as CSSProperties}>{kind==='grow'?'✧':kind==='orbit'?'●':'✦'}</i>)}</div>
-    <h3>{titles[kind]}</h3><p>{correct}/{total} doğru · Her 4 doğru, 1 yıldız eder.</p>
+    <h3>{titles[kind]}</h3><p>{correct}/{total} doğru · Yıldızların doğru cevap oranına göre dolar.</p>
     <StoryStars correct={correct} total={total}/>
-    {bestCorrect!==undefined&&<p className="bj-story-best">En iyi sonucun: {bestCorrect}/{total} doğru · {storyStars(bestCorrect,total).toLocaleString('tr-TR',{maximumFractionDigits:2})}/5 yıldız</p>}
+    {bestCorrect!==undefined&&<p className="bj-story-best">En iyi sonucun: {bestCorrect}/{bestTotal} doğru · {storyStars(bestCorrect,bestTotal).toLocaleString('tr-TR',{maximumFractionDigits:2})}/5 yıldız</p>}
     {correct<total&&<p>Yeniden oynayarak yıldız barını tamamlayabilirsin.</p>}
   </section>;
 }
@@ -24,3 +24,4 @@ export function StoryResultCelebration({correct,total=STORY_QUESTION_COUNT,bestC
 export function StoryAnswerReview({enabled,count,children}:{enabled:boolean;count:number;children:ReactNode}) {
   return enabled?<details className="bj-story-answer-review"><summary>{count} sorunun çözümlerini incele</summary>{children}</details>:<>{children}</>;
 }
+

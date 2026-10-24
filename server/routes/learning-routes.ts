@@ -19,7 +19,9 @@ import { questionStimulusKey } from '../../src/features/questions/quality';
 import { loadPublishedLearningBank } from '../learning-bank';
 import { isQuestionReadyForStudents } from '../../src/features/questions/quality';
 import { loadRecentLearningContext, selectLearningQuestions, generateVariedLearningQuestion, gradeChallengeFloor, pickGradeChallenge, currentReasoningCandidate, assertLearningQuestionFormat } from '../learning-question-selection';
-import { reasoningDifficultyPlan } from '../../src/features/questions/reasoning-profile';
+import { reasoningDifficultyPlan, professionalGradeTypes } from '../../src/features/questions/reasoning-profile';
+import { CURRENT_REASONING_ENGINES } from '../learning-question-selection';
+import type { DifficultyLevel } from '../../src/types';
 import { LEARNING_QUESTION_FORMAT, supportsReasoningFormat, supportsProfessionalV2Format, needsCurrentQuestionFormat, needsProfessionalV2Format, needsReasoningFormat } from '../../src/features/student/learning-question-format';
 import { AVAILABLE_CATEGORIES } from '../../src/features/student/available-categories';
 import { QUESTION_TYPE_LABELS, COGNITIVE_CATEGORY_LABELS, type BaseQuestion } from '../../src/types';
@@ -84,8 +86,15 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     if (!parsed.success) throw new LearningError('Çalışma seçenekleri geçersiz.', 400);
     await requireLearningAccess(req.authUser!.uid);
     const { mode, exam, locale, topic } = parsed.data, student = req.authUser!.uid, client = getServiceClient();
-    const profile = await client.from('profiles').select('grade').eq('id', student).single();
+    // These reads are independent, account-scoped, and run only after access is checked.
+    const [profile, configuration, active, recent] = await Promise.all([
+      client.from('profiles').select('grade').eq('id', student).single(),
+      readPlatformSettings(),
+      client.from('learning_sessions').select('*').eq('student_id', student).eq('mode', mode).is('finished_at', null).maybeSingle(),
+      loadRecentLearningContext(student),
+    ]);
     if (profile.error) throw profile.error;
+    if (active.error) throw active.error;
     if (!isSchoolGrade(profile.data.grade)) throw new LearningError('Çalışma için 1–4. sınıf bilgisi gerekli.');
     const grade = profile.data.grade;
     if (parsed.data.expectedGrade !== undefined && parsed.data.expectedGrade !== profile.data.grade) throw new LearningError('Sınıfın başka bir ekranda değişti. Ana sayfaya dönüp yeniden başla.', 409);
@@ -95,10 +104,17 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     // A mixed route stays mixed, including older clients which omit mixCategories.
     // Adaptation adjusts difficulty below; it must not replace the child's area choice.
     const category = topicCategory(topic, mode === 'exam' ? 'mixed' : parsed.data.category);
-    const configuration = await readPlatformSettings();
     const settings = configuredExams(configuration.settings).find(e => e.id === exam)!;
     const requestedCount = mode === 'exam' ? settings.count : mode === 'adaptive' ? parsed.data.questionCount ?? DEFAULT_ADAPTIVE_COUNT : parsed.data.questionCount ?? 5;
-    const bank = locale === 'en' ? {questions:englishBankForGrade(grade),bankVersion:ENGLISH_BANK_VERSION} : await loadPublishedLearningBank({ grade: profile.data.grade, difficulty, category, topic });
+    const modern = supportsReasoningFormat(req.query.questionFormat);
+    const challengeMode = locale !== 'en' && topic === 'mixed' && difficulty === 'mixed';
+    const recommendation=mode==='adaptive'?recommendDifficulty(grade,recent.answers):{adjustment:0 as const,sampleSize:0,accuracy:null,reason:'steady' as const};
+    const challengeFloor = Math.max(1,gradeChallengeFloor(grade)+Math.min(0,recommendation.adjustment)) as DifficultyLevel;
+    // Fetch only candidates that this client can use; all delivered questions still pass proofs.
+    const bank = locale === 'en' ? {questions:englishBankForGrade(grade),bankVersion:ENGLISH_BANK_VERSION} : await loadPublishedLearningBank({ grade, difficulty, category, topic }, {
+      ...(modern && topic === 'mixed' ? {types:professionalGradeTypes(grade),engines:CURRENT_REASONING_ENGINES} : {}),
+      ...(challengeMode ? {minDifficulty:challengeFloor} : {}),
+    });
     const seen = new Set<string>();
     const topicCandidates = topic === 'mixed' ? bank.questions : bank.questions.filter(q => {
       if (q.type !== topic || q.targetGrade !== grade || q.category !== category || q.difficulty > EDUCATION_PROFILES[grade].maxDifficulty || (difficulty !== 'mixed' && q.difficulty !== difficulty) || !isQuestionReadyForStudents(q)) return false;
@@ -108,24 +124,27 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     });
     const count = requestedCount;
     if (topic!=='mixed'&&!topicCandidates.length) throw new LearningError('Seçilen sınıf, konu ve zorlukta yayımlanmış soru yok. Zorluk filtresini değiştirip yeniden dene.', 422);
-    const modern = supportsReasoningFormat(req.query.questionFormat);
     const selection: LearningSelection = { ...(modern?{questionFormat:req.query.questionFormat as 'reasoning-8'|'professional-v2'|'reasoning-lab-1'}:{}), ...(parsed.data.mixCategories ? {mixCategories:true} : {}), topic, grade: profile.data.grade, difficulty, category, exam: mode === 'exam' ? exam : '', count, bankVersion: bank.bankVersion, ...(locale === 'en' ? { locale } : {}) };
-    const active = await client.from('learning_sessions').select('*').eq('student_id', student).eq('mode', mode).is('finished_at', null).maybeSingle();
-    if (active.error) throw active.error;
     // Starting a test always draws a fresh shuffled set. Explicit GET/resume keeps its snapshot.
     const englishReady = (q: BaseQuestion) => (q.visualConfig as Record<string,unknown>)?.displayMode === 'colorful_board' && ENGLISH_AREAS.some(a => a.id === q.type);
     // Respect deliberate easy-level choices and specific-topic filters. For the
     // Turkish mixed-level pool, remove below-grade filler before selection.
-    const challengeMode = locale !== 'en' && topic === 'mixed' && difficulty === 'mixed';
-    const recent=await loadRecentLearningContext(student);
-    const recommendation=mode==='adaptive'?recommendDifficulty(grade,recent.answers):{adjustment:0 as const,sampleSize:0,accuracy:null,reason:'steady' as const};
-    const challengeFloor = Math.max(1,gradeChallengeFloor(grade)+Math.min(0,recommendation.adjustment));
     const gradeAppropriate = (q: BaseQuestion) => !challengeMode || q.difficulty >= challengeFloor;
     const formatReady=(q:BaseQuestion)=>needsCurrentQuestionFormat(q)?req.query.questionFormat===LEARNING_QUESTION_FORMAT:needsProfessionalV2Format(q)?supportsProfessionalV2Format(req.query.questionFormat):modern||!needsReasoningFormat(q);
     const reasoningReady=(q:BaseQuestion)=>locale==='en'||topic!=='mixed'||currentReasoningCandidate(q,grade,modern);
     const candidates = topicCandidates.filter(q => fitsLearningSelection(q, selection) && gradeAppropriate(q) && formatReady(q)&&reasoningReady(q) && (locale !== 'en' || englishReady(q)));
     if (locale === 'en' && candidates.length < count) throw new LearningError('This activity is not available in English at this level. Try mixed practice.', 422);
     const exposure = recent.exposure;
+    // A candidate may be inspected more than once, but its immutable snapshot needs one audit here.
+    // prepareLearningQuestions independently checks the final delivery boundary again.
+    const checked = new WeakMap<BaseQuestion, boolean>();
+    const canUse = (q: BaseQuestion) => {
+      const previous = checked.get(q);
+      if (previous !== undefined) return previous;
+      const valid = fitsLearningSelection(q, selection) && gradeAppropriate(q) && formatReady(q) && reasoningReady(q) &&
+        isQuestionReadyForStudents(q) && (locale !== 'en' || englishReady(q));
+      checked.set(q, valid); return valid;
+    };
     const questions = selectLearningQuestions({ count, preferDiverseTypes:topic === 'mixed' && locale !== 'en', allowGeneration: topic === 'mixed'&&locale!=='en', category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number],
       // Prefer diverse mechanics, then reinforce them with different verified puzzles.
       // One style per test makes long tests and single-topic practice impossible.
@@ -136,7 +155,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
       // Mixed Turkish tests and adventures always require unseen content.
       repeatPolicy: locale === 'en' || topic !== 'mixed' ? 'oldest-first' : 'unseen',
       ...(locale === 'en' ? {categories:[...new Set(candidates.map(q=>q.category))]} : {}),
-      candidates, exposure, canUse: q => fitsLearningSelection(q, selection) && gradeAppropriate(q) && formatReady(q)&&reasoningReady(q)&&isQuestionReadyForStudents(q) && (locale !== 'en' || englishReady(q)),
+      candidates, exposure, canUse,
       generate: (nextCategory,typeCounts,plannedDifficulty,reasoningCounts,acceptCandidate) => {
         if (topic !== 'mixed') throw new LearningError('Seçilen konunun yayımlanmış soruları kullanılmalı.');
         if (locale === 'en') throw new LearningError('English practice is temporarily unavailable. Please try again.', 503);
@@ -260,4 +279,5 @@ routes.post('/learning/:id/report', async (req: AuthenticatedRequest, res) => {
   } catch (error) { return handleError(error, res); }
 });
 export default routes;
+
 

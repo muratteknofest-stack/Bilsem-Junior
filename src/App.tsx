@@ -1,7 +1,7 @@
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { isAndroidApp } from './lib/native-app';
-import { advanceStory, storyCollection, storyBadges, nextCampaignStage, isStoryStageComplete, type StoryStage, type StoryProgress, type StoryReward } from './features/student/story-adventure';
+import { storyStars, advanceStory, storyCollection, storyBadges, nextCampaignStage, isStoryStageComplete, type StoryStage, type StoryProgress, type StoryReward } from './features/student/story-adventure';
 import { readStoryProgress, saveStoryProgress } from './services/story-progress-service';
 import type { LearningSessionView } from './features/student/learning-contract';
 import type { StudentSection } from './components/StudentDashboard';
@@ -82,8 +82,9 @@ export default function App() {
     setStoryReward({
       sessionId:session.id,
       replay:isStoryStageComplete(storyProgress,activeStory.stage),
-      improved:(next.stageResults?.[activeStory.stage.id]?.bestCorrect||0)>(storyProgress.stageResults?.[activeStory.stage.id]?.bestCorrect||0),
+      improved:storyStars(next.stageResults?.[activeStory.stage.id]?.bestCorrect||0,next.stageResults?.[activeStory.stage.id]?.totalQuestions||20)>storyStars(storyProgress.stageResults?.[activeStory.stage.id]?.bestCorrect||0,storyProgress.stageResults?.[activeStory.stage.id]?.totalQuestions||20),
       bestCorrect:next.stageResults?.[activeStory.stage.id]?.bestCorrect||0,
+      bestTotalQuestions:next.stageResults?.[activeStory.stage.id]?.totalQuestions||20,
       points:storyCollection(next,activeStory.grade).points-storyCollection(storyProgress,activeStory.grade).points,
       badges:storyBadges(next,activeStory.grade).filter(b=>b.unlocked&&!previousBadges.some(old=>old.id===b.id&&old.unlocked)).map(b=>b.title),
     });
@@ -657,5 +658,6 @@ export default function App() {
     </div>
   );
 }
+
 
 

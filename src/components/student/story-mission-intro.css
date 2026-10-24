@@ -29,5 +29,15 @@
 @media(min-width:760px){.bj-mission{grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr)}.bj-mission .bj-mission-scene{height:auto;min-height:440px;border-bottom:0;border-right:1px solid #e9ddfa}.bj-mission .bj-mission-card{padding:30px}.bj-mission .bj-mission-fox{width:300px;height:300px;max-width:92%;bottom:66px}.bj-mission-island{width:280px;height:65px;bottom:58px}.bj-mission-greeting{top:45px;font-size:13px}.bj-mission-scene-label{bottom:24px;font-size:9px}.bj-mission-orbit{left:8%;bottom:130px}.bj-mission-sprout{bottom:90px}.bj-mission-sprout-two{bottom:85px}}
 @media(max-width:380px),(max-height:720px) and (max-width:759px){.bj-mission .bj-mission-scene{height:180px}.bj-mission .bj-mission-fox{width:172px;height:172px;bottom:8px}.bj-mission .bj-mission-card{padding:13px 14px}.bj-mission-greeting{top:8px;font-size:10px;padding:6px 10px}.bj-mission h2{font-size:21px}.bj-mission .bj-mission-narrative{font-size:12px;line-height:1.5}.bj-mission-goal{margin:10px 0;padding:8px 10px}.bj-mission-rewards{margin-bottom:14px}.bj-mission-rewards>span{padding:8px 3px;gap:3px}.bj-mission-rewards small{display:none}.bj-mission .bj-mission-footnote{margin-top:13px}}
 /* At text zoom, content grows naturally rather than being clipped to a fixed viewport. */
+.bj-mission-options{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:10px;border:0;padding:0;margin:0 0 15px;min-width:0}
+.bj-mission-options legend{font-size:11px;font-weight:800;margin-bottom:7px;color:#61457d}
+.bj-mission-options label{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:10px;font-weight:750;color:#77628d}
+.bj-mission-options select{width:100%;min-width:0;min-height:44px;padding:8px 25px 8px 10px;border:1px solid #d9cbed;border-radius:12px;background:#faf7ff;color:#4c356a;font:700 11px system-ui,sans-serif;box-shadow:0 3px 0 #e7ddf3;cursor:pointer}
+.bj-mission-options select:focus-visible{outline:3px solid #ad82eb;outline-offset:3px}
+.bj-mission-options:disabled select{opacity:.65;cursor:wait}
+.bj-mission:has(.bj-mission-options) .bj-mission-scene{height:clamp(155px,23dvh,230px)}
+.bj-mission:has(.bj-mission-options) .bj-mission-fox{width:clamp(145px,22dvh,220px);height:clamp(145px,22dvh,220px)}
+@media(min-width:760px){.bj-mission:has(.bj-mission-options) .bj-mission-scene{height:auto}.bj-mission:has(.bj-mission-options) .bj-mission-fox{width:300px;height:300px}}
 .zp-learning[data-reduced-motion=true] .bj-mission *{animation:none!important;transition:none!important}
 @media(prefers-reduced-motion:reduce){.bj-mission *{animation:none!important;transition:none!important}}
+

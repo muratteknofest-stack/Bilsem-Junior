@@ -19,3 +19,10 @@ test('multiple saved star bars keep independent SVG clips and result variants sh
  assert.match(result,/data-celebration="grow"/);assert.match(result,/En iyi sonucun: 20\/20 doğru/);assert.match(result,/aria-valuenow="1"/);
  assert.match(renderToStaticMarkup(<StoryResultCelebration correct={20}/>),/data-celebration="perfect"/);
 });
+
+
+test('different story lengths show current and best scores with their own denominators',()=>{
+ const result=renderToStaticMarkup(<StoryResultCelebration correct={4} total={5} bestCorrect={9} bestTotal={10}/>);
+ assert.match(result,/4\/5 doğru/);assert.match(result,/En iyi sonucun: 9\/10 doğru/);
+ assert.match(result,/aria-valuenow="4"/);assert.doesNotMatch(result,/Her 4 doğru/);
+});

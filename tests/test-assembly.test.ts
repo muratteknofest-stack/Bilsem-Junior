@@ -300,3 +300,15 @@ test('balanced practice rejects identical displayed tasks under different topic 
   assert.throws(() => selectLearningQuestions({ ...base, candidates: [alias], count: 1, exposure }),
     error => error instanceof QuestionDiversityError && error.preparedCount === 0);
 });
+
+
+test('explicit difficulty and chosen lengths survive real mixed assembly for every grade',()=>{
+ for(const grade of [1,2,3,4] as const)for(const count of [5,10,30,50]){
+  let seed=grade*100003+count;const difficulty=1;
+  const questions=selectLearningQuestions({count,category:'mixed',candidates:[],exposure:new Map(),
+   canUse:q=>q.targetGrade===grade&&q.difficulty===difficulty&&isQuestionReadyForStudents(q),
+   generate:(category,typeCounts,_planned,reasoningCounts,acceptCandidate)=>generateVariedLearningQuestion({grade,category,difficulty,seed:++seed,typeCounts,reasoningCounts,acceptCandidate})});
+  assert.equal(questions.length,count);assert.ok(questions.every(q=>q.targetGrade===grade&&q.difficulty===difficulty));
+  assert.equal(new Set(questions.map(questionStimulusKey)).size,count);
+ }
+});

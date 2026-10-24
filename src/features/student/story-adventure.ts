@@ -13,6 +13,8 @@ export const STORY_CHAPTERS = [
 ] as const;
 export const STORY_ROUND_LENGTH = 18;
 export const STORY_QUESTION_COUNT = 20;
+export const STORY_MIN_QUESTION_COUNT = 5;
+export const STORY_MAX_QUESTION_COUNT = 50;
 const LEGACY_STORY_QUESTION_COUNT = 3;
 /** Resolve one stop on demand: the adventure never allocates an ever-growing map. */
 export function storyStageAt(index: number): StoryStage {
@@ -28,8 +30,8 @@ export function storyStageAt(index: number): StoryStage {
 }
 /** First tour remains available to callers and for legacy storage migration. */
 export const STORY_STAGES = Array.from({length: STORY_ROUND_LENGTH}, (_, index) => storyStageAt(index));
-export interface StoryStageResult { bestCorrect:number; lastCorrect:number; totalQuestions:number; attempts:number; }
-export interface StoryReward { sessionId:string; points:number; badges:string[]; replay:boolean; improved:boolean; bestCorrect:number; }
+export interface StoryStageResult { bestCorrect:number; lastCorrect:number; totalQuestions:number; attempts:number; lastTotalQuestions?:number; }
+export interface StoryReward { sessionId:string; points:number; badges:string[]; replay:boolean; improved:boolean; bestCorrect:number; bestTotalQuestions?:number; }
 export interface StoryProgress { version: 2; completedCount: number; sessions: string[]; campaigns?: Record<string,number>; selectedStoryId?: string; skillPractice?: Record<string,number>; stageResults?: Record<string,StoryStageResult>; }
 export const emptyStoryProgress = (): StoryProgress => ({version:2,completedCount:0,sessions:[]});
 export function parseStoryProgress(raw: string | null): StoryProgress {
@@ -51,7 +53,7 @@ export function parseStoryProgress(raw: string | null): StoryProgress {
     if(typeof extra.selectedStoryId==='string'&&campaignById(extra.selectedStoryId))progress.selectedStoryId=extra.selectedStoryId;
     if(extra.skillPractice && typeof extra.skillPractice==='object') {
       progress.skillPractice={};
-      for(const category of AVAILABLE_CATEGORIES) { const count=(extra.skillPractice as Record<string,unknown>)[category]; if(typeof count==='number'&&Number.isSafeInteger(count)&&count>=0&&count<=STORY_CAMPAIGNS.reduce((sum,s)=>sum+campaignLength(s)*STORY_QUESTION_COUNT,0))progress.skillPractice[category]=count; }
+      for(const category of AVAILABLE_CATEGORIES) { const count=(extra.skillPractice as Record<string,unknown>)[category]; if(typeof count==='number'&&Number.isSafeInteger(count)&&count>=0&&count<=STORY_CAMPAIGNS.reduce((sum,s)=>sum+campaignLength(s)*STORY_MAX_QUESTION_COUNT,0))progress.skillPractice[category]=count; }
     }
     if(extra.stageResults && typeof extra.stageResults==='object' && !Array.isArray(extra.stageResults)) {
       progress.stageResults={};
@@ -59,7 +61,8 @@ export function parseStoryProgress(raw: string | null): StoryProgress {
         const id=`${story.id}:${index}`,saved=(extra.stageResults as Record<string,unknown>)[id];
         if(!saved||typeof saved!=='object')continue;
         const record=saved as StoryStageResult;
-        if(record.totalQuestions===STORY_QUESTION_COUNT && Number.isInteger(record.bestCorrect) && record.bestCorrect>=0 && record.bestCorrect<=STORY_QUESTION_COUNT && Number.isInteger(record.lastCorrect) && record.lastCorrect>=0 && record.lastCorrect<=record.bestCorrect && Number.isSafeInteger(record.attempts) && record.attempts>=1 && record.attempts<=10000)progress.stageResults[id]={bestCorrect:record.bestCorrect,lastCorrect:record.lastCorrect,totalQuestions:STORY_QUESTION_COUNT,attempts:record.attempts};
+        const total=record.totalQuestions,lastTotal=record.lastTotalQuestions??total;
+        if(Number.isInteger(total)&&total>=STORY_MIN_QUESTION_COUNT&&total<=STORY_MAX_QUESTION_COUNT && Number.isInteger(lastTotal)&&lastTotal>=STORY_MIN_QUESTION_COUNT&&lastTotal<=STORY_MAX_QUESTION_COUNT && Number.isInteger(record.bestCorrect) && record.bestCorrect>=0 && record.bestCorrect<=total && Number.isInteger(record.lastCorrect) && record.lastCorrect>=0 && record.lastCorrect<=lastTotal && record.lastCorrect*total<=record.bestCorrect*lastTotal && Number.isSafeInteger(record.attempts) && record.attempts>=1 && record.attempts<=10000)progress.stageResults[id]={bestCorrect:record.bestCorrect,lastCorrect:record.lastCorrect,totalQuestions:total,attempts:record.attempts,...(record.lastTotalQuestions!==undefined?{lastTotalQuestions:lastTotal}:{})};
       }
     }
     return progress;
@@ -78,18 +81,22 @@ export function advanceStory(progress: StoryProgress,stageId: string,session: Le
     if(campaign.grade!==grade || !Number.isInteger(index) || index<0 || index>=campaignLength(campaign) || index>campaignCompleted(progress,campaign.id))return progress;
     stage=campaignStageAt(campaign.id,index);
   } else stage=storyStageAt(progress.completedCount);
-  const count=campaign?STORY_QUESTION_COUNT:LEGACY_STORY_QUESTION_COUNT;
+  const count=campaign?session.questions.length:LEGACY_STORY_QUESTION_COUNT;
+  if(campaign && (!Number.isInteger(count)||count<STORY_MIN_QUESTION_COUNT||count>STORY_MAX_QUESTION_COUNT))return progress;
   if(stage.id!==stageId || progress.sessions.includes(session.id) || session.mode!=='adaptive' || !session.result || session.questions.length!==count || session.result.totalQuestions!==count || session.result.blankAnswers!==0 || !Number.isInteger(session.result.correctAnswers) || session.result.correctAnswers<0 || !Number.isInteger(session.result.wrongAnswers) || session.result.wrongAnswers<0 || session.result.correctAnswers+session.result.wrongAnswers!==count)return progress;
   const categories=new Set(session.questions.map(q=>q.category));
-  if(campaign ? AVAILABLE_CATEGORIES.some(category=>session.questions.filter(q=>q.category===category).length!==2) : categories.size!==count)return progress;
+  if(campaign ? categories.size<Math.min(count,AVAILABLE_CATEGORIES.length) || [...categories].some(category=>!AVAILABLE_CATEGORIES.includes(category)) : categories.size!==count)return progress;
+  if(Object.keys(session.answers).length!==count||new Set(session.questions.map(q=>q.id)).size!==count)return progress;
   if(session.questions.some((q,i)=>q.targetGrade!==grade || !session.answers[String(i)]?.response))return progress;
   if(campaign) {
     const firstCompletion=stage.index===campaignCompleted(progress,campaign.id);
     const skillPractice={...progress.skillPractice};
     if(firstCompletion)session.questions.forEach(q=>{skillPractice[q.category]=(skillPractice[q.category]||0)+1;});
     const previous=progress.stageResults?.[stage.id],correct=session.result.correctAnswers;
+    const improved=!previous||correct*previous.totalQuestions>previous.bestCorrect*count;
+    const bestCorrect=improved?correct:previous.bestCorrect,bestTotal=improved?count:previous.totalQuestions;
     return {...progress,campaigns:{...progress.campaigns,[campaign.id]:Math.max(campaignCompleted(progress,campaign.id),stage.index+1)},selectedStoryId:campaign.id,skillPractice,
-      stageResults:{...progress.stageResults,[stage.id]:{bestCorrect:Math.max(previous?.bestCorrect||0,correct),lastCorrect:correct,totalQuestions:count,attempts:Math.min(10000,(previous?.attempts||0)+1)}},sessions:[...progress.sessions,session.id].slice(-64)};
+      stageResults:{...progress.stageResults,[stage.id]:{bestCorrect,lastCorrect:correct,totalQuestions:bestTotal,attempts:Math.min(10000,(previous?.attempts||0)+1),...(count!==bestTotal?{lastTotalQuestions:count}:{})}},sessions:[...progress.sessions,session.id].slice(-64)};
   }
   return {...progress,completedCount:progress.completedCount+1,sessions:[...progress.sessions,session.id].slice(-64)};
 }
@@ -139,3 +146,4 @@ export function storyPracticeLevel(attempts: number) {
   const level=thresholds.filter(n=>count>=n).length-1;
   return {level,next:thresholds[level+1]??null,label:['Yeni','Keşfeden','İz süren','Bağ kuran','Çözüm arayan','Deneyimli'][level]};
 }
+

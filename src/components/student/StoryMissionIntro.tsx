@@ -1,17 +1,22 @@
 import { ArrowRight, BookOpen, Check, Compass, LoaderCircle, Sparkles, Star } from 'lucide-react';
 import type { StoryStage } from '../../features/student/story-adventure';
+import { difficultyChoices, type LearningDifficulty } from '../../features/student/learning-selection';
+import type { SchoolGrade } from '../../features/questions/quality-policy';
 import './story-mission-intro.css';
 
 interface Props {
   stage: StoryStage;
-  grade: number;
+  grade: SchoolGrade;
   questionCount: number;
+  difficulty: LearningDifficulty;
+  onDifficulty: (value: LearningDifficulty) => void;
+  onCount: (value: number) => void;
   busy: boolean;
   onStart: () => void;
 }
 
 /** A small, self-contained welcome scene; the session owner controls starting and errors. */
-export function StoryMissionIntro({ stage, grade, questionCount, busy, onStart }: Props) {
+export function StoryMissionIntro({ stage, grade, questionCount, difficulty, onDifficulty, onCount, busy, onStart }: Props) {
   return <section className="bj-story-setup bj-mission" aria-label="Hikâye görevi" aria-busy={busy}>
     <div className="bj-mission-scene" aria-hidden="true">
       <div className="bj-mission-cloud bj-mission-cloud-one" />
@@ -32,6 +37,16 @@ export function StoryMissionIntro({ stage, grade, questionCount, busy, onStart }
       <h2>{stage.title}</h2>
       {stage.narrative && <p className="bj-mission-narrative">{stage.narrative}</p>}
       <div className="bj-mission-goal"><span><Compass size={20} aria-hidden="true"/></span><p><strong>Senin görevin</strong>{stage.task}</p></div>
+      <fieldset className="bj-mission-options" disabled={busy}>
+        <legend>Maceranı ayarla</legend>
+        <label>Zorluk düzeyi<select aria-label="Macera zorluğu" value={difficulty} onChange={event => onDifficulty(event.target.value === 'mixed' ? 'mixed' : Number(event.target.value) as LearningDifficulty)}>
+          <option value="mixed">Karışık · Bana uygun</option>
+          {difficultyChoices(grade).map(level => <option key={level.value} value={level.value}>{level.label}</option>)}
+        </select></label>
+        <label>Soru sayısı<select aria-label="Macera soru sayısı" value={questionCount} onChange={event => onCount(Number(event.target.value))}>
+          {[5,10,15,20,30,40,50].map(count => <option key={count} value={count}>{count} soru</option>)}
+        </select></label>
+      </fieldset>
       <div className="bj-mission-rewards" aria-label="Macera adımları">
         <span><BookOpen size={19} aria-hidden="true"/><strong>{questionCount} soru</strong><small>Keşfet ve çöz</small></span>
         <span><Star size={19} aria-hidden="true"/><strong>Yıldız kazan</strong><small>Her cevap bir adım</small></span>
@@ -42,7 +57,8 @@ export function StoryMissionIntro({ stage, grade, questionCount, busy, onStart }
         <span>{busy ? 'Görev hazırlanıyor…' : 'Maceraya başla'}</span>
         {!busy && <ArrowRight size={23} aria-hidden="true"/>}
       </button>
-      <p className="bj-mission-footnote" role="status">{busy ? 'Soruların hazırlanıyor, keşif birazdan başlıyor.' : 'Kendi hızında ilerle. Junior yanında!'} </p>
+      <p className="bj-mission-footnote" role="status">{busy ? `${questionCount} soruluk maceran hazırlanıyor…` : 'Kendi hızında ilerle. Junior yanında!'} </p>
     </div>
   </section>;
 }
+

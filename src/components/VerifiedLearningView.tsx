@@ -47,7 +47,7 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
   const [exam, setExam] = useState('mini');
   const [difficulty, setDifficulty] = useState<LearningDifficulty>('mixed');
   const [questionCount, setQuestionCount] = useState(String(storyStage?STORY_QUESTION_COUNT:mode==='practice'?5:DEFAULT_ADAPTIVE_COUNT));
-  const validQuestionCount = /^\d+$/.test(questionCount) && Number(questionCount) >= 1 && Number(questionCount) <= MAX_LEARNING_QUESTIONS;
+  const validQuestionCount = /^\d+$/.test(questionCount) && Number(questionCount) >= 1 && Number(questionCount) <= (mode === 'practice' ? 5 : MAX_LEARNING_QUESTIONS);
   const selectedGrade = dataService.getCurrentUser().grade;
   const grade = isSchoolGrade(selectedGrade) ? selectedGrade : 1;
   const [exams, setExams] = useState<Array<{id: string; title: string; count: number; seconds: number}>>([...LEARNING_EXAMS]);
@@ -82,8 +82,8 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
     }); }
     catch (err) { if (mounted.current) {setError(err instanceof Error ? err.message : 'İşlem tamamlanamadı. Yeniden dene.');if(err instanceof QuestionDiversityError)setDiversityError(err);} return null; }
   };
-  const start = async () => { if (mode === 'adaptive' && !validQuestionCount) return; sound.unlock(); const saved = await run(() => {
-    return reviewMistakeId ? learningService.review(reviewMistakeId) : learningService.start(mode, storyStage?.category || topicCategory(topic, category), exam, difficulty, undefined, storyStage?'mixed':topic, storyStage?STORY_QUESTION_COUNT:Number(questionCount), !!storyStage);
+  const start = async () => { if (mode !== 'exam' && !validQuestionCount) return; sound.unlock(); const saved = await run(() => {
+    return reviewMistakeId ? learningService.review(reviewMistakeId) : learningService.start(mode, storyStage?.category || topicCategory(topic, category), exam, difficulty, undefined, storyStage?'mixed':topic, Number(questionCount), !!storyStage);
   }); if (saved && mounted.current) { const next = mode === 'exam' ? 0 : nextUnansweredIndex(saved); setIndex(next < 0 ? saved.questions.length - 1 : next); } };
   const savePending = async () => {
     if (!session || mode !== 'exam' || session.result || Date.now() >= Date.parse(session.expiresAt)) return true;
@@ -167,7 +167,7 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
   const restart = () => { feedbackLedger.current.reset(); setFeedback(null); setSession(null); setResponse(null); setIndex(0); setError(''); setDiversityError(null); };
   const shortestExam=[...exams].sort((a,b)=>a.count-b.count)[0];
   const shorterExam=diversityError?[...exams].filter(item=>item.count<diversityError.requestedCount&&item.count<=diversityError.preparedCount).sort((a,b)=>b.count-a.count)[0]:undefined;
-  const shorterCount=diversityError&&mode!=='exam'?Math.min(5,diversityError.preparedCount):
+  const shorterCount=diversityError&&mode!=='exam'?(storyStage&&diversityError.preparedCount<5?0:Math.min(5,diversityError.preparedCount)):
     mode==='exam'&&shorterExam?shorterExam.count:0;
   const resetDiversityNotice=()=>{setError('');setDiversityError(null);};
   const chooseNewDifficulty = async () => {
@@ -209,16 +209,16 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
     <div className="zp-screen">
     <LearningRefreshNotice/>
     <div className="zp-screen-bar"><span>{isExam ? <Tablet size={17} aria-hidden="true" /> : <Gamepad2 size={19} aria-hidden="true" />} {isExam ? 'BİLSEM JUNIOR / DENEME' : 'KEŞFET · DÜŞÜN · ÇÖZ'}</span><span>{grade}. SINIF</span></div>
-    {diversityError&&!session&&!storyStage?<DiversityRecoveryNotice error={diversityError} busy={busy}
+    {diversityError&&!session?<DiversityRecoveryNotice error={diversityError} busy={busy}
       mixedCount={mode==='exam'?shortestExam?.count||15:5}
       onMixed={()=>{setTopic('mixed');setCategory('mixed');setQuestionCount('5');if(shortestExam)setExam(shortestExam.id);resetDiversityNotice();}}
       shorterCount={shorterCount||undefined} onShorter={shorterCount?()=>{if(mode!=='exam')setQuestionCount(String(shorterCount));else if(shorterExam)setExam(shorterExam.id);resetDiversityNotice();}:undefined}/>:error&&<div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{error}</div>}
     <AnswerHistory items={history} />
-    {!session && storyStage ? <StoryMissionIntro stage={storyStage} grade={grade} questionCount={STORY_QUESTION_COUNT} busy={busy} onStart={() => void start()} /> : !session ? <LearningSetupPanel mode={mode} grade={grade} review={!!reviewMistakeId} busy={busy} topic={topic} onTopic={setTopic} category={category} onCategory={setCategory} difficulty={difficulty} onDifficulty={setDifficulty} questionCount={questionCount} onCount={setQuestionCount} validCount={validQuestionCount} exam={exam} onExam={setExam} exams={exams} onStart={() => void start()} /> : <>
+    {!session && storyStage ? <StoryMissionIntro stage={storyStage} grade={grade} questionCount={Number(questionCount)} difficulty={difficulty} onDifficulty={setDifficulty} onCount={count => setQuestionCount(String(count))} busy={busy} onStart={() => void start()} /> : !session ? <LearningSetupPanel mode={mode} grade={grade} review={!!reviewMistakeId} busy={busy} topic={topic} onTopic={setTopic} category={category} onCategory={setCategory} difficulty={difficulty} onDifficulty={setDifficulty} questionCount={questionCount} onCount={setQuestionCount} validCount={validQuestionCount} exam={exam} onExam={setExam} exams={exams} onStart={() => void start()} /> : <>
       {session.result && <section aria-label="Çalışma sonucu" className={`zp-result ${storyStage?'bj-story-result':''} space-y-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-5`}>
         {!storyStage&&<Trophy size={38} aria-hidden="true" />}
-        <h2 className="text-xl font-extrabold">Çalışman tamamlandı</h2><p>{session.result.correctAnswers} doğru · {session.result.wrongAnswers} yanlış · {session.result.blankAnswers} boş · %{session.result.scorePercentage} başarı</p><p className="font-bold text-emerald-800">{session.result.xp} XP kazandın</p>{storyStage&&<StoryResultCelebration key={session.id} correct={session.result.correctAnswers} total={session.result.totalQuestions} bestCorrect={storyReward?.sessionId===session.id?storyReward.bestCorrect:undefined}/>}
-<p className="text-sm">Sorular arasında geçerek çözüm açıklamalarını inceleyebilirsin.</p>{storyStage&&<button type="button" disabled={busy} onClick={()=>{restart();void start();}} className="bj-story-replay">Tekrar oyna · 20 yeni soru</button>}{storyStage&&onContinueStory&&<button type="button" disabled={busy} onClick={onContinueStory} className={button}>Sıradaki keşfe geç</button>}<button type="button" disabled={busy} onClick={storyStage?onNavigateHome:restart} className={button}>{storyStage?'Maceraya dön':'Yeni çalışma'}</button>
+        <h2 className="text-xl font-extrabold">Çalışman tamamlandı</h2><p>{session.result.correctAnswers} doğru · {session.result.wrongAnswers} yanlış · {session.result.blankAnswers} boş · %{session.result.scorePercentage} başarı</p><p className="font-bold text-emerald-800">{session.result.xp} XP kazandın</p>{storyStage&&<StoryResultCelebration key={session.id} correct={session.result.correctAnswers} total={session.result.totalQuestions} bestCorrect={storyReward?.sessionId===session.id?storyReward.bestCorrect:undefined} bestTotal={storyReward?.sessionId===session.id?storyReward.bestTotalQuestions:undefined}/>}
+<p className="text-sm">Sorular arasında geçerek çözüm açıklamalarını inceleyebilirsin.</p>{storyStage&&<button type="button" disabled={busy} onClick={()=>{restart();void start();}} className="bj-story-replay">Tekrar oyna · {questionCount} yeni soru</button>}{storyStage&&onContinueStory&&<button type="button" disabled={busy} onClick={onContinueStory} className={button}>Sıradaki keşfe geç</button>}<button type="button" disabled={busy} onClick={storyStage?onNavigateHome:restart} className={button}>{storyStage?'Maceraya dön':'Yeni çalışma'}</button>
         {storyStage&&session.result.blankAnswers===0&&<div className="bj-story-discovery"><BookOpen size={22} aria-hidden="true"/><h3>Hikâyede yeni bir adım</h3><p>{storyStage.discovery}</p>{storyReward?.sessionId===session.id&&<>{storyReward.points>0&&<strong>+{storyReward.points} macera puanı</strong>}{storyReward.replay&&<strong>{storyReward.improved?'En iyi sonucunu geliştirdin!':'Tekrar maceran tamamlandı. En iyi yıldızların korundu.'}</strong>}{storyReward.badges.map(badge=><p key={badge}>Yeni rozet: {badge}</p>)}</>}</div>}
       </section>}
       {q && renderQuestion && <StoryAnswerReview enabled={!!storyStage&&!!session.result} count={session.questions.length}><section className="zp-session space-y-5 p-4 sm:p-7">
@@ -256,5 +256,6 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
     </div>
   </main>;
 }
+
 
 

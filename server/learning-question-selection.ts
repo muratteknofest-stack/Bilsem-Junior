@@ -19,6 +19,8 @@ import { LEARNING_QUESTION_FORMAT, supportsReasoningFormat, supportsProfessional
 
 export const RECENT_SESSION_LIMIT = 30;
 export const RECENT_HISTORY_DAYS = 30;
+// Matches currentReasoningCandidate; push cheap engine filtering into the bank read.
+export const CURRENT_REASONING_ENGINES = ['reasoning-lab-1','symbolic-v2','verified-8','verified-4','colorful-3','workshop-3','workshop-reading-1'] as const;
 type RecentSession = { questions: BaseQuestion[]; answers?: Record<string,{correct?:boolean}>; created_at: string };
 
 /** Renaming an equivalent topic cannot make the same displayed task fresh. */
@@ -239,3 +241,4 @@ export function generateVariedLearningQuestion(options:{grade:SchoolGrade; categ
   if(!best)throw new LearningError('Bu sınıfta doğrulanmış farklı bir soru hazırlanamadı.');
   return best;
 }
+

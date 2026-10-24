@@ -171,3 +171,34 @@ test('stars are proportional, replay improves only the best rating, and neither 
  const upgraded=advanceStory(legacy,stage.id,withScore(19,'legacy-replay'),2);
  assert.equal(upgraded.stageResults?.[stage.id].bestCorrect,19);assert.equal(campaignCompleted(upgraded,'g2-map'),3);assert.equal(upgraded.completedCount,18);
 });
+
+
+test('chosen story lengths retain exact scoring, proportional best stars and persisted progress', async () => {
+ const {campaignStageAt,storyStars,storyCollection,campaignCompleted}=await import('../src/features/student/story-adventure');
+ const stage=campaignStageAt('g2-map',0);let seed=77123;
+ const make=(count:number,correct:number,id:string):LearningSessionView=>{
+  const qs=selectLearningQuestions({count,category:'mixed',candidates:[],exposure:new Map(),canUse:isQuestionReadyForStudents,
+   generate:(category,typeCounts)=>generateVariedLearningQuestion({category,grade:2,difficulty:2,seed:++seed,typeCounts})});
+  return {...session,id,questions:prepareLearningQuestions(qs),answers:Object.fromEntries(qs.map((q,i)=>[String(i),{response:{mode:'choice',optionId:q.correctOptionId}}])),result:{...session.result!,totalQuestions:count,correctAnswers:correct,wrongAnswers:count-correct,blankAnswers:0}};
+ };
+ let progress=emptyStoryProgress();
+ for(const [count,correct] of [[5,4],[10,9],[30,15],[50,45]] as const){
+  const before=storyCollection(progress,2).points;
+  progress=advanceStory(progress,stage.id,make(count,correct,`chosen-${count}`),2);
+  assert.equal(campaignCompleted(progress,'g2-map'),1);
+  assert.equal(storyCollection(progress,2).points,count===5?before+20:before);
+  assert.deepEqual(parseStoryProgress(JSON.stringify(progress)),progress);
+ }
+ const best=progress.stageResults![stage.id];
+ assert.equal(storyStars(best.bestCorrect,best.totalQuestions),4.5);
+ assert.equal(best.bestCorrect,9);assert.equal(best.totalQuestions,10);
+ assert.equal(best.lastCorrect,45);assert.equal(best.lastTotalQuestions,50);
+ assert.equal(best.attempts,4);
+ const finished=make(5,5,'perfect-short');
+ const next=advanceStory(progress,stage.id,finished,2);
+ assert.equal(next.stageResults![stage.id].bestCorrect,5);assert.equal(next.stageResults![stage.id].totalQuestions,5);
+ assert.equal(storyStars(5,5),5);
+ for(const broken of [{...finished,id:'extra-answer',answers:{...finished.answers,5:{response:{mode:'choice',optionId:'a'}}}},
+  {...finished,id:'wrong-grade',questions:finished.questions.map(q=>({...q,targetGrade:3 as const}))},
+  {...finished,id:'duplicate',questions:finished.questions.map(()=>finished.questions[0])}])assert.strictEqual(advanceStory(progress,stage.id,broken,2),progress);
+});
