@@ -1,6 +1,8 @@
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { isAndroidApp } from './lib/native-app';
+import { androidParentRoute, dispatchAndroidBack } from './lib/android-navigation';
+import { AndroidConnectionNotice } from './components/android/AndroidConnectionNotice';
 import { storyStars, advanceStory, storyCollection, storyBadges, nextCampaignStage, isStoryStageComplete, type StoryStage, type StoryProgress, type StoryReward } from './features/student/story-adventure';
 import { readStoryProgress, saveStoryProgress } from './services/story-progress-service';
 import type { LearningSessionView } from './features/student/learning-contract';
@@ -445,24 +447,30 @@ export default function App() {
   };
 
   useEffect(()=>{
-    if(!isAndroidApp || !Capacitor.isNativePlatform() || isTestRoute)return;
+    if(!isAndroidApp || !Capacitor.isNativePlatform())return;
     let disposed=false;let remove:(()=>Promise<void>)|undefined;
     void CapacitorApp.addListener('backButton',({canGoBack})=>{
+      // Native Back must close the top layer before leaving the underlying task.
+      const dialogs=document.querySelectorAll<HTMLDialogElement>('dialog[open]');
+      if(dialogs.length){dialogs[dialogs.length-1].close();return;}
+      if(showGlobalReminderModal){setShowGlobalReminderModal(false);return;}
       if(showParentAccess){setShowParentAccess(false);return;}
-      if(currentUser.role==='student'&&currentRoute!=='dashboard'&&!['landing','login'].includes(currentRoute)){
-        const target=['student-tests','student-topics','student-plan','student-skills','mistakes','glossary'].includes(currentRoute)?'student-study':['student-challenges','student-progress','achievements','leaderboard'].includes(currentRoute)?'student-rewards':'dashboard';
-        navigateTo(target);return;
-      }
+      if(isSwitchingStudent)return;
+      if(dispatchAndroidBack(window))return;
+      if(isTestRoute){leaveTest();return;}
+      const target=androidParentRoute(currentRoute,currentUser.role);
+      if(target){navigateTo(target);return;}
       if(canGoBack)window.history.back();else void CapacitorApp.minimizeApp();
     }).then(handle=>{if(disposed)void handle.remove();else remove=()=>handle.remove();}).catch(()=>{});
     return()=>{disposed=true;void remove?.();};
-  },[currentRoute,isTestRoute,showParentAccess,currentUser.role]);
+  },[currentRoute,isTestRoute,showParentAccess,showGlobalReminderModal,isSwitchingStudent,currentUser.role]);
 
   if (authLoading && authUser && !userProfile) return <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6"><p role="status">Hesap ve ilerleme bilgileri yükleniyor…</p></main>;
   if (currentRoute !== 'login' && hasVerifiedAdminAccess({ currentUser: authUser, userProfile, loading: authLoading, isAdminAuthorized })) return <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6"><p role="status">Yönetici alanına yönlendiriliyorsunuz…</p></main>;
 
   return (
     <div className={`${isAndroidApp ? 'bj-native-shell ' : ''}bilsem-junior-skin min-h-screen bg-slate-50 text-slate-900 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]`}>
+      {isAndroidApp && <AndroidConnectionNotice />}
       {/* Workspace navigation; public pages own their header. Tests stay distraction-free. */}
       {!isTestRoute && currentRoute !== 'landing' && currentRoute !== 'login' && (
         <Navbar
@@ -658,6 +666,7 @@ export default function App() {
     </div>
   );
 }
+
 
 
 

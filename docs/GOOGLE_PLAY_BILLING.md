@@ -167,3 +167,12 @@ Android ilk açılışta web ile aynı LandingPage bileşenini kullanır. Öğre
 Play Console'da `com.quantumtech.bilsemjunior` uygulamasının `zekapark_uyelik` ürünü ile `monthly` / P1M, `quarterly` / P3M, `annual` / P1Y otomatik yenilenen temel planları etkin olmalıdır. Ürünlerin mevcut Console durumu bu kod çalışmasıyla doğrulanmış değildir. Gerçek fiyat, satın alma ve yenileme testleri lisans testçisi ve Google Play kurulumu üzerinden tamamlanmalıdır.
 
 Bu sürümün APK'sı geliştirme test anahtarıyla imzalanmış test dağıtımıdır. Google Play'e yayımlama ve gerçek ödeme kabul testi yapılmış sayılmaz.
+
+
+## 25 Ekim 2026 — Android abonelik kurtarması
+
+Üretimde satış, ücretli erişim zorunluluğu, test satın alımları ve herkese açık mağaza bağlantısı bayrakları `false` olarak doğrulandı; bu çalışma bunları açmaz. Mevcut üç plan ve sunucuda Google doğrulaması korunur.
+
+Abonelik erişimi okunurken başarılı fakat aktif olmayan Google sonucu artık durumunu ve bitiş tarihini kaybetmez. `PENDING`, `PAUSED` ve `ON_HOLD` durumlarında istemci satın alma açmaz; `/prepare` de 409 döner. Kullanıcı Google Play'den ödeme/duraklatma sorununu çözer ve yeniden doğrular. Grace döneminde erişim korunurken ödeme yöntemi uyarısı gösterilir. İşlem öncesi ve `/prepare` yanıtından sonra çevrimiçi durum ipucu kontrol edilir; bağlantı yoksa native ödeme çağrısı yapılmaz. Bu ipucu ödeme veya erişim kanıtı değildir.
+
+Gerçek Play kataloğunun üç etkin dönemle okunması, kimliği doğrulanmış RTDN teslimi ve lisans testçisiyle imzalı uygulamadaki ödeme/yenileme/iade kabulü hâlâ ayrıca doğrulanmalıdır. Otomatik ve yalıtılmış arayüz testleri gerçek Google Play satın alımı sayılmaz.

@@ -31,19 +31,23 @@ export async function googlePlayAccess(parentId: string, studentId: string): Pro
     .eq('parent_id', parentId).eq('student_id', studentId).not('subscription_state', 'in', '(SUBSCRIPTION_STATE_EXPIRED,SUBSCRIPTION_STATE_PENDING_PURCHASE_CANCELED)').order('verified_at', { ascending: false }).limit(21);
   if (result.error || !result.data || result.data.length > 20) throw new GooglePlayError('Abonelik kayıtları doğrulanamadı.');
   let active: PlayAccess | null = null, failure = false;
+  const inactive: PlayAccess[] = [];
   const config = playConfig();
   for (let i = 0; i < result.data.length; i += 3) {
-    await Promise.all(result.data.slice(i, i + 3).map(async row => {
+    await Promise.all(result.data.slice(i, i + 3).map(async (row, offset) => {
       try {
         if (row.package_name !== config.packageName || row.product_id !== config.productId) throw new GooglePlayError('Abonelik ürün ayarları değişmiş.');
         const access = await verifyAndSavePlay(parentId, studentId, decryptPlayToken(row.token_ciphertext, row.token_hash));
         if (access.active && (!active || Date.parse(access.expiresAt!) > Date.parse(active.expiresAt!))) active = access;
+        // Keep Google's verified reason for a blocked subscription. Parallel replies
+        // must not let an older expired token hide the newest paused/on-hold state.
+        if (!access.active) inactive[i + offset] = access;
       } catch (error) { if (!(error instanceof GooglePlayError) || error.status !== 409) failure = true; }
     }));
   }
   if (active) return active;
   if (failure) throw new GooglePlayError('Abonelik durumu şu anda doğrulanamıyor. Yeniden deneyin.');
-  return { active: false, expiresAt: null };
+  return inactive.find(Boolean) || { active: false, expiresAt: null };
 }
 export async function handlePlayNotification(token: string) {
   const result = await getServiceClient().from('google_play_subscriptions').select('parent_id,student_id').eq('token_hash', tokenHash(token)).maybeSingle();
@@ -62,3 +66,4 @@ export async function handlePlayNotification(token: string) {
   if (binding.error) throw new GooglePlayError('Bildirim hesap bağlantısı yüklenemedi.');
   if (binding.data) await verifyAndSavePlay(binding.data.parent_id, binding.data.student_id, token);
 }
+

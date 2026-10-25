@@ -359,9 +359,9 @@ try{
  await page.screenshot({path:'/tmp/zekapark-correct-feedback.png'});
  await page.locator('.zp-focus-footer').getByText('2 / 2',{exact:true}).waitFor();
  const successTones=await page.evaluate(()=>window.__audioTones.filter(f=>f===659.25).length);assert.ok(successTones>0);
- await page.getByRole('button',{name:'‹ Önceki',exact:true}).click();assert.equal(await page.locator('.zp-feedback').count(),0);
+ await page.locator('.zp-focus-footer').getByRole('button',{name:'Önceki',exact:true}).click();assert.equal(await page.locator('.zp-feedback').count(),0);
  assert.equal(await page.evaluate(()=>window.__audioTones.filter(f=>f===659.25).length),successTones);
- await page.getByRole('button',{name:'Sonraki ›',exact:true}).click();
+ await page.locator('.zp-focus-footer').getByRole('button',{name:'Sonraki',exact:true}).click();
  await page.getByRole('button',{name:'Sorular ve çalışma araçları',exact:true}).click();
  const tools=page.getByRole('dialog',{name:'Sorular ve çalışma araçları',exact:true});
  await tools.getByRole('button',{name:'Sesi kapat',exact:true}).click();await tools.getByRole('button',{name:'Kapat ✕',exact:true}).click();
@@ -424,3 +424,4 @@ try{
  console.log('Turkish isolated browser: registration, grade, consent, confirmation retry, unconfirmed-parent rejection, verified login, export, history failure/retry, deletion request, secure family switching clipboard denial/success, review validation/refresh/empty state admin deletion stale-scope rejection/receipt validation/confirmed completion acknowledged correct/wrong feedback, failed-save silence, muted reload, reduced motion and hidden exam correctness; adaptive count validation, finite 3-question completion and fresh 2-question restarts in grades 1–4; student App topic handoff/reset across all four grades at 320/390/820 px and actual admin portal MFA/educator review navigation/paging/three approvals/save retry passed. This is not a real email/pilot acceptance record.');
  }
 }catch(error){console.error('Turkish component scenario failed:',error.message);if(page)console.error(await page.locator('body').innerText().catch(()=>'(page unavailable)'));throw error; }finally{await browser?.close();await server.close();}
+

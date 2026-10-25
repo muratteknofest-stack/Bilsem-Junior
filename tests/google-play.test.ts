@@ -8,6 +8,7 @@ import { GooglePlayError, encryptPlayToken, decryptPlayToken, tokenHash, playBin
 import { playRequest, verifyPlayPush } from '../server/google-play-client';
 import playRoutes from '../server/routes/google-play-routes';
 import { requireLearningAccess } from '../server/membership-access';
+import { googlePlayAccess } from '../server/google-play-access';
 import { defaultPlatformSettings } from '../src/lib/platform-settings';
 const parent='11111111-1111-4111-8111-111111111111',student='22222222-2222-4222-8222-222222222222',other='33333333-3333-4333-8333-333333333333';
 const secret='unit-test-binding-secret-not-a-real-secret', key='12'.repeat(32), purchaseToken='test-purchase-token', binding=playBindings(parent,student,secret);
@@ -139,6 +140,13 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     events=[];const restored=await verify();assert.equal(restored.status,200);assert.equal(restored.body.access.active,true);assert.equal(restored.body.access.expiresAt,expiry);assert.equal(ledger.length,1);assert.deepEqual(events,['google','save','ack']);
     // Each new study request checks the Google-authoritative entitlement.
     await requireLearningAccess(student);
+    for (const state of ['SUBSCRIPTION_STATE_PENDING','SUBSCRIPTION_STATE_PAUSED','SUBSCRIPTION_STATE_ON_HOLD']) {
+      payload=subscription({subscriptionState:state});
+      const blocked=await googlePlayAccess(parent,student);
+      assert.equal(blocked.active,false);assert.equal(blocked.state,state);assert.equal(blocked.expiresAt,expiry);
+      assert.equal((await post('parent/google-play/prepare',{studentId:student})).status,409);
+    }
+    payload=subscription();
     process.env.GOOGLE_PLAY_BILLING_ENABLED='false';
     await requireLearningAccess(student); // disabling new sales never grants free premium access or revokes a verified purchase
     payload=subscription({subscriptionState:'SUBSCRIPTION_STATE_ON_HOLD'});await assert.rejects(requireLearningAccess(student),e=>(e as any).status===403);
@@ -157,3 +165,4 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     for(const k of Object.keys(process.env))if(!(k in savedEnv))delete process.env[k];Object.assign(process.env,savedEnv);
   }
 });
+

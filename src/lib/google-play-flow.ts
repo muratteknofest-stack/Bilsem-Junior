@@ -14,6 +14,19 @@ const purchaseSchema = z.object({ purchases: z.array(z.object({ token: z.string(
   accountId: z.string().nullable(), profileId: z.string().nullable(), productIds: z.array(productId).min(1).max(20) })).max(50), cancelled: z.boolean().optional() });
 const catalogSchema = z.object({ offers: z.array(z.object({ basePlanId: z.enum(['monthly','quarterly','annual']), price: z.string().trim().min(1).max(100), period: z.string() })).max(20) });
 export type PlayConfig = z.infer<typeof playConfigSchema>;
+/** Resolve a paused/unpaid subscription in Play, rather than starting a duplicate charge. */
+export function playNeedsManagement(access: PlayConfig['access'] | undefined) {
+  return !!access && ['SUBSCRIPTION_STATE_PENDING', 'SUBSCRIPTION_STATE_ON_HOLD', 'SUBSCRIPTION_STATE_PAUSED'].includes(access.state || '');
+}
+export function playStateGuidance(access: PlayConfig['access'] | undefined): string | null {
+  switch (access?.state) {
+    case 'SUBSCRIPTION_STATE_PENDING': return 'Ödeme Google Play’de bekliyor. Tamamlandığında satın alımları geri yükleyin.';
+    case 'SUBSCRIPTION_STATE_ON_HOLD': return 'Ödeme sorunu nedeniyle aboneliğiniz askıda. Google Play’den ödeme yönteminizi güncelleyin, ardından Yenile’ye dokunun.';
+    case 'SUBSCRIPTION_STATE_PAUSED': return 'Aboneliğiniz duraklatılmış. Devam etmek için Google Play’de aboneliğinizi yönetin.';
+    case 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD': return 'Erişiminiz devam ediyor. Kesinti yaşamamak için Google Play’de ödeme yönteminizi kontrol edin.';
+    default: return null;
+  }
+}
 export type PlayNotice = { kind: 'info' | 'success' | 'warning' | 'error'; text: string };
 export interface PlayBillingState {
   config: PlayConfig | null; offers: PlayOffer[]; phase: 'loading' | 'idle' | 'refreshing' | 'restoring' | 'opening' | 'verifying';
@@ -27,12 +40,14 @@ export interface PlayStore {
 }
 interface Dependencies {
   studentId: string; native: boolean; isCurrent(): boolean; store: PlayStore;
+  isOnline?(): boolean;
   request(path: string, body: unknown, signal: AbortSignal): Promise<unknown>;
   changed(state: PlayBillingState): void;
   deadlineMs?: number;
 }
 export function canBuyPlay(state: PlayBillingState, plan: PlayPlanId) {
   return state.phase === 'idle' && state.fresh && state.storeChecked && state.config?.ready === true && !state.config.access.active
+    && !playNeedsManagement(state.config.access)
     && !state.pending && !state.otherStudent && state.offers.some(o => o.basePlanId === plan && PLAY_PLANS.some(p => p.id === plan && p.period === o.period));
 }
 /** One owner, one operation. Disposal aborts HTTP and ignores late native callbacks. */
@@ -92,7 +107,8 @@ export class PlayBillingFlow {
     return this.run(this.state.config ? 'refreshing' : 'loading', async () => {
       this.patch({ offers: [], storeChecked: false });
       const config = await this.load(); if (!this.current()) return;
-      this.notice(config.access.active ? 'success' : 'info', config.access.active ? 'Aboneliğiniz doğrulandı.' : config.ready ? 'Döneminizi seçip Google Play ile devam edin.' : 'Google Play abonelikleri henüz satışa açılmadı.');
+      const guidance = playStateGuidance(config.access);
+      this.notice(guidance ? 'warning' : config.access.active ? 'success' : 'info', guidance || (config.access.active ? 'Aboneliğiniz doğrulandı.' : config.ready ? 'Döneminizi seçip Google Play ile devam edin.' : 'Google Play abonelikleri henüz satışa açılmadı.'));
       if (!this.deps.native) { if (!config.access.active) this.notice('info', 'Satın alma Android uygulamasındaki veli panelinde Google Play ile tamamlanır.'); return; }
       // Product availability and owned purchases are independent. A catalog outage
       // must never prevent an already-paid purchase from being restored.
@@ -115,7 +131,7 @@ export class PlayBillingFlow {
       if (results[1].status === 'rejected') this.notice('warning', 'Satın alımlar kontrol edilemedi. Yeni ödeme başlatmadan önce geri yüklemeyi deneyin.');
       else if (results[0].status === 'rejected' && !this.state.config?.access.active && !this.state.pending && !this.state.otherStudent)
         this.notice('warning', 'Google Play fiyatları yüklenemedi. Mevcut satın alımlar kontrol edildi; paketler için Yenile’ye dokunun.');
-      else if (config.ready && !this.state.offers.length && !this.state.config?.access.active && !this.state.pending && !this.state.otherStudent)
+      else if (config.ready && !this.state.offers.length && !this.state.config?.access.active && !this.state.pending && !this.state.otherStudent && !playNeedsManagement(this.state.config?.access))
         this.notice('info', 'Bu Google Play hesabına sunulan paket bulunamadı. Yenile’yi deneyin.');
     });
   };
@@ -143,7 +159,9 @@ export class PlayBillingFlow {
     const latest = verifiedCount ? await this.load() : config;
     const access = latest.access;
     this.patch({ config: latest, fresh: true });
-    if (restored && access.active) this.notice('success', 'Aboneliğiniz doğrulandı. İyi çalışmalar!');
+    const guidance = playStateGuidance(access);
+    if (guidance) this.notice('warning', guidance);
+    else if (restored && access.active) this.notice('success', 'Aboneliğiniz doğrulandı. İyi çalışmalar!');
     else if (pending) this.notice('warning', 'Ödemeniz Google Play’de beklemede. Tamamlandığında aboneliğiniz güncellenecek.');
     else if (otherStudent && !access.active) this.notice('warning', 'Bu Google hesabındaki abonelik başka bir öğrenci hesabına bağlı. İlgili öğrenci hesabından devam edin.');
     else if (context !== 'background') this.notice('info', context === 'purchase' ? 'Satın alım henüz doğrulanmadı. Satın alımları geri yükle ile kontrol edin.' : access.active ? 'Aboneliğiniz zaten aktif.' : 'Bu öğrenci için geri yüklenecek aktif satın alım bulunamadı.');
@@ -162,12 +180,17 @@ export class PlayBillingFlow {
   });
   purchase = (plan: PlayPlanId) => {
     if (!this.deps.native || !canBuyPlay(this.state, plan)) return Promise.resolve();
+    if (this.deps.isOnline?.() === false) {
+      this.notice('warning', 'Satın alma için internet bağlantınızı kontrol edin. Bağlandıktan sonra Yenile’ye dokunun.');
+      return Promise.resolve();
+    }
     return this.run('opening', async () => {
       this.notice('info', 'Google Play ödeme ekranı açılıyor…');
       const config = this.state.config!;
       const prepared = preparedSchema.parse(await this.request('prepare', { studentId: this.deps.studentId }));
       if (prepared.productId !== config.productId || prepared.accountId !== config.binding?.accountId || prepared.profileId !== config.binding?.profileId) throw Error('Satın alma hesap bağlantısı değişti. Yenile’yi deneyin.');
       if (!this.current()) return;
+      if (this.deps.isOnline?.() === false) throw Error('Bağlantı kesildi. Google Play açılmadı. Bağlandıktan sonra Yenile’ye dokunun.');
       this.patch({ storeChecked: false });
       // Do not time out the user's interaction with Google's payment sheet.
       const result = await this.deps.store.purchase({ ...prepared, basePlanId: plan });
@@ -177,3 +200,4 @@ export class PlayBillingFlow {
   purchasesUpdated = (_event: unknown) => { void this.refresh(); };
   dispose = () => { this.alive = false; this.queuedRefresh = false; this.lifetime.abort(); };
 }
+

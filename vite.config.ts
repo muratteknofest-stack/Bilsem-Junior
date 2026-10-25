@@ -6,7 +6,7 @@ import {defineConfig, loadEnv, Plugin} from 'vite';
 import { blogPlugin } from './scripts/blog-vite-plugin';
 import { blogConfig } from './scripts/blog-engine';
 import { publicBuildSettings } from './scripts/public-build-settings';
-import { androidBuildSettings } from './scripts/android-build-settings';
+import { androidBuildSettings, androidViewportHtml } from './scripts/android-build-settings';
 import { browserDirectives } from './server/browser-security';
 
 // LINT.IfChange(aistudio_media_plugin)
@@ -79,7 +79,7 @@ export default defineConfig(({ mode }) => {
   return {
     // Empty prefix list disables automatic exports, including similarly named secrets.
     envPrefix: [],
-    plugins: [react(), tailwindcss(), aistudioMediaPlugin(), ...(native ? [{ name: 'android-content-policy', apply: 'build' as const, transformIndexHtml: () => [{ tag: 'meta', attrs: { 'http-equiv': 'Content-Security-Policy', content: nativePolicy }, injectTo: 'head-prepend' as const }] }] : [blogPlugin()])],
+    plugins: [react(), tailwindcss(), aistudioMediaPlugin(), ...(native ? [{ name: 'android-content-policy', apply: 'build' as const, transformIndexHtml: (html: string) => ({ html: androidViewportHtml(html), tags: [{ tag: 'meta', attrs: { 'http-equiv': 'Content-Security-Policy', content: nativePolicy }, injectTo: 'head-prepend' as const }] }) }] : [blogPlugin()])],
     // Vercel serves /api in this project. Ignore stale external API settings there.
     define: {
       ...Object.fromEntries(Object.entries(publicSettings).map(([key, value]) => [`import.meta.env.${key}`, JSON.stringify(value)])),
@@ -118,4 +118,5 @@ export default defineConfig(({ mode }) => {
     },
   };
 });
+
 

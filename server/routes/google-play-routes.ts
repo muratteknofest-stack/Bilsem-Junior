@@ -36,6 +36,7 @@ routes.post('/parent/google-play/prepare', sharedRateLimit('play-prepare', 12, 3
     encryptPlayToken('configuration-check');
         const access = await googlePlayAccess(req.authUser!.uid, studentId);
     if (access.active) throw new GooglePlayError('Aktif aboneliğinizi Google Play üzerinden yönetebilirsiniz.', 409);
+    if (['SUBSCRIPTION_STATE_PENDING', 'SUBSCRIPTION_STATE_ON_HOLD', 'SUBSCRIPTION_STATE_PAUSED'].includes(access.state || '')) throw new GooglePlayError('Mevcut aboneliğinizi Google Play üzerinden yönetin. Ödeme veya duraklatma sorununu çözdükten sonra Yenile’ye dokunun.', 409);
     const prepared = await getServiceClient().rpc('prepare_google_play_binding', { p_parent: req.authUser!.uid, p_student: studentId, p_account: binding.accountId, p_profile: binding.profileId });
     if (prepared.error || prepared.data !== true) throw new GooglePlayError('Satın alma hesap bağlantısı kaydedilemedi.');
     res.json({ ...binding, productId: config.productId, plans: PLAY_PLANS });
@@ -62,3 +63,4 @@ routes.post('/google-play/notifications', async (req, res) => {
   } catch (error) { failure(error instanceof SyntaxError ? new GooglePlayError('Bildirim biçimi geçersiz.', 400) : error, res); }
 });
 export default routes;
+

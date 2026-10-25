@@ -91,13 +91,18 @@ test('unknown hosts, credentials, fragments and non-Supabase paths cannot receiv
 });
 
 test('Request inputs retain body, method, headers and AbortSignal cancellation', async () => {
-  const abort = new AbortController(); let forwarded;
-  const transport = createSupabaseTransport(config(async request => { forwarded = request; return new Promise(() => {}); }));
+  const abort = new AbortController(); let forwarded, relayStarted;
+  const started = new Promise(resolve => { relayStarted = resolve; });
+  const transport = createSupabaseTransport(config(async request => { forwarded = request; relayStarted(); return new Promise(() => {}); }));
   const input = new Request(project + '/auth/v1/user', { method: 'PUT', body: '{"data":{"name":"fixture"}}', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer fixture' }, signal: abort.signal });
-  const pending = transport(input); await flush();
-  assert.equal(forwarded.method, 'PUT'); assert.equal(forwarded.headers.get('authorization'), 'Bearer fixture');
-  assert.deepEqual(await forwarded.json(), { data: { name: 'fixture' } });
-  abort.abort(); await assert.rejects(pending, { name: 'AbortError' });
+  const pending = transport(input);
+  try {
+    // Request body buffering can cross an event-loop turn, especially under full-suite load.
+    // Observe the actual relay boundary instead of assuming twelve microtasks are enough.
+    await Promise.race([started, pending]);
+    assert.equal(forwarded.method, 'PUT'); assert.equal(forwarded.headers.get('authorization'), 'Bearer fixture');
+    assert.deepEqual(await forwarded.json(), { data: { name: 'fixture' } });
+  } finally { abort.abort(); await assert.rejects(pending, { name: 'AbortError' }); }
   assert.equal(forwarded.signal.aborted, true);
 });
 
@@ -192,3 +197,4 @@ test('Vercel routes Auth and REST before the generic API function with no privat
   assert.ok(pattern.test('/api/supabase/rest/v1/profiles'));
   assert.equal(pattern.test('/api/auth/change-password'), false);
 });
+

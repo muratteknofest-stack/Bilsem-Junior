@@ -1,14 +1,14 @@
 import React, { useId, useState } from 'react';
 import { AlertCircle, ArrowRight, Check, CheckCircle2, Clock3, Crown, ExternalLink, Gift, LoaderCircle, LockKeyhole, RefreshCw, Rocket, RotateCcw, ShieldCheck, Sparkles } from 'lucide-react';
 import { PLAY_PLANS, type PlayPlanId } from '../lib/google-play-contract';
-import { canBuyPlay, type PlayBillingState } from '../lib/google-play-flow';
-interface Props { studentName?: string; state: PlayBillingState; onPurchase(plan: PlayPlanId): void; onRestore(): void; onRefresh(): void; }
+import { canBuyPlay, playNeedsManagement, playStateGuidance, type PlayBillingState } from '../lib/google-play-flow';
+interface Props { studentName?: string; state: PlayBillingState; online?: boolean; onPurchase(plan: PlayPlanId): void; onRestore(): void; onRefresh(): void; }
 const PLAN_ART: Record<PlayPlanId, { image: string; caption: string; badge: string }> = {
   monthly: { image: '/images/membership/monthly-robot.webp', caption: 'Küçük adımlar, yeni keşifler', badge: 'İlk adım' },
   quarterly: { image: '/images/membership/quarterly-robot.webp', caption: 'Keşif yolculuğuna devam', badge: 'Yeni rotalar' },
   annual: { image: '/images/membership/annual-robot.webp', caption: 'Bir yıl boyunca keşif', badge: 'Büyük macera' },
 };
-export function PlayBillingPanel({ state, studentName, onPurchase, onRestore, onRefresh }: Props) {
+export function PlayBillingPanel({ state, studentName, online = true, onPurchase, onRestore, onRefresh }: Props) {
   const [preferred, setPreferred] = useState<PlayPlanId>('monthly'), radioName = useId();
   const { config, phase, notice, fresh, pending, otherStudent } = state;
   const busy = phase !== 'idle', active = config?.access.active === true && fresh;
@@ -17,7 +17,9 @@ export function PlayBillingPanel({ state, studentName, onPurchase, onRestore, on
   const selected = available.some(plan => plan.id === preferred) ? preferred : available[0]?.id ?? preferred;
   const selectedPlan = PLAY_PLANS.find(plan => plan.id === selected)!;
   const selectedOffer = state.offers.find(offer => offer.basePlanId === selected && offer.period === selectedPlan.period);
-  const canPurchase = canBuyPlay(state, selected);
+  const canPurchase = online && canBuyPlay(state, selected);
+  const needsManagement = fresh && playNeedsManagement(config?.access);
+  const stateGuidance = fresh ? playStateGuidance(config?.access) : null;
   const date = config?.access.expiresAt ? new Date(config.access.expiresAt).toLocaleDateString('tr-TR') : null;
   const phaseText = { loading: 'Bilgiler yükleniyor', idle: '', refreshing: 'Bilgiler yenileniyor', restoring: 'Satın alımlar kontrol ediliyor', opening: 'Google Play açılıyor', verifying: 'Ödeme doğrulanıyor' }[phase];
   const displayNotice = /API uç noktası bulunamadı/i.test(notice.text)
@@ -46,8 +48,10 @@ export function PlayBillingPanel({ state, studentName, onPurchase, onRestore, on
         <small>{config.access.autoRenewing === false ? 'Otomatik yenileme kapalı. Kalan sürenizi kullanabilirsiniz.' : 'Aboneliğinizi ve yenileme ayarlarınızı Google Play’den yönetebilirsiniz.'}</small></div>
       </div> : config?.access.active && !fresh ? <p className="zp-play-state-note">Son doğrulanan erişim{date ? `: ${date}` : ''}. Güncel durumu görmek için Yenile’ye dokunun.</p> : null}
       {pending && !active && <p className="zp-play-state-note"><Clock3 size={20} aria-hidden="true"/>Bekleyen ödeme var. Google Play’deki işlem tamamlanınca erişiminiz güncellenecek.</p>}
-      {!active && !pending && !otherStudent && <>
-        <fieldset className="zp-play-plans" disabled={busy || !config?.ready || !fresh || !state.storeChecked}>
+      {!online && <p className="zp-play-state-note" role="status">İnternet bağlantısı yok. Satın alma ve geri yükleme için bağlantınızı kontrol edin.</p>}
+      {stateGuidance && <p className="zp-play-state-note">{stateGuidance}</p>}
+      {!active && !pending && !otherStudent && !needsManagement && <>
+        <fieldset className="zp-play-plans" disabled={!online || busy || !config?.ready || !fresh || !state.storeChecked}>
           <legend><Crown size={19} aria-hidden="true"/>Size uygun dönemi seçin</legend>
           <div className="zp-play-plan-list">{PLAY_PLANS.map(plan => {
             const offer = state.offers.find(item => item.basePlanId === plan.id && item.period === plan.period), checked = plan.id === selected;
@@ -71,11 +75,12 @@ export function PlayBillingPanel({ state, studentName, onPurchase, onRestore, on
       <div className="zp-play-notice" data-tone={notice.kind} role={notice.kind === 'error' ? 'alert' : 'status'} aria-live={notice.kind === 'error' ? 'assertive' : 'polite'}><NoticeIcon size={20} aria-hidden="true"/><span>{displayNotice}</span></div>
       {config && !config.enforced && !active && <p className="zp-play-free">Mevcut ücretsiz kullanım devam ediyor.</p>}
       <div className="zp-play-recovery">
-        <button type="button" disabled={busy} onClick={onRefresh} className="zp-play-refresh"><RefreshCw size={18} aria-hidden="true"/>Yenile</button>
-        <button type="button" disabled={busy || !config?.binding} onClick={onRestore} className="zp-play-restore"><RotateCcw size={18} aria-hidden="true"/>Satın alımları geri yükle</button>
+        <button type="button" disabled={!online || busy} onClick={onRefresh} className="zp-play-refresh"><RefreshCw size={18} aria-hidden="true"/>Yenile</button>
+        <button type="button" disabled={!online || busy || !config?.binding} onClick={onRestore} className="zp-play-restore"><RotateCcw size={18} aria-hidden="true"/>Satın alımları geri yükle</button>
         <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener noreferrer">Aboneliği yönet / iptal et<ExternalLink size={14} aria-hidden="true"/></a>
       </div>
       <p className="zp-play-terms">Ödeme Google Play hesabınızdan alınır. Abonelik, iptal edilmedikçe seçtiğiniz dönem ve Google Play’de gösterilen fiyatla otomatik yenilenir. İptalden sonra ödediğiniz sürenin sonuna kadar kullanabilirsiniz. Her Google Play hesabı aynı anda bir öğrenci için abonelik kullanabilir; erişim seçtiğiniz öğrenciye bağlıdır.</p>
     </div>
   </section>;
 }
+

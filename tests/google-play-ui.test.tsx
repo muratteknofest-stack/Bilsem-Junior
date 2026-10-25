@@ -10,11 +10,11 @@ const config=():PlayConfig=>({ready:true,enforced:true,productId,binding:{accoun
 const offers=[{basePlanId:'monthly',price:'₺299,00',period:'P1M'},{basePlanId:'quarterly',price:'₺699,00',period:'P3M'},{basePlanId:'annual',price:'₺1.499,00',period:'P1Y'}];
 const purchase=(patch:Record<string,unknown>={})=>({token:'fixture-purchase-token',state:'purchased',accountId,profileId,productIds:[productId],...patch});
 const deferred=<T,>()=>{let resolve!:(v:T)=>void,reject!:(e:Error)=>void;const promise=new Promise<T>((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
-function fixture(options:{deadlineMs?:number;native?:boolean}={}) {
+function fixture(options:{deadlineMs?:number;native?:boolean;isOnline?:()=>boolean}={}) {
   let current=true, live=config();let states:PlayBillingState[]=[],calls:string[]=[],buyCalls=0,restores=0,catalogs=0;
   let onRequest:((path:string,body:unknown,signal:AbortSignal)=>Promise<unknown>)|undefined;
   const store:PlayStore={async catalog(){catalogs++;return {offers};},async restore(){restores++;return {purchases:[]};},async purchase(){buyCalls++;return {purchases:[purchase()]};}};
-  const flow=new PlayBillingFlow({studentId:'student-fixture',native:options.native??true,deadlineMs:options.deadlineMs??1000,store,isCurrent:()=>current,changed:s=>states.push(s),
+  const flow=new PlayBillingFlow({studentId:'student-fixture',native:options.native??true,isOnline:options.isOnline,deadlineMs:options.deadlineMs??1000,store,isCurrent:()=>current,changed:s=>states.push(s),
     async request(path,body,signal){calls.push(path);if(onRequest)return onRequest(path,body,signal);if(path.startsWith('access?'))return structuredClone(live);if(path==='prepare')return {productId,accountId,profileId};if(path==='verify'){live={...live,access};return {access};}throw Error('Unexpected request');}});
   return {flow,store,states,calls,get buys(){return buyCalls;},get restores(){return restores;},get catalogs(){return catalogs;},get config(){return live;},set config(v){live=v;},set request(v:typeof onRequest){onRequest=v;},changeOwner(){current=false;}};
 }
@@ -108,4 +108,23 @@ test('restoring after a temporary catalog failure reloads eligible prices withou
  f.store.catalog=async()=>({offers});await f.flow.restore();
  assert.equal(f.flow.snapshot().offers.length,3);assert.equal(canBuyPlay(f.flow.snapshot(),'monthly'),true);assert.equal(f.buys,0);
  f.flow.dispose();
+});
+
+
+test('offline purchase never prepares or launches Play, including a disconnect after prepare',async()=>{
+ let online=false;const f=fixture({isOnline:()=>online});await f.flow.refresh();
+ await f.flow.purchase('monthly');assert.equal(f.buys,0);assert.ok(!f.calls.includes('prepare'));assert.equal(f.flow.snapshot().notice.kind,'warning');
+ online=true;f.request=async path=>{if(path==='prepare'){online=false;return {productId,accountId,profileId};}return config();};
+ await f.flow.purchase('monthly');assert.equal(f.buys,0);assert.match(f.flow.snapshot().notice.text,/Bağlantı kesildi/);
+ const html=renderToStaticMarkup(<PlayBillingPanel state={f.flow.snapshot()} online={false} onPurchase={()=>assert.fail('offline charge')} onRestore={()=>{}} onRefresh={()=>{}}/>);
+ assert.match(html,/İnternet bağlantısı yok/);assert.match(html,/<button[^>]*disabled=""[^>]*class="zp-play-buy"/);
+});
+test('paused and on-hold subscriptions lead to management without a second charge',async()=>{
+ for(const state of ['SUBSCRIPTION_STATE_PENDING','SUBSCRIPTION_STATE_PAUSED','SUBSCRIPTION_STATE_ON_HOLD']){
+  const f=fixture();f.config={...config(),access:{active:false,expiresAt:expiry,state}};await f.flow.refresh();
+  assert.equal(canBuyPlay(f.flow.snapshot(),'monthly'),false);await f.flow.purchase('monthly');assert.equal(f.buys,0);
+  const html=render(f.flow.snapshot());assert.ok(!html.includes('class="zp-play-buy"'));assert.match(html,/Aboneliği yönet/);assert.equal(f.flow.snapshot().notice.kind,'warning');
+ }
+ const f=fixture();f.config={...config(),access:{...access,state:'SUBSCRIPTION_STATE_IN_GRACE_PERIOD'}};await f.flow.refresh();
+ assert.equal(f.flow.snapshot().config?.access.active,true);assert.match(render(f.flow.snapshot()),/ödeme yönteminizi kontrol/);
 });

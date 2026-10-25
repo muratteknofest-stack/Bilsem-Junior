@@ -1,4 +1,5 @@
 import './student/story-stars.css';
+import { useAndroidBack } from '../hooks/useAndroidBack';
 import './student/learning-results.css';
 import { STORY_QUESTION_COUNT, type StoryStage, type StoryReward } from '../features/student/story-adventure';
 import { StoryResultCelebration } from './student/StoryStars';
@@ -104,7 +105,8 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
   const latestFinish = useRef({ finish, busy });
   useEffect(() => { latestFinish.current = { finish, busy }; });
   const goTo = async (nextIndex: number) => { if (!busy && await savePending()) setIndex(nextIndex); };
-  const leave = async () => { if (await savePending()) onNavigateHome(); };
+  const leave = async () => { if (!busy && await savePending()) onNavigateHome(); };
+  useAndroidBack(() => { void leave(); });
   useEffect(() => {
     const saved = session?.answers[String(index)];
     setResponse(saved ? saved.response as QuestionResponse : null); setHint(false); setReportStatus('');

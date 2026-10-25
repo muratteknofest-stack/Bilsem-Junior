@@ -1,5 +1,12 @@
 import { publicBuildSettings } from './public-build-settings';
 
+/** Let the native WebView reserve system bars consistently, including older Chromium. */
+export function androidViewportHtml(html: string) {
+  const viewport = /(<meta\s+name=["']viewport["']\s+content=["'][^"']*)viewport-fit=cover/;
+  if (!viewport.test(html)) throw new Error('Android güvenli ekran alanı ayarı bulunamadı.');
+  return html.replace(viewport, '$1viewport-fit=contain');
+}
+
 /** Android has no same-origin /api server: require explicit, public HTTPS configuration. */
 export function androidBuildSettings(env: Record<string, string | undefined>) {
   const settings = publicBuildSettings(env, true, false, env.VITE_PUBLIC_SITE_URL || '');
@@ -12,3 +19,4 @@ export function androidBuildSettings(env: Record<string, string | undefined>) {
   }
   return settings;
 }
+

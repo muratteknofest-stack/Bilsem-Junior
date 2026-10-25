@@ -9,5 +9,7 @@ const config: CapacitorConfig = {
   webDir: 'dist-android',
   server: { hostname: 'localhost', androidScheme: 'https', cleartext: false },
   android: { allowMixedContent: false, webContentsDebuggingEnabled: false, backgroundColor: '#f8fafc' },
+  plugins: { SystemBars: { insetsHandling: 'native', initialViewportFitValueHint: 'contain' } },
 };
 export default config;
+

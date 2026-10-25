@@ -1,4 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useAndroidBack } from '../hooks/useAndroidBack';
+import { connectionAvailable, subscribeConnection } from '../lib/connection-status';
 import { App } from '@capacitor/app';
 import { authenticatedFetch } from '../lib/api-client';
 import { auth } from '../lib/supabase';
@@ -13,9 +15,12 @@ export function NativeAccessStatus({ studentId, studentName }: { studentId: stri
 }
 function BillingSession({ studentId, studentName, owner }: { studentId: string; studentName?: string; owner: string | undefined }) {
   const nativeAndroid = isGooglePlayBillingPlatform();
+  const online = useSyncExternalStore(subscribeConnection, connectionAvailable, () => true);
   const [state, setState] = useState(initialPlayBillingState), flow = useRef<PlayBillingFlow | null>(null);
+  useAndroidBack(() => {}, nativeAndroid && ['opening', 'verifying'].includes(state.phase));
   useEffect(() => {
     const controller = new PlayBillingFlow({ studentId, native: nativeAndroid, store: PlayBilling,
+      isOnline: connectionAvailable,
       isCurrent: () => auth.currentUser?.uid === owner, changed: setState,
       async request(path, body, signal) {
         const response = await authenticatedFetch('/api/parent/google-play/' + path, { signal, ...(body ? { method: 'POST', body: JSON.stringify(body) } : {}) });
@@ -41,5 +46,6 @@ function BillingSession({ studentId, studentName, owner }: { studentId: string; 
     return () => { window.removeEventListener('online', online); disposed = true; controller.dispose(); for (const listener of listeners) void listener.remove().catch(() => {}); if (flow.current === controller) flow.current = null; };
   }, [studentId, owner, nativeAndroid]);
   if (!nativeAndroid) return <WebPlayMembershipPanel studentName={studentName} state={state} onRefresh={() => { void flow.current?.refresh(); }}/>;
-  return <PlayBillingPanel studentName={studentName} state={state} onPurchase={plan => { void flow.current?.purchase(plan); }} onRestore={() => { void flow.current?.restore(); }} onRefresh={() => { void flow.current?.refresh(); }}/>;
+  return <PlayBillingPanel studentName={studentName} state={state} online={online} onPurchase={plan => { void flow.current?.purchase(plan); }} onRestore={() => { void flow.current?.restore(); }} onRefresh={() => { void flow.current?.refresh(); }}/>;
 }
+
