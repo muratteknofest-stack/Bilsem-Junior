@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 /** Verify the compiled package, rather than inferring security from source XML. */
 export function verifyAndroidRelease(manifest, badging) {
   const pkg = badging.match(/^package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'/m);
-  if (!pkg || pkg[1] !== 'com.quantumtech.bilsemjunior' || pkg[2] !== '30' || pkg[3] !== '1.0.29') throw Error('Unexpected release identity or version');
+  if (!pkg || pkg[1] !== 'com.quantumtech.bilsemjunior' || pkg[2] !== '31' || pkg[3] !== '1.0.30') throw Error('Unexpected release identity or version');
   if (!/^application-label:'Bilsem Junior'$/m.test(badging)) throw Error('Unexpected application label');
   if (!/^sdkVersion:'24'$/m.test(badging) || !/^targetSdkVersion:'36'$/m.test(badging)) throw Error('Unexpected SDK requirements');
   // AAPT encodes boolean true as either 0xffffffff or 0x1. Missing means Android's default false.

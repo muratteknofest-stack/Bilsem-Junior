@@ -1,3 +1,5 @@
+import { isAndroidApp } from '../lib/native-app';
+import { useEntryViewport } from '../hooks/useEntryViewport';
 import React, { useState } from 'react';
 import { UserRole, UserProfile } from '../types';
 import { sound } from '../lib/sound';
@@ -18,6 +20,7 @@ import { RegistrationConfirmation } from '../features/auth/components/Registrati
 import { ForgotPasswordModal } from '../features/auth/components/ForgotPasswordModal';
 import './landing/design-system.css';
 import '../features/auth/auth-design-system.css';
+import './android/android-entry.css';
 
 interface LoginPageProps {
   onLoginSuccess: (role: UserRole, userProfile?: UserProfile) => void;
@@ -34,12 +37,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   initialMode = 'login',
   onModeChange,
 }) => {
+  const viewportRef = useEntryViewport(isAndroidApp);
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(initialMode);
   const [selectedRole, setSelectedRole] = useState<UserRole>(initialMode === 'register' || initialRole === 'parent' ? 'parent' : 'student');
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [registrationResult, setRegistrationResult] = useState<RegistrationSuccess | null>(null);
+  const [registrationPage, setRegistrationPage] = useState(0);
   const [registrationBusy, setRegistrationBusy] = useState(false);
   const [loginIdentifier, setLoginIdentifier] = useState('');
 
@@ -61,7 +66,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   };
 
   return (
-    <div className="zp-auth min-h-[calc(100vh-4rem)] flex flex-col justify-center py-8 px-4 sm:px-6 lg:px-8">
+    <div ref={viewportRef} data-native-entry={isAndroidApp} data-registration-complete={Boolean(registrationResult)} data-registration-page={isAndroidApp && activeTab === 'register' && !registrationResult ? registrationPage : undefined} className="zp-auth min-h-[calc(100vh-4rem)] flex flex-col justify-center py-8 px-4 sm:px-6 lg:px-8">
       <div className="zp-auth-top max-w-6xl mx-auto w-full mb-4 flex items-center justify-between">
         <button
           type="button"
@@ -70,9 +75,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           className="zp-auth-back inline-flex items-center gap-2 text-sm font-semibold px-3.5 py-2 rounded-xl border transition-all cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Ana Sayfaya Dön</span>
+          <span>{isAndroidApp ? 'Ana sayfa' : 'Ana Sayfaya Dön'}</span>
         </button>
 
+        {isAndroidApp && <Logo size="xs" showTagline={false} />}
         <div className="zp-auth-top-note hidden sm:flex items-center gap-2 text-xs font-semibold px-3.5 py-2 rounded-xl border">
           <ShieldCheck className="w-4 h-4" aria-hidden="true" />
           <span>Öğrenci ve veli hesapları</span>
@@ -94,7 +100,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
             <div className="zp-auth-intro">
               <p className="zp-auth-kicker">BİLSEM JUNIOR / HAZIRLIK HESABI</p>
-              <h1 id="zp-auth-heading">{activeTab === 'login' ? 'Hazırlığına kaldığın yerden devam et.' : 'Bilsem Junior yolculuğun başlasın.'}</h1>
+              <h1 id="zp-auth-heading">{isAndroidApp ? (activeTab === 'login' ? 'Tekrar hoş geldin!' : 'Birlikte başlayalım') : activeTab === 'login' ? 'Hazırlığına kaldığın yerden devam et.' : 'Bilsem Junior yolculuğun başlasın.'}</h1>
               <p>{activeTab === 'login' ? 'Hesabına gir, yeni sorular ve küçük zaferler seni bekliyor.' : 'Veli bilgilerini gir, öğrenci hesabını ekle ve e-postanı doğrula.'}</p>
             </div>
 
@@ -156,6 +162,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             {/* Active Mode Form */}
             {activeTab === 'login' ? (
               <LoginForm
+                compact={isAndroidApp}
                 initialIdentifier={loginIdentifier}
                 selectedRole={selectedRole}
                 setSelectedRole={role => { setSelectedRole(role); onModeChange?.('login', role); }}
@@ -165,9 +172,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 setSuccessToast={setSuccessToast}
               />
             ) : registrationResult ? (
-              <RegistrationConfirmation result={registrationResult} onLogin={openParentLogin} />
+              <RegistrationConfirmation compact={isAndroidApp} result={registrationResult} onLogin={openParentLogin} />
             ) : (
               <RegistrationForm
+                compact={isAndroidApp}
+                onPageChange={setRegistrationPage}
                 setErrorMessage={setErrorMessage}
                 onRegisterSuccess={handleRegisterSuccess}
                 onBusyChange={setRegistrationBusy}

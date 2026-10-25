@@ -31,6 +31,7 @@ import {
 
 interface LoginFormProps {
   selectedRole: UserRole;
+  compact?: boolean;
   adminOnly?: boolean;
   initialIdentifier?: string;
   setSelectedRole: (role: UserRole) => void;
@@ -42,6 +43,7 @@ interface LoginFormProps {
 
 export const LoginForm: React.FC<LoginFormProps> = ({
   selectedRole: requestedRole,
+  compact = false,
   adminOnly = false,
   initialIdentifier = '',
   setSelectedRole,
@@ -168,7 +170,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   return (
     <div>
       {/* Modern Minimalist Role Selector */}
-      {!adminOnly && <div className="mb-5">
+      {!adminOnly && <div className="bj-login-roles mb-5">
         <div className="flex items-center justify-between mb-2">
           <p className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
             Hesap Türü
@@ -251,7 +253,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         <div>
           <label htmlFor="login-identifier" className="block text-xs font-bold text-slate-700 mb-1.5">
             {selectedRole === 'student'
-              ? 'Öğrenci Kodu, Kullanıcı Adı veya E-posta'
+              ? (compact ? 'Öğrenci kodu veya e-posta' : 'Öğrenci Kodu, Kullanıcı Adı veya E-posta')
               : selectedRole === 'parent'
               ? 'Veli E-posta Adresi'
               : 'Yönetici E-posta Adresi'}
@@ -281,9 +283,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               }}
               placeholder={
                 selectedRole === 'student'
-                  ? 'Örn: DENIZ2026 veya ogrenci@zekapark.com'
+                  ? 'Örn: DENIZ2026'
                   : selectedRole === 'parent'
-                  ? 'Örn: veli@zekapark.com'
+                  ? 'Örn: veli@ornek.com'
                   : 'Örn: yonetici@ornek.com'
               }
               className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm font-medium text-slate-900 placeholder:text-slate-400 bg-white focus:outline-hidden focus:ring-2 transition-all ${
@@ -302,7 +304,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         </div>
 
         <div>
-          <div className="flex items-center justify-between mb-1.5">
+          <div className="bj-login-password-label flex items-center justify-between mb-1.5">
             <label htmlFor="login-password" className="block text-xs font-bold text-slate-700">
               Şifre
             </label>
@@ -359,7 +361,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           )}
         </div>
 
-        <div className="flex items-center justify-between pt-0.5">
+        <div className="bj-login-remember flex items-center justify-between pt-0.5">
           <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-600 select-none">
             <input
               type="checkbox"
@@ -385,7 +387,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           ) : (
             <>
               <span>
-                {selectedRole === 'student'
+                {compact ? 'Giriş yap' : selectedRole === 'student'
                   ? 'Öğrenci Paneline Giriş Yap'
                   : selectedRole === 'parent'
                   ? 'Veli Portalı Raporlarına Gir'

@@ -31,6 +31,7 @@ import { StudyReminderSettingsModal } from './components/StudyReminderSettingsMo
 const AndroidStudentHub = lazy(() => import('./components/android/AndroidStudentHub').then(m => ({default:m.AndroidStudentHub})));
 const nativeSections: Record<string, StudentSection> = {'student-tests':'tests','student-plan':'plan','student-skills':'skills','student-challenges':'challenges','student-progress':'progress','student-topics':'modes'};
 const StudentDashboard = lazy(() => import('./components/StudentDashboard').then((m) => ({ default: m.StudentDashboard })));
+const AndroidWelcome = lazy(() => import('./components/android/AndroidWelcome').then(m => ({ default: m.AndroidWelcome })));
 const LandingPage = lazy(() => import('./components/LandingPage').then((m) => ({ default: m.LandingPage })));
 const VerifiedLearningView = lazy(() => import('./components/VerifiedLearningView').then(m => ({ default: m.VerifiedLearningView })));
 const PracticeSessionView = lazy(() => import('./components/PracticeSessionView').then((m) => ({ default: m.PracticeSessionView })));
@@ -469,7 +470,7 @@ export default function App() {
   if (currentRoute !== 'login' && hasVerifiedAdminAccess({ currentUser: authUser, userProfile, loading: authLoading, isAdminAuthorized })) return <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6"><p role="status">Yönetici alanına yönlendiriliyorsunuz…</p></main>;
 
   return (
-    <div className={`${isAndroidApp ? 'bj-native-shell ' : ''}bilsem-junior-skin min-h-screen bg-slate-50 text-slate-900 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]`}>
+    <div data-entry-route={isAndroidApp && (currentRoute === 'landing' || currentRoute === 'login')} className={`${isAndroidApp ? 'bj-native-shell ' : ''}bilsem-junior-skin min-h-screen bg-slate-50 text-slate-900 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]`}>
       {isAndroidApp && <AndroidConnectionNotice />}
       {/* Workspace navigation; public pages own their header. Tests stay distraction-free. */}
       {!isTestRoute && currentRoute !== 'landing' && currentRoute !== 'login' && (
@@ -501,7 +502,7 @@ export default function App() {
             transition={{ duration: reducedMotion ? 0 : 0.22, ease: [0.22, 1, 0.36, 1] }}
             className="w-full flex-1 flex flex-col"
           >
-            {currentRoute === 'landing' && (
+            {currentRoute === 'landing' && (isAndroidApp ? <AndroidWelcome onNavigateToLogin={handleNavigateToLogin} onNavigate={navigateTo} /> :
               <LandingPage
                 onNavigateToLogin={handleNavigateToLogin}
                 onNavigate={navigateTo}
