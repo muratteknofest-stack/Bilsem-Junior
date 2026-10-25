@@ -3,13 +3,22 @@ import { CheckCircle2, Copy, ShieldCheck } from 'lucide-react';
 import { ConfirmationEmailAction } from './ConfirmationEmailAction';
 import type { RegistrationSuccess } from './RegistrationForm';
 
-interface Props { result: RegistrationSuccess; onLogin: (email: string) => void; }
-export function RegistrationConfirmation({ result, onLogin }: Props) {
+interface Props { compact?: boolean; result: RegistrationSuccess; onLogin: (email: string) => void; }
+export function RegistrationConfirmation({ compact = false, result, onLogin }: Props) {
   const [copyNotice, setCopyNotice] = useState('');
   async function copyCode() {
     try { await navigator.clipboard.writeText(result.createdStudentCode); setCopyNotice('Öğrenci kodu kopyalandı.'); }
     catch { setCopyNotice('Kopyalama yapılamadı. Kodu seçip elle kopyalayabilirsiniz.'); }
   }
+  if (compact) return <section className="bj-registration-done" aria-labelledby="family-created-title">
+    <header><CheckCircle2 size={24} aria-hidden="true" /><h2 id="family-created-title">Aile hesabınız hazır!</h2></header>
+    <p role={result.verificationSent ? 'status' : 'alert'}>{result.verificationSent ? 'E-postadaki bağlantıyı açın, ardından veli girişi yapın.' : 'Hesaplar oluşturuldu; doğrulama e-postası gönderilemedi. Aşağıdan yeniden deneyin.'}</p>
+    <p className="bj-registration-done-email">{result.identifier}</p>
+    <div><strong>Öğrenci giriş kodu</strong><p className="bj-registration-done-code">{result.createdStudentCode}</p><button type="button" onClick={copyCode}><Copy size={16} aria-hidden="true" /> Kodu kopyala</button><p role="status">{copyNotice}</p></div>
+    <p>Kodu saklayın. Öğrenci hesabı, e-posta doğrulaması sonrası ilk veli girişinde etkinleşir.</p>
+    <button type="button" className="bj-registration-done-login" onClick={() => onLogin(result.identifier)}>Veli girişine geç</button>
+    <ConfirmationEmailAction email={result.identifier} initialSent={result.verificationSent} />
+  </section>;
   return <section className="space-y-5" aria-labelledby="family-created-title">
     <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950">
       <CheckCircle2 size={28} aria-hidden="true" /><h2 id="family-created-title" className="mt-3 text-xl font-semibold">Aile hesabınız oluşturuldu</h2>
