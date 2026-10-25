@@ -47,7 +47,7 @@
       "destination": "/api/index?__path=:path*"
     },
     {
-      "source": "/bilgi/:slug(gizlilik-ve-veriler|kullanim-kosullari|iletisim-ve-destek)",
+      "source": "/bilgi/:slug(gizlilik-ve-veriler|kullanim-kosullari|iletisim-ve-destek|hesap-ve-veri-silme|abonelik-iptal-ve-iade|cerez-ve-yerel-depolama)",
       "destination": "/api/index?__path=public/policy/:slug&format=html"
     },
     {
@@ -194,7 +194,7 @@
       ]
     },
     {
-      "source": "/bilgi/:slug(gizlilik-ve-veriler|kullanim-kosullari|iletisim-ve-destek)",
+      "source": "/bilgi/:slug(gizlilik-ve-veriler|kullanim-kosullari|iletisim-ve-destek|hesap-ve-veri-silme|abonelik-iptal-ve-iade|cerez-ve-yerel-depolama)",
       "headers": [
         {
           "key": "Cache-Control",

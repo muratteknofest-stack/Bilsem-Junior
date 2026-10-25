@@ -1,3 +1,4 @@
+import { isPublicPolicySlug } from '../src/content/legal-documents';
 import type { Plugin } from 'vite';
 import { blogConfig, renderBlog } from './blog-engine';
 
@@ -22,7 +23,7 @@ export function blogPlugin(): Plugin {
     generateBundle() {
       for (const [fileName, source] of renderBlog().pages) {
         // Vercel's filesystem must not serve a stale policy instead of the database-backed route.
-        if (/^bilgi\/(?:gizlilik-ve-veriler|kullanim-kosullari|iletisim-ve-destek)\/index\.html$/.test(fileName)) continue;
+        if (fileName.startsWith('bilgi/') && isPublicPolicySlug(fileName.split('/')[1])) continue;
         this.emitFile({ type: 'asset', fileName, source });
       }
     },

@@ -1,3 +1,4 @@
+import { LegalLinks } from './LegalLinks';
 import React, { useId, useState } from 'react';
 import { AlertCircle, ArrowRight, Check, CheckCircle2, Clock3, Crown, ExternalLink, Gift, LoaderCircle, LockKeyhole, RefreshCw, Rocket, RotateCcw, ShieldCheck, Sparkles } from 'lucide-react';
 import { PLAY_PLANS, type PlayPlanId } from '../lib/google-play-contract';
@@ -79,6 +80,7 @@ export function PlayBillingPanel({ state, studentName, online = true, onPurchase
         <button type="button" disabled={!online || busy || !config?.binding} onClick={onRestore} className="zp-play-restore"><RotateCcw size={18} aria-hidden="true"/>Satın alımları geri yükle</button>
         <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener noreferrer">Aboneliği yönet / iptal et<ExternalLink size={14} aria-hidden="true"/></a>
       </div>
+      <LegalLinks mode="purchase" disabled={busy}/>
       <p className="zp-play-terms">Ödeme Google Play hesabınızdan alınır. Abonelik, iptal edilmedikçe seçtiğiniz dönem ve Google Play’de gösterilen fiyatla otomatik yenilenir. İptalden sonra ödediğiniz sürenin sonuna kadar kullanabilirsiniz. Her Google Play hesabı aynı anda bir öğrenci için abonelik kullanabilir; erişim seçtiğiniz öğrenciye bağlıdır.</p>
     </div>
   </section>;

@@ -16,6 +16,10 @@ import { apiUrl } from '../lib/api-client';
 import type { PlatformInfo } from '../content/platform-info';
 import { PLATFORM_INFO } from '../content/platform-info';
 import './footer.css';
+import { isAndroidApp, publicPageUrl } from '../lib/native-app';
+import { useAndroidBack } from '../hooks/useAndroidBack';
+import { isPublicPolicySlug, policyActionLinks } from '../content/legal-documents';
+import { SUPPORT_EMAIL } from '../content/platform-info';
 
 export type FooterModalTopic =
   | 'bilsem_guide'
@@ -26,7 +30,10 @@ export type FooterModalTopic =
   | 'cognitive_domains'
   | 'exam_anxiety'
   | 'account_guide'
-  | 'account_security';
+  | 'account_security'
+  | 'cookies'
+  | 'deletion'
+  | 'subscription';
 
 interface TopicItem {
   id: FooterModalTopic;
@@ -42,6 +49,9 @@ const topics: TopicItem[] = [
   { id: 'contact', label: 'İletişim ve destek', slug: 'iletisim-ve-destek', icon: MessageCircle },
   { id: 'kvkk', label: 'Gizlilik ve veriler', slug: 'gizlilik-ve-veriler', icon: Lock },
   { id: 'terms', label: 'Kullanım koşulları', slug: 'kullanim-kosullari', icon: FileText },
+  { id: 'cookies', label: 'Çerez ve yerel depolama', slug: 'cerez-ve-yerel-depolama', icon: Lock },
+  { id: 'subscription', label: 'Abonelik, iptal ve iade', slug: 'abonelik-iptal-ve-iade', icon: FileText },
+  { id: 'deletion', label: 'Hesap ve veri silme', slug: 'hesap-ve-veri-silme', icon: KeyRound },
   { id: 'account_security', label: 'Hesap güvenliği', slug: 'hesap-guvenligi', icon: KeyRound },
 ];
 
@@ -53,7 +63,10 @@ interface FooterInfoModalProps {
 
 export function FooterInfoModal({ topic, onClose, onSelectTopic }: FooterInfoModalProps) {
   const [active, setActive] = useState(topic);
+  const [reload, setReload] = useState(0);
+  useAndroidBack(onClose, isAndroidApp);
   const dialog = useRef<HTMLDialogElement>(null);
+  const selectedTopic = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setActive(topic);
@@ -72,16 +85,20 @@ export function FooterInfoModal({ topic, onClose, onSelectTopic }: FooterInfoMod
     };
   }, []);
 
+  useEffect(() => {
+    selectedTopic.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+  }, [active]);
+
   const selected = topics.find(t => t.id === active) || topics[0];
   const [liveInfo, setLiveInfo] = useState<PlatformInfo | null>(null);
   const [policyError, setPolicyError] = useState('');
   const slug = selected?.slug;
-  const dynamic = ['gizlilik-ve-veriler', 'kullanim-kosullari', 'iletisim-ve-destek'].includes(slug || '');
+  const dynamic = isPublicPolicySlug(slug || '');
 
   useEffect(() => {
     setLiveInfo(null);
     setPolicyError('');
-    if (!slug || !['gizlilik-ve-veriler', 'kullanim-kosullari', 'iletisim-ve-destek'].includes(slug)) return;
+    if (!slug || !isPublicPolicySlug(slug)) return;
 
     const controller = new AbortController();
     apiFetch(apiUrl('/api/public/policy/' + slug), { signal: controller.signal, cache: 'no-store' })
@@ -96,7 +113,7 @@ export function FooterInfoModal({ topic, onClose, onSelectTopic }: FooterInfoMod
         }
       });
     return () => controller.abort();
-  }, [slug]);
+  }, [slug, reload]);
 
   const info = dynamic
     ? liveInfo?.slug === slug
@@ -147,6 +164,7 @@ export function FooterInfoModal({ topic, onClose, onSelectTopic }: FooterInfoMod
           return (
             <button
               key={t.id}
+              ref={isSelected ? selectedTopic : undefined}
               type="button"
               className={`platform-info-dialog-pill ${isSelected ? 'active' : ''}`}
               aria-pressed={isSelected}
@@ -166,7 +184,8 @@ export function FooterInfoModal({ topic, onClose, onSelectTopic }: FooterInfoMod
         {dynamic && !info ? (
           <div className="platform-info-dialog-loading" role="status">
             <p>{policyError || 'Güncel açıklama yükleniyor…'}</p>
-            <a href={`/bilgi/${slug}`} target="_blank" rel="noopener noreferrer" className="platform-info-dialog-ext-link">
+            {policyError && <button type="button" className="platform-info-dialog-done-btn" onClick={() => setReload(value => value + 1)}>Yeniden dene</button>}
+            <a href={publicPageUrl(`/bilgi/${slug}`)} target="_blank" rel="noopener noreferrer" className="platform-info-dialog-ext-link">
               <span>Ayrı sayfada aç</span>
               <ExternalLink size={13} aria-hidden="true" />
             </a>
@@ -193,9 +212,10 @@ export function FooterInfoModal({ topic, onClose, onSelectTopic }: FooterInfoMod
                 </section>
               ))}
             </div>
+            <div className="bj-policy-actions">{policyActionLinks(info.slug, info.contactEmail || SUPPORT_EMAIL).map(action => <a key={action.href} href={action.href.startsWith('/') ? publicPageUrl(action.href) : action.href} target={action.href.startsWith('mailto:') ? undefined : '_blank'} rel="noopener noreferrer">{action.label}</a>)}</div>
             <div className="platform-info-dialog-footer">
               <a
-                href={`/bilgi/${info.slug}`}
+                href={publicPageUrl(`/bilgi/${info.slug}`)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="platform-info-dialog-ext-link"
@@ -212,7 +232,7 @@ export function FooterInfoModal({ topic, onClose, onSelectTopic }: FooterInfoMod
           <div className="platform-info-dialog-fallback">
             <p>
               Güncel kaynak bağlantıları ve eğitim içerikleri için{' '}
-              <a href="/blog">Bilsem Junior blogunu</a> inceleyebilirsiniz. Resmî sınav koşulları için MEB duyurularını kontrol edin.
+              <a href={publicPageUrl('/blog')}>Bilsem Junior blogunu</a> inceleyebilirsiniz. Resmî sınav koşulları için MEB duyurularını kontrol edin.
             </p>
           </div>
         )}

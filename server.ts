@@ -1,3 +1,4 @@
+import { isPublicPolicySlug } from './src/content/legal-documents';
 import path from 'path';
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
@@ -22,7 +23,7 @@ async function startServer() {
   });
   app.get('/paketler',async(_req,res)=>{res.setHeader('Cache-Control','no-store');res.type('html').send(playMembershipPageHtml(await publicPlayMembership()));});
   app.get('/bilgi/:slug', async (req, res, next) => {
-    if (!['gizlilik-ve-veriler', 'kullanim-kosullari', 'iletisim-ve-destek'].includes(req.params.slug)) return next();
+    if (!isPublicPolicySlug(req.params.slug)) return next();
     const { settings } = await readPlatformSettings().catch(() => ({ settings: defaultPlatformSettings() }));
     const info = publicPolicy(req.params.slug, settings)!;
     res.setHeader('Cache-Control', 'no-store');

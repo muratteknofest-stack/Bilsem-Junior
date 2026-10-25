@@ -1,3 +1,4 @@
+import { LegalLinks } from './components/LegalLinks';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { isAndroidApp } from './lib/native-app';
@@ -633,6 +634,7 @@ export default function App() {
         </Suspense>
       </div>
 
+      {isAuth && !isAndroidApp && !isTestRoute && currentRoute !== 'login' && currentRoute !== 'landing' && <div className="bj-legal-workspace"><LegalLinks/></div>}
       {/* Mobile Bottom Navigation Bar - Hidden during test routes for full screen test view */}
       {currentRoute !== 'landing' && currentRoute !== 'login' && !isTestRoute && !(isAndroidApp && currentUser.role === 'parent' && currentRoute === 'parent') && (
         <MobileBottomNav
