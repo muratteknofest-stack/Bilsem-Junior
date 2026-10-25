@@ -1,5 +1,5 @@
 import React from 'react';
-import { isAndroidApp } from '../lib/native-app';
+import { isAndroidApp, publicPageUrl } from '../lib/native-app';
 import { Compass, Shapes, UserRound } from 'lucide-react';
 import { useStudentReducedMotion } from '../features/student/experience-preferences';
 import { motion, useReducedMotion } from 'motion/react';
@@ -175,7 +175,7 @@ export function MobileBottomNav({
           <>
             <a
               key="blog"
-              href="/blog"
+              href={publicPageUrl('/blog')}
               className="group relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1.5 min-h-[48px] min-w-0 select-none outline-none rounded-2xl cursor-pointer"
             >
               <span className="relative flex items-center justify-center h-8 w-14">
@@ -191,11 +191,11 @@ export function MobileBottomNav({
             </a>
             <a
               key="guide"
-              href={
+              href={publicPageUrl(
                 userRole === 'parent'
                   ? '/bilgi/hesap-ve-veli-rehberi'
                   : '/bilgi/hesap-guvenligi'
-              }
+              )}
               className="group relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1.5 min-h-[48px] min-w-0 select-none outline-none rounded-2xl cursor-pointer"
             >
               <span className="relative flex items-center justify-center h-8 w-14">

@@ -9,14 +9,16 @@ import { initialPlayBillingState, PlayBillingFlow } from '../lib/google-play-flo
 import { WebPlayMembershipPanel } from './WebPlayMembershipPanel';
 import { PlayBillingPanel } from './PlayBillingPanel';
 
-export function NativeAccessStatus({ studentId, studentName }: { studentId: string; studentName?: string }) {
+export function NativeAccessStatus({ studentId, studentName, onBusyChange }: { studentId: string; studentName?: string; onBusyChange?: (busy: boolean) => void }) {
   const owner = auth.currentUser?.uid;
-  return <BillingSession key={`${owner}:${studentId}`} studentId={studentId} studentName={studentName} owner={owner}/>;
+  return <BillingSession key={`${owner}:${studentId}`} studentId={studentId} studentName={studentName} owner={owner} onBusyChange={onBusyChange}/>;
 }
-function BillingSession({ studentId, studentName, owner }: { studentId: string; studentName?: string; owner: string | undefined }) {
+function BillingSession({ studentId, studentName, owner, onBusyChange }: { studentId: string; studentName?: string; owner: string | undefined; onBusyChange?: (busy: boolean) => void }) {
   const nativeAndroid = isGooglePlayBillingPlatform();
   const online = useSyncExternalStore(subscribeConnection, connectionAvailable, () => true);
   const [state, setState] = useState(initialPlayBillingState), flow = useRef<PlayBillingFlow | null>(null);
+  const busy = state.phase === 'opening' || state.phase === 'verifying';
+  useEffect(() => { onBusyChange?.(busy); return () => onBusyChange?.(false); }, [busy, onBusyChange]);
   useAndroidBack(() => {}, nativeAndroid && ['opening', 'verifying'].includes(state.phase));
   useEffect(() => {
     const controller = new PlayBillingFlow({ studentId, native: nativeAndroid, store: PlayBilling,

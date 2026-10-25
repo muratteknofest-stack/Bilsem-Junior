@@ -1,4 +1,8 @@
 import { NativeAccessStatus } from './NativeAccessStatus';
+import { isAndroidApp, publicPageUrl } from '../lib/native-app';
+import { useAndroidBack } from '../hooks/useAndroidBack';
+import { AndroidParentOverview } from './android/AndroidParentOverview';
+import { AndroidScreenLoading } from './android/AndroidScreenLoading';
 import { AccountCenter, FamilyActivation } from './AccountCenter';
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'motion/react';
@@ -78,6 +82,7 @@ import './landing/design-system.css';
 import './dashboard-design-system.css';
 import { ParentProgressOverview, ParentWeeklyVolume } from './parent/ParentProgressOverview';
 import './parent/parent-executive.css';
+import './android/android-parent.css';
 
 interface ParentPortalViewProps {
   student?: UserProfile | null;
@@ -117,7 +122,10 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
   const [studentLoadError, setStudentLoadError] = useState('');
   const [studentReload, setStudentReload] = useState(0);
   const [passwordResetNotice, setPasswordResetNotice] = useState('');
-  const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'preferences'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'preferences' | 'membership'>('overview');
+  const [isBillingBusy, setIsBillingBusy] = useState(false);
+  const [showDetailedReport, setShowDetailedReport] = useState(false);
+  const [codeCopyError, setCodeCopyError] = useState('');
   const [chartViewMode, setChartViewMode] = useState<'radar' | 'momentum'>('radar');
   const [skillFilter, setSkillFilter] = useState<'all' | 'strengths' | 'weaknesses'>('all');
   const [showReminderModal, setShowReminderModal] = useState(false);
@@ -167,6 +175,13 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
           return;
         }
         setIsLoadingStudent(true);
+        setStudentLoadError('');
+        setDisplayMasteries([]);
+        setWeeklyData(null);
+        setShowDetailedReport(false);
+        setCodeCopied(false);
+        setCodeCopyError('');
+        setReportSendStatus('idle');
         try {
           const docRef = doc(db, 'users', selectedStudentId);
           const snap = await getDoc(docRef);
@@ -175,11 +190,10 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
             if (child.id !== selectedStudentId || child.role !== 'student' || child.linkedParentId !== activeUser.id) {
               throw new Error('Linked student unavailable');
             }
-            setCurrentStudent(child);
-            setStudentLoadError('');
             const progress = await dataService.loadRemoteProgressForUser(child.id);
             if (isSubscribed) {
               const childMasteries = progress.masteries || [];
+              setCurrentStudent(child);
               setDisplayMasteries(childMasteries);
               setWeeklyData(dataService.getWeeklyQuestionProgressData(child, progress.weeklyQuestions));
               return;
@@ -209,7 +223,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
     return () => {
       isSubscribed = false;
     };
-  }, [parentId, parentRole, selectedStudentId, studentReload]);
+  }, [parentId, parentRole, selectedStudentId, studentReload, linkedIdsKey]);
 
   useEffect(() => {
     if (parentOrStudent?.role !== 'parent') {
@@ -259,12 +273,16 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
     }
   };
 
-  const handleCopyCode = () => {
-    if (currentStudent.studentCode) {
-      navigator.clipboard.writeText(currentStudent.studentCode);
+  const handleCopyCode = async () => {
+    if (!currentStudent.studentCode) return;
+    setCodeCopyError('');
+    try {
+      await navigator.clipboard.writeText(currentStudent.studentCode);
       setCodeCopied(true);
       sound.playClick();
       setTimeout(() => setCodeCopied(false), 2000);
+    } catch {
+      setCodeCopyError('Kod kopyalanamadı. Giriş bilgileri bölümünden kodu seçip kopyalayabilirsiniz.');
     }
   };
 
@@ -314,7 +332,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
       Öğrenci seçin
       <select
         value={selectedStudentId}
-        disabled={isSwitchingStudent || isResettingPassword}
+        disabled={isSwitchingStudent || isResettingPassword || isBillingBusy}
         onChange={e => {
           setSelectedStudentId(e.target.value);
           setShowPasswordResetModal(false);
@@ -333,8 +351,25 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
     </label>
   ) : null;
 
+  const changeTab = (tab: typeof activeTab) => {
+    if (isSwitchingStudent || isResettingPassword || isBillingBusy) return;
+    sound.playClick();
+    setActiveTab(tab);
+    setShowDetailedReport(false);
+    if (isAndroidApp) window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+  useAndroidBack(() => {
+    if (isResettingPassword || isSwitchingStudent || isBillingBusy) return;
+    if (showPasswordResetModal) setShowPasswordResetModal(false);
+    else if (showStudentSettingsModal) setShowStudentSettingsModal(false);
+    else if (showReminderModal) setShowReminderModal(false);
+    else if (showStudyPlanModal) setShowStudyPlanModal(false);
+    else if (showDetailedReport) setShowDetailedReport(false);
+    else changeTab('overview');
+  }, isAndroidApp && (isResettingPassword || isSwitchingStudent || isBillingBusy || showPasswordResetModal || showStudentSettingsModal || showReminderModal || showStudyPlanModal || showDetailedReport || activeTab !== 'overview'));
+
   if (parentOrStudent?.role === 'parent') {
-    if (studentLoadError && currentStudent.role !== 'student') {
+    if (studentLoadError) {
       return (
         <div className="mx-auto max-w-6xl space-y-4 p-5">
           <h1 className="text-2xl font-bold">Veli paneli</h1>
@@ -353,7 +388,8 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
         </div>
       );
     }
-    if (isLoadingStudent && (currentStudent.id === 'pending' || currentStudent.role !== 'student')) {
+    if (isLoadingStudent || currentStudent.id !== selectedStudentId || currentStudent.linkedParentId !== parentId || !linkedStudentIds?.includes(currentStudent.id)) {
+      if (isAndroidApp) return <AndroidScreenLoading />;
       return (
         <div className="mx-auto max-w-6xl min-h-[50vh] flex flex-col items-center justify-center p-8 space-y-3 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 animate-pulse">
@@ -366,11 +402,12 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
   }
 
   return (
-    <MotionConfig reducedMotion={prefersReducedMotion ? 'always' : 'user'}><div className="zp-dashboard-page zp-parent-dashboard bj-parent-executive min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24 text-zinc-900 dark:text-zinc-100 selection:bg-indigo-500 selection:text-white relative overflow-x-hidden" data-reduced-motion={prefersReducedMotion}>
+    <MotionConfig reducedMotion={prefersReducedMotion ? 'always' : 'user'}><div className={`${isAndroidApp ? 'bj-native-parent ' : ''}zp-dashboard-page zp-parent-dashboard bj-parent-executive min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24 text-zinc-900 dark:text-zinc-100 selection:bg-indigo-500 selection:text-white relative overflow-x-hidden`} data-reduced-motion={prefersReducedMotion}>
       
-      <div className="relative z-10 mx-auto max-w-6xl px-5 pt-4">{studentSelector}{passwordResetNotice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{passwordResetNotice}</p>}</div>
+      <div className="bj-parent-student-selector relative z-10 mx-auto max-w-6xl px-5 pt-4">{studentSelector}{codeCopyError && <p role="alert" className="p-3 text-sm text-rose-700">{codeCopyError}</p>}{passwordResetNotice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{passwordResetNotice}</p>}</div>
+      {isAndroidApp && <header className="bj-parent-native-heading"><span className="bj-parent-native-avatar" aria-hidden="true">{!currentStudent.avatar || currentStudent.avatar === '🦊' ? <img src="/brand/junior-fox.svg" alt="" width={32} height={38}/> : currentStudent.avatar}</span><div><p>VELİ ALANI</p><h1>{currentStudent.name}</h1><small>{currentStudent.grade || 1}. sınıf · Seviye {currentStudent.level || 1}</small></div>{(onNavigate || onOpenStudent) && <button type="button" disabled={isSwitchingStudent || isBillingBusy} aria-busy={isSwitchingStudent} onClick={() => { sound.playClick(); if (onOpenStudent) onOpenStudent(currentStudent.id); else onNavigate?.('dashboard'); }}><GraduationCap size={18} aria-hidden="true"/>{isSwitchingStudent ? 'Açılıyor…' : 'Öğrenciye geç'}</button>}</header>}
       {/* Animated Subtle Background Ambience */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+      {!isAndroidApp && <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <motion.div 
           animate={prefersReducedMotion ? undefined : {
             scale: [1, 1.15, 1],
@@ -391,10 +428,10 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
           transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 2 }}
           className="absolute top-96 -left-32 w-96 h-96 bg-emerald-500/10 dark:bg-emerald-500/10 rounded-full blur-3xl"
         />
-      </div>
+      </div>}
 
       {/* Top Header Hero */}
-      <div className="zp-dashboard-hero relative z-10 bg-white/80 dark:bg-zinc-900/80 border-b border-zinc-200/80 dark:border-zinc-800/80 pt-8 pb-10 px-4 sm:px-6 md:px-12 transition-colors">
+      {!isAndroidApp && <div className="zp-dashboard-hero relative z-10 bg-white/80 dark:bg-zinc-900/80 border-b border-zinc-200/80 dark:border-zinc-800/80 pt-8 pb-10 px-4 sm:px-6 md:px-12 transition-colors">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           
           {/* Student Profile Card */}
@@ -546,13 +583,13 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
           </div>
 
         </div>
-      </div>
+      </div>}
 
       {/* Main Dashboard Body */}
       <div className="zp-dashboard-content max-w-6xl mx-auto px-4 sm:px-6 md:px-12 pt-8 space-y-8 relative z-10">
         
         {/* Modern Fluid Segmented Tabs */}
-        <div className="zp-dashboard-tabs flex p-1.5 bg-zinc-200/60 dark:bg-zinc-900/80 rounded-2xl w-full max-w-full overflow-x-auto whitespace-nowrap scrollbar-none border border-zinc-200/70 dark:border-zinc-800/80 shadow-inner gap-1 md:w-fit" role="group" aria-label="Veli paneli bölümleri">
+        {!isAndroidApp && <div className="zp-dashboard-tabs flex p-1.5 bg-zinc-200/60 dark:bg-zinc-900/80 rounded-2xl w-full max-w-full overflow-x-auto whitespace-nowrap scrollbar-none border border-zinc-200/70 dark:border-zinc-800/80 shadow-inner gap-1 md:w-fit" role="group" aria-label="Veli paneli bölümleri">
           <button 
             type="button"
             aria-pressed={activeTab === 'overview'}
@@ -595,7 +632,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               />
             )}
             <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
-              <Brain className="w-4 h-4" /> 8 Bilişsel Boyut Haritası
+              <Brain className="w-4 h-4" /> Bilişsel Beceri Haritası
             </span>
           </button>
 
@@ -621,12 +658,13 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               <Bell className="w-4 h-4" /> Bildirim & E-posta
             </span>
           </button>
-        </div>
+        </div>}
 
         {parentProfile?.role === 'parent' && <FamilyActivation />}
-        {parentProfile?.role === 'parent' && currentStudent.role === 'student' && <NativeAccessStatus studentId={currentStudent.id}/>}
+        {parentProfile?.role === 'parent' && currentStudent.role === 'student' && (!isAndroidApp || activeTab === 'membership') && <NativeAccessStatus key={currentStudent.id} studentId={currentStudent.id} studentName={currentStudent.name} onBusyChange={setIsBillingBusy}/>}
         <AnimatePresence mode="wait">
-          {activeTab === 'overview' && (
+          {isAndroidApp && activeTab === 'overview' && !showDetailedReport && <AndroidParentOverview key="native-overview" student={currentStudent} weeklyData={weeklyData} masteries={displayMasteries} onReport={() => setShowDetailedReport(true)} onMembership={() => changeTab('membership')}/>}
+          {activeTab === 'overview' && (!isAndroidApp || showDetailedReport) && (
             <motion.div 
               key="tab-overview"
               initial={{ opacity: 0, y: 12 }}
@@ -635,6 +673,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               transition={{ duration: 0.25 }}
               className="space-y-8"
             >
+              {isAndroidApp && <button type="button" className="bj-parent-pocket-link bj-parent-report-toggle" onClick={() => setShowDetailedReport(false)}>← Kısa özete dön</button>}
               <ParentProgressOverview student={currentStudent} weeklyData={weeklyData} masteries={displayMasteries} />
 
               {/* Main Visuals Grid */}
@@ -1092,6 +1131,16 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.25 }}
             >
+              {isAndroidApp && <section className="bj-parent-native-tools" aria-label="Öğrenci ve destek işlemleri"><h2>Öğrenci ve destek</h2>
+                <button type="button" onClick={() => setShowStudentSettingsModal(true)}><KeyRound size={17} aria-hidden="true"/>Giriş bilgileri</button>
+                {currentStudent.studentCode && <button type="button" onClick={() => void handleCopyCode()}><Copy size={17} aria-hidden="true"/>{codeCopied ? 'Kopyalandı' : 'Kodu kopyala'}</button>}
+                {parentOrStudent?.role === 'parent' && <button type="button" onClick={() => { setPasswordResetError(null); setNewStudentPassword(''); setConfirmStudentPassword(''); setShowPasswordResetModal(true); }}>Öğrenci şifresini yenile</button>}
+                <button type="button" onClick={() => setShowReminderModal(true)}><Bell size={17} aria-hidden="true"/>Hatırlatıcı</button>
+                <button type="button" disabled={isSendingReport || !weeklyData} onClick={handleSendWeeklyReport}><Mail size={17} aria-hidden="true"/>{isSendingReport ? 'Hazırlanıyor…' : 'Haftalık raporu paylaş'}</button>
+                <a href={publicPageUrl('/bilgi/hesap-ve-veli-rehberi')} target="_blank" rel="noopener noreferrer">Hesap ve veli rehberi</a>
+                {codeCopied && <p role="status">Öğrenci kodu kopyalandı.</p>}
+                {reportSendStatus !== 'idle' && <p role="status">{reportSendStatus === 'success' ? 'Rapor hazır.' : 'Rapor hazırlanamadı. Yeniden deneyin.'}</p>}
+              </section>}
               <AccountCenter />
               <NotificationPreferences 
                 currentStudent={currentStudent} 
@@ -1104,6 +1153,10 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
 
       </div>
 
+      {isAndroidApp && <nav className="bj-parent-native-tabs" aria-label="Veli alanı bölümleri"><div>{([
+        { id: 'overview', label: 'Özet', icon: BarChart2 }, { id: 'skills', label: 'Beceriler', icon: Brain },
+        { id: 'membership', label: 'Üyelik', icon: ShieldCheck }, { id: 'preferences', label: 'Hesap', icon: Settings },
+      ] as const).map(({ id, label, icon: Icon }) => <button key={id} type="button" aria-pressed={activeTab === id} disabled={isSwitchingStudent || isResettingPassword || isBillingBusy} onClick={() => changeTab(id)}><Icon aria-hidden="true"/><span>{label}</span></button>)}</div></nav>}
       {/* MODAL 1: AI Custom Study Plan Modal */}
       <AnimatePresence>
         {showStudyPlanModal && (

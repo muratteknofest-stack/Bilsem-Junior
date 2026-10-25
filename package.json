@@ -68,6 +68,7 @@
     "audit:session-diversity": "node --import tsx scripts/audit-session-diversity.ts",
     "audit:strict-test-diversity": "node --import tsx scripts/audit-strict-test-diversity.ts",
     "android:candidate": "python3 scripts/package-android-candidate.py test-artifacts/android",
+    "test:android-parent": "node --import tsx scripts/check-android-parent.tsx",
     "test:android-entry": "node --import tsx scripts/check-android-entry.tsx",
     "test:android-release": "python3 -m unittest discover -s tests -p \"android_release_test.py\" -v"
   },
