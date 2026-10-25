@@ -40,6 +40,7 @@ jobs:
           npx playwright install --with-deps chromium
           node --import tsx scripts/check-google-play-ui.tsx
           npm run test:android-entry
+          npm run test:android-parent
       - name: Verify Android story adventure and simplified menus
         run: npm run test:android-story
       - name: Compile Android Billing and release bundle
@@ -56,5 +57,6 @@ jobs:
             test-artifacts/google-play-ui/
             test-artifacts/android-story/
             test-artifacts/android-entry/
+            test-artifacts/android-parent/
           if-no-files-found: ignore
           retention-days: 7

@@ -3,6 +3,7 @@ import { Capacitor } from '@capacitor/core';
 import { isAndroidApp } from './lib/native-app';
 import { androidParentRoute, dispatchAndroidBack } from './lib/android-navigation';
 import { AndroidConnectionNotice } from './components/android/AndroidConnectionNotice';
+import { AndroidScreenLoading } from './components/android/AndroidScreenLoading';
 import { storyStars, advanceStory, storyCollection, storyBadges, nextCampaignStage, isStoryStageComplete, type StoryStage, type StoryProgress, type StoryReward } from './features/student/story-adventure';
 import { readStoryProgress, saveStoryProgress } from './services/story-progress-service';
 import type { LearningSessionView } from './features/student/learning-contract';
@@ -492,7 +493,7 @@ export default function App() {
       {isSwitchingStudent && <div role="status" className="mx-auto my-3 w-full max-w-7xl rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-3 text-sm text-indigo-800">{switchTarget === 'parent' ? 'Veli oturumu açılıyor…' : 'Öğrenci oturumu açılıyor…'}</div>}
       {/* Main View Router */}
       <div role={currentRoute === 'landing' ? undefined : 'main'} className={`flex-1 w-full ${currentRoute === 'landing' ? '' : 'overflow-x-hidden'}`}>
-        <Suspense fallback={<div className="min-h-[50vh] flex items-center justify-center" role="status">Yükleniyor…</div>}>
+        <Suspense fallback={isAndroidApp ? <AndroidScreenLoading /> : <div className="min-h-[50vh] flex items-center justify-center" role="status">Yükleniyor…</div>}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={currentRoute === 'practice' ? `practice-${selectedPracticeCategory}-${selectedPracticeTopic}` : currentRoute}
@@ -633,7 +634,7 @@ export default function App() {
       </div>
 
       {/* Mobile Bottom Navigation Bar - Hidden during test routes for full screen test view */}
-      {currentRoute !== 'landing' && currentRoute !== 'login' && !isTestRoute && (
+      {currentRoute !== 'landing' && currentRoute !== 'login' && !isTestRoute && !(isAndroidApp && currentUser.role === 'parent' && currentRoute === 'parent') && (
         <MobileBottomNav
           currentRoute={currentRoute}
           onNavigate={navigateTo}

@@ -1,3 +1,14 @@
+## 1.0.31 - Mobil veli çalışma alanı ve veri geçişi
+
+- Android veli alanı kısa bir gerçek veri özeti ve dört sabit bölüme ayrılır: Özet, Beceriler, Üyelik, Hesap. Grafikler yalnız istendiğinde açılır; üyelik paneli kendi bölümünde çalışır. Öğrenciye geçiş, giriş bilgileri, şifre yenileme, hatırlatıcı, rapor paylaşma ve veri/silme işlemleri korunur.
+- Android veli başlığı sadeleşir; ses ve çıkış işlemleri erişilebilir kalır. Native veli ekranındaki genel Blog/Rehber alt menüsü kaldırılır. Kalan ortak bilgi/İngilizce bağlantıları doğru genel site adresini kullanır.
+- Öğrenci değiştirilirken profil ve ilerleme birlikte yüklenmeden gösterilmez. Yükleme hatası eski öğrencinin bilgilerini yeni seçim altında göstermez; tekrar deneme yolu sunulur. Çift yönlü aile bağı kontrolü korunur. Kopyalama başarısı yalnız pano işlemi tamamlandıktan sonra bildirilir; reddedilirse anlaşılır hata görünür.
+- Native Back açık veli pencerelerini veya ayrıntılı raporu kapatır ve diğer bölümlerden özete döner. Satın alma/ağ doğrulaması sürerken öğrenci seçimi, bölüm değişimi ve Back ile panelden çıkış engellenir.
+- Bölüm yüklenirken boş alan yerine marka görseli ve kısa yükleme durumu gösterilir. Karanlık tema, büyük metin, 44 px dokunma alanları ve azaltılmış hareket ayarları gözetilir.
+- Sürüm kodu 32, sürüm adı 1.0.31. Paket kimliği ve mevcut yükleme anahtarı korunur. Bu arayüz çalışması satış veya üretim yayın kabulünü açmaz.
+
+Doğrulama: TypeScript, mevcut regresyonlar ve Android sürüm bütünlüğü kontrolleri. `test:android-parent` gerçek veli bileşenini izole hesap/veri hizmetleriyle altı ekran boyutunda kontrol eder: özet/rapor/beceriler/üyelik/hesap, Back, ödeme sırasında gezinme kilidi, pano reddi, öğrenci yükleme hatası ve kurtarma, karanlık tema ve büyük metin. Bu kontrol gerçek Google Play satın alma veya fiziksel cihaz kabul testi değildir. `test:android-entry`, mevcut Play UI ve hikâye kontrolleri ayrıca korunur.
+
 ## 1.0.30 — Kısa Android açılışı ve ekrana sığan hesap ekranları
 
 - Android, uzun web tanıtım sayfası yerine öğrenci girişi, veli girişi, yeni aile hesabı ve örnek soru seçeneklerini içeren kısa açılış ekranını kullanır. Örnek soru motoru yalnız istenince yüklenir. Gizlilik, koşullar ve yardım erişimi korunur.
