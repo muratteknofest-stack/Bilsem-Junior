@@ -5,6 +5,9 @@ const errors=[],failures=[];let checks=0,webgl=false,contextFallback=false,pixel
 try{
  const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2,reducedMotion:'reduce'});page.on('pageerror',error=>errors.push(error.message));await page.goto('http://127.0.0.1:5193/tests/browser/engine-v2-pilot.html');await page.waitForSelector('.zp-answer-option');const count=await page.evaluate(()=>window.__pilotCount);
  for(const [width,height] of [[320,568],[390,844],[768,1024]]){await page.setViewportSize({width,height});
+  // Viewport emulation resolves before the WebView resize event on some runners.
+  // Inspect only after the actual question surface has the new visible height.
+  await page.waitForFunction(()=>document.querySelector('.zp-focus')?.clientHeight===innerHeight);
   for(let index=0;index<count;index++){
    await page.evaluate(index=>window.__showPilot(index),index);await page.waitForTimeout(45);const memory=page.getByRole('button',{name:'Deseni gizle ve cevapla'});if(await memory.isVisible())await memory.click();
    const bad=await page.evaluate(()=>{const root=document.querySelector('.zp-focus'),options=[...document.querySelectorAll('.zp-answer-option')],bad=[];
