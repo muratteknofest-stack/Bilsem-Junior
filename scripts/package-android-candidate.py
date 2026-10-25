@@ -12,7 +12,7 @@ import sys
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-PREFIX = 'Bilsem-Junior-1.0.28'
+PREFIX = 'Bilsem-Junior-1.0.29'
 
 
 def run(args):
@@ -91,3 +91,4 @@ if __name__ == '__main__':
     except (ValueError, OSError, subprocess.SubprocessError, zipfile.BadZipFile) as error:
         print(str(error) if isinstance(error, ValueError) else 'Android candidate could not be verified.', file=sys.stderr)
         sys.exit(1)
+
