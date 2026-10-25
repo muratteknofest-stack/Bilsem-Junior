@@ -1,5 +1,6 @@
 /* Learning chrome is scoped so puzzle colours retain their meaning everywhere. */
 .zp-learning { color: #192442; }
+.bj-review-session{scroll-margin-top:20px}.bj-review-session .zp-puzzle-card{border:1px solid #d8d2ec;border-radius:24px;background:#fff;box-shadow:0 5px 0 #e0d9ee,0 12px 30px #4935770d}.bj-review-position{padding:12px 16px;border-radius:14px;border:1px solid #dcd2ef;background:#f4efff;color:#5d407f;font-size:13px;font-weight:750}.bj-review-blank{padding:14px;border:1px solid #cad7ed;border-radius:14px;background:#f0f5fc;color:#3f5c84;font-size:14px;line-height:1.6}
 .zp-learning button:not(:disabled), .zp-learning summary { cursor: pointer; }
 .zp-learning button:focus-visible, .zp-learning select:focus-visible, .zp-learning summary:focus-visible { outline: 3px solid #6366f1; outline-offset: 4px; }
 .zp-learning button:disabled { cursor: default; }

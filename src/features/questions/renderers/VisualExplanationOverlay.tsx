@@ -21,7 +21,7 @@ export const VisualExplanationOverlay: React.FC<VisualExplanationOverlayProps> =
     }
   };
   return (
-    <div className="w-full mt-4 p-4 md:p-5 rounded-xl bg-amber-50/80 border-2 border-amber-200/80 text-slate-800  animate-fadeIn">
+    <section aria-label="Çözüm ve mantık kuralı" className="bj-solution-card w-full mt-4 p-4 md:p-5 rounded-xl bg-amber-50/80 border-2 border-amber-200/80 text-slate-800">
       {/* Header */}
       <div className="flex items-center gap-2 mb-2">
         <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center ">
@@ -46,7 +46,7 @@ export const VisualExplanationOverlay: React.FC<VisualExplanationOverlayProps> =
         <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
           Nasıl Düşünmeliyiz?
         </span>
-        <ul className="space-y-1.5 text-xs sm:text-sm text-slate-700">
+        <ol className="bj-solution-steps space-y-1.5 text-xs sm:text-sm text-slate-700">
           {explanation.steps.map((step, idx) => (
             <li key={idx} className="flex items-start gap-2">
               <span className="w-5 h-5 rounded-full bg-amber-200 text-amber-900 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
@@ -55,7 +55,7 @@ export const VisualExplanationOverlay: React.FC<VisualExplanationOverlayProps> =
               <span>{step}</span>
             </li>
           ))}
-        </ul>
+        </ol>
       </div>
 
       {/* Correct answer callout & Glossary Link */}
@@ -74,6 +74,7 @@ export const VisualExplanationOverlay: React.FC<VisualExplanationOverlayProps> =
           )}
 
           <button
+            type="button"
             onClick={handleOpenGlossary}
             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold transition-all cursor-pointer  active:scale-95"
           >
@@ -82,6 +83,6 @@ export const VisualExplanationOverlay: React.FC<VisualExplanationOverlayProps> =
           </button>
         </div>
       </div>
-    </div>
+    </section>
   );
 };

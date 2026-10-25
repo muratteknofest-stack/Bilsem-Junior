@@ -1,6 +1,9 @@
 import './student/story-stars.css';
+import './student/learning-results.css';
 import { STORY_QUESTION_COUNT, type StoryStage, type StoryReward } from '../features/student/story-adventure';
-import { StoryResultCelebration, StoryAnswerReview } from './student/StoryStars';
+import { StoryResultCelebration } from './student/StoryStars';
+import { LearningResultPanel } from './student/LearningResultPanel';
+import { learningReviewIndices, type LearningReviewFilter } from '../features/student/learning-review';
 import { apiFetch } from '../lib/api-fetch';
 import { LearningSetupPanel } from './student/LearningSetupPanel';
 import { StoryMissionIntro } from './student/StoryMissionIntro';
@@ -67,6 +70,8 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
   const [reportBusy, setReportBusy] = useState(false);
   const [hint, setHint] = useState(false);
   const [history, setHistory] = useState<ReviewedAnswer[]>([]);
+  const [reviewFilter, setReviewFilter] = useState<LearningReviewFilter>('all');
+  const reviewSection = useRef<HTMLElement>(null);
   const gate = useRef(new AnswerRequestGate());
   const deadlineGate = useRef(new DeadlineFinishGate());
   const mounted = useRef(true);
@@ -164,7 +169,15 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
     if (index < session.questions.length - 1) setIndex(index + 1);
     else await finish();
   };
-  const restart = () => { feedbackLedger.current.reset(); setFeedback(null); setSession(null); setResponse(null); setIndex(0); setError(''); setDiversityError(null); };
+  const restart = () => { feedbackLedger.current.reset(); setFeedback(null); setSession(null); setResponse(null); setIndex(0); setReviewFilter('all'); setError(''); setDiversityError(null); };
+  const reviewIndices = session ? learningReviewIndices(session, session.result ? reviewFilter : 'all') : [];
+  const reviewAnswers = (filter: LearningReviewFilter) => {
+    if (!session?.result) return;
+    const indices = learningReviewIndices(session, filter);
+    if (!indices.length) return;
+    setReviewFilter(filter); setIndex(indices[0]);
+    reviewSection.current?.scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' });
+  };
   const shortestExam=[...exams].sort((a,b)=>a.count-b.count)[0];
   const shorterExam=diversityError?[...exams].filter(item=>item.count<diversityError.requestedCount&&item.count<=diversityError.preparedCount).sort((a,b)=>b.count-a.count)[0]:undefined;
   const shorterCount=diversityError&&mode!=='exam'?(storyStage&&diversityError.preparedCount<5?0:Math.min(5,diversityError.preparedCount)):
@@ -215,20 +228,20 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
       shorterCount={shorterCount||undefined} onShorter={shorterCount?()=>{if(mode!=='exam')setQuestionCount(String(shorterCount));else if(shorterExam)setExam(shorterExam.id);resetDiversityNotice();}:undefined}/>:error&&<div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{error}</div>}
     <AnswerHistory items={history} />
     {!session && storyStage ? <StoryMissionIntro stage={storyStage} grade={grade} questionCount={Number(questionCount)} difficulty={difficulty} onDifficulty={setDifficulty} onCount={count => setQuestionCount(String(count))} busy={busy} onStart={() => void start()} /> : !session ? <LearningSetupPanel mode={mode} grade={grade} review={!!reviewMistakeId} busy={busy} topic={topic} onTopic={setTopic} category={category} onCategory={setCategory} difficulty={difficulty} onDifficulty={setDifficulty} questionCount={questionCount} onCount={setQuestionCount} validCount={validQuestionCount} exam={exam} onExam={setExam} exams={exams} onStart={() => void start()} /> : <>
-      {session.result && <section aria-label="Çalışma sonucu" className={`zp-result ${storyStage?'bj-story-result':''} space-y-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-5`}>
-        {!storyStage&&<Trophy size={38} aria-hidden="true" />}
-        <h2 className="text-xl font-extrabold">Çalışman tamamlandı</h2><p>{session.result.correctAnswers} doğru · {session.result.wrongAnswers} yanlış · {session.result.blankAnswers} boş · %{session.result.scorePercentage} başarı</p><p className="font-bold text-emerald-800">{session.result.xp} XP kazandın</p>{storyStage&&<StoryResultCelebration key={session.id} correct={session.result.correctAnswers} total={session.result.totalQuestions} bestCorrect={storyReward?.sessionId===session.id?storyReward.bestCorrect:undefined} bestTotal={storyReward?.sessionId===session.id?storyReward.bestTotalQuestions:undefined}/>}
-<p className="text-sm">Sorular arasında geçerek çözüm açıklamalarını inceleyebilirsin.</p>{storyStage&&<button type="button" disabled={busy} onClick={()=>{restart();void start();}} className="bj-story-replay">Tekrar oyna · {questionCount} yeni soru</button>}{storyStage&&onContinueStory&&<button type="button" disabled={busy} onClick={onContinueStory} className={button}>Sıradaki keşfe geç</button>}<button type="button" disabled={busy} onClick={storyStage?onNavigateHome:restart} className={button}>{storyStage?'Maceraya dön':'Yeni çalışma'}</button>
+      {session.result && <LearningResultPanel result={session.result} busy={busy} story={!!storyStage} filter={reviewFilter} onReview={reviewAnswers} onNew={storyStage?()=>{restart();void start();}:restart} onHome={onNavigateHome} onContinue={storyStage&&session.result.blankAnswers===0?onContinueStory:undefined}>
+        {storyStage&&<StoryResultCelebration key={session.id} correct={session.result.correctAnswers} total={session.result.totalQuestions} bestCorrect={storyReward?.sessionId===session.id?storyReward.bestCorrect:undefined} bestTotal={storyReward?.sessionId===session.id?storyReward.bestTotalQuestions:undefined}/>}
         {storyStage&&session.result.blankAnswers===0&&<div className="bj-story-discovery"><BookOpen size={22} aria-hidden="true"/><h3>Hikâyede yeni bir adım</h3><p>{storyStage.discovery}</p>{storyReward?.sessionId===session.id&&<>{storyReward.points>0&&<strong>+{storyReward.points} macera puanı</strong>}{storyReward.replay&&<strong>{storyReward.improved?'En iyi sonucunu geliştirdin!':'Tekrar maceran tamamlandı. En iyi yıldızların korundu.'}</strong>}{storyReward.badges.map(badge=><p key={badge}>Yeni rozet: {badge}</p>)}</>}</div>}
-      </section>}
-      {q && renderQuestion && <StoryAnswerReview enabled={!!storyStage&&!!session.result} count={session.questions.length}><section className="zp-session space-y-5 p-4 sm:p-7">
+      </LearningResultPanel>}
+      {q && renderQuestion && <section ref={reviewSection} aria-label={session.result?'Soru çözümlerini incele':'Çalışma sorusu'} className="zp-session bj-review-session space-y-5 p-4 sm:p-7">
         <div className="zp-round-header"><div><p className="zp-eyebrow">{COGNITIVE_CATEGORY_LABELS[q.category]}</p><p className="zp-round-title">{isExam ? 'Soru' : 'Sıradaki keşfin'} <span>{index + 1} / {session.questions.length}</span></p><p className="zp-round-detail">{q.targetGrade}. sınıf · Zorluk {q.difficulty}</p></div>{!session.result && <div className={`zp-timer ${remaining <= 60 ? 'zp-timer-low' : ''}`} role="timer" aria-label="Kalan süre"><Clock3 size={21} aria-hidden="true" /><span><small>Kalan süre</small>{Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}</span></div>}</div>
         <div className="zp-progress-row"><span><CheckCircle2 size={16} aria-hidden="true" /> {answeredCount} / {session.questions.length} cevaplandı</span><progress aria-label="Çalışma ilerlemesi" max={session.questions.length} value={answeredCount} /></div>
-        <nav aria-label="Soru seçimi" className="zp-question-nav flex flex-wrap gap-2">{session.questions.map((item, i) => {
+        <nav aria-label="Soru seçimi" className="zp-question-nav flex flex-wrap gap-2">{reviewIndices.map(i => {
+          const item = session.questions[i];
           const saved = session.answers[String(i)];
           const label = saved?.correct === undefined ? saved ? 'Yanıtlandı' : 'Boş' : saved.correct ? 'Doğru' : 'Yanlış';
           return <button key={item.id} type="button" disabled={busy || (mode !== 'exam' && !session.result && !saved && i !== nextUnansweredIndex(session))} aria-current={index === i ? 'step' : undefined} aria-label={`${i + 1}. soru, ${label}`} onClick={() => void goTo(i)} className={`min-h-11 rounded-lg border px-3 disabled:opacity-50 ${index === i ? 'border-indigo-700 bg-indigo-700 text-white' : saved?.correct === false ? 'border-amber-300 bg-amber-50' : saved?.correct ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300'}`} data-state={saved?.correct === false ? 'incorrect' : saved?.correct ? 'correct' : saved ? 'answered' : 'empty'}><span>{i + 1}</span><small>{label}</small></button>;
         })}</nav>
+        {session.result&&<p className="bj-review-position">{reviewFilter==='incorrect'?'Yanlış cevaplarını':reviewFilter==='blank'?'Boş bıraktığın soruları':reviewFilter==='correct'?'Doğru cevaplarını':'Bütün soruları'} inceliyorsun · {reviewIndices.length} soru</p>}
         <div className="zp-puzzle-card">
         <h2 ref={heading} tabIndex={-1} className="zp-prompt text-lg font-bold focus:outline-none">{q.prompt}</h2>{q.secondaryPrompt && <p>{q.secondaryPrompt}</p>}
         {!submitted && <p className="text-sm text-slate-600">Şıkkı seçince cevabın kaydedilir ve sonraki soru açılır. Önceki soruları yukarıdan inceleyebilirsin.{mode === 'exam' ? ' Doğru cevaplar ve çözümler deneme bitince gösterilir.' : ''}</p>}
@@ -240,16 +253,17 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
         {!submitted && response?.mode === 'choice' && response.optionId && error && <button type="button" disabled={busy} onClick={() => void submit()} className={button}>Cevabımı yeniden gönder</button>}
         {mode === 'exam' && answer && !session.result && <p role="status" className="text-sm text-indigo-800">Cevabın kaydedildi. Başka bir şık seçersen kaydedilip sıradaki boş soruya geçilir.</p>}
         {revealed && <p role="status" className={`font-bold ${answer.correct ? 'text-emerald-700' : 'text-amber-800'}`}>{answer.correct ? `Doğru cevap!${answer.xp ? ` +${answer.xp} XP` : ''}` : 'Bu soruyu birlikte yeniden inceleyelim.'}</p>}
+        {session.result&&!answer&&<p className="bj-review-blank">Bu soruyu boş bıraktın. Çözüm adımlarını inceleyerek yeniden düşünebilirsin.</p>}
         {solution && <VisualExplanationOverlay explanation={solution.explanation} correctOptionId={solution.correctOptionId} />}
         {!submitted && mode !== 'exam' && <><button type="button" onClick={() => setHint(!hint)} className="min-h-11 font-semibold text-indigo-700 underline">Bir ipucu göster</button>{hint && <p className="rounded-xl bg-amber-50 p-4">Önce değişen ve aynı kalan özellikleri karşılaştır. Bulduğun kuralın bütün adımlarda çalıştığını kontrol et; sonra seçenekleri tek tek dene.</p>}</>}
-        {isExam && <div className="zp-exam-navigation"><button type="button" disabled={busy || index === 0} onClick={() => void goTo(index - 1)}><ArrowLeft size={18} aria-hidden="true" /> Önceki soru</button><span>{index + 1} / {session.questions.length}</span><button type="button" disabled={busy || index === session.questions.length - 1} onClick={() => void goTo(index + 1)}>Sonraki soru <ArrowRight size={18} aria-hidden="true" /></button></div>}
+        {(isExam||session.result) && <div className="zp-exam-navigation"><button type="button" disabled={busy || reviewIndices.indexOf(index) <= 0} onClick={() => void goTo(reviewIndices[reviewIndices.indexOf(index)-1])}><ArrowLeft size={18} aria-hidden="true" /> Önceki soru</button><span>{reviewIndices.indexOf(index)+1} / {reviewIndices.length}</span><button type="button" disabled={busy || reviewIndices.indexOf(index) >= reviewIndices.length-1} onClick={() => void goTo(reviewIndices[reviewIndices.indexOf(index)+1])}>Sonraki soru <ArrowRight size={18} aria-hidden="true" /></button></div>}
         <div className="zp-session-actions flex flex-wrap gap-3">
           {!session.result && !reviewMistakeId && <button type="button" disabled={busy} onClick={() => void chooseNewDifficulty()} className="min-h-11 rounded-xl border border-indigo-300 px-4 py-2 font-semibold text-indigo-800">Zorluğu değiştir / yeni çalışma</button>}
           {!session.result && mode !== 'exam' && revealed && <button type="button" disabled={busy} onClick={() => nextUnansweredIndex(session) >= 0 ? void goTo(nextUnansweredIndex(session)) : void next()} className={button}>{nextUnansweredIndex(session) >= 0 ? 'Çalışmaya devam et' : 'Sonuçları gör'}</button>}
           {!session.result && <button type="button" disabled={busy} onClick={() => void finish()} className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 font-semibold">{remaining===0?'Sonuçları yeniden yükle':mode === 'exam' ? 'Denemeyi bitir' : 'Çalışmayı bitir'}</button>}
         </div>
         <details className="border-t border-slate-100 pt-4"><summary className="min-h-11 cursor-pointer text-sm font-semibold text-slate-600">Soruyla ilgili sorun bildir</summary><div className="flex flex-wrap gap-2">{([['answer', 'Cevap'], ['unclear', 'Anlatım'], ['visual', 'Görsel'], ['level', 'Seviye']] as const).map(([reason, label]) => <button key={reason} type="button" disabled={reportBusy} onClick={async () => { setReportBusy(true); try { await learningService.report(session.id, index, reason); setReportStatus('Bildirimin alındı. Teşekkür ederiz.'); } catch (err) { setReportStatus(err instanceof Error ? err.message : 'Bildirim gönderilemedi.'); } finally { setReportBusy(false); } }} className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm">{label}</button>)}</div><p role="status" className="mt-2 text-sm">{reportStatus}</p></details>
-      </section></StoryAnswerReview>}
+      </section>}
     </>}
     </div>
     {isExam && <div className="zp-tablet-home" aria-hidden="true"><span /></div>}

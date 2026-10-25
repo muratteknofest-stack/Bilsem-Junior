@@ -9,6 +9,31 @@ import { LearningAnswerFeedback } from '../src/components/student/LearningAnswer
 import { saveAndAdvance } from '../src/features/student/answer-progression';
 import { SoundEngine } from '../src/lib/sound';
 import type { LearningSessionView } from '../src/features/student/learning-contract';
+import { learningReviewIndices } from '../src/features/student/learning-review';
+import { LearningResultPanel } from '../src/components/student/LearningResultPanel';
+
+test('result review filters preserve original solution indices and never expose active exam correctness', () => {
+  const view=session();
+  view.questions=Array.from({length:5},(_,i)=>({id:`q-${i}`})) as LearningSessionView['questions'];
+  view.answers={'0':{response:{},correct:true},'2':{response:{},correct:false},'4':{response:{},correct:true},'99':{response:{},correct:false}};
+  assert.deepEqual(learningReviewIndices(view,'all'),[0,1,2,3,4]);
+  for(const filter of ['correct','incorrect','blank'] as const)assert.deepEqual(learningReviewIndices(view,filter),[]);
+  view.result={totalQuestions:5,correctAnswers:2,wrongAnswers:1,blankAnswers:2,scorePercentage:40,xp:30,totalTimeSeconds:83};
+  assert.deepEqual(learningReviewIndices(view,'correct'),[0,4]);
+  assert.deepEqual(learningReviewIndices(view,'incorrect'),[2]);
+  assert.deepEqual(learningReviewIndices(view,'blank'),[1,3]);
+});
+
+test('result summary renders acknowledged totals and empty review groups cannot be opened', () => {
+  let actions=0;
+  const result={totalQuestions:5,correctAnswers:5,wrongAnswers:0,blankAnswers:0,scorePercentage:100,xp:75,totalTimeSeconds:83};
+  const html=renderToStaticMarkup(<LearningResultPanel result={result} busy={false} story={false} filter="all" onReview={()=>actions++} onNew={()=>actions++} onHome={()=>actions++}/>);
+  assert.equal(actions,0);assert.match(html,/%100/);assert.match(html,/\+75/);assert.match(html,/1:23/);
+  assert.match(html,/<button[^>]*disabled=""[^>]*>Yanlışlar/);
+  assert.match(html,/<button[^>]*disabled=""[^>]*>Boşlar/);
+  assert.match(html,/5 soruda 5 doğru, 0 yanlış, 0 boş/);
+  assert.ok(!html.includes('Sıradaki keşfe geç'));
+});
 
 const session = (correct?: boolean, mode: LearningSessionView['mode'] = 'practice'): LearningSessionView => ({
   id: 'fixture-session', mode, title: 'Fixture', expiresAt: new Date(Date.now() + 600000).toISOString(), questions: [{ id: 'q' } as any],

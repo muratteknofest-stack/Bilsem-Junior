@@ -1,15 +1,15 @@
 /* One responsive test surface: the puzzle keeps the space, the chrome guides the child. */
 .zp-focus {
-  --zp-ink: #263452;
-  --zp-purple: #7254dc;
+  --zp-ink: #24314c;
+  --zp-purple: #7041cd;
   position: fixed; inset: 0; z-index: 100;
   height: 100vh; height: var(--zp-visible-height, 100dvh);
   box-sizing: border-box; display: flex; flex-direction: column; gap: 10px;
   padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   overflow: auto; overscroll-behavior: none;
   color: var(--zp-ink); font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  background-color: #f7f8fe;
-  background-image: radial-gradient(ellipse at 0 0, #eae3ff 0, transparent 42%), radial-gradient(ellipse at 100% 100%, #def8ef 0, transparent 40%), radial-gradient(#a998d51c .8px, transparent .8px);
+  background-color: #f7f5ff;
+  background-image: radial-gradient(ellipse at 0 0, #e6dcff 0, transparent 48%), radial-gradient(ellipse at 100% 100%, #daf6ee 0, transparent 44%), radial-gradient(#8a6ccb1c .8px, transparent .8px);
   background-size: auto, auto, 20px 20px;
 }
 .zp-focus:fullscreen { width: 100%; height: 100dvh; }
@@ -102,6 +102,10 @@
 .zp-focus-dialog button:disabled { opacity: .45; }
 .zp-focus-dialog .zp-sound-toggle { display: inline-flex; align-items: center; gap: 8px; margin-right: 8px; background: #f3edff; color: #5c3eb6; }
 .zp-focus-dialog .zp-sound-toggle[aria-pressed=false] { background: #eef1f6; color: #485369; }
+/* Shared tactile surfaces. Depth stays outside the scored diagram geometry. */
+.zp-focus-header>button{border-color:#cfc7e4;background:linear-gradient(155deg,#fff,#f4efff);box-shadow:inset 0 2px 0 #fff,0 4px 0 #dad0ed;color:#60428d}.zp-focus-brand-icon{background:radial-gradient(circle at 25% 15%,#b08aff,#7948dc 60%,#5b31b4);box-shadow:inset 0 2px 0 #d5bfff,0 4px 0 #4f2e9d,0 7px 14px #7141c829;color:#fff}.zp-focus-brand small{color:#5a6381}.zp-focus-clock{background:linear-gradient(#fff,#f5f0fc);border-color:#d1c8e3;color:#544168;box-shadow:0 3px 0 #e4dbef}.zp-journey-label strong{color:#55416e}.zp-journey-label>span{color:#626980}.zp-journey-track{height:12px;border-color:#d2c8e6;box-shadow:inset 0 2px 3px #674c7724}.zp-journey-fill{background:linear-gradient(90deg,#9665ed,#7845d3 55%,#20ac98);box-shadow:inset 0 3px 0 #ffffff55}.zp-focus-question-label{color:#6942af}.zp-focus-question-label>span{color:#62637e}.zp-focus-prompt small{color:#52617a}
+.zp-focus-visual{border-color:#cec5e5;box-shadow:inset 0 2px 0 #fff,0 5px 0 #d8cfea,0 12px 24px #60488912;background:radial-gradient(ellipse at 50% 100%,#faf8ff,#fff 70%)}.zp-focus .zp-answer-option{--zp-choice:#7041b7;--zp-choice-light:#f4edff;--zp-choice-edge:#ceb9e9;background:linear-gradient(145deg,#fff 50%,var(--zp-choice-light));border-width:2px;box-shadow:inset 0 2px 0 #fff,0 5px 0 var(--zp-choice-edge),0 8px 16px #4a31640a}.zp-focus .zp-answer-option:nth-child(2){--zp-choice:#0c7968;--zp-choice-light:#edf9f3;--zp-choice-edge:#abd7c9}.zp-focus .zp-answer-option:nth-child(3){--zp-choice:#925b13;--zp-choice-light:#fff8e9;--zp-choice-edge:#e6cd98}.zp-focus .zp-answer-option:nth-child(4){--zp-choice:#315fac;--zp-choice-light:#eef4ff;--zp-choice-edge:#b9cdec}.zp-focus .zp-answer-badge{border-radius:9px;box-shadow:inset 0 1px 0 #fff,0 3px 0 var(--zp-choice-edge)}.zp-focus .zp-answer-option[aria-pressed=true]{border-color:#7542cc;background:linear-gradient(145deg,#f8f4ff,#ede2ff);box-shadow:0 4px 0 #b39bdc,inset 0 0 0 1px #7542cc}.zp-focus .zp-answer-option[data-feedback=correct],.zp-focus[data-answer-feedback=correct] .zp-answer-option[aria-pressed=true]{border-color:#178765;background:#edf9f2;box-shadow:0 4px 0 #9bceb8}.zp-focus .zp-answer-option[data-feedback=incorrect],.zp-focus[data-answer-feedback=incorrect] .zp-answer-option[aria-pressed=true]{border-color:#b78024;background:#fff7e6;box-shadow:0 4px 0 #e1c48b}.zp-focus .zp-answer-option:disabled{opacity:1}.zp-focus-footer{border-color:#d8cfe8;box-shadow:0 4px 0 #e4dcee;background:linear-gradient(#fff,#faf7ff)}.zp-focus-status small{color:#5f5876}.zp-focus-status b{color:#513479}
+.zp-focus-dialog{border:2px solid #d6c9e9;background:linear-gradient(145deg,#fff,#f9f5ff);box-shadow:0 8px 0 #d2c4e8,0 28px 85px #2d1c5c55}.zp-focus-dialog nav button{font-size:12px;min-height:44px;box-shadow:0 3px 0 #e1d6ef}.zp-focus-dialog [aria-current=step]{background:linear-gradient(145deg,#9a73ea,#7144ce);box-shadow:0 3px 0 #56329e;color:#fff}.zp-focus-dialog summary{font-weight:750;color:#5b407a;padding-block:10px}.zp-focus-dialog>p,.zp-focus-dialog details p{font-size:14px;line-height:1.6;color:#515f79}.zp-focus .zp-feedback-card{border-width:2px;box-shadow:inset 0 2px 0 #fff,0 7px 0 #b1dbc7,0 24px 65px #34215538}.zp-focus .zp-feedback-icon{background:radial-gradient(circle at 30% 20%,#fff2a3,#ffd052 70%);color:#a66a0d;border:1px solid #e4b84f;box-shadow:inset 0 2px 0 #fff7bc,0 5px 0 #d3ad4b,0 0 0 9px #fff5d9}.zp-focus .zp-feedback[data-kind=incorrect] .zp-feedback-icon{color:#a26911;background:linear-gradient(145deg,#fff4bc,#ffdc83);box-shadow:inset 0 2px 0 #fff9d7,0 5px 0 #d8b66d,0 0 0 9px #fff1cc}.zp-focus .zp-feedback[data-kind=saved] .zp-feedback-icon{color:#416db2;background:linear-gradient(145deg,#f1f7ff,#b7d4ff);border-color:#91b8e4;box-shadow:inset 0 2px 0 #fff,0 5px 0 #8baddc,0 0 0 9px #e5effc}.zp-focus .zp-feedback-continue{box-shadow:0 3px 0 #d2e8dc;font-weight:850}.zp-focus .zp-feedback[data-kind=incorrect] .zp-feedback-continue{box-shadow:0 3px 0 #ebd6aa}.zp-focus .zp-feedback[data-kind=saved] .zp-feedback-continue{box-shadow:0 3px 0 #cad9ee}
 .zp-focus-volume { display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 650; margin: 16px 0; color: #53617c; }
 .zp-focus-volume input { max-width: 190px; min-height: 44px; accent-color: #7751d0; }
 .zp-spatial-mode { position: absolute; left: 7px; top: 7px; min-width: 44px; min-height: 44px; border: 1px solid #ded8f0; border-radius: 12px; padding: 8px; background: #fffffff0; color: #6543b0; font-size: 12px; font-weight: 700; }

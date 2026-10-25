@@ -1,5 +1,5 @@
 import React, { useId, useRef, useState } from 'react';
-import { ArrowRight, Check, ChevronRight, Gamepad2, Brain, Box, Eye, Hash, BookOpen, Grid3X3, Lightbulb, Code2, Shapes, Rocket, Search, Shuffle, Sparkles, Star, Target, X } from 'lucide-react';
+import { ArrowRight, Check, ChevronRight, Gamepad2, Brain, Box, Eye, Hash, BookOpen, Grid3X3, Lightbulb, Code2, Shapes, Rocket, Search, Shuffle, Sparkles, Star, Target, X, LoaderCircle } from 'lucide-react';
 import { COGNITIVE_CATEGORY_LABELS, QUESTION_TYPE_LABELS } from '../../types';
 import { AVAILABLE_CATEGORIES } from '../../features/student/available-categories';
 import { LEARNING_TOPICS, topicCategory, type LearningTopic } from '../../features/student/learning-topics';
@@ -65,15 +65,15 @@ export function LearningSetupPanel(props: Props) {
           {(mode === 'practice' ? [1, 3, 5] : [5, 10, 20]).map((count, index) => <button key={count} type="button" className="zp-toy-button" aria-label={`${count} soru seç`} aria-pressed={questionCount === String(count)} onClick={() => { tap(index + 2); onCount(String(count)); }}><strong>{count}</strong><small>{['Mini tur', 'Keşif turu', 'Uzun tur'][index]}</small></button>)}
           <label className="zp-custom-count">Özel<input aria-label="Soru sayısı" aria-describedby={countHelp} aria-invalid={!validCount} type="number" inputMode="numeric" min={1} max={maxQuestions} step={1} value={questionCount} onChange={event => onCount(event.target.value)} /></label>
         </div>
-        <p id={countHelp} className={validCount ? 'zp-launch-hint' : 'zp-launch-hint is-invalid'}>{validCount ? `1–${maxQuestions} soru seçebilirsin. Hedefin korunur; farklı sorular konu ve zorluk dengesiyle hazırlanır. Aynı soru test içinde tekrarlanmaz.` : `1–${maxQuestions} arasında bir tam sayı yaz.`}</p>
+        <p id={countHelp} className={validCount ? 'zp-launch-hint' : 'zp-launch-hint is-invalid'}>{validCount ? `1–${maxQuestions} soru seçebilirsin. Kendi hızında ilerle.` : `1–${maxQuestions} arasında bir tam sayı yaz.`}</p>
       </fieldset>}
       {mode === 'exam' && <fieldset className="zp-launch-group" disabled={busy}><legend><span>3</span> Deneme süresi</legend><div className="zp-launch-exams">{exams.map(item => <label key={item.id} className={`zp-toy-button ${exam === item.id ? 'is-selected' : ''}`}><input type="radio" name="learning-exam" value={item.id} checked={exam === item.id} onChange={() => { tap(3); onExam(item.id); }} /><strong>{item.title}</strong><small>{item.count} soru · {item.seconds / 60} dk.</small></label>)}</div></fieldset>}
     </div>
     <div className="zp-launch-footer">
-      {mode==='practice'&&!review&&<p role="status" className="zp-launch-hint">Bu tur: {questionCount} soru · Farklı örneklerle pekiştir.</p>}
-      <button type="button" className="zp-launch-start zp-toy-button" aria-label="Yeni testi başlat" disabled={busy || (mode !== 'exam' && !validCount)} onClick={() => { sound.unlock(); sound.playTransition(); onStart(); }}><Rocket size={23} aria-hidden="true" /><span>{busy ? 'Çalışman hazırlanıyor…' : review ? 'Birlikte tekrar bakalım' : 'Haydi, başlayalım!'}</span><ArrowRight size={19} aria-hidden="true" /></button>
+      {!review&&<div className="bj-launch-summary" role="status" aria-live="polite" aria-label="Seçim özeti"><span><BookOpen size={16} aria-hidden="true" />{grade}. sınıf</span><span><Target size={16} aria-hidden="true" />{mode==='exam'?`${exams.find(item=>item.id===exam)?.count??0} soru`:validCount?`${questionCount} soru`:'Hedefini seç'}</span><span><Sparkles size={16} aria-hidden="true" />{difficulty==='mixed'?'Karışık zorluk':`${difficulty}. seviye`}</span></div>}
+      <button type="button" className="zp-launch-start zp-toy-button" aria-label="Yeni testi başlat" aria-busy={busy} disabled={busy || (mode !== 'exam' && !validCount)} onClick={() => { sound.unlock(); sound.playTransition(); onStart(); }}>{busy?<LoaderCircle className="bj-launch-spinner" size={23} aria-hidden="true" />:<Rocket size={23} aria-hidden="true" />}<span>{busy ? 'Çalışman hazırlanıyor…' : review ? 'Birlikte tekrar bakalım' : 'Haydi, başlayalım!'}</span>{!busy&&<ArrowRight size={19} aria-hidden="true" />}</button>
       <div className="zp-launch-bottom"><span><Target size={14} aria-hidden="true" /> Her turda farklı sorular</span><StudentExperienceControls variant="playful" /></div>
-      <details className="zp-launch-info"><summary>Çalışmam nasıl hazırlanıyor?</summary><p>Sürpriz karışım tüm çalışma alanlarından sorular içerir. Sorular sınıfına, seçtiğin konuya ve zorluğa uygun hazırlanır; cevapları ve çözümleri kontrol edilir. Önce farklı soru tarzlarına yer verilir. Uzun testlerde veya tek konuda aynı beceriyi farklı örneklerle pekiştirebilirsin; aynı soru test içinde tekrar edilmez. Adaptif çalışmada geçmiş cevaplarına göre zorluk dengelenir. Seçtiğin soru sayısı kendiliğinden azaltılmaz. Sınıfını öğrenci profilinden değiştirebilirsin.</p></details>
+      <details className="zp-launch-info"><summary>Çalışmam nasıl hazırlanıyor?</summary><p>Sürpriz karışım tüm çalışma alanlarından sorular içerir. Sorular sınıfına, seçtiğin konuya ve zorluğa uygun hazırlanır; cevapları ve çözümleri kontrol edilir. Önce farklı soru tarzlarına yer verilir. Uzun testlerde veya tek konuda aynı beceriyi farklı örneklerle pekiştirebilirsin. Aynı soru test içinde tekrarlanmaz. Adaptif çalışmada geçmiş cevaplarına göre zorluk dengelenir. Seçtiğin soru sayısı kendiliğinden azaltılmaz. Sınıfını öğrenci profilinden değiştirebilirsin.</p></details>
     </div>
     <dialog ref={dialog} className="zp-topic-dialog" aria-labelledby={topicHeading} onCancel={() => topicButton.current?.focus({ preventScroll: true })}>
       <div className="zp-topic-dialog-heading"><div><p className="zp-launch-kicker">{grade}. SINIF · 44 KEŞİF</p><h3 id={topicHeading}>Bugün ne keşfedelim?</h3></div><button type="button" aria-label="Konu seçimini kapat" onClick={closeTopics}><X size={22} aria-hidden="true" /></button></div>
@@ -87,4 +87,3 @@ export function LearningSetupPanel(props: Props) {
     </dialog>
   </section>;
 }
-
