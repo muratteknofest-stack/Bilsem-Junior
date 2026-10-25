@@ -8,7 +8,7 @@ import { symbolLabel } from '../visual-vocabulary';
 
 export function WorkshopShape({value}:{value:WorkshopValue}) {
   if('figure' in value)return <AnalogyFigure figure={value.figure}/>;
-  if('symbol' in value)return <span className="block w-20 mx-auto"><SymbolDiagram symbol={value.symbol}/></span>;
+  if('symbol' in value)return <span className="zp-workshop-symbol block w-20 mx-auto"><SymbolDiagram symbol={value.symbol}/></span>;
   if('polygon' in value)return <svg viewBox="-0.2 -0.2 4.4 4.4" role="img" aria-label={`Üçgen parça: ${value.polygon.map(([x,y])=>`${x},${y}`).join('; ')}`} className="w-24 h-24 mx-auto"><polygon points={value.polygon.map(p=>p.join(',')).join(' ')} fill="#6366f1" stroke="#312e81" strokeWidth="0.05"/></svg>;
   return null;
 }
@@ -58,4 +58,3 @@ export function WorkshopBoard({board:b}:{board:Board}) {
   }
   return <section className="w-full rounded-2xl bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 p-3 sm:p-5 space-y-4 text-slate-900" aria-label="Soru verilenleri" data-workshop-kind={b.kind}>{content}</section>;
 }
-
