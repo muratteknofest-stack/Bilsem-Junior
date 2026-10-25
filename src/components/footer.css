@@ -801,3 +801,10 @@
   color: #64748b;
   font-size: 14px;
 }
+
+/* Legal topics stay reachable without shrinking their touch targets or clipping the text. */
+.platform-info-dialog-nav{flex-shrink:0}
+.platform-info-dialog-pill,.platform-info-dialog-done-btn,.platform-info-dialog-ext-link{min-height:44px}
+.platform-info-dialog-close-icon{min-width:44px;min-height:44px}
+.platform-info-dialog-content{min-height:0;overscroll-behavior:contain}
+.platform-info-dialog{margin:auto}

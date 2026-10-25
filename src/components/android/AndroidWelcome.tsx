@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useState } from 'react';
 import { ArrowRight, GraduationCap, Heart, Sparkles } from 'lucide-react';
 import type { UserRole } from '../../types';
 import { Logo } from '../Logo';
-import { FooterInfoModal, type FooterModalTopic } from '../FooterInfoModal';
+import { LegalLinks } from '../LegalLinks';
 import { useAndroidBack } from '../../hooks/useAndroidBack';
 import { useEntryViewport } from '../../hooks/useEntryViewport';
 import './android-entry.css';
@@ -16,9 +16,8 @@ interface Props {
 /** App entry deliberately loads the question engine only when an example is opened. */
 export function AndroidWelcome({ onNavigateToLogin, onNavigate }: Props) {
   const [discovery, setDiscovery] = useState(false);
-  const [topic, setTopic] = useState<FooterModalTopic | null>(null);
   const viewport = useEntryViewport(!discovery);
-  useAndroidBack(() => topic ? setTopic(null) : setDiscovery(false), discovery || Boolean(topic));
+  useAndroidBack(() => setDiscovery(false), discovery);
   if (discovery) return <Suspense fallback={<p role="status">Örnek soru hazırlanıyor…</p>}>
     <Discovery demoOnly onCloseDemo={() => setDiscovery(false)} onNavigateToLogin={onNavigateToLogin} onNavigate={onNavigate} />
   </Suspense>;
@@ -34,7 +33,6 @@ export function AndroidWelcome({ onNavigateToLogin, onNavigate }: Props) {
         <button type="button" className="bj-welcome-try" onClick={() => setDiscovery(true)}><Sparkles size={18} aria-hidden="true" /> Hesap açmadan bir soru dene</button>
       </div>
     </main>
-    <footer><button type="button" onClick={() => setTopic('kvkk')}>Gizlilik</button><span aria-hidden="true">·</span><button type="button" onClick={() => setTopic('terms')}>Koşullar</button><span aria-hidden="true">·</span><button type="button" onClick={() => setTopic('contact')}>Yardım</button></footer>
-    {topic && <FooterInfoModal topic={topic} onClose={() => setTopic(null)} />}
+    <footer><LegalLinks mode="entry"/></footer>
   </div>;
 }

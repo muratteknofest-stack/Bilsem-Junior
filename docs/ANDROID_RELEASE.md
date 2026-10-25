@@ -1,3 +1,14 @@
+## 1.0.32 - Web ve Android yasal açıklama bağlantıları
+
+- Ortak yasal bağlantılar: Gizlilik/KVKK, kullanım koşulları, çerez/yerel depolama, abonelik/iptal/iade, hesap/veri silme ve iletişim/işletmeci. Android açılışı, giriş/kayıt üst alanı, öğrenci profili, veli hesabı ve ödeme açıklamaları bu sayfalara erişim sunar. Web alt bilgisi, oturum içi sayfalar, üyelik sayfası ve İngilizce alt bilgisi de bağlantıları içerir.
+- Belgeler uygulamada okunabilir; bağlantı kopyalama ve ayrı sayfa açma korunur. Android ayrı sayfa bağlantıları gerçek web adresini kullanır. Ağ hatasında tekrar deneme ve ayrı belge sayfası sunulur. Açılan açıklama kayıt/giriş alanlarını sıfırlamaz.
+- Yeni genel hesap silme sayfasında uygulama içi talep yolu ve uygulamayı kurmadan yapılandırılmış iletişim adresine e-posta göndererek başvuru yolu açıklanır. E-posta bağlantısı kullanıcı tarafından gönderilecek bir taslak açar; otomatik talep veya anında silme değildir. Google Play iptali ayrı açıklanır.
+- Üç yeni açıklama sayfası da güncel işletmeci ayarlarını kullanan sunucu yolundan sunulur ve no-store kullanır. Dağıtımda eski statik politika dosyaları sunulmaz. Yalnız izinli genel HTML belgeleri dış sayfalardan okunabilir; çapraz site JSON, iframe ve yazma istekleri engelli kalır.
+- Bağlantıların varlığı nihai hukuki uyum onayı değildir. Tam yasal kimlik, açık adres, gerçek saklama/aktarım uygulamaları ve satış öncesi bilgiler işletmeci tarafından doğrulanmalıdır. Satış/kayıt kabul ayarları bu çalışmada değiştirilmez.
+- Android sürümü 1.0.32 / kod 33; paket ve mevcut yükleme anahtarı korunur.
+
+Kontroller: `test:legal-links` gerçek web/Android bağlantı bileşenlerini ve altı genel belgeyi izole hizmetlerle kontrol eder. Ek hukuki belge regresyonları, mevcut giriş/veli düzen kontrolleri ve Android sürüm bütünlüğü kontrolleri korunur. Gerçek Google Play kabulü ve fiziksel cihaz kontrolü ayrıca gerekir.
+
 ## 1.0.31 - Mobil veli çalışma alanı ve veri geçişi
 
 - Android veli alanı kısa bir gerçek veri özeti ve dört sabit bölüme ayrılır: Özet, Beceriler, Üyelik, Hesap. Grafikler yalnız istendiğinde açılır; üyelik paneli kendi bölümünde çalışır. Öğrenciye geçiş, giriş bilgileri, şifre yenileme, hatırlatıcı, rapor paylaşma ve veri/silme işlemleri korunur.

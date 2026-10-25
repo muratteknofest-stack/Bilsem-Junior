@@ -1,4 +1,5 @@
 import { isAndroidApp } from '../lib/native-app';
+import { LegalLinks } from './LegalLinks';
 import { useEntryViewport } from '../hooks/useEntryViewport';
 import React, { useState } from 'react';
 import { UserRole, UserProfile } from '../types';
@@ -78,11 +79,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           <span>{isAndroidApp ? 'Ana sayfa' : 'Ana Sayfaya Dön'}</span>
         </button>
 
-        {isAndroidApp && <Logo size="xs" showTagline={false} />}
-        <div className="zp-auth-top-note hidden sm:flex items-center gap-2 text-xs font-semibold px-3.5 py-2 rounded-xl border">
-          <ShieldCheck className="w-4 h-4" aria-hidden="true" />
-          <span>Öğrenci ve veli hesapları</span>
-        </div>
+        {isAndroidApp && <Logo size="xs" showTagline={false} showText={false} />}
+        <LegalLinks mode="trigger" disabled={registrationBusy}/>
       </div>
 
       <main className="zp-auth-shell max-w-6xl mx-auto w-full overflow-hidden grid">

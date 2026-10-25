@@ -13,7 +13,7 @@ import ssl
 import subprocess
 import sys
 
-PREFIX = 'Bilsem-Junior-1.0.31'
+PREFIX = 'Bilsem-Junior-1.0.32'
 REQUIRED_FILES = {
     'manifest.txt', 'package.txt', 'release-check.json', 'release-maven-osv.json',
     'release-dependencies.json', 'asset-verification.json', 'apksigner.jar',
@@ -44,7 +44,7 @@ def sign_release(candidate, private_dir, output):
     verify_candidate(candidate)
     output.mkdir(parents=True, exist_ok=True)
     checks = json.loads((candidate / 'release-check.json').read_text())
-    if checks != {'packageName': 'com.quantumtech.bilsemjunior', 'versionCode': 32, 'versionName': '1.0.31', 'debuggable': False, 'testOnly': False, 'cleartext': False, 'backup': False}:
+    if checks != {'packageName': 'com.quantumtech.bilsemjunior', 'versionCode': 33, 'versionName': '1.0.32', 'debuggable': False, 'testOnly': False, 'cleartext': False, 'backup': False}:
         raise ValueError('Compiled release checks did not pass')
     dependency_audit = json.loads((candidate / 'release-maven-osv.json').read_text())
     if dependency_audit.get('ecosystem') != 'Maven' or not dependency_audit.get('count') or dependency_audit.get('findings') != []:
@@ -70,14 +70,14 @@ def sign_release(candidate, private_dir, output):
     expected = hashlib.sha256(ssl.PEM_cert_to_DER_cert(certificate.read_text())).hexdigest()
     if expected != pinned_certificate:
         raise ValueError('Upload key does not match the pinned Play Console certificate')
-    aab = output / 'Bilsem-Junior-1.0.31.aab'
-    apk = output / 'Bilsem-Junior-1.0.31.apk'
+    aab = output / 'Bilsem-Junior-1.0.32.aab'
+    apk = output / 'Bilsem-Junior-1.0.32.apk'
     if aab.exists() or apk.exists():
         raise ValueError('Refusing to overwrite a signed release')
     signer = ['java', '-Duser.language=en', '-Duser.country=US', '--module', 'jdk.jartool/sun.security.tools.jarsigner.Main']
     run(signer + ['-keystore', key, '-storetype', 'PKCS12', '-storepass:env', 'ZEKAPARK_UPLOAD_PASSWORD',
                   '-keypass:env', 'ZEKAPARK_UPLOAD_PASSWORD', '-sigalg', 'SHA256withRSA', '-digestalg', 'SHA-256',
-                  '-signedjar', str(aab), str(candidate / 'Bilsem-Junior-1.0.31-unsigned.aab'), alias])
+                  '-signedjar', str(aab), str(candidate / 'Bilsem-Junior-1.0.32-unsigned.aab'), alias])
     verified = run(signer + ['-verify', '-verbose', '-certs', str(aab)])
     if 'jar verified.' not in verified or 'unsigned entries' in verified or 'jar is unsigned' in verified:
         raise RuntimeError('AAB is not fully signed')
@@ -88,7 +88,7 @@ def sign_release(candidate, private_dir, output):
     apk_signer = ['java', '-jar', str(candidate / 'apksigner.jar')]
     run(apk_signer + ['sign', '--ks', key, '--ks-type', 'PKCS12', '--ks-key-alias', alias,
                      '--ks-pass', 'env:ZEKAPARK_UPLOAD_PASSWORD', '--key-pass', 'env:ZEKAPARK_UPLOAD_PASSWORD',
-                     '--out', str(apk), str(candidate / 'Bilsem-Junior-1.0.31-aligned-unsigned.apk')])
+                     '--out', str(apk), str(candidate / 'Bilsem-Junior-1.0.32-aligned-unsigned.apk')])
     apk_verified = run(apk_signer + ['verify', '--verbose', '--print-certs', str(apk)])
     if f'Signer #1 certificate SHA-256 digest: {expected}' not in apk_verified:
         raise RuntimeError('Unexpected APK signer')

@@ -1,3 +1,4 @@
+import { LegalLinks } from './LegalLinks';
 import { NativeAccessStatus } from './NativeAccessStatus';
 import { isAndroidApp, publicPageUrl } from '../lib/native-app';
 import { useAndroidBack } from '../hooks/useAndroidBack';
@@ -384,6 +385,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               Tekrar dene
             </button>
           </div>
+          <LegalLinks/>
           <AccountCenter />
         </div>
       );
@@ -1141,6 +1143,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                 {codeCopied && <p role="status">Öğrenci kodu kopyalandı.</p>}
                 {reportSendStatus !== 'idle' && <p role="status">{reportSendStatus === 'success' ? 'Rapor hazır.' : 'Rapor hazırlanamadı. Yeniden deneyin.'}</p>}
               </section>}
+              <LegalLinks/>
               <AccountCenter />
               <NotificationPreferences 
                 currentStudent={currentStudent} 
