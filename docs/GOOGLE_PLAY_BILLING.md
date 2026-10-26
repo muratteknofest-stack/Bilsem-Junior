@@ -2,6 +2,20 @@
 
 23 Ekim 2026: Tek ödeme sağlayıcısı Google Play. Satın alma yalnızca gerçek Android ortamında açılır; Android derleme etiketi taşıyan tarayıcı önizlemeleri ve diğer işletim sistemleri ödeme başlatamaz. Satın alma Android veli panelinde, erişim doğrulaması sunucuda yapılır. Aynı öğrenci webde de aboneliğini kullanır. Gerçek Play Console kurulumu ve lisans testçisi kabulü tamamlanmadan satış açılmaz.
 
+## Yeni kayıtların ücretli erişime geçişi — 27 Ekim 2026
+
+İşletmecinin yeni kayıtları ücretsiz/tam kullanım olarak ayırma talimatı üzerine sunucuda `GOOGLE_PLAY_PAID_ACCESS_FROM` adlı sabit ISO tarih eşiği eklendi. Eşik ve sonrasında oluşturulan **öğrenci Auth hesapları** yeni kapsamdır; eski öğrenciler önceki erişimlerini korur. Eski bir velinin yeni öğrenci hesabı da yeni kapsama girer. Tarih, istemcinin değiştirebildiği profil alanından veya `user_metadata` içinden okunmaz; Supabase Admin Auth kaydı doğrulanır. Geçersiz ayar veya okunamayan hesap, tam çalışmaya izin vermez.
+
+- Ücretsiz: ana sayfa örnekleri, günde üç görev, mevcut geçmiş ve veli takibi.
+- Tam erişim: yeni konu/karışık/adaptif/macera/deneme çalışmaları ve yanlış sorulardan yeni tekrar oturumu. Aynı öğrencide web ve Android aynı sunucu yetkisini kullanır.
+- Satın alma/geri yükleme yalnız gerçek Google makbuzu, doğru veli–öğrenci bağı, kalıcı kayıt ve Google bitiş tarihiyle yetki açar. İptal, ödenen dönem bitene kadar erişimi korur; iade ile iptal veya süre bitimi yeni tam çalışmaları kapatır. Ücretli olmak üç günlük görevin sayısını artırmaz.
+
+Satış anahtarı (`GOOGLE_PLAY_BILLING_ENABLED`) ile erişim kapsamı ayrıdır. Satış için sunucu kimlik/şifreleme/bildirim yapılandırması ve satıcı bilgileri zorunludur; her ödeme öncesinde Google'dan üç etkin plan doğrulanır. Genel platformun e-posta, yedekten geri yükleme, aile pilotu ve izleme kabul kayıtları ödeme yetkisi yerine kullanılmaz ve bu değişiklikle **geçti olarak işaretlenmez**; ticari hazırlık raporu bunları ayrı eksik olarak göstermeye devam eder. Yukarıdaki tarihli eski kurulum notlarındaki genel kabul bayraklarına bağlı satış kontrolü bu açık işletmeci geçiş kararıyla ayrılmıştır.
+
+Tarih eşiği tanımlıyken tek ailelik lisans testi istisnası kapanır. Üretimde `GOOGLE_PLAY_ALLOW_TEST_PURCHASES=false` kalır; test makbuzları ücretli yetki açamaz. Global `GOOGLE_PLAY_ENFORCE_PAID_ACCESS=false` bırakılır; `true` yapılması eski öğrencileri de kapsar. Tarih eşiğini ileri taşımak yeni üyeleri yanlışlıkla eski kapsama alacağından normal dağıtımlarda bu sabit tarih değiştirilmemelidir.
+
+Google Play uygulaması hâlen dahili test kanalındadır. Bu değişiklik, mağazanın herkese açık üretim yayını veya gerçek cihaz satın alma/geri yükleme/yenileme kabul testlerinin tamamlandığı anlamına gelmez. Önceki gerçek tahsilat test modunda reddedildi ve tamamen iade/iptal edildi; otomatik senaryolar gerçek ücretli makbuzu kabul eden normal yolu doğrular, gerçek müşteri işlemi yapmaz.
+
 ## Ürünler
 
 Kullanıcının paylaştığı Quantum Studio App Console kaydındaki uygulama kimliği `com.quantumtech.bilsemjunior` olarak eşleştirildi. Geliştirici hesap numarası Cloud proje kimliği değildir. Mevcut uygulamayı kullanın; yeni paket veya yeni yükleme anahtarı oluşturmayın. Ürün ve hizmet hesabı ayarları Console erişimiyle ayrıca doğrulanmalıdır.

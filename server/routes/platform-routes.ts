@@ -18,6 +18,7 @@ import {
 } from "../security";
 import { accountSecurityLimiter } from "../rate-limiters";
 import { playConfig, playSetupReady, verifyPlayCatalog } from '../google-play-client';
+import { paidAccessStartsAt } from '../paid-access-policy';
 import type { CachedRead } from '../cached-read';
 import type { SettingsRecord } from '../../src/lib/platform-settings';
 import { isPublicPolicySlug } from '../../src/content/legal-documents';
@@ -65,7 +66,7 @@ export default function createPlatformRoutes(publicSettings: CachedRead<Settings
   routes.get('/admin/platform-settings/billing-diagnostics', async (_req,res) => {
     const {settings}=await readPlatformSettings();const config=playConfig(),configured=playSetupReady();let catalogVerified=false;
     if(configured)try{await verifyPlayCatalog();catalogVerified=true;}catch{}
-    res.json({provider:'google_play',configured,catalogVerified,enabled:config.enabled,enforced:config.enforced,packageName:config.packageName,productId:config.productId,blockers:releaseBlockers(settings)});
+    res.json({provider:'google_play',configured,catalogVerified,enabled:config.enabled,enforced:config.enforced,paidAccessFrom:paidAccessStartsAt()===null?null:process.env.GOOGLE_PLAY_PAID_ACCESS_FROM,packageName:config.packageName,productId:config.productId,blockers:releaseBlockers(settings)});
   });
 
   routes.put(
