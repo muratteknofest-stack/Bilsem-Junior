@@ -7,13 +7,13 @@ import { routeFromPathname, pathnameForRoute } from "../src/lib/route-sync";
 import { recordWordwallActivityStart, recordWordwallActivityClose, getWordwallTelemetryHistory } from "../src/features/student/wordwall-telemetry";
 import { sortSkillMasteriesByScore, buildCognitiveRadarData, calculateDailyGoalProgressPct } from "../src/features/parent/parent-portal-helpers";
 
-test("vercel.json configures maxDuration=60 for api/index.js and AI pipeline budget is 50s", () => {
-  const vercel = JSON.parse(fs.readFileSync("vercel.json", "utf8"));
+test("deployment template configures maxDuration=60 for api/index.js and AI pipeline budget is 50s", () => {
+  const vercel = JSON.parse(fs.readFileSync("config/vercel-base.json", "utf8"));
   assert.equal(vercel.functions?.["api/index.js"]?.maxDuration, 60);
   assert.equal(AI_PIPELINE_BUDGET_MS, 50000);
 });
 
-test("dynamic CSP helper preserves default policy and safely appends custom HTTPS Supabase origins", () => {
+test("dynamic CSP helper preserves default policy and uses only the selected HTTPS Supabase origins", () => {
   assert.equal(buildContentSecurityPolicy(), contentSecurityPolicy);
   const origins = resolveConnectSrcOrigins("https://staging-proj.supabase.co");
   assert.ok(origins.includes("https://staging-proj.supabase.co"));

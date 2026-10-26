@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { assertPasswordNotCompromised, PasswordPolicyError } from './password-policy';
 import { getServiceClient } from './supabase-admin';
 import { logServerFailure } from './safe-log';
+import { checkedSupabaseOrigin } from '../shared/supabase-environment.mjs';
 const schema = z.object({ password: strongPasswordSchema }).strict();
 interface ChangeDependencies {
   check: (password: string) => Promise<void>;
@@ -34,7 +35,7 @@ export function createPasswordChangeHandler(deps: ChangeDependencies) {
 export const changeOwnPassword = createPasswordChangeHandler({
   check: assertPasswordNotCompromised,
   async update(token, password) {
-    const origin = new URL(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '');
+    const origin = new URL(checkedSupabaseOrigin(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '', process.env));
     if (origin.protocol !== 'https:' || !origin.hostname.endsWith('.supabase.co')) throw new Error('Auth origin invalid');
     const response = await fetch(new URL('/auth/v1/user', origin), {
       method: 'PUT', redirect: 'error', signal: AbortSignal.timeout(10_000),

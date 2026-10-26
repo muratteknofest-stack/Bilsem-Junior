@@ -62,7 +62,7 @@ test('provider errors cannot leak secrets or personal input through safe log met
 });
 
 test('static deployment denies framing and script injection and does not publish the server bundle', () => {
-  const config = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
+  const config = JSON.parse(fs.readFileSync('config/vercel-base.json', 'utf8'));
   const headers = Object.fromEntries(config.headers[0].headers.map((h: any) => [h.key, h.value]));
   assert.match(headers['Content-Security-Policy'], /frame-ancestors 'none'/);
   assert.match(headers['Content-Security-Policy'], /script-src 'self';/);

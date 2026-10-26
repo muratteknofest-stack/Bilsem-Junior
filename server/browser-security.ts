@@ -39,8 +39,7 @@ export function resolveConnectSrcOrigins(customSupabaseUrl?: string): string[] {
     if (parsed.protocol === "https:") {
       const httpsOrigin = parsed.origin;
       const wssOrigin = `wss://${parsed.host}`;
-      if (!base.includes(httpsOrigin)) base.push(httpsOrigin);
-      if (!base.includes(wssOrigin)) base.push(wssOrigin);
+      return ["'self'", httpsOrigin, wssOrigin];
     }
   } catch {
     // Ignore malformed custom URL and preserve strict defaults

@@ -91,7 +91,7 @@ test('preview pages cannot be indexed and never use the preview hostname as the 
 });
 
 test('Vercel keeps blog assets and unknown blog paths outside the SPA fallback', () => {
-  const config = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
+  const config = JSON.parse(fs.readFileSync('config/vercel-base.json', 'utf8'));
   const fallback = new RegExp(`^${config.rewrites.at(-1).source}$`);
   for (const route of ['/bilgi', '/bilgi/gizlilik-ve-veriler', '/bilgi/unknown', '/blog', '/blog/bilsem-nedir', '/blog/does-not-exist', '/blog-assets/blog.css', '/robots.txt', '/sitemap.xml', '/api/health']) assert.equal(fallback.test(route), false, route);
   assert.equal(fallback.test('/dashboard'), true);

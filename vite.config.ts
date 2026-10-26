@@ -72,8 +72,8 @@ function aistudioMediaPlugin(): Plugin {
 export default defineConfig(({ mode }) => {
   const native = mode === 'android';
   const env = loadEnv(mode, process.cwd(), 'VITE_');
-  const publicSettings = native ? androidBuildSettings(env) : publicBuildSettings(env, mode === 'production', process.env.VERCEL === '1', blogConfig().origin);
-  const nativePolicy = Object.entries({ ...browserDirectives, connectSrc: [...browserDirectives.connectSrc, publicSettings.VITE_API_BASE_URL, publicSettings.VITE_SUPABASE_URL, publicSettings.VITE_SUPABASE_URL.replace('https:', 'wss:')] })
+  const publicSettings = native ? androidBuildSettings(env) : publicBuildSettings({ ...env, VERCEL_ENV: process.env.VERCEL_ENV }, mode === 'production', process.env.VERCEL === '1', blogConfig().origin);
+  const nativePolicy = Object.entries({ ...browserDirectives, connectSrc: ["'self'", publicSettings.VITE_API_BASE_URL, publicSettings.VITE_SUPABASE_URL, publicSettings.VITE_SUPABASE_URL.replace('https:', 'wss:')] })
     .map(([key, values]) => `${key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}${values.length ? ` ${[...new Set(values)].filter(Boolean).join(' ')}` : ''}`)
     .filter(value => !value.startsWith('frame-ancestors')).join('; ');
   return {

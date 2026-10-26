@@ -23,7 +23,7 @@ export async function _updateSupabaseProfile(updates: Partial<UserProfile>) {
     const definedUpdates = Object.fromEntries(
       Object.entries(updates).filter(([, value]) => value !== undefined),
     );
-    await updateDoc(ref, { ...definedUpdates, updatedAt: Date.now() });
+    await updateDoc(ref, definedUpdates);
   } catch (e) {
     console.error('Supabase profil güncellemesi başarısız:', e);
   }
@@ -61,7 +61,8 @@ export function getCurrentUser(): UserProfile {
 export function setCurrentUser(user: UserProfile) {
   safeStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
   const { avatar, dailyGoalMinutes, dailyGoalQuestions, dailyGoalSessions, soundEnabled, featuredBadgeIds, reminderConfig } = user;
-  void _updateSupabaseProfile({ avatar, dailyGoalMinutes, dailyGoalQuestions, dailyGoalSessions, soundEnabled, featuredBadgeIds, reminderConfig });
+  if (user.id === auth.currentUser?.uid)
+    void _updateSupabaseProfile({ avatar, dailyGoalMinutes, dailyGoalQuestions, dailyGoalSessions, soundEnabled, featuredBadgeIds, reminderConfig });
 }
 
 export function isAuthenticated(): boolean {

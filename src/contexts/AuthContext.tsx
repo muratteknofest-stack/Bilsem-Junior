@@ -6,7 +6,7 @@ import {
   sendEmailVerification as supabaseSendEmailVerification,
   sendPasswordResetEmail as supabaseSendPasswordResetEmail
 } from '../lib/supabase';
-import { doc, getDoc, updateDoc, onSnapshot } from '../lib/supabase-data';
+import { doc, getDoc, updateOwnProfile, recordOwnProfileActivity, onSnapshot } from '../lib/supabase-data';
 import { auth, db } from '../lib/platform';
 import { UserProfile, UserRole } from '../types';
 import { dataService } from '../services/data-service';
@@ -95,7 +95,7 @@ export const AuthProvider: React.FC<{
     watch: (user, next, fail) => {
       const ref = doc(db, 'users', user.uid);
       const unsubscribe = onSnapshot(ref, snapshot => next(snapshot.exists() ? snapshot.data() as UserProfile : null), fail);
-      void updateDoc(ref, { lastLoginAt: Date.now() }).catch(() => undefined);
+      void recordOwnProfileActivity(user.uid).catch(() => undefined);
       return unsubscribe;
     },
     onState: setSession,
@@ -127,8 +127,8 @@ export const AuthProvider: React.FC<{
       return;
     }
     if (!currentUser || !userProfile) throw new Error('Profil güncellemek için oturum açın.');
-    await updateDoc(doc(db, 'users', currentUser.uid), { ...validatedData, updatedAt });
-    const updated = { ...userProfile, ...validatedData, updatedAt };
+    const result = await updateOwnProfile(currentUser.uid, validatedData);
+    const updated = { ...userProfile, ...result.changes, updatedAt: result.updatedAt };
     setUserProfile(updated);
     dataService.syncUserFromSupabase(updated);
   };

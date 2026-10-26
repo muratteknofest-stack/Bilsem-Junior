@@ -1,3 +1,4 @@
+import { checkedSupabaseOrigin } from '../shared/supabase-environment.mjs';
 type Settings = Record<string, string | undefined>;
 
 function publicOrigin(value: string, name: string, production: boolean): string {
@@ -23,8 +24,10 @@ function publishableKey(key: string): string {
 
 /** Exact names only: prefixes also expose accidental *_SECRET or *_TOKEN settings. */
 export function publicBuildSettings(env: Settings, production: boolean, onVercel: boolean, siteOrigin: string) {
+  const supabaseUrl = publicOrigin(env.VITE_SUPABASE_URL || '', 'Supabase URL', production);
+  if (onVercel || env.VERCEL_ENV) checkedSupabaseOrigin(supabaseUrl, { ...env, ...(onVercel ? { VERCEL: '1' } : {}) });
   return {
-    VITE_SUPABASE_URL: publicOrigin(env.VITE_SUPABASE_URL || '', 'Supabase URL', production),
+    VITE_SUPABASE_URL: supabaseUrl,
     VITE_SUPABASE_PUBLISHABLE_KEY: publishableKey(env.VITE_SUPABASE_PUBLISHABLE_KEY || ''),
     VITE_API_BASE_URL: onVercel ? '' : publicOrigin(env.VITE_API_BASE_URL || '', 'API URL', production),
     VITE_PUBLIC_SITE_URL: publicOrigin(siteOrigin, 'Site URL', production),

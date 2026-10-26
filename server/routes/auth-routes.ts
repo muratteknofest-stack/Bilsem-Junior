@@ -2,7 +2,7 @@ import { assertPasswordNotCompromised } from '../password-policy';
 import { changeOwnPassword } from '../password-change';
 import { logServerFailure } from '../safe-log';
 import { sharedRateLimit } from '../shared-rate-limit';
-import { Router } from 'express';
+import { Router, type Response } from 'express';
 import { z } from 'zod';
 import {
   getAdminAuth,
@@ -18,6 +18,19 @@ import { createFamilyRegistrationHandler } from '../family-registration';
 export { registerFamilySchema } from '../family-registration';
 
 const authRoutes = Router();
+
+// These app-relay routes are defense in depth, not a firewall for the public
+// Supabase origin. The provider settings in docs/auth-security.md are required.
+const rejectProviderSignup = (_req: unknown, res: Response) => res.status(410).json({
+  error: 'Yeni hesap veli kaydı üzerinden açılır.', code: 'FAMILY_REGISTRATION_REQUIRED',
+});
+const rejectProviderPassword = (_req: unknown, res: Response) => res.status(410).json({
+  error: 'Şifrenizi uygulamanın şifre yenileme ekranından değiştirin.', code: 'APP_PASSWORD_CHANGE_REQUIRED',
+});
+authRoutes.post(['/auth/provider-signup-blocked', '/supabase/auth/v1/signup', '/supabase/auth/v1/otp'], rejectProviderSignup);
+authRoutes.put('/supabase/auth/v1/user', rejectProviderPassword);
+// Vercel's method-specific edge rule retains PUT while dispatching here.
+authRoutes.put('/auth/provider-password-blocked', rejectProviderPassword);
 
 export const registerStudentSchema = z.object({
   email: z.string().trim().toLowerCase().email(),

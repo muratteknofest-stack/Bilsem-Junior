@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import net from 'node:net';
-import fs from 'node:fs';
+import { createVercelConfig } from './vercel-config.mjs';
 import { setTimeout as pause } from 'node:timers/promises';
 const reservation = net.createServer();
 await new Promise(resolve => reservation.listen(0, '127.0.0.1', resolve));
@@ -9,7 +9,7 @@ const port = reservation.address().port;
 await new Promise(resolve => reservation.close(resolve));
 const child = spawn(process.execPath, ['build/server.cjs'], { env: { ...process.env, NODE_ENV: 'production', PORT: String(port) }, stdio: 'ignore' });
 const base = `http://127.0.0.1:${port}`;
-const configuredHeaders = JSON.parse(fs.readFileSync('vercel.json', 'utf8')).headers[0].headers.filter(header => header.key !== 'Content-Security-Policy');
+const configuredHeaders = createVercelConfig(process.env).headers[0].headers.filter(header => header.key !== 'Content-Security-Policy');
 try {
   let ready = false;
   for (let attempt = 0; attempt < 50; attempt++) {
@@ -44,6 +44,13 @@ try {
   assert.equal(reset.status, 401, 'Unauthenticated password change');
   assert.equal(reset.headers.get('cache-control'), 'no-store');
   await reset.arrayBuffer();
+  for (const [method, path] of [['PATCH', '/api/account/profile'], ['POST', '/api/account/profile/activity']]) {
+    const response = await fetch(base + path, { method, headers: { 'Content-Type': 'application/json' },
+      body: '{}', signal: AbortSignal.timeout(3000) });
+    assert.equal(response.status, 401, `Unauthenticated ${path}`);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    await response.arrayBuffer();
+  }
   const studentSwitch = await fetch(base + '/api/parent/student-session', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ studentId: '22222222-2222-4222-8222-222222222222' }), signal: AbortSignal.timeout(3000),
@@ -71,7 +78,7 @@ try {
     assert.equal(response.headers.get('cross-origin-resource-policy'), 'same-origin');
     await response.arrayBuffer();
   }
-  console.log(`Production HTTP security: ${checks.length + 8} checks passed.`);
+  console.log(`Production HTTP security: ${checks.length + 10} checks passed.`);
 } finally {
   if (child.exitCode === null) { child.kill('SIGTERM'); await new Promise(resolve => child.once('exit', resolve)); }
 }

@@ -43,6 +43,6 @@ test('the recovery shell is outside the React root and its handler loads before 
   assert.ok(html.indexOf('id="bj-load-recovery"')<html.indexOf('src="/boot-recovery.js"'));
   assert.ok(html.indexOf('src="/boot-recovery.js"')<html.indexOf('src="/src/main.tsx"'));
   assert.doesNotMatch(html,/onclick\s*=/i);
-  const config=JSON.parse(readFileSync(new URL('../vercel.json',import.meta.url),'utf8'));
+  const config=JSON.parse(readFileSync(new URL('../config/vercel-base.json',import.meta.url),'utf8'));
   for(const path of ['/','/index.html','/boot-recovery.js','/boot-recovery.css'])assert.ok(config.headers.some(row=>row.source===path&&row.headers.some(h=>h.key==='Cache-Control'&&h.value.includes('no-cache'))),path);
 });

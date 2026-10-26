@@ -168,26 +168,6 @@ export const passwordResetSchema = z.object({
 });
 
 /**
- * User Profile Update Schema
- */
-export const userProfileUpdateSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(2, 'İsim en az 2 karakter olmalıdır.')
-    .max(50, 'İsim en fazla 50 karakter olabilir.')
-    .optional(),
-  grade: z.number().int().min(1).max(4).optional(),
-  avatar: z.string().min(1).optional(),
-  dailyGoalMinutes: z.number().int().min(5, 'Günlük hedef en az 5 dakika olmalıdır.').max(180).optional(),
-  dailyGoalQuestions: z.number().int().min(5, 'Günlük soru hedefi en az 5 olmalıdır.').max(200).optional(),
-  dailyGoalSessions: z.number().int().min(1).max(10).optional(),
-  soundEnabled: z.boolean().optional(),
-});
-
-export type UserProfileUpdateData = z.infer<typeof userProfileUpdateSchema>;
-
-/**
  * Study Reminder Config Schema
  */
 export const studyReminderConfigSchema = z.object({
@@ -199,10 +179,34 @@ export const studyReminderConfigSchema = z.object({
   browserPushEnabled: z.boolean(),
   soundAlert: z.boolean(),
   weekendIncluded: z.boolean(),
-  customMessage: z.string().max(120, 'Özel hatırlatma mesajı 120 karakteri geçemez.').optional(),
-});
+  customMessage: z.string().max(120, 'Özel hatırlatma mesajı 120 karakteri geçemez.')
+    .regex(/^[^\u0000-\u001f\u007f]*$/u).optional(),
+  snoozeUntil: z.number().int().min(0).max(8_640_000_000_000_000).nullable().optional(),
+  lastNotifiedDate: z.iso.date().optional(),
+  lastNotifiedHour: z.number().int().min(0).max(23).optional(),
+}).strict();
 
 export type StudyReminderConfigData = z.infer<typeof studyReminderConfigSchema>;
+
+/** Shared client/server allowlist. Grade changes use /learning/grade exclusively. */
+export const userProfileUpdateSchema = z.object({
+  name: z.string().trim().min(2, 'İsim en az 2 karakter olmalıdır.')
+    .max(50, 'İsim en fazla 50 karakter olabilir.').regex(/^[^\u0000-\u001f\u007f]*$/u).optional(),
+  avatar: z.string().trim().min(1).max(32).regex(/^[^\u0000-\u001f\u007f]*$/u).optional(),
+  dailyGoalMinutes: z.number().int().min(5, 'Günlük hedef en az 5 dakika olmalıdır.').max(180).optional(),
+  dailyGoalQuestions: z.number().int().min(5, 'Günlük soru hedefi en az 5 olmalıdır.').max(200).optional(),
+  dailyGoalSessions: z.number().int().min(1).max(10).optional(),
+  soundEnabled: z.boolean().optional(),
+  featuredBadgeIds: z.array(z.string().regex(/^[a-z][a-z0-9_]{0,63}$/)).max(3)
+    .refine(ids => new Set(ids).size === ids.length).optional(),
+  reminderConfig: studyReminderConfigSchema.optional(),
+}).strict().refine(value => Object.values(value).some(item => item !== undefined), 'En az bir profil ayarı gönderilmelidir.');
+
+export type UserProfileUpdateData = z.infer<typeof userProfileUpdateSchema>;
+export const profileUpdateResultSchema = z.object({
+  changes: userProfileUpdateSchema,
+  updatedAt: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+}).strict();
 
 /**
  * Password Strength Evaluator (Helper for UI Feedback)
