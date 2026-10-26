@@ -37,7 +37,7 @@ export function requestSecurity(configuredOrigins: string): RequestHandler {
       res.setHeader('Access-Control-Allow-Origin', parsed);
       res.vary('Origin');
       res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, OPTIONS');
     }
     if (req.method === 'OPTIONS') return res.sendStatus(204);
     if (!['GET', 'HEAD'].includes(req.method) && !req.is('application/json')) {

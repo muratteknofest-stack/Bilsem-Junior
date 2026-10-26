@@ -42,6 +42,10 @@ export function getAdminAuth() {
 export async function requireSupabaseAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const match = (req.header('authorization') || '').match(/^Bearer\s+(.+)$/i);
   if (!match) return res.status(401).json({ error: 'Oturum doğrulaması gerekli.' });
+  // Syntax is only an inexpensive rejection filter. Authentication still
+  // requires provider verification and the live session check below.
+  if (match[1].length > 8192 || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(match[1]))
+    return res.status(401).json({ error: 'Oturum geçersiz veya süresi dolmuş.' });
   const { data, error } = await getServiceClient().auth.getUser(match[1]);
   if (error || !data.user) return res.status(401).json({ error: 'Oturum geçersiz veya süresi dolmuş.' });
   // getUser verifies the JWT but access tokens may outlive a revoked session.

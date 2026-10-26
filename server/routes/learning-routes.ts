@@ -27,7 +27,8 @@ import { AVAILABLE_CATEGORIES } from '../../src/features/student/available-categ
 import { QUESTION_TYPE_LABELS, COGNITIVE_CATEGORY_LABELS, type BaseQuestion } from '../../src/types';
 import { prepareQuestionReport } from '../support-validation';
 import { LearningError, answerLearningSession, finishLearningSession, learningTotals, learningView, learningUpdateView, prepareLearningQuestions, type LearningSession } from '../learning-model';
-import { eligibleReward, type RewardFacts } from '../learning-rewards';
+import { eligibleReward, rewardClaimSchema, rewardDates, type RewardFacts } from '../learning-rewards';
+import { weeklyGrandRewardPrefix } from '../../src/lib/weekly-grand-reward';
 import { fromSupabaseRow } from '../../src/lib/supabase-shape';
 import type { UserProfile } from '../../src/types';
 import { createLockedAchievements } from '../../src/services/modules/shared';
@@ -250,7 +251,7 @@ routes.post('/learning/review', async (req: AuthenticatedRequest, res) => {
 });
 routes.post('/learning/rewards/claim', async (req: AuthenticatedRequest, res) => {
   try {
-    const parsed = z.object({ kind: z.enum(['badge', 'streak', 'mission', 'weekly', 'grand']), id: z.string().min(1).max(80) }).strict().safeParse(req.body);
+    const parsed = rewardClaimSchema.safeParse(req.body);
     if (!parsed.success) throw new LearningError('Ödül isteği geçersiz.', 400);
     const client = getServiceClient(), student = req.authUser!.uid;
     for (let retry = 0; retry < 5; retry++) {
@@ -261,7 +262,17 @@ routes.post('/learning/rewards/claim', async (req: AuthenticatedRequest, res) =>
       ]);
       if (profile.error || privateState.error || facts.error) throw profile.error || privateState.error || facts.error;
       const values = privateState.data?.values || {};
-      const reward = eligibleReward(parsed.data.kind, parsed.data.id, fromSupabaseRow('profiles', profile.data) as UserProfile, facts.data as RewardFacts, { masteries: JSON.parse(values.yapyap_mastery || '[]'), mistakes: JSON.parse(values.yapyap_mistakes || '[]'), categories: JSON.parse(values.zekapark_verified_categories_v1 || '{}') });
+      const now = new Date();
+      const reward = eligibleReward(parsed.data.kind, parsed.data.id, fromSupabaseRow('profiles', profile.data) as UserProfile, facts.data as RewardFacts, { masteries: JSON.parse(values.yapyap_mastery || '[]'), mistakes: JSON.parse(values.yapyap_mistakes || '[]'), categories: JSON.parse(values.zekapark_verified_categories_v1 || '{}') }, now);
+      if (parsed.data.kind === 'grand') {
+        // Existing noncanonical records count too. New concurrent requests share
+        // one canonical key, protected atomically by the database's unique key.
+        const previous = await client.from('learning_reward_claims').select('reward_key')
+          .eq('student_id', student).like('reward_key', `${weeklyGrandRewardPrefix(rewardDates(now).week)}%`).limit(1);
+        if (previous.error) throw previous.error;
+        if (!Array.isArray(previous.data)) throw new LearningError('Ödül kaydı doğrulanamadı.', 503);
+        if (previous.data.length) return res.json({ xpAwarded: 0 });
+      }
       const oldBadges = JSON.parse(values.yapyap_achievements || '[]') as Array<{ id: string; rewardClaimed?: boolean }>;
       if (reward.badge && oldBadges.some(b => b.id === reward.badge!.id && b.rewardClaimed)) return res.json({ xpAwarded: 0 });
       if (reward.streakDay && profile.data.claimed_streak_days?.includes(reward.streakDay)) return res.json({ xpAwarded: 0 });

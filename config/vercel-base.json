@@ -15,6 +15,16 @@
         }
       ],
       "continue": true
+    },
+    {
+      "src": "^/api/supabase/auth/v1/(?:signup|otp)/?$",
+      "methods": ["POST"],
+      "dest": "/api/index?__path=auth/provider-signup-blocked"
+    },
+    {
+      "src": "^/api/supabase/auth/v1/user/?$",
+      "methods": ["PUT"],
+      "dest": "/api/index?__path=auth/provider-password-blocked"
     }
   ],
   "rewrites": [

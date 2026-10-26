@@ -12,7 +12,7 @@ import { blogPlugin } from '../scripts/blog-vite-plugin';
 import { requestSecurity } from '../server/request-security';
 
 test('every legal link resolves to a public document and deployed policies cannot become stale static files', () => {
-  const config = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
+  const config = JSON.parse(fs.readFileSync('config/vercel-base.json', 'utf8'));
   const rewrite = config.rewrites.find((row: { destination: string }) => row.destination.includes('public/policy'));
   const headers = config.headers.find((row: { source: string }) => row.source.startsWith('/bilgi/:slug('));
   const emitted: string[] = [];

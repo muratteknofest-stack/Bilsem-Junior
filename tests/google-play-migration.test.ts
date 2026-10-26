@@ -56,7 +56,7 @@ test('retired checkout endpoints and components are absent from runtime routing'
  for(const path of ['server/routes/shopier-routes.ts','server/shopier-client.ts','src/components/ShopierBilling.tsx','scripts/check-shopier-connection.mjs'])assert.equal(existsSync(path),false);
  assert.ok(!readFileSync('server/api-app.ts','utf8').toLowerCase().includes('shopier'));
  assert.ok(!readFileSync('src/components/ParentPortalView.tsx','utf8').includes('Shopier'));
- const routes=JSON.parse(readFileSync('vercel.json','utf8'));assert.equal(routes.rewrites.find((r:{source:string})=>r.source==='/paketler').destination,'/api/index?__path=public/membership/page');
+ const routes=JSON.parse(readFileSync('config/vercel-base.json','utf8'));assert.equal(routes.rewrites.find((r:{source:string})=>r.source==='/paketler').destination,'/api/index?__path=public/membership/page');
 });
 test('retirement revokes legacy writes and claims while preserving business settings and deletion review reads',async()=>{
  const db=new PGlite();try{

@@ -54,7 +54,7 @@ test('student class is selected automatically and games are only embedded after 
 });
 
 test('static CSP permits the Wordwall frame and thumbnails while retaining script and frame protections', () => {
-  const config = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
+  const config = JSON.parse(fs.readFileSync('config/vercel-base.json', 'utf8'));
   const csp = config.headers[0].headers.find((header: { key: string }) => header.key === 'Content-Security-Policy').value;
   assert.match(csp, /frame-src https:\/\/wordwall\.net;/);
   assert.match(csp, /img-src[^;]+https:\/\/screens\.cdn\.wordwall\.net/);

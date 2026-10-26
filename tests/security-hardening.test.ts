@@ -10,7 +10,7 @@ import { createApiApp } from '../server/api-app';
 import { secretKinds } from '../scripts/check-public-assets.mjs';
 import { policyHtml } from '../server/platform-policy';
 
-const publicEnv = { VITE_SUPABASE_URL: 'https://vtcsoqohkiagbwatlabk.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test-only', VITE_API_BASE_URL: '' };
+const publicEnv = { VERCEL_ENV: 'production', VITE_SUPABASE_URL: 'https://vtcsoqohkiagbwatlabk.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test-only', VITE_API_BASE_URL: '' };
 const jwt = (role: string) => `header.${Buffer.from(JSON.stringify({ role })).toString('base64url')}.signature`;
 
 test('public bundle checks catch recognized private keys and privileged JWTs without flagging publishable keys', () => {
@@ -39,12 +39,12 @@ test('public settings export exact names and reject service-role, secret keys an
   assert.throws(() => publicBuildSettings({ ...publicEnv, VITE_API_BASE_URL: 'http://localhost:3000' }, true, false, ''));
   const vite = fs.readFileSync('vite.config.ts', 'utf8');
   assert.match(vite, /envPrefix: \[\]/);
-  assert.match(vite, /publicBuildSettings\(env,/);
+  assert.match(vite, /publicBuildSettings\(/);
   assert.match(vite, /androidBuildSettings\(env\)/);
 });
 
 test('static and API policies agree; only style attributes permit inline content and network access is project-specific', () => {
-  const vercel = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
+  const vercel = JSON.parse(fs.readFileSync('config/vercel-base.json', 'utf8'));
   const headers = Object.fromEntries(vercel.headers[0].headers.map((header: any) => [header.key, header.value]));
   assert.equal(headers['Content-Security-Policy'], contentSecurityPolicy);
   for (const [name, expected] of Object.entries(securityHeaders)) assert.equal(headers[name], expected, name);

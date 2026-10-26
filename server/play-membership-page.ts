@@ -7,8 +7,8 @@ import { releaseBlockers } from '../src/lib/platform-settings';
 import { playConfig, playSetupReady } from './google-play-client';
 import { playStoreListing } from './play-listing';
 
-export async function publicPlayMembership() {
-  const { settings } = await readPlatformSettings();
+export async function publicPlayMembership(readSettings = readPlatformSettings) {
+  const { settings } = await readSettings();
   return { brand: APP_BRAND.name, storeUrl: playStoreListing(),
     ready: playConfig().enabled && playSetupReady() && releaseBlockers(settings).length === 0 };
 }

@@ -2,6 +2,13 @@ import type { Achievement, UserProfile, SkillMastery, MistakeItem } from '../src
 import { INITIAL_ACHIEVEMENTS, STREAK_MILESTONES } from '../src/services/modules/shared';
 import { LearningError } from './learning-model';
 import { isAvailableCategory } from '../src/features/student/available-categories';
+import { z } from 'zod';
+import { WEEKLY_GRAND_REWARD_ID, weeklyGrandRewardKey } from '../src/lib/weekly-grand-reward';
+
+export const rewardClaimSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.enum(['badge', 'streak', 'mission', 'weekly']), id: z.string().min(1).max(80) }).strict(),
+  z.object({ kind: z.literal('grand'), id: z.literal(WEEKLY_GRAND_REWARD_ID) }).strict(),
+]);
 
 export interface RewardFacts { answered: number; correctCategories: Record<string, number>; hardCorrect: number; reviewToday: number; exams: number; perfect: number; weekend: number; }
 export interface RewardProgress { masteries: SkillMastery[]; mistakes: MistakeItem[]; categories: { day?: string; weekStart?: string; counts?: Record<string, number>; todayCounts?: Record<string, number> }; }
@@ -12,6 +19,7 @@ export function rewardDates(now = new Date()) {
   return { day, week: date.toISOString().slice(0, 10) };
 }
 export function eligibleReward(kind: string, id: string, user: UserProfile, facts: RewardFacts, progress: RewardProgress, now = new Date()): { key: string; xp: number; badge: Achievement | null; streakDay: number | null } {
+  if (!rewardClaimSchema.safeParse({ kind, id }).success) throw new LearningError('Ödül isteği geçersiz.', 400);
   const { day, week } = rewardDates(now);
   let eligible = false, xp = 0, badge: Achievement | null = null, key = `${kind}:${id}`, streakDay: number | null = null;
   const correct = (category: string) => facts.correctCategories[category] || 0;
@@ -38,7 +46,7 @@ export function eligibleReward(kind: string, id: string, user: UserProfile, fact
     const counts = progress.categories.weekStart === week ? progress.categories.counts || {} : {};
     if (kind === 'weekly' && isAvailableCategory(id) && WEEKLY_TARGETS[id]) { eligible = (counts[id] || 0) >= WEEKLY_TARGETS[id].count; xp = WEEKLY_TARGETS[id].xp; }
     if (kind === 'grand') { eligible = Object.entries(WEEKLY_TARGETS).filter(([c, t]) => (counts[c] || 0) >= t.count).length >= 6; xp = 500; }
-    key = `${kind}:${week}:${id}`;
+    key = kind === 'grand' ? weeklyGrandRewardKey(week) : `weekly:${week}:${id}`;
   }
   if (!eligible || !xp) throw new LearningError('Bu ödül için gereken doğrulanmış çalışma henüz tamamlanmadı.');
   return { key, xp, badge, streakDay };

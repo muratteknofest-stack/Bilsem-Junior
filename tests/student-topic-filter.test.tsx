@@ -71,6 +71,8 @@ test('adaptive question counts are bounded integers and participate in saved sel
 
 test('real authenticated learning API preserves mixed choices, permits practice variants, and rejects duplicate puzzles without changing active sessions', async () => {
   const originalFetch = globalThis.fetch;
+  const priorVercel = process.env.VERCEL, priorTarget = process.env.VERCEL_ENV;
+  delete process.env.VERCEL; delete process.env.VERCEL_ENV;
   const priorUrl = process.env.SUPABASE_URL, priorKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   process.env.SUPABASE_URL = 'https://topic-api-fixture.invalid';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'isolated-fixture-key';
@@ -278,6 +280,8 @@ test('real authenticated learning API preserves mixed choices, permits practice 
     globalThis.fetch = originalFetch;
     if (priorUrl === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = priorUrl;
     if (priorKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = priorKey;
+    if (priorVercel === undefined) delete process.env.VERCEL; else process.env.VERCEL = priorVercel;
+    if (priorTarget === undefined) delete process.env.VERCEL_ENV; else process.env.VERCEL_ENV = priorTarget;
   }
 });
 

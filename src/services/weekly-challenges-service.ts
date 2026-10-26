@@ -11,6 +11,7 @@ import {
 } from '../types';
 import { dataService } from './data-service';
 import { safeStorage } from '../lib/storage';
+import { hasWeeklyGrandRewardClaim } from '../lib/weekly-grand-reward';
 
 const STORAGE_KEY_CHALLENGES = 'bilsem_weekly_category_challenges_v1';
 
@@ -338,7 +339,7 @@ export class WeeklyChallengesService {
       state.totalTargetQuestions = state.challenges.reduce((n,c) => n+c.targetQuestions,0);
       state.completedChallengesCount = state.challenges.filter(c => c.isCompleted).length;
       state.grandChallenge.isCompleted = state.completedChallengesCount >= 6;
-      state.grandChallenge.rewardClaimed = claims.includes(`grand:${weekStart}:grand`);
+      state.grandChallenge.rewardClaimed = expectedWeek === weekId && !!weekStart && hasWeeklyGrandRewardClaim(claims, weekStart);
     }
     return state;
   }

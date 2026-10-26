@@ -58,7 +58,7 @@ test('device summaries are bounded, reject malformed data and do not count a ses
   let many=p;for(let i=0;i<50;i++)many=recordEnglishSession(many,{...value,id:String(i)});assert.equal(many.sessions.length,30);
 });
 test('English entry has its own language and build path; Turkish navigation can reach it',async()=>{
-  const [html,vite,routes,navbar]=await Promise.all(['en/index.html','vite.config.ts','vercel.json','src/components/Navbar.tsx'].map(p=>readFile(p,'utf8')));
+  const [html,vite,routes,navbar]=await Promise.all(['en/index.html','vite.config.ts','config/vercel-base.json','src/components/Navbar.tsx'].map(p=>readFile(p,'utf8')));
   assert.match(html,/<html lang="en">/);assert.match(vite,/en\/index.html/);assert.ok(JSON.parse(routes).rewrites.some((r:any)=>r.source==='/en/'&&r.destination==='/en/index.html'));assert.match(navbar,/aria-label="English version"/);
 });
 

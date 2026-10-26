@@ -4,6 +4,8 @@ Aktif proje: `vtcsoqohkiagbwatlabk`. Kimlik doğrulama Supabase Auth, kalıcı h
 
 ## Çalışan proje
 
+25 Ekim 2026 güvenlik kalkanının SQL Editor dosyaları ve uygulama sırası: [Aşama 3 veritabanı rehberi](../docs/database-shield.md). Dosyalar hazırlanmıştır; bu kayıt canlıya uygulandıkları anlamına gelmez. Mevcut projeyi sıfırlamadan, önce izole ortamda prova ederek uygulanırlar.
+
 Mevcut projeye `schema.sql` veya tarihsel migration dosyalarını topluca yeniden uygulamayın. Canlı kayıtlardaki zamanlar bazı kaynak dosyalardan farklıdır; uygulanmış migration isimlerini/içeriğini eşleştirin. [Canlı yayın raporu](../docs/live-release-blockers-20261010.md) son güvenlik migration eşleştirmesini açıklar.
 
 Tarihsel migration dosyaları yalnızca sürüm geçmişini korur. Bunlar eski sağlayıcıya bağlantı açmaz ve mevcut kullanıcıları yeniden içe aktarmaz. Veri silme, kimlik birleştirme veya kullanıcı yeniden oluşturma bu kurulumun parçası değildir.

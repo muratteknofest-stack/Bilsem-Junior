@@ -177,7 +177,7 @@ test('the actual Supabase SDK signs in through the relay and keeps its original 
 });
 
 test('Vercel routes Auth and REST before the generic API function with no private-response caching', async () => {
-  const configuration = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'));
+  const configuration = JSON.parse(await readFile(new URL('../config/vercel-base.json', import.meta.url), 'utf8'));
   const api = configuration.rewrites.findIndex(rule => rule.source === '/api/:path*');
   for (const service of ['auth', 'rest']) {
     const index = configuration.rewrites.findIndex(rule => rule.source === `/api/supabase/${service}/v1/:path*`);

@@ -1,5 +1,11 @@
-import { supabase } from './supabase';
+import { supabase, auth } from './supabase';
 import { fromSupabaseRow, toSupabaseRow } from './supabase-shape';
+import { authenticatedFetch } from './api-client';
+import { createProfileUpdater } from './profile-updates';
+
+const profileUpdater = createProfileUpdater({ currentUserId: () => auth.currentUser?.uid, request: authenticatedFetch });
+export const updateOwnProfile = profileUpdater.update;
+export const recordOwnProfileActivity = profileUpdater.activity;
 
 type Ref = { table: string; id?: string; userId?: string };
 type Filter = { field: string; operator: '==' | '!='; value: unknown };
@@ -63,23 +69,17 @@ export async function getDocs(ref: Query) {
   return { empty: rows.length === 0, docs: rows.map(row => snapshot(row, undefined, ref.table)) };
 }
 export async function setDoc(ref: Ref, value: Record<string, any>, options?: { merge?: boolean }) {
+  if (ref.table === 'profiles') { await updateOwnProfile(ref.id!, value); return; }
   const key = ref.table === 'user_private_state' ? 'user_id' : 'id';
   const existing = options?.merge ? (await getDoc(ref)).data() : undefined;
   const data = { ...(existing ?? {}), ...value };
   const row = toSupabaseRow(ref.table, ref.id!, data);
-  // Profiles are created by the registration API. Their restrictive INSERT
-  // policy does not authorize an upsert even when the row already exists.
-  const { error } = ref.table === 'profiles'
-    ? await supabase.from(ref.table).update(row).eq('id', ref.id!)
-    : await supabase.from(ref.table).upsert(row, { onConflict: key });
+  const { error } = await supabase.from(ref.table).upsert(row, { onConflict: key });
   if (error) throw error;
 }
 export async function updateDoc(ref: Ref, updates: Record<string, any>) {
   if (ref.table === 'profiles') {
-    const row = toSupabaseRow(ref.table, ref.id!, updates);
-    delete row.id;
-    const { error } = await supabase.from(ref.table).update(row).eq('id', ref.id!);
-    if (error) throw error;
+    await updateOwnProfile(ref.id!, updates);
     return;
   }
   const old = await getDoc(ref);

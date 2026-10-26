@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createClient } from '@supabase/supabase-js';
-import { readFile } from 'node:fs/promises';
+import { createVercelConfig } from './vercel-config.mjs';
 
 const url = new URL(process.env.VITE_SUPABASE_URL || '');
 const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -10,7 +10,7 @@ if (!key.startsWith('sb_publishable_')) {
   assert.equal(claims.role, 'anon', 'Only a public API key may be used by the browser');
 }
 if (process.env.SUPABASE_URL) assert.equal(new URL(process.env.SUPABASE_URL).origin, url.origin, 'Server and browser projects must agree');
-const config = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'));
+const config = createVercelConfig(process.env);
 for (const service of ['auth', 'rest']) {
   const rule = config.rewrites.find(item => item.source === `/api/supabase/${service}/v1/:path*`);
   assert.equal(new URL(rule.destination.replace(':path*', '')).origin, url.origin, 'Proxy project and public SDK project must agree');

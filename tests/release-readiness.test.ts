@@ -126,7 +126,7 @@ test('live release refuses sign-in walls, private exports, missing protection an
 
 
 test('package addresses with and without a trailing slash use the same public server page',()=>{
- const config=JSON.parse(fs.readFileSync('vercel.json','utf8'));
+ const config=JSON.parse(fs.readFileSync('config/vercel-base.json','utf8'));
  for(const path of ['/paketler','/paketler/']){
   assert.equal(config.rewrites.find((route:{source:string})=>route.source===path)?.destination,'/api/index?__path=public/membership/page');
  }

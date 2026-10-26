@@ -1,11 +1,11 @@
-import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { verifyHealthResponse } from './verify-live-release.mjs';
+import { createVercelConfig } from './vercel-config.mjs';
 
 const [site, commit, projectRef] = process.argv.slice(2);
 const origin = new URL(site);
 if (origin.protocol !== 'https:' || origin.username || origin.password || origin.search || origin.hash || origin.pathname !== '/') throw Error('Use a canonical HTTPS origin.');
-const headers = JSON.parse(fs.readFileSync('vercel.json', 'utf8')).headers[0].headers;
+const headers = createVercelConfig(process.env).headers[0].headers;
 const parseCsp = text => Object.fromEntries(text.split(';').map(item => item.trim().split(/\s+/)).filter(item => item[0]).map(([key,...values]) => [key,values.sort()]));
 const fetchOptions = {redirect:'manual',signal:AbortSignal.timeout(15000)};
 let count = 0;
