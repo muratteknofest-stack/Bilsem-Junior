@@ -7,9 +7,10 @@ import { readPlatformSettings } from '../platform-settings';
 import { releaseBlockers } from '../../src/lib/platform-settings';
 import { PLAY_PLANS } from '../../src/lib/google-play-contract';
 import { GooglePlayError, playBindings, playTokenSchema, encryptPlayToken } from '../google-play-model';
-import { playConfig, playSetupReady, verifyPlayPush } from '../google-play-client';
+import { playConfig, playSetupReady, verifyPlayPush, verifyPlayCatalog } from '../google-play-client';
 import { googlePlayAccess, handlePlayNotification, verifyAndSavePlay } from '../google-play-access';
 import { playStoreListing } from '../play-listing';
+import { isLicenseTestFamily, licenseTestLegalReady } from '../google-play-license-test';
 const routes = Router();
 const student = z.uuid();
 function failure(error: unknown, res: import('express').Response) {
@@ -22,18 +23,22 @@ routes.get('/parent/google-play/access', sharedRateLimit('play-access', 60, 600)
   try {
     const id = student.parse(req.query.studentId), config = playConfig();
     const { settings } = await readPlatformSettings();
-    const ready = config.enabled && playSetupReady() && releaseBlockers(settings).length === 0;
-    res.json({ ready, storeUrl: playStoreListing(), enforced: config.enforced, productId: config.productId, plans: PLAY_PLANS, binding: process.env.GOOGLE_PLAY_BINDING_SECRET ? playBindings(req.authUser!.uid, id) : null, access: await googlePlayAccess(req.authUser!.uid, id) });
+    const licenseTest = isLicenseTestFamily(req.authUser!.uid, id);
+    const ready = playSetupReady() && (licenseTest ? licenseTestLegalReady(settings) : config.enabled && releaseBlockers(settings).length === 0);
+    res.json({ ready, storeUrl: playStoreListing(), enforced: config.enforced || licenseTest, productId: config.productId, plans: PLAY_PLANS, binding: process.env.GOOGLE_PLAY_BINDING_SECRET ? playBindings(req.authUser!.uid, id) : null, access: await googlePlayAccess(req.authUser!.uid, id) });
   } catch (error) { failure(error, res); }
 });
 routes.post('/parent/google-play/prepare', sharedRateLimit('play-prepare', 12, 3600), async (req: AuthenticatedRequest, res) => {
   try {
     const { studentId } = z.object({ studentId: student }).strict().parse(req.body), config = playConfig();
     const { settings } = await readPlatformSettings();
-    if (!config.enabled || !playSetupReady() || releaseBlockers(settings).length) throw new GooglePlayError('Google Play abonelikleri henüz satışa açılmadı.');
+    const licenseTest = isLicenseTestFamily(req.authUser!.uid, studentId);
+    if (!playSetupReady() || (licenseTest ? !licenseTestLegalReady(settings) : !config.enabled || releaseBlockers(settings).length > 0))
+      throw new GooglePlayError('Google Play abonelikleri henüz satışa açılmadı.');
     // Fail before a charge if durable encryption/account binding or service credentials are absent.
     const binding = playBindings(req.authUser!.uid, studentId);
     encryptPlayToken('configuration-check');
+    if (licenseTest) await verifyPlayCatalog(); // Prove real Google credentials/catalog before opening the test payment sheet.
         const access = await googlePlayAccess(req.authUser!.uid, studentId);
     if (access.active) throw new GooglePlayError('Aktif aboneliğinizi Google Play üzerinden yönetebilirsiniz.', 409);
     if (['SUBSCRIPTION_STATE_PENDING', 'SUBSCRIPTION_STATE_ON_HOLD', 'SUBSCRIPTION_STATE_PAUSED'].includes(access.state || '')) throw new GooglePlayError('Mevcut aboneliğinizi Google Play üzerinden yönetin. Ödeme veya duraklatma sorununu çözdükten sonra Yenile’ye dokunun.', 409);

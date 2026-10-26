@@ -120,6 +120,59 @@ Bekleyen ödeme erişim açmaz. Aktif ve ek ödeme süresindeki abonelikler eri�
 
 ## Kabul ve yayın sırası
 
+### Üretimde tek veliye bağlı lisans testi
+
+26 Ekim 2026: Ayrı backend seçeneğine ek olarak, mevcut anahtarsız Production
+bağlantısını kullanan, tek veliye bağlı ve en fazla 24 saat açık kalan bir teknik
+test oturumu desteklenir. Herkese açık satış ve ücretli erişim zorunluluğu kapalı
+kalır; yayın kabul kontrolleri başarılı işaretlenmez. Bu seçenek gerçek ödeme
+testi değildir: Google'ın gerçek Billing akışında lisans test kartıyla çalışır.
+
+1. Yayıncı Google hesabı zaten lisans testçisidir. Diğer hesaplar Play Console
+   lisans testçileri listesine ayrıca eklenmelidir. Dahili teste katılım ve
+   uygulamanın doğru Google hesabıyla Play Store'dan yüklenmesi de gerekir.
+2. Test için doğrulanmış bir Bilsem Junior veli hesabı ve bu veliye bağlı test
+   öğrencisi oluşturulur. Parolaları kullanıcı kendisi belirler. Sunucu
+   yapılandırmasına e-posta yerine doğrulanmış velinin değişmez Auth UUID'si
+   `GOOGLE_PLAY_LICENSE_TEST_PARENT_ID`, seçilen tek öğrencinin UUID'si ise
+   `GOOGLE_PLAY_LICENSE_TEST_STUDENT_ID` olarak girilir. Aynı velinin diğer
+   öğrencileri dahil hiçbir başka veli/öğrenci çifti bu oturuma dahil değildir.
+3. `GOOGLE_PLAY_LICENSE_TEST_UNTIL` en fazla 24 saat ilerideki UTC ISO tarih,
+   `GOOGLE_PLAY_LICENSE_TEST_ENABLED=true` olarak ayarlanır ve backend dağıtılır.
+   Süre dolunca oturum kendiliğinden kapanır. Test tamamlandığında etkinlik
+   bayrağı ayrıca `false` yapılır. Varsayılan kapalıdır.
+4. `GOOGLE_PLAY_ALLOW_TEST_PURCHASES=false`, `GOOGLE_PLAY_BILLING_ENABLED=false`
+   ve `GOOGLE_PLAY_ENFORCE_PAID_ACCESS=false` korunur. Üretimde global test
+   satın alımı bayrağını `true` yapmak kurulum kontrolünü başarısız kılar.
+5. Yalnız belirtilen veli için normal doğrulanmış e-posta, veli rolü, aile
+   yetkisi, gerçek yasal metinler, hesap bağlama, şifreleme ve Google kimlik
+   kontrollerinden sonra satın alma hazırlanır. Test ödeme penceresinden önce
+   gerçek Google kimlik değişimi ve üç etkin dönemin katalog kontrolü de
+   yapılır; başarısızsa hesap bağlama/ödeme başlatılmaz. İstemci test modu seçemez.
+   Doğrulanan Google yanıtında `testPurchase` bulunması zorunludur; gerçek
+   ödeme makbuzu test erişimi açmaz. Test kaydı mevcut sunucuya özel defterde
+   `test_purchase=true` olarak tutulur ve normal üretim erişiminden süzülür.
+6. Seçilen test öğrencisinin yeni öğrenme oturumlarında gerçek
+   Google erişimi kontrol edilir. Böylece iptal sonrası kalan süre, yenileme
+   ve süre bitiminde erişimin kapanması genel ücretli erişimi açmadan denenir.
+   Diğer ailelerin kullanımı etkilenmez. Genel ücretli erişim açılırsa bu dar
+   lisans testi otomatik olarak devre dışı kalır.
+7. Google Play ödeme penceresinde test satın alımı bildirimi ve test kartı
+   görülmeden ödeme onaylanmaz. Aylık plan yaklaşık 5, üç aylık 10, yıllık 30
+   dakikada yenilenir; bunlar yaklaşık test süreleridir. Telefon adımı gerçek
+   Android cihazda yapılır. Backend/DB kontrolü gerçek makbuzdan sonra yapılır;
+   otomatik testlerdeki örnek Google yanıtları gerçek satın alma kanıtı değildir.
+
+Bu oturum gerçek aile/e-posta, yedek geri yükleme ve izleme kontrollerinin yerini
+almaz. Satışa geçişte bu kontrollerin ve gerçek ödeme kabulünün ayrıca
+tamamlanması gerekir. Test kaydını silmek yerine mevcut faturalandırma saklama
+ve hesap silme prosedürüne uyulur.
+
+Kaynak: https://developer.android.com/google/play/billing/test ve
+https://support.google.com/googleplay/android-developer/answer/6062777 .
+
+### Genel yayın sırası
+
 1. `npm ci`, `npm run lint`, `npm run test:google-play`, mevcut regresyon testleri ve `npm run android:sync`.
 2. Android Studio/JDK 21/SDK 36 ile derleyip imzalı AAB üretin. Yerel `android:sync` Java derlemesi veya cihaz doğrulaması değildir.
 3. Play Console internal test kanalına yükleyin; lisans testçileri ve test ödeme yöntemlerini hazırlayın. Google Play'den aynı paket ve imzayla yükleyin. Test backend'inde gerekli kurulum ve gerçek yayın kontrollerinden sonra `GOOGLE_PLAY_BILLING_ENABLED=true`, `GOOGLE_PLAY_ALLOW_TEST_PURCHASES=true` kullanın. Test ve üretim ortamlarını karıştırmayın.

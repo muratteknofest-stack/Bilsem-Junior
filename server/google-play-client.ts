@@ -7,11 +7,12 @@ export function playConfig() {
   const packageName = process.env.GOOGLE_PLAY_PACKAGE_NAME || 'com.quantumtech.bilsemjunior';
   const productId = process.env.GOOGLE_PLAY_PRODUCT_ID || 'zekapark_uyelik';
   if (!/^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*){2,}$/.test(packageName) || !/^[a-z0-9][a-z0-9_.]{0,39}$/.test(productId)) throw new GooglePlayError('Google Play ürün ayarları geçersiz.');
-  return { packageName, productId, enabled: process.env.GOOGLE_PLAY_BILLING_ENABLED === 'true', enforced: process.env.GOOGLE_PLAY_ENFORCE_PAID_ACCESS === 'true', allowTest: process.env.GOOGLE_PLAY_ALLOW_TEST_PURCHASES === 'true' };
+  return { packageName, productId, enabled: process.env.GOOGLE_PLAY_BILLING_ENABLED === 'true', enforced: process.env.GOOGLE_PLAY_ENFORCE_PAID_ACCESS === 'true', allowTest: process.env.VERCEL_ENV !== 'production' && process.env.GOOGLE_PLAY_ALLOW_TEST_PURCHASES === 'true' };
 }
 // Report variable names only; credentials and rejected values must never reach logs.
 export function playSetupIssues(env: NodeJS.ProcessEnv = process.env): string[] {
   const issues = playAuthIssues(env);
+  if (env.VERCEL_ENV === 'production' && env.GOOGLE_PLAY_ALLOW_TEST_PURCHASES === 'true') issues.push('GOOGLE_PLAY_ALLOW_TEST_PURCHASES');
   if ((env.GOOGLE_PLAY_BINDING_SECRET || '').length < 32) issues.push('GOOGLE_PLAY_BINDING_SECRET');
   if (!/^[a-fA-F0-9]{64}$/.test(env.GOOGLE_PLAY_TOKEN_KEY || '')) issues.push('GOOGLE_PLAY_TOKEN_KEY');
   try {

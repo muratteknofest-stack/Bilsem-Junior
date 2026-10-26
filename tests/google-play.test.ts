@@ -10,11 +10,30 @@ import playRoutes from '../server/routes/google-play-routes';
 import { requireLearningAccess } from '../server/membership-access';
 import { googlePlayAccess } from '../server/google-play-access';
 import { defaultPlatformSettings } from '../src/lib/platform-settings';
+import { isLicenseTestFamily, licenseTestStudentId, licenseTestLegalReady } from '../server/google-play-license-test';
 const parent='11111111-1111-4111-8111-111111111111',student='22222222-2222-4222-8222-222222222222',other='33333333-3333-4333-8333-333333333333';
 const secret='unit-test-binding-secret-not-a-real-secret', key='12'.repeat(32), purchaseToken='test-purchase-token', binding=playBindings(parent,student,secret);
 const expiry='2027-01-16T12:00:00.000Z';
 const subscription=(patch: Record<string,unknown>={})=>({kind:'androidpublisher#subscriptionPurchaseV2',subscriptionState:'SUBSCRIPTION_STATE_ACTIVE',acknowledgementState:'ACKNOWLEDGEMENT_STATE_PENDING',externalAccountIdentifiers:{obfuscatedExternalAccountId:binding.accountId,obfuscatedExternalProfileId:binding.profileId},lineItems:[{productId:'zekapark_uyelik',expiryTime:expiry,offerDetails:{basePlanId:'quarterly'},autoRenewingPlan:{autoRenewEnabled:true}}],...patch});
 const expected={...binding,productId:'zekapark_uyelik',allowTest:false};
+test('license testing is opt-in, bound to one parent/student pair, expires within 24h and cannot overlap paid production enforcement',()=>{
+  const now=Date.parse('2026-10-26T12:00:00Z');
+  const env={GOOGLE_PLAY_LICENSE_TEST_ENABLED:'true',GOOGLE_PLAY_LICENSE_TEST_PARENT_ID:parent,GOOGLE_PLAY_LICENSE_TEST_STUDENT_ID:student,GOOGLE_PLAY_LICENSE_TEST_UNTIL:'2026-10-26T13:00:00Z'};
+  assert.equal(licenseTestStudentId({},now),null);
+  assert.equal(isLicenseTestFamily(parent,student,env,now),true);
+  assert.equal(isLicenseTestFamily(other,student,env,now),false);
+  assert.equal(isLicenseTestFamily(parent,other,env,now),false);
+  for(const patch of [{GOOGLE_PLAY_LICENSE_TEST_ENABLED:'false'},{GOOGLE_PLAY_LICENSE_TEST_PARENT_ID:'not-a-uuid'},
+    {GOOGLE_PLAY_LICENSE_TEST_STUDENT_ID:''},{GOOGLE_PLAY_LICENSE_TEST_STUDENT_ID:parent},
+    {GOOGLE_PLAY_LICENSE_TEST_UNTIL:'invalid'},{GOOGLE_PLAY_LICENSE_TEST_UNTIL:'2026-10-26T12:00:00Z'},
+    {GOOGLE_PLAY_LICENSE_TEST_UNTIL:'2026-10-28T12:00:00Z'},{GOOGLE_PLAY_ENFORCE_PAID_ACCESS:'true'}])
+    assert.equal(licenseTestStudentId({...env,...patch},now),null);
+  assert.equal(licenseTestStudentId(env,Date.parse(env.GOOGLE_PLAY_LICENSE_TEST_UNTIL)),null);
+  const settings=defaultPlatformSettings(); assert.equal(licenseTestLegalReady(settings),false);
+  settings.business={legalName:'Operator',address:'Address',contactEmail:'test@example.com',legalBases:'Purposes',retention:'Retention',transfers:'Providers'};
+  assert.equal(licenseTestLegalReady(settings),true);
+  settings.business.address='  ';assert.equal(licenseTestLegalReady(settings),false);
+});
 test('only Google-authoritative active, grace and canceled-unexpired subscriptions grant access',()=>{
   const now=Date.parse('2026-10-16T12:00:00Z');
   for(const suffix of ['ACTIVE','IN_GRACE_PERIOD','CANCELED'])assert.equal(verifiedPlaySubscription(subscription({subscriptionState:'SUBSCRIPTION_STATE_'+suffix}),expected,now).active,true);
@@ -29,6 +48,8 @@ test('wrong product, parent, student, unknown state, missing expiry and test pur
   const missing=subscription();delete (missing.lineItems[0] as any).expiryTime;assert.equal(verifiedPlaySubscription(missing,expected).active,false);
   const invalid=subscription();invalid.lineItems[0].expiryTime='tomorrow';assert.throws(()=>verifiedPlaySubscription(invalid,expected));
   assert.equal(verifiedPlaySubscription(subscription({testPurchase:{}}),{...expected,allowTest:true}).testPurchase,true);
+  assert.throws(()=>verifiedPlaySubscription(subscription(),{...expected,allowTest:true,requireTest:true}),/yalnızca Google Play test/);
+  assert.equal(verifiedPlaySubscription(subscription({testPurchase:{}}),{...expected,allowTest:true,requireTest:true}).testPurchase,true);
   assert.throws(()=>verifiedPlaySubscription({...subscription(),lineItems:[...subscription().lineItems,...subscription().lineItems]},expected));
 });
 test('purchase binding is deterministic and scoped; encrypted tokens reject tampering and swapped rows',()=>{
@@ -91,7 +112,7 @@ test('real Postgres preserves one binding and exact expiry, rejects stale grants
 test('authenticated flow verifies before grant, acknowledges after durable save, restores and enforces paid learning',{timeout:30000},async()=>{
   const savedEnv={...process.env},originalFetch=globalThis.fetch,originalToken=GoogleAuth.prototype.getAccessToken,originalVerify=OAuth2Client.prototype.verifyIdToken;
   Object.assign(process.env,{VERCEL:'',VERCEL_ENV:'',SUPABASE_URL:'https://play-fixture.invalid',SUPABASE_SERVICE_ROLE_KEY:'unit-test',GOOGLE_PLAY_BINDING_SECRET:secret,GOOGLE_PLAY_TOKEN_KEY:key,GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:JSON.stringify({type:'service_account',client_email:'fixture@fixture.iam.gserviceaccount.com',private_key:'-----BEGIN PRIVATE KEY-----fixture-only'}),GOOGLE_PLAY_ENFORCE_PAID_ACCESS:'true',GOOGLE_PLAY_BILLING_ENABLED:'true',GOOGLE_PLAY_ALLOW_TEST_PURCHASES:'false',GOOGLE_PLAY_RTDN_AUDIENCE:'https://api.example.test/api/google-play/notifications',GOOGLE_PLAY_RTDN_EMAIL:'push@fixture.iam.gserviceaccount.com'});
-  const platform=defaultPlatformSettings();let ledger:any[]=[],events:string[]=[],payload=subscription(),failSave=false,failAck=false,emailVerified=true,role='parent';
+  const platform=defaultPlatformSettings();let ledger:any[]=[],events:string[]=[],payload=subscription(),failSave=false,failAck=false,emailVerified=true,catalogReady=true,role='parent';
   GoogleAuth.prototype.getAccessToken=async()=> 'fixture-oauth';
   let oidcValid=false, preparedBinding=false;
   OAuth2Client.prototype.verifyIdToken=(async(options:any)=>{assert.equal(options.audience,process.env.GOOGLE_PLAY_RTDN_AUDIENCE);if(!oidcValid)throw Error('invalid signature');return {getPayload:()=>({email:process.env.GOOGLE_PLAY_RTDN_EMAIL,email_verified:true,iss:'https://accounts.google.com'})};}) as any;
@@ -99,6 +120,15 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     const req=new Request(input as RequestInfo,init),u=new URL(req.url);let value:unknown;
     if(u.hostname==='androidpublisher.googleapis.com'){
       assert.equal(req.headers.get('authorization'),'Bearer fixture-oauth');
+      if(u.pathname.endsWith('/subscriptions/zekapark_uyelik')) {
+        events.push('catalog');
+        if(!catalogReady)return new Response('private-catalog-error',{status:503});
+        return Response.json({packageName:'com.quantumtech.bilsemjunior',productId:'zekapark_uyelik',basePlans:[
+          {basePlanId:'monthly',state:'ACTIVE',autoRenewingBasePlanType:{billingPeriodDuration:'P1M'}},
+          {basePlanId:'quarterly',state:'ACTIVE',autoRenewingBasePlanType:{billingPeriodDuration:'P3M'}},
+          {basePlanId:'annual',state:'ACTIVE',autoRenewingBasePlanType:{billingPeriodDuration:'P1Y'}},
+        ]});
+      }
       if(req.method==='POST'){events.push('ack');assert.ok(events.includes('save'));if(failAck)return new Response('unavailable',{status:503});return new Response(null,{status:204});}
       events.push('google');value=payload;
     }else if(u.hostname!=='play-fixture.invalid')return originalFetch(input,init);
@@ -111,8 +141,8 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     }else if(u.pathname==='/rest/v1/rpc/prepare_google_play_binding'){const body=await req.json();assert.deepEqual(body,{p_parent:parent,p_student:student,p_account:binding.accountId,p_profile:binding.profileId});preparedBinding=true;value=true;}
     else if(u.pathname==='/rest/v1/rpc/record_google_play_subscription'){
       events.push('save');if(failSave)return Response.json({code:'XX000',message:'private-db-failure'},{status:503});
-      const body=await req.json();assert.equal(body.p_expiry,expiry);assert.equal(body.p_student,student);assert.ok(!body.p_token.includes(purchaseToken));
-      ledger=[{token_hash:body.p_hash,token_ciphertext:body.p_token,package_name:body.p_package,product_id:body.p_product,parent_id:parent,student_id:student}];value=body.p_hash;
+      const body=await req.json();assert.equal(body.p_expiry,payload.lineItems[0].expiryTime);assert.equal(body.p_student,student);assert.ok(!body.p_token.includes(purchaseToken));
+      ledger=[{token_hash:body.p_hash,token_ciphertext:body.p_token,package_name:body.p_package,product_id:body.p_product,parent_id:parent,student_id:student,test_purchase:body.p_test}];value=body.p_hash;
     }else if(u.pathname==='/rest/v1/google_play_purchase_bindings')value=preparedBinding?{parent_id:parent,student_id:student}:null;
     else if(u.pathname==='/rest/v1/google_play_subscriptions')value=req.headers.get('accept')?.includes('vnd.pgrst.object')?ledger[0]||null:ledger;
     else throw Error('Unexpected fixture endpoint '+u.pathname);
@@ -160,6 +190,49 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     ledger=[];preparedBinding=false;events=[];notification.message.data=Buffer.from(JSON.stringify({packageName:'com.quantumtech.bilsemjunior',subscriptionNotification:{purchaseToken}})).toString('base64');assert.equal((await post('google-play/notifications',notification)).status,204);assert.deepEqual(events,['google']);
     // A prepared binding recovers a completed purchase even when the client died before verify.
     preparedBinding=true;payload=subscription();events=[];assert.equal((await post('google-play/notifications',notification)).status,204);assert.deepEqual(events,['google','google','save','ack']);assert.equal(ledger.length,1);
+    // A scoped, temporary license-test session works without claiming that
+    // release acceptance checks have passed or enabling public paid sales.
+    process.env.GOOGLE_PLAY_ENFORCE_PAID_ACCESS='false';
+    process.env.GOOGLE_PLAY_BILLING_ENABLED='false';
+    process.env.GOOGLE_PLAY_LICENSE_TEST_ENABLED='true';
+    process.env.GOOGLE_PLAY_LICENSE_TEST_PARENT_ID=other;
+    process.env.GOOGLE_PLAY_LICENSE_TEST_STUDENT_ID=student;
+    process.env.GOOGLE_PLAY_LICENSE_TEST_UNTIL=new Date(Date.now()+3600000).toISOString();
+    platform.release={registrationEnabled:true,emailTested:false,restoreTested:false,familyPilotTested:false,monitoringTested:false};
+    ledger=[];preparedBinding=false;payload=subscription({testPurchase:{}});events=[];
+    const getAccess=async()=>{const r=await originalFetch(origin+'/api/parent/google-play/access?studentId='+student,{headers:{Authorization:`Bearer ${session}`}});return {status:r.status,body:await r.json() as any};};
+    assert.equal((await getAccess()).body.ready,false);
+    assert.equal((await post('parent/google-play/prepare',{studentId:student})).status,503);
+    process.env.GOOGLE_PLAY_LICENSE_TEST_PARENT_ID=parent;
+    const configured=await getAccess();assert.equal(configured.status,200);assert.equal(configured.body.ready,true);assert.equal(configured.body.enforced,true);
+    await assert.rejects(requireLearningAccess(student),e=>(e as any).status===403);
+    assert.equal((await post('parent/google-play/prepare',{studentId:other})).status,503);
+    const beforeOtherStudent=events.length;await requireLearningAccess(other);assert.equal(events.length,beforeOtherStudent);
+    const legalName=platform.business.legalName;platform.business.legalName='';
+    assert.equal((await getAccess()).body.ready,false);
+    assert.equal((await post('parent/google-play/prepare',{studentId:student})).status,503);platform.business.legalName=legalName;
+    catalogReady=false;const failedCatalog=await post('parent/google-play/prepare',{studentId:student});
+    assert.equal(failedCatalog.status,503);assert.equal(preparedBinding,false);assert.ok(!JSON.stringify(failedCatalog.body).includes('private-catalog-error'));catalogReady=true;
+    assert.equal((await post('parent/google-play/prepare',{studentId:student})).status,200);
+    payload=subscription();assert.equal((await verify()).status,409);assert.equal(ledger.length,0); // real-money receipts cannot become test grants
+    payload=subscription({testPurchase:{}});assert.equal((await verify()).body.access.active,true);assert.equal(ledger[0].test_purchase,true);
+    const restoredTest=await verify();assert.equal(restoredTest.body.access.expiresAt,expiry);assert.equal(ledger.length,1);
+    await requireLearningAccess(student);
+    payload=subscription({testPurchase:{},acknowledgementState:'ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED'});
+    const renewedExpiry=new Date(Date.parse(expiry)+3600000).toISOString();payload.lineItems[0].expiryTime=renewedExpiry;
+    assert.equal((await post('google-play/notifications',notification)).status,204);
+    assert.equal((await getAccess()).body.access.expiresAt,renewedExpiry);
+    payload=subscription({testPurchase:{},subscriptionState:'SUBSCRIPTION_STATE_CANCELED'});
+    payload.lineItems[0].autoRenewingPlan.autoRenewEnabled=false;
+    const canceled=await verify();assert.equal(canceled.body.access.active,true);assert.equal(canceled.body.access.autoRenewing,false);await requireLearningAccess(student);
+    payload=subscription({testPurchase:{},subscriptionState:'SUBSCRIPTION_STATE_EXPIRED'});
+    payload.lineItems[0].expiryTime=new Date(Date.now()-1000).toISOString();
+    assert.equal((await verify()).body.access.active,false);
+    await assert.rejects(requireLearningAccess(student),e=>(e as any).status===403);
+    process.env.GOOGLE_PLAY_LICENSE_TEST_UNTIL=new Date(Date.now()-1000).toISOString();
+    assert.equal((await getAccess()).body.ready,false);assert.equal((await getAccess()).body.access.active,false);
+    assert.equal((await verify()).status,409); // an old test receipt cannot survive closing the test session
+    assert.equal(platform.release.emailTested,false);assert.equal(platform.release.restoreTested,false);
   }finally{
     await new Promise<void>(resolve=>server.close(()=>resolve()));globalThis.fetch=originalFetch;GoogleAuth.prototype.getAccessToken=originalToken;OAuth2Client.prototype.verifyIdToken=originalVerify;
     for(const k of Object.keys(process.env))if(!(k in savedEnv))delete process.env[k];Object.assign(process.env,savedEnv);
