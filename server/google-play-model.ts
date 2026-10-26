@@ -41,7 +41,7 @@ const payload = z.object({
   })).length(1),
   linkedPurchaseToken: playTokenSchema.optional(), testPurchase: z.object({}).optional(),
 });
-export function verifiedPlaySubscription(raw: unknown, expected: { productId: string; accountId: string; profileId: string; allowTest: boolean }, now = Date.now()) {
+export function verifiedPlaySubscription(raw: unknown, expected: { productId: string; accountId: string; profileId: string; allowTest: boolean; requireTest?: boolean }, now = Date.now()) {
   const result = payload.safeParse(raw);
   if (!result.success) throw new GooglePlayError('Google Play abonelik bilgisi doğrulanamadı.', 409);
   const p = result.data, item = p.lineItems[0];
@@ -50,6 +50,7 @@ export function verifiedPlaySubscription(raw: unknown, expected: { productId: st
   if (item.productId !== expected.productId || !PLAY_PLANS.some(x => x.id === item.offerDetails.basePlanId) || item.prepaidPlan !== undefined || !item.autoRenewingPlan)
     throw new GooglePlayError('Google Play abonelik ürünü eşleşmedi.', 409);
   if (p.testPurchase && !expected.allowTest) throw new GooglePlayError('Test satın alımı üretim erişimi açamaz.', 409);
+  if (expected.requireTest && !p.testPurchase) throw new GooglePlayError('Lisans test hesabı yalnızca Google Play test satın alımlarını doğrulayabilir.', 409);
   const expiresAt = item.expiryTime ? new Date(item.expiryTime).toISOString() : null;
   const active = ['SUBSCRIPTION_STATE_ACTIVE','SUBSCRIPTION_STATE_IN_GRACE_PERIOD','SUBSCRIPTION_STATE_CANCELED'].includes(p.subscriptionState) && !!expiresAt && Date.parse(expiresAt) > now;
   return { active, expiresAt, state: p.subscriptionState, productId: item.productId, basePlanId: item.offerDetails.basePlanId,

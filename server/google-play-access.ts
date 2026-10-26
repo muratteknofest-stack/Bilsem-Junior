@@ -4,6 +4,7 @@ import { assertBillingFamily } from './billing-family';
 import { playConfig, playRequest } from './google-play-client';
 import { GooglePlayError, decryptPlayToken, encryptPlayToken, playBindings, tokenHash, verifiedPlaySubscription } from './google-play-model';
 import type { PlayAccess } from '../src/lib/google-play-contract';
+import { isLicenseTestFamily } from './google-play-license-test';
 export async function verifyAndSavePlay(parentId: string, studentId: string, token: string) {
   await assertBillingFamily(parentId, studentId);
   const config = playConfig(), binding = playBindings(parentId, studentId), observedAt = new Date().toISOString();
@@ -11,7 +12,10 @@ export async function verifyAndSavePlay(parentId: string, studentId: string, tok
     .eq('account_hash', binding.accountId).eq('profile_hash', binding.profileId).maybeSingle();
   if (prepared.error) throw new GooglePlayError('Satın alma hesap bağlantısı doğrulanamadı.');
   if (prepared.data?.parent_id !== parentId || prepared.data.student_id !== studentId) throw new GooglePlayError('Bu hesap için hazırlanmış satın alma bağlantısı bulunamadı.', 409);
-  const proof = verifiedPlaySubscription(await playRequest(token, 'get'), { ...binding, productId: config.productId, allowTest: config.allowTest });
+  const licenseTest = isLicenseTestFamily(parentId, studentId);
+  const proof = verifiedPlaySubscription(await playRequest(token, 'get'), {
+    ...binding, productId: config.productId, allowTest: config.allowTest || licenseTest, requireTest: licenseTest,
+  });
   // Google, not the client, determines expiry and state. Retrying never adds days.
   const saved = await getServiceClient().rpc('record_google_play_subscription', {
     p_hash: tokenHash(token), p_parent: parentId, p_student: studentId, p_token: encryptPlayToken(token), p_package: config.packageName,
@@ -27,12 +31,15 @@ export async function verifyAndSavePlay(parentId: string, studentId: string, tok
 }
 export async function googlePlayAccess(parentId: string, studentId: string): Promise<PlayAccess> {
   await assertBillingFamily(parentId, studentId);
-  const result = await getServiceClient().from('google_play_subscriptions').select('token_hash,token_ciphertext,package_name,product_id')
+  const config = playConfig(), licenseTest = isLicenseTestFamily(parentId, studentId);
+  const query = getServiceClient().from('google_play_subscriptions').select('token_hash,token_ciphertext,package_name,product_id')
     .eq('parent_id', parentId).eq('student_id', studentId).not('subscription_state', 'in', '(SUBSCRIPTION_STATE_EXPIRED,SUBSCRIPTION_STATE_PENDING_PURCHASE_CANCELED)').order('verified_at', { ascending: false }).limit(21);
+  if (licenseTest) query.eq('test_purchase', true);
+  else if (!config.allowTest) query.eq('test_purchase', false);
+  const result = await query;
   if (result.error || !result.data || result.data.length > 20) throw new GooglePlayError('Abonelik kayıtları doğrulanamadı.');
   let active: PlayAccess | null = null, failure = false;
   const inactive: PlayAccess[] = [];
-  const config = playConfig();
   for (let i = 0; i < result.data.length; i += 3) {
     await Promise.all(result.data.slice(i, i + 3).map(async (row, offset) => {
       try {

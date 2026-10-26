@@ -17,6 +17,7 @@ test('keyless readiness requires explicit production config but no private key o
   for (const mode of ['preview', 'development', '', undefined]) assert.deepEqual(playAuthIssues({ ...env, VERCEL_ENV: mode }), ['VERCEL_ENV']);
   assert.deepEqual(playAuthIssues({ ...env, GOOGLE_PLAY_AUTH_MODE: 'invalid-private-value' }), ['GOOGLE_PLAY_AUTH_MODE']);
   assert.deepEqual(playAuthIssues({}), ['GOOGLE_PLAY_SERVICE_ACCOUNT_JSON']);
+  assert.ok(playSetupIssues({...env,GOOGLE_PLAY_ALLOW_TEST_PURCHASES:'true'}).includes('GOOGLE_PLAY_ALLOW_TEST_PURCHASES'));
 });
 
 test('malformed federation resource names cannot supply URLs, paths or other credential sources', () => {
