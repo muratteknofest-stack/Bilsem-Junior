@@ -19,11 +19,5 @@ export async function readPlatformSettings(): Promise<SettingsRecord> {
     if (!settings.business.retention) settings.business.retention = DEFAULT_KVKK_RETENTION;
     if (!settings.business.transfers) settings.business.transfers = DEFAULT_KVKK_TRANSFERS;
   }
-  if (settings.release.registrationEnabled) {
-    settings.release.emailTested = true;
-    settings.release.restoreTested = true;
-    settings.release.familyPilotTested = true;
-    settings.release.monitoringTested = true;
-  }
   return { settings, revision: data.revision, updatedAt: data.updated_at };
 }
