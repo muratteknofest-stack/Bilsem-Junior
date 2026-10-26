@@ -1,9 +1,16 @@
 node_modules
 dist
+dist-android
+android
 .git
+.github
 .env
 .env.*
 !.env.example
 *.log
+*.tsbuildinfo
 tests
+test-artifacts
+coverage
+docs
 analysis*

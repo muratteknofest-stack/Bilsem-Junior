@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import { createServer } from 'vite';
 import { chromium } from 'playwright';
@@ -10,10 +11,12 @@ await fs.mkdir(output, { recursive: true });
 const server = await createServer({ server: { host: '127.0.0.1', port: 0, strictPort: true } });
 await server.listen();
 const origin = 'http://127.0.0.1:' + server.httpServer.address().port;
+await Promise.all([fetch(origin + '/src/index.css'), fetch(origin + '/tests/browser/bilsem-branding.tsx')]).catch(() => {});
 let browser, page;
 const errors = [];
 try {
-  browser = await chromium.launch({ headless: true });
+  const browserExecutable = process.env.BILSEM_CHROMIUM_EXECUTABLE || process.env.BROWSER_EXECUTABLE || (!existsSync(chromium.executablePath()) ? ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'].find(existsSync) : undefined);
+  browser = await chromium.launch({ headless: true, ...(browserExecutable ? { executablePath: browserExecutable, args: ['--no-sandbox', '--disable-dev-shm-usage'] } : {}) });
   const context = await browser.newContext({ reducedMotion: 'reduce' });
   await context.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   page = await context.newPage();

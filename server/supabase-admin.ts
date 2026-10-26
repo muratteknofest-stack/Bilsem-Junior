@@ -2,6 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import { fromSupabaseRow, toSupabaseRow } from '../src/lib/supabase-shape';
 import { checkedDeploymentDatabase, checkedSupabaseOrigin, vercelEnvironment } from '../shared/supabase-environment.mjs';
 
+const ServerNoopWebSocket = (globalThis.WebSocket ?? class {}) as any;
+
 export function getServiceClient() {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -9,7 +11,10 @@ export function getServiceClient() {
   const origin = vercelEnvironment(process.env)
     ? checkedDeploymentDatabase(process.env, { requireServerKey: true }).serverOrigin
     : checkedSupabaseOrigin(url, process.env);
-  return createClient(origin, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  return createClient(origin, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    realtime: { transport: ServerNoopWebSocket },
+  });
 }
 
 const tables: Record<string, string> = {

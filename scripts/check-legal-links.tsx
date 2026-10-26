@@ -1,6 +1,7 @@
 /** Public legal documents and real web/Android UI. Isolated accounts, no messages or live writes. */
 import { build } from 'esbuild';
 import { chromium } from 'playwright';
+import { existsSync } from 'node:fs';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import express from 'express';
@@ -28,7 +29,8 @@ for (const target of ['web','android']) {
   await build({ stdin: { contents: fixture, resolveDir: process.cwd(), loader: 'tsx' }, bundle: true, format: 'iife', platform: 'browser', outfile: resolve(output, target + '.js'), define: { 'import.meta.env': JSON.stringify({ VITE_APP_TARGET: target, VITE_API_BASE_URL: origin, VITE_PUBLIC_SITE_URL: 'https://bilsemjunior.vercel.app', VITE_SUPABASE_URL: 'https://legal-test.supabase.co', VITE_SUPABASE_PUBLISHABLE_KEY: 'public-isolated-fixture' }) }, plugins: [{ name: 'isolated-auth-context', setup(builder) { builder.onResolve({ filter: /contexts\/AuthContext$/ }, () => ({ path: 'auth-context', namespace: 'isolated' })); builder.onLoad({ filter: /.*/, namespace: 'isolated' }, () => ({ contents: 'export const useAuth=()=>({loginLocally(){},sendEmailVerification:async()=>{},sendPasswordResetEmail:async()=>{}});' })); } }] });
   await writeFile(resolve(output, target + '.html'), `<!doctype html><html lang="tr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style><link rel="stylesheet" href="/${target}.css"></head><body><div id="root" class="${target === 'android' ? 'bj-native-shell' : ''}"></div><script src="/${target}.js"></script></body></html>`);
 }
-const browser = await chromium.launch({ headless: true, executablePath: process.env.BILSEM_CHROMIUM_EXECUTABLE || undefined, args: ['--no-sandbox','--disable-dev-shm-usage'] });
+const browserExecutable = process.env.BILSEM_CHROMIUM_EXECUTABLE || process.env.BROWSER_EXECUTABLE || (!existsSync(chromium.executablePath()) ? ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'].find(existsSync) : undefined);
+const browser = await chromium.launch({ headless: true, executablePath: browserExecutable || undefined, args: ['--no-sandbox','--disable-dev-shm-usage'] });
 const checks: Array<Record<string, unknown>> = [], errors: string[] = [];
 try {
   for (const target of ['web','android']) for (const [width,height] of [[320,480],[390,844],[768,1024]]) {

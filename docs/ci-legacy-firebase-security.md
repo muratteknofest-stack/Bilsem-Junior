@@ -39,7 +39,7 @@ istenmiş `cache: npm` davranışı sürer. Workflow içindeki `npx` çağrılar
 - İncelenmemiş ayrıcalıklı PR olayları, doğrudan güvensiz shell bağlamı
   yerleştirmesi ve kilit dosyasını atlayan kurulum.
 - Main koşulu ve tanımlı ortamı olmayan secret kullanan işler.
-- Eski Firebase'e istemci erişimi veya Hosting hedefinin geri eklenmesi.
+- Eski Firebase yapılandırma dosyalarının veya runtime bağımlılıklarının depoya geri eklenmesi.
 
 Kontrol quality işine eklenmiştir. YAML ayrıştırıcısı `yaml@2.9.1`, yalnızca
 geliştirme bağımlılığıdır; sürümü ve bütünlük özeti kilit dosyasındadır.
@@ -54,52 +54,17 @@ koşusu kod gönderilene kadar doğrulanmış değildir.
 ## Firebase'in emekli erişim yüzeyi
 
 Uygulamanın aktif runtime bağımlılıklarında ve `src`/`server` kodunda Firebase
-kullanımı bulunmadı; çalışma altyapısı Supabase'dir. `firestore.rules` ve yeni
-`storage.rules`, tüm belge/nesne yollarında istemci okuma ve yazmasını
-koşulsuz reddeder. E-posta adresine veya yönetici claim'ine göre istisna yoktur.
-
-`firebase.json` artık Hosting, eski Cloud Run API yönlendirmesi veya index
-yayınlama hedefi içermez. Firestore kural hedefi, tarihsel applet ayarındaki
-**adlandırılmış veritabanını** açıkça gösterir; `(default)` ile karıştırılmaz.
-Depodaki varsayılan proje eşlemesi kaldırılmıştır. Gerçek bir işlemde proje,
-veritabanı ve bucket ayrıca açıkça doğrulanmalıdır. Tarihsel applet/blueprint
-dosyaları referans olarak durur; aktif uygulama tarafından import edilmez.
+kullanımı bulunmadı; çalışma altyapısı Supabase ve Vercel/Docker'dır. Kök dizindeki
+eski yapılandırma ve geliştirme kalıntıları (`.firebaserc`, `firebase.json`,
+`firebase.emulator.json`, `firebase-blueprint.json`, `firebase-applet-config.json`,
+`firestore.rules`, `firestore.indexes.json`, `.openai/hosting.json`,
+`BILSEM_Gemini_Soru_Motoru_Guncelleme_Promptu.txt`) depodan tamamen kaldırılmıştır.
+`scripts/check-workflow-security.mjs` bu dosyaların depoda bulunmadığını ve
+`package.json` içinde Firebase bağımlılığı yer almadığını doğrular.
 
 Bu değişiklikler eski dağıtımları, projeyi veya Cloud Run servisini silmez.
-Rules, yetkili Admin SDK/IAM erişimini veya mevcut paylaşım/download token'larını
-kendiliğinden iptal etmez. Aşama 4'te gerçek eski kaynakların envanteri ve
-gerekli emeklilik işlemleri ayrı doğrulanmalıdır. Kullanıcı verileri otomatik
-silinmemiştir; canlı Firestore bulgusu hâlâ koşullu/doğrulanmamış durumdadır.
-
-## Yerel semantik kural testi
-
-Firestore Emulator 1.22.0 ve Storage Rules Runtime 1.1.3, Firebase CLI 15.34.1 ve
-Java 21 ile çalıştırıldı. Anonim, öğrenci, veli ve admin claim'li dört istemcinin
-52 get/list/create/update/delete ve nesne işlemi `403` ile reddedildi. Test
-verileri yalnızca `demo-bilsem-security` projesinin loopback emülatörlerinde
-oluşturuldu. Test runner gerçek proje adını veya harici host'u kabul etmez.
-
-Bağımsız Firebase CLI 15.34.1 ve Java 21 kurulu bir test ortamında, depo kökünden:
-
-```sh
-firebase emulators:exec --only firestore,storage \
-  --project demo-bilsem-security --config firebase.emulator.json \
-  "npm run test:legacy-firebase"
-```
-
-Bu bir `deploy` komutu değildir. Firebase test araçları uygulamanın runtime
-bağımlılıklarına eklenmez. Normal `npm test` emülatör gerektirmez; CI kaynak
-ilkesi, koşulsuz recursive deny kuralından sapmayı ayrıca reddeder.
-
-Workflow yapısı actionlint 1.7.12 ile de doğrulandı; bu çalıştırmada ShellCheck
-ve Pyflakes eklentileri kullanılmadı. Action commit'leri ve Node runtime'ları
-resmî GitHub API/metadata kaynaklarıyla doğrulandı.
-
-578 test, TypeScript, yapılandırılmış üretim derlemesi ve 37 üretim HTTP
-kontrolü geçti. npm audit bilinen açık raporlamadı; OSV taramasında 532 npm
-paket/sürüm çifti için bulgu çıkmadı. Web çıktısında 158 metin dosyası gizli
-anahtar/source-map taramasından geçti. Gerçek GitHub Actions koşusu ve canlı
-Firebase kural yayını bu doğrulamaya dahil değildir.
+Aşama 4'te gerçek eski kaynakların envanteri ve gerekli emeklilik işlemleri
+ayrı doğrulanmalıdır.
 
 ## Resmî kaynaklar
 

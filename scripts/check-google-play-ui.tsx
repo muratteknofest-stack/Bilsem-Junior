@@ -3,6 +3,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { build } from 'esbuild';
 import { chromium } from 'playwright';
+import { existsSync } from 'node:fs';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import express from 'express';
@@ -46,7 +47,8 @@ const app=express();app.use(express.static(output));app.use(express.static(resol
 const server=app.listen(0,'127.0.0.1');await once(server,'listening');
 let browser:Awaited<ReturnType<typeof chromium.launch>>|undefined;
 try{
- browser=await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE,args:['--no-sandbox','--disable-dev-shm-usage']}: {})});
+ const fallbackExecutable = process.env.BROWSER_EXECUTABLE || (!existsSync(chromium.executablePath()) ? ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'].find(existsSync) : undefined);
+ browser=await chromium.launch({headless:true,...(fallbackExecutable?{executablePath:fallbackExecutable,args:['--no-sandbox','--disable-dev-shm-usage']}: {})});
  const page=await browser.newPage({viewport:{width:360,height:800},deviceScaleFactor:1});const pageErrors:string[]=[];page.on('pageerror',e=>pageErrors.push(e.message));
  await page.goto(`http://127.0.0.1:${(server.address() as AddressInfo).port}/`);await page.getByRole('radio',{name:/Aylık/}).waitFor();
  await page.locator('.zp-play-plan-art').evaluateAll(async nodes=>{await Promise.all(nodes.map(node=>(node as HTMLImageElement).decode()));});

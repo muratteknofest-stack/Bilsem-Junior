@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { parseDocument } from 'yaml';
 
@@ -71,18 +71,28 @@ export function retiredRulesDenyAll(source, service) {
   return compact === policy;
 }
 
+export const RETIRED_LEGACY_FILES = [
+  '.firebaserc',
+  'firebase.json',
+  'firebase.emulator.json',
+  'firebase-blueprint.json',
+  'firebase-applet-config.json',
+  'firestore.rules',
+  'firestore.indexes.json',
+  '.openai/hosting.json',
+  'BILSEM_Gemini_Soru_Motoru_Guncelleme_Promptu.txt',
+];
+
 export function retiredFirebaseIssues(root = process.cwd()) {
   const issues = [];
-  if (!retiredRulesDenyAll(readFileSync(`${root}/firestore.rules`, 'utf8'), 'firestore')) issues.push('FIRESTORE_MUST_DENY_ALL_CLIENTS');
-  if (!retiredRulesDenyAll(readFileSync(`${root}/storage.rules`, 'utf8'), 'storage')) issues.push('STORAGE_MUST_DENY_ALL_CLIENTS');
-  const config = JSON.parse(readFileSync(`${root}/firebase.json`, 'utf8'));
-  const legacy = JSON.parse(readFileSync(`${root}/firebase-applet-config.json`, 'utf8'));
-  if (Object.keys(config).some(key => !['firestore', 'storage'].includes(key))) issues.push('RETIRED_FIREBASE_DEPLOY_TARGET');
-  if (!Array.isArray(config.firestore) || config.firestore.length !== 1 || config.firestore[0]?.database !== legacy.firestoreDatabaseId
-    || config.firestore[0]?.rules !== 'firestore.rules' || config.storage?.rules !== 'storage.rules') issues.push('LEGACY_RULE_TARGET_MISMATCH');
-  const projects = JSON.parse(readFileSync(`${root}/.firebaserc`, 'utf8')).projects;
-  if (!isRecord(projects) || Object.keys(projects).length) issues.push('IMPLICIT_FIREBASE_PROJECT_FORBIDDEN');
-  const dependencies = JSON.parse(readFileSync(`${root}/package.json`, 'utf8')).dependencies || {};
+  for (const file of RETIRED_LEGACY_FILES) {
+    if (existsSync(`${root}/${file}`)) issues.push(`RETIRED_LEGACY_FILE_PRESENT:${file}`);
+  }
+  if (existsSync(`${root}/storage.rules`) && !retiredRulesDenyAll(readFileSync(`${root}/storage.rules`, 'utf8'), 'storage')) {
+    issues.push('STORAGE_MUST_DENY_ALL_CLIENTS');
+  }
+  const pkg = JSON.parse(readFileSync(`${root}/package.json`, 'utf8'));
+  const dependencies = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
   if (Object.keys(dependencies).some(name => /^(?:firebase(?:-admin)?|@firebase\/)/.test(name))) issues.push('RETIRED_FIREBASE_RUNTIME_DEPENDENCY');
   return issues;
 }

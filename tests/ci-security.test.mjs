@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { workflowSecurityIssues, checkRepositoryWorkflows, retiredRulesDenyAll, retiredFirebaseIssues } from '../scripts/check-workflow-security.mjs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { workflowSecurityIssues, checkRepositoryWorkflows, retiredRulesDenyAll, retiredFirebaseIssues, RETIRED_LEGACY_FILES } from '../scripts/check-workflow-security.mjs';
 
 const approved = JSON.parse(readFileSync('config/github-actions.json', 'utf8'));
 const checkout = `actions/checkout@${approved['actions/checkout'].sha}`;
@@ -76,10 +78,28 @@ test('artifact and Node setup options must explicitly disable hidden files and a
   }
 });
 
-test('retired Firebase policies and explicit named-database targets cannot restore client access or hosting', () => {
+test('retired Firebase and legacy config files remain removed from repository and deny-all helper rejects permissive rules', () => {
   assert.deepEqual(retiredFirebaseIssues(), []);
-  for (const [file, service] of [['firestore.rules', 'firestore'], ['storage.rules', 'storage']]) {
-    const source = readFileSync(file, 'utf8');
+  for (const file of RETIRED_LEGACY_FILES) {
+    assert.equal(existsSync(file), false, `Legacy file must be removed: ${file}`);
+  }
+  const tempRoot = mkdtempSync(join(tmpdir(), 'bilsem-legacy-check-'));
+  try {
+    writeFileSync(join(tempRoot, 'package.json'), JSON.stringify({ dependencies: {} }));
+    assert.deepEqual(retiredFirebaseIssues(tempRoot), []);
+    mkdirSync(join(tempRoot, '.openai'), { recursive: true });
+    writeFileSync(join(tempRoot, 'firebase.json'), '{}');
+    writeFileSync(join(tempRoot, '.openai/hosting.json'), '{}');
+    assert.deepEqual(retiredFirebaseIssues(tempRoot), [
+      'RETIRED_LEGACY_FILE_PRESENT:firebase.json',
+      'RETIRED_LEGACY_FILE_PRESENT:.openai/hosting.json',
+    ]);
+  } finally {
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
+  const firestoreDenyFixture = "rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if false;\n    }\n  }\n}\n";
+  const storageDenyFixture = existsSync('storage.rules') ? readFileSync('storage.rules', 'utf8') : "rules_version = '2';\nservice firebase.storage {\n  match /b/{bucket}/o {\n    match /{allPaths=**} {\n      allow read, write: if false;\n    }\n  }\n}\n";
+  for (const [source, service] of [[firestoreDenyFixture, 'firestore'], [storageDenyFixture, 'storage']]) {
     assert.equal(retiredRulesDenyAll(source, service), true);
     for (const mutation of [source.replace('if false', 'if true'), source.replace('if false', "if request.auth != null"),
       source.replace('if false', "if request.auth.token.email == 'fixture@example.invalid'"),

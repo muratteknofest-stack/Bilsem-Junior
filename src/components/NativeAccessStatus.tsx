@@ -3,6 +3,7 @@ import { useAndroidBack } from '../hooks/useAndroidBack';
 import { connectionAvailable, subscribeConnection } from '../lib/connection-status';
 import { App } from '@capacitor/app';
 import { authenticatedFetch } from '../lib/api-client';
+import { isAndroidApp } from '../lib/native-app';
 import { auth } from '../lib/supabase';
 import { PlayBilling, isGooglePlayBillingPlatform } from '../lib/play-billing';
 import { initialPlayBillingState, PlayBillingFlow } from '../lib/google-play-flow';
@@ -47,7 +48,6 @@ function BillingSession({ studentId, studentName, owner, onBusyChange }: { stude
     }
     return () => { window.removeEventListener('online', online); disposed = true; controller.dispose(); for (const listener of listeners) void listener.remove().catch(() => {}); if (flow.current === controller) flow.current = null; };
   }, [studentId, owner, nativeAndroid]);
-  if (!nativeAndroid) return <WebPlayMembershipPanel studentName={studentName} state={state} onRefresh={() => { void flow.current?.refresh(); }}/>;
+  if (!nativeAndroid && !isAndroidApp) return <WebPlayMembershipPanel studentName={studentName} state={state} onRefresh={() => { void flow.current?.refresh(); }}/>;
   return <PlayBillingPanel studentName={studentName} state={state} online={online} onPurchase={plan => { void flow.current?.purchase(plan); }} onRestore={() => { void flow.current?.restore(); }} onRefresh={() => { void flow.current?.refresh(); }}/>;
 }
-
