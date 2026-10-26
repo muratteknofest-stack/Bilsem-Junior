@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 /** Verify the compiled package, rather than inferring security from source XML. */
 export function verifyAndroidRelease(manifest, badging) {
   const pkg = badging.match(/^package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'/m);
-  if (!pkg || pkg[1] !== 'com.quantumtech.bilsemjunior' || pkg[2] !== '33' || pkg[3] !== '1.0.32') throw Error('Unexpected release identity or version');
+  if (!pkg || pkg[1] !== 'com.quantumtech.bilsemjunior' || pkg[2] !== '34' || pkg[3] !== '1.0.33') throw Error('Unexpected release identity or version');
   if (!/^application-label:'Bilsem Junior'$/m.test(badging)) throw Error('Unexpected application label');
   if (!/^sdkVersion:'24'$/m.test(badging) || !/^targetSdkVersion:'36'$/m.test(badging)) throw Error('Unexpected SDK requirements');
   // AAPT encodes boolean true as either 0xffffffff or 0x1. Missing means Android's default false.
@@ -54,8 +54,8 @@ async function verifyAndroidSourceTemplate() {
       [appGradle, /apply from: '\.\.\/\.\.\/mobile\/android\/play-billing\.gradle'/, 'play-billing.gradle applied'],
       [appGradle, /apply from: '\.\.\/\.\.\/mobile\/android\/release\.gradle'/, 'release.gradle applied'],
       [playBillingGradle, /com\.android\.billingclient:billing:9\.1\.0/, 'Play Billing 9.1.0 dependency'],
-      [playBillingGradle, /versionCode\s+33\b/, 'versionCode 33'],
-      [playBillingGradle, /versionName\s+"1\.0\.32"/, 'versionName 1.0.32'],
+      [playBillingGradle, /versionCode\s+34\b/, 'versionCode 34'],
+      [playBillingGradle, /versionName\s+"1\.0\.33"/, 'versionName 1.0.33'],
       [releaseGradle, /debuggable\s+false\b/, 'release debuggable false'],
       [varsGradle, /minSdkVersion\s*=\s*24\b/, 'minSdk 24'],
       [varsGradle, /compileSdkVersion\s*=\s*36\b/, 'compileSdk 36'],
@@ -77,15 +77,15 @@ async function verifyAndroidSourceTemplate() {
     }
 
     const compiledManifest = [
-      'A: android:versionCode(0x0101021b)=(type 0x10)0x21',
-      'A: android:versionName(0x0101021c)="1.0.32" (Raw: "1.0.32")',
+      'A: android:versionCode(0x0101021b)=(type 0x10)0x22',
+      'A: android:versionName(0x0101021c)="1.0.33" (Raw: "1.0.33")',
       'A: android:usesCleartextTraffic(0x010104ec)=(type 0x12)0x0',
       'A: android:allowBackup(0x01010280)=(type 0x12)0x0',
       'A: android:fullBackupContent(0x010104eb)=(type 0x12)0x0',
     ].join('\n');
 
     const compiledBadging = [
-      "package: name='com.quantumtech.bilsemjunior' versionCode='33' versionName='1.0.32'",
+      "package: name='com.quantumtech.bilsemjunior' versionCode='34' versionName='1.0.33'",
       "sdkVersion:'24'",
       "targetSdkVersion:'36'",
       "application-label:'Bilsem Junior'",
