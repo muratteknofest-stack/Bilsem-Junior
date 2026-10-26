@@ -1,5 +1,5 @@
 import { getServiceClient } from './supabase-admin';
-import { playConfig } from './google-play-client';
+import { studentRequiresPaidAccess } from './paid-access-policy';
 import { googlePlayAccess } from './google-play-access';
 import { GooglePlayError } from './google-play-model';
 import { isLicenseTestFamily, licenseTestStudentId } from './google-play-license-test';
@@ -14,10 +14,10 @@ export async function learningAccess(studentId: string) {
   return googlePlayAccess(parentId,studentId);
 }
 export async function requireLearningAccess(studentId: string) {
-  const enforced = playConfig().enforced;
+  const enforced = await studentRequiresPaidAccess(studentId);
   if (!enforced && licenseTestStudentId() !== studentId) return;
   const parentId = await linkedParentId(studentId);
   if (!enforced && (!parentId || !isLicenseTestFamily(parentId, studentId))) return;
   if (!parentId || !(await googlePlayAccess(parentId,studentId)).active)
-    throw new GooglePlayError('Bu çalışma için Google Play üzerinden aktif öğrenci aboneliği gerekli.',403);
+    throw new GooglePlayError('Bu tam çalışma için aktif öğrenci aboneliği gerekli. Veliniz Üyelik bölümünden devam edebilir. Günün üç ücretsiz görevini kullanabilirsiniz.',403);
 }

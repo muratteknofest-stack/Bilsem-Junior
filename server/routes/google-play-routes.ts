@@ -4,7 +4,8 @@ import { requireSupabaseAuth, requireVerifiedEmail, requireProfileRole, type Aut
 import { sharedRateLimit } from '../shared-rate-limit';
 import { getServiceClient } from '../supabase-admin';
 import { readPlatformSettings } from '../platform-settings';
-import { releaseBlockers } from '../../src/lib/platform-settings';
+import { studentRequiresPaidAccess } from '../paid-access-policy';
+import { paidSalesReady } from '../google-play-sales';
 import { PLAY_PLANS } from '../../src/lib/google-play-contract';
 import { GooglePlayError, playBindings, playTokenSchema, encryptPlayToken } from '../google-play-model';
 import { playConfig, playSetupReady, verifyPlayPush, verifyPlayCatalog } from '../google-play-client';
@@ -24,8 +25,10 @@ routes.get('/parent/google-play/access', sharedRateLimit('play-access', 60, 600)
     const id = student.parse(req.query.studentId), config = playConfig();
     const { settings } = await readPlatformSettings();
     const licenseTest = isLicenseTestFamily(req.authUser!.uid, id);
-    const ready = playSetupReady() && (licenseTest ? licenseTestLegalReady(settings) : config.enabled && releaseBlockers(settings).length === 0);
-    res.json({ ready, storeUrl: playStoreListing(), enforced: config.enforced || licenseTest, productId: config.productId, plans: PLAY_PLANS, binding: process.env.GOOGLE_PLAY_BINDING_SECRET ? playBindings(req.authUser!.uid, id) : null, access: await googlePlayAccess(req.authUser!.uid, id) });
+    const ready = licenseTest ? playSetupReady() && licenseTestLegalReady(settings) : paidSalesReady(settings);
+    const access = await googlePlayAccess(req.authUser!.uid, id);
+    const enforced = await studentRequiresPaidAccess(id) || licenseTest;
+    res.json({ ready, storeUrl: playStoreListing(), enforced, productId: config.productId, plans: PLAY_PLANS, binding: process.env.GOOGLE_PLAY_BINDING_SECRET ? playBindings(req.authUser!.uid, id) : null, access });
   } catch (error) { failure(error, res); }
 });
 routes.post('/parent/google-play/prepare', sharedRateLimit('play-prepare', 12, 3600), async (req: AuthenticatedRequest, res) => {
@@ -33,13 +36,13 @@ routes.post('/parent/google-play/prepare', sharedRateLimit('play-prepare', 12, 3
     const { studentId } = z.object({ studentId: student }).strict().parse(req.body), config = playConfig();
     const { settings } = await readPlatformSettings();
     const licenseTest = isLicenseTestFamily(req.authUser!.uid, studentId);
-    if (!playSetupReady() || (licenseTest ? !licenseTestLegalReady(settings) : !config.enabled || releaseBlockers(settings).length > 0))
+    if (licenseTest ? !playSetupReady() || !licenseTestLegalReady(settings) : !paidSalesReady(settings))
       throw new GooglePlayError('Google Play abonelikleri henüz satışa açılmadı.');
     // Fail before a charge if durable encryption/account binding or service credentials are absent.
     const binding = playBindings(req.authUser!.uid, studentId);
     encryptPlayToken('configuration-check');
-    if (licenseTest) await verifyPlayCatalog(); // Prove real Google credentials/catalog before opening the test payment sheet.
-        const access = await googlePlayAccess(req.authUser!.uid, studentId);
+    await verifyPlayCatalog(); // Prove real Google credentials and all active plans before any payment sheet.
+    const access = await googlePlayAccess(req.authUser!.uid, studentId);
     if (access.active) throw new GooglePlayError('Aktif aboneliğinizi Google Play üzerinden yönetebilirsiniz.', 409);
     if (['SUBSCRIPTION_STATE_PENDING', 'SUBSCRIPTION_STATE_ON_HOLD', 'SUBSCRIPTION_STATE_PAUSED'].includes(access.state || '')) throw new GooglePlayError('Mevcut aboneliğinizi Google Play üzerinden yönetin. Ödeme veya duraklatma sorununu çözdükten sonra Yenile’ye dokunun.', 409);
     const prepared = await getServiceClient().rpc('prepare_google_play_binding', { p_parent: req.authUser!.uid, p_student: studentId, p_account: binding.accountId, p_profile: binding.profileId });

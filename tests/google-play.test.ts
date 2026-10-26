@@ -7,7 +7,11 @@ import { GoogleAuth, OAuth2Client } from 'google-auth-library';
 import { GooglePlayError, encryptPlayToken, decryptPlayToken, tokenHash, playBindings, verifiedPlaySubscription } from '../server/google-play-model';
 import { playRequest, verifyPlayPush } from '../server/google-play-client';
 import playRoutes from '../server/routes/google-play-routes';
+import learningRoutes from '../server/routes/learning-routes';
+import challengeRoutes from '../server/routes/challenge-routes';
 import { requireLearningAccess } from '../server/membership-access';
+import { paidAccessStartsAt } from '../server/paid-access-policy';
+import { publicPlayMembership } from '../server/play-membership-page';
 import { googlePlayAccess } from '../server/google-play-access';
 import { defaultPlatformSettings } from '../src/lib/platform-settings';
 import { isLicenseTestFamily, licenseTestStudentId, licenseTestLegalReady } from '../server/google-play-license-test';
@@ -26,13 +30,19 @@ test('license testing is opt-in, bound to one parent/student pair, expires withi
   for(const patch of [{GOOGLE_PLAY_LICENSE_TEST_ENABLED:'false'},{GOOGLE_PLAY_LICENSE_TEST_PARENT_ID:'not-a-uuid'},
     {GOOGLE_PLAY_LICENSE_TEST_STUDENT_ID:''},{GOOGLE_PLAY_LICENSE_TEST_STUDENT_ID:parent},
     {GOOGLE_PLAY_LICENSE_TEST_UNTIL:'invalid'},{GOOGLE_PLAY_LICENSE_TEST_UNTIL:'2026-10-26T12:00:00Z'},
-    {GOOGLE_PLAY_LICENSE_TEST_UNTIL:'2026-10-28T12:00:00Z'},{GOOGLE_PLAY_ENFORCE_PAID_ACCESS:'true'}])
+    {GOOGLE_PLAY_LICENSE_TEST_UNTIL:'2026-10-28T12:00:00Z'},{GOOGLE_PLAY_ENFORCE_PAID_ACCESS:'true'},{GOOGLE_PLAY_PAID_ACCESS_FROM:'2026-10-27T00:00:00Z'}])
     assert.equal(licenseTestStudentId({...env,...patch},now),null);
   assert.equal(licenseTestStudentId(env,Date.parse(env.GOOGLE_PLAY_LICENSE_TEST_UNTIL)),null);
   const settings=defaultPlatformSettings(); assert.equal(licenseTestLegalReady(settings),false);
   settings.business={legalName:'Operator',address:'Address',contactEmail:'test@example.com',legalBases:'Purposes',retention:'Retention',transfers:'Providers'};
   assert.equal(licenseTestLegalReady(settings),true);
   settings.business.address='  ';assert.equal(licenseTestLegalReady(settings),false);
+});
+test('signup cutoff is explicit, accepts only ISO timestamps and fails closed for malformed settings',()=>{
+  assert.equal(paidAccessStartsAt({}),null);
+  assert.equal(paidAccessStartsAt({GOOGLE_PLAY_PAID_ACCESS_FROM:'2026-10-27T03:00:00+03:00'}),Date.parse('2026-10-27T00:00:00Z'));
+  for(const value of ['invalid','2026-10-27','0','2026-02-30T00:00:00Z'])
+    assert.throws(()=>paidAccessStartsAt({GOOGLE_PLAY_PAID_ACCESS_FROM:value}),GooglePlayError);
 });
 test('only Google-authoritative active, grace and canceled-unexpired subscriptions grant access',()=>{
   const now=Date.parse('2026-10-16T12:00:00Z');
@@ -114,7 +124,7 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
   Object.assign(process.env,{VERCEL:'',VERCEL_ENV:'',SUPABASE_URL:'https://play-fixture.invalid',SUPABASE_SERVICE_ROLE_KEY:'unit-test',GOOGLE_PLAY_BINDING_SECRET:secret,GOOGLE_PLAY_TOKEN_KEY:key,GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:JSON.stringify({type:'service_account',client_email:'fixture@fixture.iam.gserviceaccount.com',private_key:'-----BEGIN PRIVATE KEY-----fixture-only'}),GOOGLE_PLAY_ENFORCE_PAID_ACCESS:'true',GOOGLE_PLAY_BILLING_ENABLED:'true',GOOGLE_PLAY_ALLOW_TEST_PURCHASES:'false',GOOGLE_PLAY_RTDN_AUDIENCE:'https://api.example.test/api/google-play/notifications',GOOGLE_PLAY_RTDN_EMAIL:'push@fixture.iam.gserviceaccount.com'});
   const platform=defaultPlatformSettings();let ledger:any[]=[],events:string[]=[],payload=subscription(),failSave=false,failAck=false,emailVerified=true,catalogReady=true,role='parent';
   GoogleAuth.prototype.getAccessToken=async()=> 'fixture-oauth';
-  let oidcValid=false, preparedBinding=false;
+  let oidcValid=false, preparedBinding=false, authCreatedAt='2026-10-26T00:00:00Z', authUnavailable=false;
   OAuth2Client.prototype.verifyIdToken=(async(options:any)=>{assert.equal(options.audience,process.env.GOOGLE_PLAY_RTDN_AUDIENCE);if(!oidcValid)throw Error('invalid signature');return {getPayload:()=>({email:process.env.GOOGLE_PLAY_RTDN_EMAIL,email_verified:true,iss:'https://accounts.google.com'})};}) as any;
   globalThis.fetch=(async(input,init)=>{
     const req=new Request(input as RequestInfo,init),u=new URL(req.url);let value:unknown;
@@ -132,8 +142,10 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
       if(req.method==='POST'){events.push('ack');assert.ok(events.includes('save'));if(failAck)return new Response('unavailable',{status:503});return new Response(null,{status:204});}
       events.push('google');value=payload;
     }else if(u.hostname!=='play-fixture.invalid')return originalFetch(input,init);
-    else if(u.pathname==='/auth/v1/user')value={id:parent,email:'parent@example.com',email_confirmed_at:emailVerified?new Date().toISOString():null,app_metadata:{role}};
+    else if(u.pathname==='/auth/v1/admin/users/'+student){if(authUnavailable)return Response.json({message:'private-auth-error'},{status:503});value={id:student,created_at:authCreatedAt,user_metadata:{created_at:'2000-01-01T00:00:00Z'}};}
+    else if(u.pathname==='/auth/v1/user')value={id:role==='student'?student:parent,email:'parent@example.com',email_confirmed_at:emailVerified?new Date().toISOString():null,app_metadata:{role}};
     else if(u.pathname==='/rest/v1/rpc/is_user_session_active'||u.pathname==='/rest/v1/rpc/consume_api_limit')value=true;
+    else if(u.pathname==='/rest/v1/daily_challenge_attempts'||u.pathname==='/rest/v1/learning_sessions')value=[];
     else if(u.pathname==='/rest/v1/platform_settings')value={settings:platform,revision:1,updated_at:null};
     else if(u.pathname==='/rest/v1/profiles'){
       const id=u.searchParams.get('id')?.slice(3);const row=id===student?{id:student,role:'student',linked_parent_id:parent}:id===other?{id:other,role:'student',linked_parent_id:'44444444-4444-4444-8444-444444444444'}:{id:parent,role,linked_student_ids:[student]};
@@ -148,7 +160,7 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     else throw Error('Unexpected fixture endpoint '+u.pathname);
     return Response.json(value);
   }) as typeof fetch;
-  const app=express();app.use(express.json());app.use('/api',playRoutes);app.use((e:any,_req:any,res:any,_next:any)=>res.status(500).json({error:e.message}));
+  const app=express();app.use(express.json());app.use('/api',playRoutes,learningRoutes,challengeRoutes);app.use((e:any,_req:any,res:any,_next:any)=>res.status(500).json({error:e.message}));
   const server=app.listen(0,'127.0.0.1');await new Promise<void>(resolve=>server.once('listening',resolve));const origin=`http://127.0.0.1:${(server.address() as any).port}`;
   const session=['fixture',Buffer.from(JSON.stringify({session_id:'99999999-9999-4999-8999-999999999999',aal:'aal1'})).toString('base64url'),'fixture'].join('.');
   const post=async(path:string,body:unknown,authenticated=true)=>{const r=await originalFetch(origin+'/api/'+path,{method:'POST',headers:{'Content-Type':'application/json',...(authenticated?{Authorization:`Bearer ${session}`}:{})},body:JSON.stringify(body)});return {status:r.status,body:r.status===204?null:await r.json() as any};};
@@ -159,12 +171,14 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     role='student';assert.equal((await verify()).status,403);role='parent';
     assert.equal((await verify({studentId:student,purchaseToken,paid:true,price:1})).status,400);assert.equal(events.length,0);
     assert.equal((await verify({studentId:other,purchaseToken})).status,403);assert.equal(events.length,0);
-    assert.equal((await post('parent/google-play/prepare',{studentId:student})).status,503);assert.equal(events.length,0); // release blockers cannot be bypassed
+    assert.equal((await post('parent/google-play/prepare',{studentId:student})).status,503);assert.equal(events.length,0); // missing seller information blocks sales
     assert.equal((await verify()).status,409);assert.equal(events.length,0);
     platform.business={legalName:'Fixture operator',address:'Fixture address',contactEmail:'fixture@example.com',legalBases:'Fixture purposes',retention:'Fixture retention',transfers:'Fixture transfers'};
-    platform.release={registrationEnabled:true,emailTested:true,restoreTested:true,familyPilotTested:true,monitoringTested:true};
-    const prepared=await post('parent/google-play/prepare',{studentId:student});assert.equal(prepared.status,200);assert.equal(prepared.body.accountId,binding.accountId);assert.equal(prepared.body.profileId,binding.profileId);assert.equal(events.length,0);
-    payload=subscription({externalAccountIdentifiers:{obfuscatedExternalAccountId:binding.accountId,obfuscatedExternalProfileId:'b'.repeat(64)}});assert.equal((await verify()).status,409);assert.deepEqual(events,['google']);
+    // The sales switch and legal/setup/catalog checks are independent of uncompleted platform acceptance flags.
+    assert.equal(platform.release.emailTested,false);
+    assert.equal((await publicPlayMembership(async()=>({settings:platform,revision:1,updatedAt:null}))).ready,true);
+    const prepared=await post('parent/google-play/prepare',{studentId:student});assert.equal(prepared.status,200);assert.equal(prepared.body.accountId,binding.accountId);assert.equal(prepared.body.profileId,binding.profileId);assert.deepEqual(events,['catalog']);
+    events=[];payload=subscription({externalAccountIdentifiers:{obfuscatedExternalAccountId:binding.accountId,obfuscatedExternalProfileId:'b'.repeat(64)}});assert.equal((await verify()).status,409);assert.deepEqual(events,['google']);
     events=[];payload=subscription();failSave=true;assert.equal((await verify()).status,503);assert.deepEqual(events,['google','save']);failSave=false;
     events=[];failAck=true;assert.equal((await verify()).status,503);assert.deepEqual(events,['google','save','ack']);assert.equal(ledger.length,1);failAck=false;
     events=[];const restored=await verify();assert.equal(restored.status,200);assert.equal(restored.body.access.active,true);assert.equal(restored.body.access.expiresAt,expiry);assert.equal(ledger.length,1);assert.deepEqual(events,['google','save','ack']);
@@ -232,6 +246,49 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     process.env.GOOGLE_PLAY_LICENSE_TEST_UNTIL=new Date(Date.now()-1000).toISOString();
     assert.equal((await getAccess()).body.ready,false);assert.equal((await getAccess()).body.access.active,false);
     assert.equal((await verify()).status,409); // an old test receipt cannot survive closing the test session
+    // Explicit paid rollout closes the test exception and uses immutable Auth
+    // creation time. A forged editable profile timestamp cannot grandfather a user.
+    process.env.GOOGLE_PLAY_LICENSE_TEST_ENABLED='false';
+    process.env.GOOGLE_PLAY_PAID_ACCESS_FROM='2026-10-27T00:00:00Z';
+    process.env.GOOGLE_PLAY_BILLING_ENABLED='true';
+    ledger=[];preparedBinding=false;events=[];
+    authCreatedAt='2026-10-26T23:59:59.999Z';
+    assert.equal((await getAccess()).body.enforced,false);
+    await requireLearningAccess(student); // existing student keeps previous access
+    authCreatedAt='2026-10-27T00:00:00Z';
+    assert.equal((await getAccess()).body.enforced,true);
+    await assert.rejects(requireLearningAccess(student),e=>(e as any).status===403);
+    role='student';
+    for(const mode of ['practice','adaptive','exam'])
+      assert.equal((await post('learning/start',{mode})).status,403);
+    assert.equal((await post('learning/review',{mistakeId:'fixture'})).status,403);
+    for(const path of ['challenges/today','learning/history']){
+      const response=await originalFetch(origin+'/api/'+path,{headers:{Authorization:`Bearer ${session}`}});
+      assert.equal(response.status,200);
+      if(path==='challenges/today')assert.equal((await response.json() as any).limit,3);
+    }
+    role='parent';
+    catalogReady=false;
+    assert.equal((await post('parent/google-play/prepare',{studentId:student})).status,503);
+    assert.equal(preparedBinding,false);catalogReady=true;
+    assert.equal((await post('parent/google-play/prepare',{studentId:student})).status,200);
+    payload=subscription({testPurchase:{}});
+    assert.equal((await verify()).status,409);assert.equal(ledger.length,0);
+    payload=subscription();
+    assert.equal((await verify()).body.access.active,true);
+    assert.equal(ledger[0].test_purchase,false);
+    assert.equal((await getAccess()).body.access.active,true); // web/native share the authoritative grant
+    await requireLearningAccess(student);
+    assert.equal((await verify()).body.access.active,true);assert.equal(ledger.length,1); // restore is idempotent
+    payload=subscription({subscriptionState:'SUBSCRIPTION_STATE_CANCELED'});
+    payload.lineItems[0].autoRenewingPlan.autoRenewEnabled=false;
+    await requireLearningAccess(student); // cancellation retains the paid period
+    payload=subscription({subscriptionState:'SUBSCRIPTION_STATE_EXPIRED'});
+    await assert.rejects(requireLearningAccess(student),e=>(e as any).status===403); // revocation/expiry blocks new full work
+    authUnavailable=true;
+    await assert.rejects(requireLearningAccess(student),e=>(e as any).status===503);authUnavailable=false;
+    authCreatedAt='invalid';
+    await assert.rejects(requireLearningAccess(student),e=>(e as any).status===503);
     assert.equal(platform.release.emailTested,false);assert.equal(platform.release.restoreTested,false);
   }finally{
     await new Promise<void>(resolve=>server.close(()=>resolve()));globalThis.fetch=originalFetch;GoogleAuth.prototype.getAccessToken=originalToken;OAuth2Client.prototype.verifyIdToken=originalVerify;
