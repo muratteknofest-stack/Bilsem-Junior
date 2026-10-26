@@ -6,6 +6,7 @@ import { randomBytes } from 'node:crypto';
 import { defaultPlatformSettings, registrationOpen, releaseBlockers, platformSettingsSchema, configuredExams } from '../src/lib/platform-settings';
 import { exportSafePreferences } from '../src/lib/safe-preferences';
 import { publicPolicy, policyHtml } from '../server/platform-policy';
+import { readPlatformSettings } from '../server/platform-settings';
 // @ts-ignore JavaScript operation helper is also used by the backup workflow.
 import { backupKey, encryptBackup, decryptBackup } from '../scripts/backup-crypto.mjs';
 
@@ -31,6 +32,42 @@ test('registration uses explicit operator enablement while readiness records rem
   assert.equal(platformSettingsSchema.safeParse({ ...complete, serviceRoleKey: 'forged' }).success, false);
   assert.equal(platformSettingsSchema.safeParse({ ...complete, exams: { ...complete.exams, mini: { count: 100, seconds: 900 } } }).success, false);
   complete.exams.mini = { count: 7, seconds: 420 }; assert.equal(configuredExams(complete)[0].count, 7); assert.equal(configuredExams(complete)[0].seconds, 420);
+});
+test('loading enabled registration preserves recorded checks and never invents acceptance evidence', async () => {
+  const keys = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'VERCEL', 'VERCEL_ENV'] as const;
+  const previous = new Map(keys.map(key => [key, process.env[key]]));
+  const originalFetch = globalThis.fetch;
+  const origin = 'https://abcdefghijklmnopqrst.supabase.co';
+  process.env.SUPABASE_URL = origin;
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_fixture';
+  delete process.env.VERCEL;
+  delete process.env.VERCEL_ENV;
+  try {
+    for (const recorded of [
+      { registrationEnabled: true },
+      { registrationEnabled: true, emailTested: true, restoreTested: false, familyPilotTested: false, monitoringTested: true },
+    ]) {
+      globalThis.fetch = async input => {
+        const url = new URL(String(input));
+        assert.equal(url.origin, origin);
+        assert.equal(url.pathname, '/rest/v1/platform_settings');
+        return Response.json({ settings: { release: recorded }, revision: 2, updated_at: null });
+      };
+      const result = await readPlatformSettings();
+      assert.equal(registrationOpen(result.settings), true);
+      assert.deepEqual(result.settings.release, platformSettingsSchema.parse({ release: recorded }).release);
+      assert.equal(result.settings.release.restoreTested, false);
+      assert.equal(result.settings.release.familyPilotTested, false);
+      assert.ok(releaseBlockers(result.settings).includes('Şifreli yedekten geri yükleme kabul testi'));
+      assert.ok(releaseBlockers(result.settings).includes('Veli / öğrenci ve aileler arası yetki kabul testi'));
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const [key, value] of previous) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
 });
 test('policy keeps missing information visible and escapes operator-supplied HTML', () => {
   const settings = defaultPlatformSettings();
