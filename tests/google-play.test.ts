@@ -251,6 +251,7 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     process.env.GOOGLE_PLAY_LICENSE_TEST_ENABLED='false';
     process.env.GOOGLE_PLAY_PAID_ACCESS_FROM='2026-10-27T00:00:00Z';
     process.env.GOOGLE_PLAY_BILLING_ENABLED='true';
+    assert.equal((await publicPlayMembership(async()=>({settings:platform,revision:1,updatedAt:null}))).paidAccessFrom,'2026-10-27T00:00:00.000Z');
     ledger=[];preparedBinding=false;events=[];
     authCreatedAt='2026-10-26T23:59:59.999Z';
     assert.equal((await getAccess()).body.enforced,false);

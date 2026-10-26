@@ -4,11 +4,14 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { PlayMembershipPage, type PlayMembershipPageProps } from '../src/components/PlayMembershipPage';
 import { readPlatformSettings } from './platform-settings';
 import { paidSalesReady } from './google-play-sales';
+import { paidAccessStartsAt } from './paid-access-policy';
 import { playStoreListing } from './play-listing';
 
 export async function publicPlayMembership(readSettings = readPlatformSettings) {
   const { settings } = await readSettings();
+  const startsAt = paidAccessStartsAt();
   return { brand: APP_BRAND.name, storeUrl: playStoreListing(),
+    paidAccessFrom: startsAt === null ? null : new Date(startsAt).toISOString(),
     ready: paidSalesReady(settings) };
 }
 export function playMembershipPageHtml(config: PlayMembershipPageProps) {
