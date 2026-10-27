@@ -21,7 +21,7 @@ try{
  });
  // Keep the isolated browser stub free of tsx/esbuild's module-only __name helper.
  await page.addInitScript(`Object.defineProperty(window,'speechSynthesis',{configurable:true,value:{cancel:function(){window.voiceCancelled=(window.voiceCancelled||0)+1;},getVoices:function(){return[{lang:'tr-TR',localService:true}];},speak:function(){window.voiceStarted=true;}}});window.SpeechSynthesisUtterance=function(text){this.text=text;};const pause=HTMLMediaElement.prototype.pause;HTMLMediaElement.prototype.pause=function(){window.mediaPauses=(window.mediaPauses||0)+1;return pause.apply(this,arguments);};`);
- page.on('pageerror',e=>errors.push(e.message));let scenes=0;
+ page.on('pageerror',e=>errors.push(e.message));page.on('console',message=>{if(message.type()==='error'&&/same key|unique.*key/i.test(message.text()))errors.push(message.text());});let scenes=0;
  for(const [width,height]of [[320,650],[390,844],[768,1024],[1440,1000]]){
   await page.setViewportSize({width,height});await page.goto(origin+'/tests/browser/lessons.html');await page.locator('[data-lesson]').first().waitFor();assert.equal(await page.locator('[data-lesson]').count(),18);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
@@ -29,6 +29,7 @@ try{
   await page.screenshot({path:`${output}/library-${width}.png`,fullPage:true,animations:'disabled'});
   for(const card of LESSON_CATALOG){await page.locator(`[data-lesson="${card.id}"]`).click();await page.getByRole('heading',{name:lessonDocument(card.id)!.steps[0].title,exact:true}).waitFor({timeout:10000}).catch(async()=>{await page.screenshot({path:`${output}/failure-${card.id}-${width}.png`,fullPage:true,animations:'disabled'});throw Error(`Lesson ${card.id}: ${await page.locator('main').innerText()} | ${errors.join('; ')}`);});
    for(let step=0;step<4;step++){
+    assert.equal(await page.locator('.bj-lesson-narration h2').count(),1,'Only the current explanation heading may remain');
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,`${card.id} ${step} ${width}`);
     const vector=page.locator('.bj-lesson-stage>svg');
     if(await vector.count()){
