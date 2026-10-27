@@ -87,9 +87,9 @@
 .bj-profile-world .bj-profile-action[data-tone=mint] { --key: #3eac83; --key-top: #f0fcf5; --key-bottom: #ddf5e9; --key-line: #acd9bf; --key-edge: #83bb9c; --key-ink: #386f55; }
 .bj-profile-world .bj-profile-action[data-tone=gold] { --key: #d7a340; --key-top: #fffbee; --key-bottom: #fff0cd; --key-line: #ead09b; --key-edge: #d0ae68; --key-ink: #846028; }
 .bj-profile-world .bj-profile-action[data-tone=rose] { --key: #c87894; --key-top: #fff9fb; --key-bottom: #fdebf1; --key-line: #e9c3d0; --key-edge: #cc9bad; --key-ink: #995974; }
-.bj-profile-key { position: relative; display: grid; place-items: center; width: 47px; height: 47px; flex: none; border: 2px solid color-mix(in srgb, var(--key), white 22%); border-radius: 16px; background: linear-gradient(145deg, color-mix(in srgb, var(--key), white 35%), var(--key)); color: #fff; box-shadow: 0 5px 0 color-mix(in srgb, var(--key), black 20%), inset 0 3px 0 #fff6; transform: perspective(180px) rotateY(-12deg) rotate(-7deg); }
+.bj-profile-key { position: relative; display: grid; place-items: center; width: 56px; height: 56px; flex: none; border: 2px solid color-mix(in srgb, var(--key), white 22%); border-radius: 18px; background: radial-gradient(ellipse at 20% 8%, color-mix(in srgb, var(--key), white 60%), var(--key) 65%, color-mix(in srgb, var(--key), black 22%)); color: #fff; box-shadow: 0 6px 0 color-mix(in srgb, var(--key), black 26%), inset 0 3px 0 #fff6; transform: perspective(180px) rotateY(-12deg) rotate(-7deg); }
 .bj-profile-key::after { content: ''; position: absolute; width: 17px; height: 5px; left: 8px; top: 5px; border-radius: 4px; background: #fff5; transform: rotate(-8deg); }
-.bj-profile-key svg { width: 25px; height: 25px; stroke-width: 2.3; filter: drop-shadow(0 2px 0 #0002); }
+.bj-profile-key svg { width: 30px; height: 30px; stroke-width: 2.3; filter: drop-shadow(0 2px 0 #0002); }
 .bj-profile-action-copy { min-width: 0; flex: 1; }
 .bj-profile-action-copy strong { display: block; font-size: 14px; line-height: 1.4; font-weight: 800; overflow-wrap: anywhere; }
 .bj-profile-action-copy small { display: block; margin-top: 4px; font-size: 10px; line-height: 1.6; opacity: .85; }
@@ -171,5 +171,5 @@
   .bj-profile-world .zp-student-hero-stats > button { gap: 6px; padding: 8px; }
   .bj-profile-world .bj-profile-action { gap: 10px; padding: 12px; }
   .bj-profile-action-copy strong { font-size: 13px; }
-  .bj-profile-key { width: 42px; height: 44px; }
+  .bj-profile-key { width: 50px; height: 52px; }
 }

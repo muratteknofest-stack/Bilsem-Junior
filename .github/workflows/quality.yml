@@ -54,6 +54,8 @@ jobs:
         run: npm run test:english-browser
 
   student-game-world:
+    env:
+      BILSEM_STUDENT_VISUAL_PREVIEW: '1'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

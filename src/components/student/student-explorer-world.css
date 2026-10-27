@@ -40,9 +40,9 @@
 .bj-player-hero .zp-profile-progress {position:relative}
 .bj-player-hero .zp-profile-progress>div:first-child>span {display:flex;align-items:center;gap:5px}
 .zp-student-pro.bj-student-game .zp-study-navigation {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;padding:7px;background:linear-gradient(#f7fbff,#e5edf8);border:2px solid #d1e0ef;box-shadow:0 5px 0 #c5d6e7}
-.zp-student-pro.bj-student-game .zp-study-navigation button {display:flex;flex-direction:column;justify-content:center;gap:7px;min-height:82px;padding:9px 4px;font-size:10px;line-height:1.25;text-align:center}
-.bj-inventory-art {display:block;flex:none;width:39px;height:36px;line-height:0;transition:transform .18s}
-.bj-inventory-art>.bj-game-art {width:42px;height:39px}
+.zp-student-pro.bj-student-game .zp-study-navigation button {display:flex;flex-direction:column;justify-content:center;gap:7px;min-height:94px;padding:9px 4px;font-size:10px;line-height:1.25;text-align:center}
+.bj-inventory-art {display:block;flex:none;width:52px;height:49px;line-height:0;transition:transform .18s}
+.bj-inventory-art>.bj-game-art {width:54px;height:51px}
 .bj-student-game .bj-inventory-art>.bj-game-art>svg {width:100%;height:auto}
 .bj-student-game .bj-quest-world>.bj-chapter-heading {padding:10px 2px 16px;min-height:0;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible}
 .bj-student-game .bj-quest-world>.bj-chapter-heading h2 {font-size:23px;color:#285773;line-height:1.2}
@@ -92,8 +92,8 @@
 }
 @media(max-width:650px) {
   .zp-student-pro.bj-student-game .zp-study-navigation {grid-template-columns:repeat(4,minmax(0,1fr));margin-block:16px;gap:6px;padding:7px;border-radius:20px}
-  .zp-student-pro.bj-student-game .zp-study-navigation button {min-height:69px;gap:4px;font-size:9px;padding:6px 2px;border-radius:13px}
-  .bj-inventory-art {width:32px;height:30px}.bj-inventory-art>.bj-game-art {width:34px;height:32px}
+  .zp-student-pro.bj-student-game .zp-study-navigation button {min-height:82px;gap:4px;font-size:9px;padding:6px 2px;border-radius:13px}
+  .bj-inventory-art {width:44px;height:42px}.bj-inventory-art>.bj-game-art {width:46px;height:44px}
   .bj-player-hero .bj-player-label {font-size:7px;padding:4px 6px;margin-bottom:6px}
   .bj-student-game .bj-explorer-portal,.bj-native-hub.bj-student-game .bj-explorer-portal {grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);min-height:215px;padding:20px 16px 52px;border-radius:24px}
   .bj-student-game .bj-explorer-eyebrow {font-size:7px;letter-spacing:.45px;gap:3px}

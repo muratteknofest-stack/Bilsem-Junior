@@ -58,7 +58,7 @@ try {
         await portal.locator('.bj-explorer-guide').evaluate(image=>image.decode());
         assert.ok(await portal.locator('.bj-explorer-guide').evaluate(image=>image.naturalWidth>0),'The local guide must load');
         const inventory=await page.locator('.bj-inventory-art>.bj-game-art>svg').evaluateAll(items=>items.map(el=>el.getBoundingClientRect().width));
-        assert.ok(inventory.length>=6&&inventory.every(size=>size>=30),'Inventory toys must retain their full size');
+        assert.ok(inventory.length>=6&&inventory.every(size=>size>=44),'Inventory objects must remain visibly larger on phones');
         if(width<1000){
           const drawer=page.getByRole('button',{name:'Hedeflerim ve serim',exact:false});
           assert.equal(await page.locator('.zp-daily-snapshot').isVisible(),false);
@@ -69,6 +69,8 @@ try {
         assert.equal(await page.getByLabel('İşlem kaydı').textContent(),'student-lessons');
       }
       if(screen==='native-study') {
+        const objects=await page.locator('.bj-game-feature-art>.bj-game-art>svg').evaluateAll(items=>items.map(el=>el.getBoundingClientRect().width));
+        assert.ok(objects.length>0&&objects.every(size=>size>=104),'Study objects must retain the enlarged size');
         await page.getByRole('region',{name:'Junior ile keşif adası',exact:true}).getByRole('button',{name:'Konu Anlatımları',exact:true}).click();
         assert.equal(await page.getByLabel('İşlem kaydı').textContent(),'student-lessons');
         await page.getByRole('button').filter({has:page.getByRole('heading',{name:'Konu Anlatımları',exact:true})}).click();
@@ -79,7 +81,19 @@ try {
       }
       if(screen==='native-rewards') {
         const toys=await page.locator('.bj-reward-object>.bj-game-art>svg').evaluateAll(items=>items.map(el=>el.getBoundingClientRect().width));
-        assert.equal(toys.length,4);assert.ok(toys.every(size=>size>=75),'Reward artwork must retain its full toy size');
+        assert.equal(toys.length,4);assert.ok(toys.every(size=>size>=104),'Reward objects must retain the enlarged size');
+      }
+      if(screen==='native-study'||screen==='native-rewards') {
+        const overlaps=await page.locator('.bj-native-feature-grid>button').evaluateAll(cards=>cards.map(card=>{
+          const art=card.querySelector('.bj-game-art>svg').getBoundingClientRect();
+          const copy=card.querySelector('h2').getBoundingClientRect();
+          return art.bottom>copy.top+1;
+        }));
+        assert.ok(overlaps.every(overlap=>!overlap),'Enlarged objects must not overlap card titles');
+      }
+      if(width===390&&['modes','native-study','native-story-progress'].includes(screen)&&process.env.BILSEM_STUDENT_VISUAL_PREVIEW==='1') {
+        const preview=await page.screenshot({type:'jpeg',quality:65,fullPage:true,animations:'disabled'});
+        console.log(`BILSEM_STUDENT_PREVIEW_${screen}:`+preview.toString('base64'));
       }
       if(screen==='native-story-progress') {
         assert.equal(await page.locator('.bj-story-stages li[data-state=complete]').count(),2);
