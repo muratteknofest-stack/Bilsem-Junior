@@ -4,6 +4,7 @@ import type { StoryProgress } from '../../features/student/story-adventure';
 import { storyCollection, storyBadges } from '../../features/student/story-adventure';
 import { campaignById, campaignLength } from '../../features/student/story-catalog';
 import { StudentAdventureAtmosphere } from '../student/StudentMotion';
+import { StudentGameArt } from '../student/StudentGameArt';
 
 export function StudentPassport({ progress }: { progress: StoryProgress }) {
   const stops=progress.completedCount+Object.values(progress.campaigns||{}).reduce((sum,n)=>sum+n,0);
@@ -23,7 +24,7 @@ export function StudentTreasure({ user, progress, achievements }: { user: UserPr
   return <section className="bj-treasure" aria-label="Ödül koleksiyonum" data-motion-zone>
     <StudentAdventureAtmosphere />
     <div className="bj-treasure-copy"><span>KÜÇÜK ADIMLAR, BÜYÜK BAŞARILAR</span><h2>Emeklerin parlıyor!</h2><p>Görevlerini tamamla, koleksiyonunu büyüt.</p></div>
-    <div className="bj-treasure-cup" aria-hidden="true"><span><Trophy size={45} strokeWidth={2.4}/></span><i>✦</i><i>✧</i></div>
+    <div className="bj-treasure-cup" aria-hidden="true"><StudentGameArt kind="treasure"/><i>✦</i><i>✧</i></div>
     <dl className="bj-treasure-stats"><div><dt><Star size={14} aria-hidden="true"/>Toplam XP</dt><dd>{user.xp || 0}</dd></div><div><dt><Trophy size={14} aria-hidden="true"/>Açılan rozet</dt><dd>{unlocked}<small> / {achievements.length+storyAwards.length}</small></dd></div><div><dt><Flame size={14} aria-hidden="true"/>Keşif durağı</dt><dd>{progress.completedCount+collection.stops}</dd></div></dl>
   </section>;
 }

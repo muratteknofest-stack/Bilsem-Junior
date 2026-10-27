@@ -1,3 +1,4 @@
+import { StudentGameArt } from './student/StudentGameArt';
 import { claimServerReward, refreshServerRewards } from '../services/reward-service';
 import { safeStorage } from '../lib/storage';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -285,7 +286,7 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
     .filter(Boolean) as Achievement[];
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-28 space-y-6 font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="bj-game-page bj-game-achievements w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-28 space-y-6 font-['Plus_Jakarta_Sans',sans-serif]">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-20 right-4 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl  border border-slate-700 flex items-center gap-3 animate-fade-in text-xs sm:text-sm">
@@ -295,7 +296,7 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
       )}
 
       {/* Top Header Navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bj-game-page-heading flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <button
             onClick={onNavigateHome}
@@ -306,6 +307,7 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
           </button>
           <div>
             <div className="flex items-center gap-2">
+              <StudentGameArt kind="medal"/>
               <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 font-['Outfit',sans-serif]">
                 Öğrenci Rozet Sistemi & Başarılar
               </h1>
@@ -331,7 +333,7 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
       </div>
 
       {/* STUDENT PROFILE & FEATURED BADGES SHOWCASE CARD */}
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-7  border border-indigo-900/50">
+      <div className="bj-game-vitrine relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-7  border border-indigo-900/50">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           {/* Avatar & Student Info */}
           <div className="flex items-center gap-4">

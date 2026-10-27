@@ -57,6 +57,7 @@
     "test:play-layout": "node --import tsx scripts/check-play-layout.mjs",
     "test:android-story": "BILSEM_ANDROID_STORY_CHECK=1 node --import tsx scripts/check-turkish-accounts.mjs",
     "test:story-web": "BILSEM_WEB_STORY_CHECK=1 node --import tsx scripts/check-turkish-accounts.mjs",
+    "test:student-game": "node --import tsx scripts/check-student-game.mjs",
     "test:student-motion": "node --import tsx scripts/check-student-motion.mjs",
     "test:startup": "node --import tsx --test tests/request-cost-security.test.ts tests/profile-security.test.ts tests/auth-policy.test.ts tests/deployment-isolation.test.ts tests/project-alignment.test.mjs tests/supabase-transport.test.mjs tests/android-network.test.ts tests/session-startup.test.mjs tests/auth-flows.test.ts tests/auth-error-messages.test.ts tests/security-regression.test.ts tests/admin-access.test.ts tests/student-session.test.ts tests/progress-outbox.test.ts",
     "test:auth-connection": "node --import tsx scripts/check-auth-connection.mjs",

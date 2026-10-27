@@ -1,3 +1,4 @@
+import { StudentGameArt } from './student/StudentGameArt';
 import { VerifiedLearningView } from './VerifiedLearningView';
 import { isQuestionReadyForStudents } from '../features/questions/quality';
 import React, { useState } from 'react';
@@ -308,9 +309,9 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
 
   // LIST OF MISTAKES
   return (
-    <div className="w-full max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-28 md:pb-12 space-y-6">
+    <div className="bj-game-page bj-game-notebook w-full max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-28 md:pb-12 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="bj-game-page-heading flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             onClick={onNavigateHome}
@@ -320,8 +321,7 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
           </button>
           <div>
             <h1 className="text-2xl font-extrabold text-slate-900 font-['Outfit',sans-serif] flex items-center gap-2">
-              <BookOpen className="w-6 h-6 text-amber-600" />
-              <span>Hata Defterim</span>
+              <StudentGameArt kind="book"/><span>Hata Defterim</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-500">
               Yanlış yaptığın sorular buraya kaydedilir. Tekrar çözerek kalıcı öğren!
@@ -464,7 +464,7 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
 
       {/* Empty State */}
       {mistakes.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-xl border border-zinc-200  space-y-3">
+        <div className="bj-game-panel p-12 text-center bg-white rounded-xl border border-zinc-200  space-y-3">
           <Award className="w-12 h-12 text-emerald-500 mx-auto" />
           <h3 className="text-lg font-bold text-slate-800">Henüz Kayıtlı Hatan Yok!</h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
@@ -472,7 +472,7 @@ export const MistakeNotebookView: React.FC<MistakeNotebookViewProps> = ({ onNavi
           </p>
         </div>
       ) : filteredMistakes.length === 0 ? (
-        <div className="p-10 text-center bg-white rounded-xl border border-zinc-200  space-y-3">
+        <div className="bj-game-panel p-10 text-center bg-white rounded-xl border border-zinc-200  space-y-3">
           <Filter className="w-10 h-10 text-slate-400 mx-auto" />
           <h4 className="text-base font-bold text-slate-800">Seçilen Filtrede Soru Bulunamadı</h4>
           <p className="text-xs text-slate-500">

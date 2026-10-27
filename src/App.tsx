@@ -473,7 +473,7 @@ export default function App() {
   if (currentRoute !== 'login' && hasVerifiedAdminAccess({ currentUser: authUser, userProfile, loading: authLoading, isAdminAuthorized })) return <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6"><p role="status">Yönetici alanına yönlendiriliyorsunuz…</p></main>;
 
   return (
-    <div data-entry-route={isAndroidApp && (currentRoute === 'landing' || currentRoute === 'login')} className={`${isAndroidApp ? 'bj-native-shell ' : ''}bilsem-junior-skin min-h-screen bg-slate-50 text-slate-900 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]`}>
+    <div data-entry-route={isAndroidApp && (currentRoute === 'landing' || currentRoute === 'login')} data-student-space={isAuth && currentUser.role==='student' && !isTestRoute && !['landing','login','parent'].includes(currentRoute)} className={`${isAndroidApp ? 'bj-native-shell ' : ''}bilsem-junior-skin min-h-screen bg-slate-50 text-slate-900 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]`}>
       {isAndroidApp && <AndroidConnectionNotice />}
       {/* Workspace navigation; public pages own their header. Tests stay distraction-free. */}
       {!isTestRoute && currentRoute !== 'landing' && currentRoute !== 'login' && (

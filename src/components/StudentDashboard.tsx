@@ -13,6 +13,7 @@ import { useStudentReducedMotion } from '../features/student/experience-preferen
 import { levelProgress } from '../features/student/study-hub-model';
 import { dailyMissions } from '../features/student/gamification-model';
 import { getStudyFavorites, saveStudyFavorites } from '../services/student-preferences-service';
+import { StudentGameBanner } from './student/StudentGameArt';
 import { StudentHeroBanner } from './student/StudentHeroBanner';
 import { StudentModesGrid } from './student/StudentModesGrid';
 import { StudentMissionStrip } from './student/StudentMissionStrip';
@@ -159,7 +160,11 @@ export function StudentDashboard({ storyProgress, storySaveError, onStartStory, 
         <div className="zp-student-workspace" data-study-section={activeTab}>
           <section id="zp-student-section" className="zp-student-section" aria-label={SECTIONS.find(section => section.id === activeTab)!.label}>
             <AnimatePresence mode="wait" initial={false}>
-              <motion.div key={activeTab} initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: reduced ? 0 : .18 }} className="zp-student-section-stack">
+              <motion.div key={activeTab} initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: reduced ? 0 : .18 }} className="zp-student-section-stack" data-game-section={activeTab}>
+                {activeTab==='plan'&&<StudentGameBanner kind="compass" tone="mint" title="Kendi keşif rotanı çiz" description="Küçük bir hedef seç. Her alıştırma seni bir adım ileri taşısın."/>}
+                {activeTab==='skills'&&<StudentGameBanner kind="puzzle" tone="violet" title="Yetenek atölyelerin" description="Bir alan seç, yeni bir yol keşfet. Kendi hızında güçlen."/>}
+                {activeTab==='challenges'&&<StudentGameBanner kind="target" tone="gold" title="Görev panon hazır" description="Bugünün küçük görevlerini seç, ilerlemeni birlikte görelim."/>}
+                {activeTab==='progress'&&<StudentGameBanner kind="map" title="Keşif günlüğün" description="Çalışmalarına göz at, öğrendiklerini ve rozetlerini keşfet."/>}
                 {activeTab === 'adventure' && storyProgress && onStartStory && <StoryAdventure key={`${activeUser.id}-${activeUser.grade}`} user={activeUser} progress={storyProgress} saveError={storySaveError} onStartStory={onStartStory} onSelectStory={onSelectStory} onStudy={()=>switchSection('modes')}/>}
                 {activeTab === 'modes' && <>
                   <StudentMissionStrip user={activeUser} weeklyQuestions={weekly.thisWeekTotal} />
