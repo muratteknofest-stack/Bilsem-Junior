@@ -21,6 +21,7 @@ const studyLinks: Array<{route:string;title:string;detail:string;icon:LucideIcon
   {route:'practice',title:'Karışık Pratik',detail:'Bütün alanlardan alıştırmalar',icon:Target,tone:'green'},
   {route:'student-tests',title:'Zeka Testleri',detail:'Etkileşimli test kütüphanesi',icon:Shapes,tone:'pink'},
   {route:'student-topics',title:'Konu Çalışmaları',detail:'İstediğin konuyu seç',icon:BookOpen,tone:'blue'},
+  {route:'student-lessons',title:'Konu Anlatımları',detail:'Animasyonla keşfet, adım adım öğren',icon:GraduationCap,tone:'green'},
   {route:'mistakes',title:'Hata Defteri',detail:'Cevaplarını yeniden incele',icon:RotateCcw,tone:'orange'},
   {route:'student-plan',title:'Kişisel Planım',detail:'Hedefler, favoriler ve çalışma planı',icon:Compass,tone:'green'},
   {route:'student-skills',title:'Yeteneklerim',detail:'Beceri alanlarına göre çalış',icon:Brain,tone:'purple'},

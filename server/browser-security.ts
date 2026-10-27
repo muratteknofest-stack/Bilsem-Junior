@@ -9,6 +9,7 @@ export const browserDirectives = {
   styleSrcAttr: ["'unsafe-inline'"],
   fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
   imgSrc: ["'self'", 'data:', 'blob:', 'https://images.unsplash.com', 'https://images.pexels.com', 'https://screens.cdn.wordwall.net'],
+  mediaSrc: ["'self'", 'blob:'],
   connectSrc: ["'self'", 'https://vtcsoqohkiagbwatlabk.supabase.co', 'wss://vtcsoqohkiagbwatlabk.supabase.co'],
   frameSrc: ['https://wordwall.net'],
   objectSrc: ["'none'"],

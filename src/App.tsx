@@ -31,6 +31,7 @@ import { StudyReminderInAppAlert } from './components/StudyReminderInAppAlert';
 import { StudyReminderSettingsModal } from './components/StudyReminderSettingsModal';
 
 const AndroidStudentHub = lazy(() => import('./components/android/AndroidStudentHub').then(m => ({default:m.AndroidStudentHub})));
+const LessonLibrary = lazy(() => import('./components/lessons/LessonLibrary').then(m => ({default:m.LessonLibrary})));
 const nativeSections: Record<string, StudentSection> = {'student-tests':'tests','student-plan':'plan','student-skills':'skills','student-challenges':'challenges','student-progress':'progress','student-topics':'modes'};
 const StudentDashboard = lazy(() => import('./components/StudentDashboard').then((m) => ({ default: m.StudentDashboard })));
 const AndroidWelcome = lazy(() => import('./components/android/AndroidWelcome').then(m => ({ default: m.AndroidWelcome })));
@@ -356,7 +357,7 @@ export default function App() {
         setCurrentRoute('demo-limit');
         return;
       }
-      if (['adaptive', 'exams', 'mistakes', 'achievements', 'leaderboard', 'glossary', 'parent','student-tests','student-topics','student-plan','student-skills','student-challenges','student-progress'].includes(targetRoute)) {
+      if (['adaptive', 'exams', 'mistakes', 'achievements', 'leaderboard', 'glossary', 'parent','student-tests','student-topics','student-lessons','student-plan','student-skills','student-challenges','student-progress'].includes(targetRoute)) {
         setCurrentRoute('demo-limit');
         return;
       }
@@ -512,6 +513,7 @@ export default function App() {
             )}
 
             {isAndroidApp && currentUser.role==='student' && ['dashboard','student-study','student-rewards','student-profile'].includes(currentRoute) && <AndroidStudentHub key={`${currentUser.id}-${currentUser.grade}-${currentRoute}`} route={currentRoute} user={currentUser} progress={storyProgress} saveError={storySaveError} onNavigate={navigateTo} onStartStory={stage=>navigateTo('adaptive','mixed',stage)} onSelectStory={selectStory} onUserUpdate={setCurrentUser} onReminder={()=>setShowGlobalReminderModal(true)} onLogout={()=>void handleLogout()} />}
+            {currentRoute==='student-lessons'&&currentUser.role==='student'&&!isDemoUser(currentUser.id)&&<LessonLibrary key={currentUser.id} studentId={currentUser.id} grade={currentUser.grade||1} onBack={()=>navigateTo(isAndroidApp?'student-study':'dashboard')} onMembership={()=>navigateTo('parent')} onPractice={topic=>{setSelectedPracticeTopic(topic);setSelectedPracticeCategory(topicCategory(topic,'mixed'));navigateTo('practice',topic);}}/>}
             {((currentRoute === 'dashboard' && !isAndroidApp) || (isAndroidApp && !!nativeSections[currentRoute])) && (
               <div className={isAndroidApp?'bj-native-detail':undefined}>
               {isAndroidApp&&<button type="button" className="bj-native-back" onClick={()=>navigateTo(['student-challenges','student-progress'].includes(currentRoute)?'student-rewards':'student-study')}>← Geri dön</button>}

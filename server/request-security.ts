@@ -36,11 +36,14 @@ export function requestSecurity(configuredOrigins: string): RequestHandler {
     if (origin && parsed) {
       res.setHeader('Access-Control-Allow-Origin', parsed);
       res.vary('Origin');
-      res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+      res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Lesson-Metadata');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, OPTIONS');
     }
     if (req.method === 'OPTIONS') return res.sendStatus(204);
-    if (!['GET', 'HEAD'].includes(req.method) && !req.is('application/json')) {
+    const lessonRecording = req.method === 'PUT'
+      && /^\/admin\/lesson-audio\/[a-z0-9_]{1,60}\/[0-3]$/.test(req.path)
+      && req.is('application/octet-stream');
+    if (!['GET', 'HEAD'].includes(req.method) && !req.is('application/json') && !lessonRecording) {
       return res.status(415).json({ error: 'İstek JSON biçiminde gönderilmelidir.' });
     }
     return next();

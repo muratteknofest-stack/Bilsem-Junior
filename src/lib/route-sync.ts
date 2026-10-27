@@ -7,6 +7,7 @@ export const ROUTE_TO_PATH: Record<string, string> = {
   adaptive: "/adaptive",
   exams: "/exam",
   wordwall: "/wordwall",
+  'student-lessons': '/konu-anlatimlari',
 };
 
 export const PATH_TO_ROUTE: Record<string, string> = {
@@ -19,6 +20,7 @@ export const PATH_TO_ROUTE: Record<string, string> = {
   "/adaptive": "adaptive",
   "/exam": "exams",
   "/wordwall": "wordwall",
+  '/konu-anlatimlari': 'student-lessons',
 };
 
 export function normalizeAppPathname(pathname: string): string {

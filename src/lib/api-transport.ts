@@ -38,6 +38,7 @@ export function createApiTransport(options: TransportOptions) {
     for (const name of ['origin', 'referer', 'cookie', 'host']) headers.delete(name);
     for (const name of [...headers.keys()]) if (name.startsWith('sec-fetch-')) headers.delete(name);
     const method = request.method;
+    const lessonAudio = method === 'GET' && /^\/api\/student\/lessons\/[a-z0-9_]+\/audio\/[0-3]$/.test(new URL(url).pathname);
     let data: unknown;
     if (!['GET', 'HEAD'].includes(method) && request.body !== null) {
       const text = await request.text();
@@ -61,7 +62,7 @@ export function createApiTransport(options: TransportOptions) {
         if (settled) return;
         return options.nativeRequest!({
           url, method, headers: Object.fromEntries(headers), data,
-          connectTimeout: 10000, readTimeout: 45000, disableRedirects: true, responseType: 'text',
+          connectTimeout: 10000, readTimeout: 45000, disableRedirects: true, responseType: lessonAudio ? 'arraybuffer' : 'text',
         });
       }).then(result => {
         if (settled || !result) return;
@@ -69,8 +70,16 @@ export function createApiTransport(options: TransportOptions) {
           if (result.url && new URL(result.url).origin !== new URL(url).origin) throw new Error('Sunucu yönlendirmesi doğrulanamadı.');
           const responseHeaders = new Headers(result.headers);
           responseHeaders.delete('content-encoding'); responseHeaders.delete('content-length');
-          const body = ['HEAD'].includes(method) || [204, 205, 304].includes(result.status) ? null
+          let body: BodyInit | null = ['HEAD'].includes(method) || [204, 205, 304].includes(result.status) ? null
             : typeof result.data === 'string' ? result.data : JSON.stringify(result.data ?? null);
+          // Capacitor Android encodes ARRAY_BUFFER/BLOB response bytes as Base64.
+          // Decode only the bounded, authenticated narration endpoint; JSON stays JSON.
+          if (lessonAudio && result.status === 200 && responseHeaders.get('content-type')?.startsWith('audio/')) {
+            if (typeof result.data !== 'string' || result.data.length > 4_500_000) throw new Error('Ses yanıtı doğrulanamadı.');
+            const binary = atob(result.data.replace(/\s/g, ''));
+            if (binary.length > 3 * 1024 * 1024) throw new Error('Ses yanıtı çok büyük.');
+            body = Uint8Array.from(binary, value => value.charCodeAt(0));
+          }
           const response = new Response(body, { status: result.status, headers: responseHeaders });
           finish(() => resolve(response));
         } catch (error) { finish(() => reject(error)); }

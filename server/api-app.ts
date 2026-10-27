@@ -3,6 +3,7 @@ import express, { type ErrorRequestHandler } from 'express';
 import { randomUUID } from 'node:crypto';
 import challengeRoutes from './routes/challenge-routes';
 import learningRoutes from './routes/learning-routes';
+import lessonRoutes from './routes/lesson-routes';
 import supportRoutes from './routes/support-routes';
 import helmet from 'helmet';
 import parentRoutes from './routes/parent-routes';
@@ -63,6 +64,7 @@ export function createApiApp(options: { limits?: Partial<RequestLimitPolicy> } =
   app.use('/api', supportRoutes);
   app.use('/api', challengeRoutes);
   app.use('/api', learningRoutes);
+  app.use('/api', lessonRoutes);
   app.get('/api/health', createHealthHandler());
   app.use('/api', (_req, res) => res.status(404).json({ error: 'API uç noktası bulunamadı.' }));
   const apiErrorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
