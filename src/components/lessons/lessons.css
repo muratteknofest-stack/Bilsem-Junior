@@ -6,3 +6,109 @@
 /* Every teaching step enters as a scene; motion remains opt-out and never gates reading. */
 .bj-lesson-stage>svg{animation:bj-lesson-scene .65s ease both}.bj-lesson-travel{animation:bj-lesson-path 1.4s ease both}.bj-lesson-slide{animation:bj-lesson-join 1.2s ease both}@keyframes bj-lesson-scene{from{opacity:0;translate:0 9px}to{opacity:1;translate:0 0}}@keyframes bj-lesson-path{from{transform:translate(var(--path-from-x),var(--path-from-y))}to{transform:translate(var(--path-x),var(--path-y))}}@keyframes bj-lesson-join{from{translate:var(--join-from,0px) 0}to{translate:0 0}}
 @media(prefers-reduced-motion:reduce){.bj-lesson-stage>svg,.bj-lesson-travel,.bj-lesson-slide{animation:none!important}}
+
+/* Crisp vector materials and a bright, dimensional teaching studio. */
+.bj-lessons{--step-ink:#235ab1;--step-soft:#edf5ff;background:linear-gradient(180deg,#eef7ff 0,#f8fafc 540px);--lesson-ink:#193f59;--lesson-muted:#526d80}
+.bj-lessons[data-lesson-step="1"]{--step-ink:#7345b4;--step-soft:#f4efff}
+.bj-lessons[data-lesson-step="2"]{--step-ink:#16765f;--step-soft:#eaf9f1}
+.bj-lessons[data-lesson-step="3"]{--step-ink:#8c571b;--step-soft:#fff6e5}
+.bj-lessons-hero{background:radial-gradient(ellipse at 85% 15%,#fff9 0,transparent 52%),linear-gradient(120deg,#ddf2fb,#e5f5ea 58%,#fff1cf);border-color:#cce4e8;box-shadow:0 7px 0 #d9e8e9,0 22px 45px #2c689510}
+.bj-lessons-hero h1{color:#173f5d}.bj-lessons-hero h1 em{color:#187d76}
+.bj-lesson-card{position:relative;box-shadow:0 5px 0 #d8e4e9,0 12px 28px #254a6410;border-bottom-width:1px;overflow:hidden}
+.bj-lesson-card:before{content:'';position:absolute;inset:0 0 auto;height:5px;background:var(--lesson-accent);opacity:.72}
+.bj-lesson-card:hover{box-shadow:0 8px 0 #c5dce4,0 19px 30px #254a6417;transform:translateY(-4px)}
+.bj-lesson-card-symbol{position:relative;background:linear-gradient(145deg,#fff,var(--lesson-soft));border:1px solid #fff;box-shadow:inset 0 2px 0 #fff,0 5px 0 var(--lesson-soft),0 7px 12px #254a6412;text-shadow:0 2px 0 #fff;transform:rotate(-5deg)}
+.bj-lesson-card-badge{border:1px solid #efdfae;background:#fff4cf;color:#73551a}
+.bj-lesson-player{border-color:#d1e2ed;box-shadow:0 7px 0 #d9e6ed,0 22px 45px #1e4b7010;border-radius:27px}
+.bj-lesson-player-heading>span{box-shadow:0 3px 0 #d9e6ed;border-color:#cadce8;color:#235ab1}
+.bj-lesson-stage-bar{padding:14px 22px;border-bottom:1px solid #e0ecf3}
+.bj-lesson-stage-bar>span{color:#42647c}.bj-lesson-status-dot{background:#20b49b;box-shadow:0 0 0 4px #e1f7f0}
+.bj-lesson-stage-bar button{color:#365d77;background:#edf5fa;border:1px solid #d8e6ef;min-height:38px}
+.bj-lesson-stage{isolation:isolate;min-height:350px;padding:24px;background-color:#eaf5ff;background-image:radial-gradient(ellipse at 25% 5%,#fff 0,transparent 54%),radial-gradient(ellipse at 86% 50%,#e9edff 0,transparent 62%),linear-gradient(180deg,#ecf7ff,#dff3f2);border-bottom:1px solid #d1e5ef}
+.bj-lesson-stage:after{content:'';position:absolute;z-index:0;left:15%;right:15%;height:18px;bottom:12px;background:radial-gradient(ellipse,#668ca626,transparent 70%);pointer-events:none}
+.bj-lesson-stage>svg{position:relative;z-index:1;shape-rendering:geometricPrecision}
+.bj-lesson-solid{filter:drop-shadow(0 2px 2px #183c5916)}.bj-lesson-panel{filter:drop-shadow(0 4px 0 #183c591a)}
+.bj-lesson-isometric{filter:drop-shadow(0 2px 0 #183c5920)}
+.bj-lesson-pop{transform-box:fill-box;transform-origin:center;animation:bj-lesson-pop .65s cubic-bezier(.22,1,.36,1) backwards}
+.bj-lesson-turn{animation-timing-function:cubic-bezier(.22,1,.36,1)}
+.bj-lesson-travel{animation-timing-function:cubic-bezier(.22,1,.36,1)}.bj-lesson-slide{animation-timing-function:cubic-bezier(.22,1,.36,1)}
+.bj-lesson-outline>button{--stop-ink:#235ab1;--stop-soft:#edf5ff;border-color:#d6e4ec;box-shadow:0 3px 0 #e2ebef}
+.bj-lesson-outline>button:nth-child(2){--stop-ink:#7345b4;--stop-soft:#f4efff}
+.bj-lesson-outline>button:nth-child(3){--stop-ink:#16765f;--stop-soft:#eaf9f1}
+.bj-lesson-outline>button:nth-child(4){--stop-ink:#8c571b;--stop-soft:#fff6e5}
+.bj-lesson-outline button[aria-current=step]{border-color:var(--stop-ink);background:var(--stop-soft);color:var(--stop-ink);box-shadow:0 4px 0 #cbdfe7}
+.bj-lesson-outline button[aria-current=step]>span{background:var(--stop-ink);box-shadow:inset 0 2px 0 #ffffff40,0 2px 0 #183c5926}
+.bj-lesson-outline>.bj-lesson-tip{display:none}
+.bj-lesson-narration{padding:22px 28px 25px;background:linear-gradient(180deg,#fff,var(--step-soft));border-top:2px solid #fff}
+.bj-lesson-voice-line{margin-bottom:22px;align-items:center}
+.bj-lesson-voice-line>span{flex:1;min-width:0;overflow-wrap:anywhere;color:#526e81;font-size:10px;line-height:1.65}
+.bj-lesson-voice-line>span>svg{flex-shrink:0}
+.bj-lesson-voice-line button{flex-shrink:0;min-height:44px;border:1px solid #c8dceb;background:linear-gradient(145deg,#fff,#e7f4ff);color:#215fa7;box-shadow:0 3px 0 #d0e3ee}
+.bj-lesson-coach-heading{display:grid;grid-template-columns:60px minmax(0,1fr);align-items:center;gap:14px;margin-bottom:16px;animation:bj-lesson-story .4s ease both}
+.bj-lesson-coach-avatar{display:grid;place-items:center;position:relative;width:60px;height:60px;border:2px solid #fff;border-radius:20px;background:linear-gradient(145deg,#fff2c9,#ffe4b6);box-shadow:0 4px 0 #ead6b0}
+.bj-lesson-coach-avatar img{width:56px;height:56px;object-fit:contain;transform:rotate(-7deg)}
+.bj-lesson-coach-kicker{display:block;color:var(--step-ink);font-size:9px;font-weight:850;letter-spacing:1px;line-height:1.7}
+.bj-lesson-coach-heading h2{margin:4px 0 0;font-size:25px;line-height:1.35;letter-spacing:-.6px;color:#193f59}
+.bj-lesson-narration>.bj-lesson-story-copy{padding:18px 20px;border:1px solid #dce7f0;border-left:4px solid var(--step-ink);border-radius:17px;background:#ffffffdf;color:#365a72;font-size:16px;line-height:1.85;box-shadow:0 4px 0 #173c5905;animation:bj-lesson-story .45s ease both}
+.bj-lesson-hint{margin-top:14px;border:1px dashed #b9cedd;border-radius:13px;background:#ffffffa6;color:var(--step-ink)}
+.bj-lesson-hint summary{display:flex;align-items:center;gap:9px;list-style:none;cursor:pointer;min-height:46px;padding:10px 13px;font-size:12px;font-weight:750}
+.bj-lesson-hint summary::-webkit-details-marker{display:none}.bj-lesson-hint summary>span{flex:1;min-width:0}.bj-lesson-hint summary>svg{flex-shrink:0}
+.bj-lesson-hint[open] summary>svg:last-child{transform:rotate(90deg)}
+.bj-lesson-hint>p{margin:0;padding:0 15px 14px;color:#45647b;font-size:13px;line-height:1.85}
+.bj-lesson-player-controls{background:#fff;border-color:#dce7f0;padding:19px 24px}
+.bj-lesson-primary{background:linear-gradient(145deg,#308de7,#1967b8)!important;box-shadow:0 4px 0 #155293,inset 0 1px 0 #ffffff40;border:1px solid #206cba!important}
+.bj-lesson-primary:hover{background:linear-gradient(145deg,#287fd2,#165ba5)!important}
+.bj-lesson-player-controls>button:not(.bj-lesson-primary){border:1px solid #dbe6ed;box-shadow:0 3px 0 #e2eaf0;background:#f5f9fc;color:#526e81}
+.bj-lesson-progress{height:7px;background:#e7eff5}.bj-lesson-progress>span{background:linear-gradient(90deg,#3989e5,#23b298)}
+.bj-lesson-try{border-color:#d4e3ed;box-shadow:0 5px 0 #e0e9ef;background:linear-gradient(150deg,#fff,#f3f9ff)}
+.bj-lesson-try>.bj-lesson-eyebrow{color:#2c69a9}.bj-lesson-try h2{color:#193f59}
+.bj-lesson-try label{background:#fff;border-color:#d4e1eb;box-shadow:0 3px 0 #e5edf3;transition:background .15s,border-color .15s}
+.bj-lesson-try label[data-selected=true]{background:#eaf5ff;border-color:#438ed2;box-shadow:0 3px 0 #c9e2f6}
+.bj-lesson-try input{accent-color:#2876c4}.bj-lesson-try label>span{display:grid;place-items:center;width:24px;height:24px;flex-shrink:0;border-radius:8px;background:#eef4fa;color:#426e94}
+.bj-lesson-feedback{box-shadow:0 4px 0 #f1e4bd}.bj-lesson-feedback[data-correct=true]{background:linear-gradient(145deg,#e3faed,#f0fff5);box-shadow:0 4px 0 #cbe6d4}
+.bj-lesson-feedback[data-correct=true] .bj-lesson-primary{background:linear-gradient(145deg,#20a17b,#14775d)!important;border-color:#14775d!important;box-shadow:0 4px 0 #0d5947}
+.bj-cube-stage{min-height:350px;perspective:850px}
+.bj-cube-pedestal{position:absolute;width:170px;height:34px;bottom:63px;left:calc(50% - 85px);border-radius:50%;background:radial-gradient(ellipse,#4c789656 0,#a4c6d935 45%,transparent 72%)}
+.bj-teaching-cube{--cube-size:112px;width:var(--cube-size);height:var(--cube-size);z-index:1;animation:bj-cube-rotate 12s linear infinite;transform:rotateX(-23deg) rotateY(30deg)}
+.bj-cube-face{width:var(--cube-size);height:var(--cube-size);border:2px solid #ffffffba;border-radius:12px;overflow:hidden;background:linear-gradient(140deg,#a5dcff,#3b92ff 52%,#1e5cc9);box-shadow:inset 0 3px 1px #ffffff75,inset 0 -7px 10px #123c6128;font-size:48px;text-shadow:0 3px 0 #183c5940}
+.bj-cube-face>span{position:relative;z-index:1}.bj-cube-face>i{position:absolute;top:-26%;left:-18%;width:160%;height:66%;background:linear-gradient(180deg,#ffffff65,#ffffff08);transform:rotate(-27deg);border-radius:50%;pointer-events:none}
+.bj-cube-face-0{transform:translateZ(calc(var(--cube-size)/2))}
+.bj-cube-face-1{transform:rotateY(90deg) translateZ(calc(var(--cube-size)/2));background:linear-gradient(140deg,#9cf0d7,#1eb893 52%,#0d786c)}
+.bj-cube-face-2{transform:rotateY(180deg) translateZ(calc(var(--cube-size)/2));background:linear-gradient(140deg,#dac0ff,#9562e0 52%,#57349f)}
+.bj-cube-face-3{transform:rotateY(-90deg) translateZ(calc(var(--cube-size)/2));background:linear-gradient(140deg,#ffc0dc,#ef71ac 52%,#b63d7f)}
+.bj-cube-face-4{transform:rotateX(90deg) translateZ(calc(var(--cube-size)/2));background:linear-gradient(140deg,#fff0b4,#ffc344 52%,#d58b19);color:#7d4c13;text-shadow:0 2px 0 #ffffff75}
+.bj-cube-face-5{transform:rotateX(-90deg) translateZ(calc(var(--cube-size)/2));background:linear-gradient(140deg,#b6f1ff,#47b7e8 52%,#2276b0)}
+.bj-cube-stage figcaption{z-index:2;display:flex;gap:8px;justify-content:center;left:10px;right:10px;bottom:20px}
+.bj-cube-stage figcaption>span{padding:8px 11px;border:1px solid #cee0ed;border-radius:10px;background:#ffffffde;color:#345d79;font-size:12px;box-shadow:0 3px 0 #cadfe9}
+@keyframes bj-lesson-story{from{opacity:.4;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:500px){
+ .bj-lesson-player{border-radius:23px}.bj-lesson-stage{min-height:255px;padding:18px 9px}.bj-lesson-stage-bar{padding:11px 12px}
+ .bj-lesson-stage-bar button{font-size:8px;min-height:36px}.bj-lesson-stage-bar>span{font-size:8px}
+ .bj-lesson-narration{padding:17px 16px 21px}.bj-lesson-voice-line{margin-bottom:18px}
+ .bj-lesson-voice-line>span{font-size:9px}.bj-lesson-voice-line button{font-size:10px}
+ .bj-lesson-coach-heading{grid-template-columns:49px minmax(0,1fr);gap:11px;margin-bottom:14px}
+ .bj-lesson-coach-avatar{width:49px;height:49px;border-radius:16px}.bj-lesson-coach-avatar img{width:47px;height:47px}
+ .bj-lesson-coach-kicker{font-size:8px;letter-spacing:.6px}.bj-lesson-coach-heading h2{font-size:21px;line-height:1.35}
+ .bj-lesson-narration>.bj-lesson-story-copy{padding:14px 13px;font-size:14px;line-height:1.85;border-radius:14px}
+ .bj-lesson-hint summary{font-size:11px;padding:10px;gap:7px}.bj-lesson-hint>p{font-size:12px;padding:0 12px 13px}
+ .bj-lesson-player-controls{padding:15px 12px;gap:9px}.bj-lesson-try{padding:22px 17px}
+ .bj-cube-stage{min-height:295px}.bj-teaching-cube{--cube-size:100px}.bj-cube-pedestal{bottom:53px}
+ .bj-cube-stage figcaption{gap:6px;bottom:16px}.bj-cube-stage figcaption>span{font-size:10px;padding:7px 9px}
+}
+.dark .bj-lessons{background:linear-gradient(180deg,#122735,#14282d 650px);--step-soft:#203a4b}
+.dark .bj-lessons[data-lesson-step="1"]{--step-soft:#322b49;--step-ink:#d6bcff}
+.dark .bj-lessons[data-lesson-step="2"]{--step-soft:#183f37;--step-ink:#9de8ca}
+.dark .bj-lessons[data-lesson-step="3"]{--step-soft:#443723;--step-ink:#ffe0a6}
+.dark .bj-lessons[data-lesson-step="0"]{--step-ink:#add8ff}
+.dark .bj-lessons-hero{background:linear-gradient(130deg,#183e54,#204b40);border-color:#345a66;box-shadow:0 6px 0 #0e2632}
+.dark .bj-lessons-hero h1{color:#e4f3ff}.dark .bj-lessons-hero h1 em{color:#91e1c3}
+.dark .bj-lesson-card{box-shadow:0 5px 0 #102b36}.dark .bj-lesson-player{box-shadow:0 7px 0 #102b36;border-color:#355563}
+.dark .bj-lesson-narration{background:linear-gradient(180deg,#213b48,var(--step-soft));border-top-color:#355563}
+.dark .bj-lesson-coach-heading h2{color:#e4f3ff}.dark .bj-lesson-narration>.bj-lesson-story-copy{background:#172e3a;border-color:#3a5668;border-left-color:var(--step-ink);color:#d0e4ef}
+.dark .bj-lesson-voice-line>span{color:#bdd4e2}.dark .bj-lesson-hint{background:#182f3b;border-color:#526a80}.dark .bj-lesson-hint>p{color:#c4dce9}
+.dark .bj-lesson-player-controls{background:#213b48;border-color:#3b5667}
+.dark .bj-lesson-try{background:linear-gradient(145deg,#213b48,#19313e);border-color:#3a5668;box-shadow:0 5px 0 #102b36}
+.dark .bj-lesson-try h2{color:#e4f3ff}.dark .bj-lesson-try>.bj-lesson-eyebrow{color:#abd7ff}.dark .bj-lesson-try label{background:#294555;color:#e1eff7;border-color:#456172;box-shadow:0 3px 0 #102b36}
+.dark .bj-lesson-try label[data-selected=true]{background:#2a5270;border-color:#91c8f9}
+@media(prefers-reduced-motion:reduce){.bj-lessons *,.bj-lessons *:before,.bj-lessons *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+.bj-lessons[data-reduced-motion=true] *,.bj-lessons[data-reduced-motion=true] *:before,.bj-lessons[data-reduced-motion=true] *:after{animation:none!important;transition:none!important}
