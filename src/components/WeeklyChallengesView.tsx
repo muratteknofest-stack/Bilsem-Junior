@@ -357,7 +357,7 @@ export const WeeklyChallengesView: React.FC<WeeklyChallengesViewProps> = ({
 
       {/* Filter Tabs & Stats Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-1.5 p-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-2xl w-fit border border-zinc-200/80 dark:border-zinc-700/80">
+        <div className="bj-game-weekly-filters flex flex-wrap items-center gap-1.5 p-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-2xl max-w-full border border-zinc-200/80 dark:border-zinc-700/80">
           <button
             onClick={() => {
               sound.playClick();

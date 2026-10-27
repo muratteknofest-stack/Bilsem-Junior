@@ -13,6 +13,7 @@ import { dataService } from '../../src/services/data-service';
 import { auth, supabase } from '../../src/lib/supabase';
 import type { UserProfile } from '../../src/types';
 import '../../src/index.css';
+import '../../src/components/wordwall.css';
 
 const student: UserProfile = { id:'22222222-2222-4222-8222-222222222222', role:'student', name:'Deniz', grade:2, avatar:'🦊', xp:300, level:2, streak:3,
   lastActiveDate:new Date().toISOString(), dailyGoalMinutes:15, todayMinutesSpent:5, dailyGoalQuestions:10, todayQuestionsSolved:7, todaySessionsCompleted:1,

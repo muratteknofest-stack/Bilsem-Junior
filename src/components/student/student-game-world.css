@@ -3,7 +3,7 @@
 .bj-game-art>svg{display:block;width:100%;height:auto;overflow:visible}
 .bj-game-landscape{display:block;width:100%;height:100%;overflow:hidden;line-height:0}
 .bj-game-landscape>svg{display:block;width:100%;height:100%}
-.bilsem-junior-skin[data-student-space=true]{background:#eff7ff;color:#193e5d}
+.bilsem-junior-skin[data-student-space=true]{background:#eff7ff!important;color:#193e5d}
 .bilsem-junior-skin[data-student-space=true] .bj-native-header{background:#fff;border-color:#d7e5f2;color:#244b6c;box-shadow:0 3px 0 #dce9f4}
 .bilsem-junior-skin[data-student-space=true] .bj-native-bottom{background:#fffffff5;border-color:#cbdff0;box-shadow:0 -6px 20px #38668a0c}
 .bilsem-junior-skin[data-student-space=true] .bj-native-bottom button[aria-current=page]{background:var(--nav-bg);color:var(--nav);border-color:var(--nav-edge);box-shadow:0 3px 0 var(--nav-edge)}
@@ -66,12 +66,15 @@
 .bj-student-game .zp-daily-snapshot,.bj-student-game .zp-week-overview,.bj-student-game .zp-daily-streak-card{border-color:#d4e2f0;border-radius:23px;box-shadow:0 4px 0 #dce7f1}
 .bj-student-game .zp-daily-start{background:linear-gradient(#43b895,#259a7b);box-shadow:0 4px 0 #1c765e;border-radius:12px}
 .bj-student-game .zp-daily-ring{box-shadow:inset 0 0 0 5px #fff,0 3px 0 #cee1dc}
+.bj-game-progress-toggle{display:none}
+.bj-game-progress-panels{display:grid;gap:18px}
 .bj-student-game .bj-game-skill-card{position:relative;overflow:hidden;border-width:2px;background:linear-gradient(150deg,#fff,#f7f4ff)}
 .bj-game-skill-card:before{content:'';position:absolute;left:0;right:0;top:0;height:5px;background:linear-gradient(90deg,#b395e5,#72ccec)}
 .bj-game-skills .bj-game-skill-art{width:76px;height:76px;border:0;background:transparent;box-shadow:none}
 .bj-game-skill-art>.bj-game-art{width:82px}
 .bj-game-skills .bj-game-skill-card>button{min-height:46px;background:#eef0ff;color:#67509a;border:1px solid #d8ceef;border-radius:13px;box-shadow:0 3px 0 #d1c9e5}
 .bj-game-skills input[type=search]{border:2px solid #d5e3f0;border-radius:16px;background:#fff;box-shadow:0 3px 0 #e2ebf3}
+.bj-student-game .bj-game-weekly-filters button{min-height:44px;white-space:normal}
 
 /* Native game shelf: six destinations fit in a concise two-column menu. */
 .bj-native-hub.bj-student-game .bj-native-page-title{margin-bottom:16px}.bj-native-hub.bj-student-game .bj-native-page-title>svg{padding:10px;border:2px solid #fff;background:linear-gradient(#c7e9ff,#8fc8f2);border-radius:18px;box-shadow:0 4px 0 #91b9da;color:#28689d}
@@ -169,6 +172,11 @@
   .bj-native-hub.bj-student-game .bj-native-feature-grid>button{min-height:175px;padding:8px 10px 14px}
   .bj-native-hub.bj-student-game .bj-treasure-cup{width:105px;height:106px}.bj-native-hub.bj-student-game .bj-treasure-cup>.bj-game-art{width:108px}
 }
+@media(max-width:999px){
+  .bj-student-game .bj-game-progress-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:78px;text-align:left;padding:15px 18px;border:2px solid #d6e5f3;border-radius:21px;background:linear-gradient(120deg,#eaf6ff,#f1efff);color:#315d83;box-shadow:0 4px 0 #d4e2ef}
+  .bj-game-progress-toggle strong{display:block;font-size:14px;font-weight:850}.bj-game-progress-toggle small{display:block;font-size:11px;color:#617d97;margin-top:5px}.bj-game-progress-toggle>span:last-child{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:11px;background:#fff;color:#6f61a9;font-size:24px;font-weight:700}
+  .bj-student-game .bj-game-progress-panels{display:none}.bj-student-game .zp-student-aside[data-expanded=true] .bj-game-progress-panels{display:grid;margin-top:16px}
+}
 @media(max-width:359px){
   .bj-native-hub.bj-student-game .bj-native-feature-grid{gap:13px 10px}
   .bj-native-hub.bj-student-game .bj-native-feature-grid>button{min-height:177px;padding-inline:9px}
@@ -177,7 +185,7 @@
   .bj-game-page-heading .bj-game-art{width:46px}.bj-game-achievements .bj-game-page-heading h1{font-size:18px}
 }
 @media(min-width:1050px){.bj-native-hub.bj-student-game .bj-native-feature-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.dark .bilsem-junior-skin[data-student-space=true]{background:#142b40;color:#dbe9f6}
+.dark .bilsem-junior-skin[data-student-space=true]{background:#142b40!important;color:#dbe9f6}
 .dark .zp-student-pro.bj-student-game,.dark .bj-native-hub.bj-student-game,.dark .bj-game-page{--game-ink:#deedf9;--game-muted:#b3c9df;--game-paper:#213c53;--game-edge:#41617d;background:linear-gradient(#172e46,#173044);color:#deedf9}
 .dark .zp-student-pro.bj-student-game .zp-pro-hero,.dark .bj-native-hub.bj-student-game.bj-game-profile .zp-pro-hero{background:linear-gradient(130deg,#23465f,#353955);border-color:#53728a;box-shadow:0 5px 0 #0b2235}
 .dark .zp-student-pro.bj-student-game .zp-study-navigation,.dark .bj-native-hub.bj-student-game .bj-study-groups,.dark .bj-journey .bj-journey-tabs{background:#203f58;border-color:#486580}
@@ -194,6 +202,7 @@
 .dark .bj-native-hub.bj-student-game.bj-game-profile .bj-profile-settings{background:#1b354b;border-color:#42637f;box-shadow:0 5px 0 #10283c}
 .dark .bj-student-game :is(#daily-goal-progress-card,#today-personalized-study-plan-card,#progress-panel,#badges-section) :is(.text-slate-900,.text-slate-800,.text-zinc-900){color:#e0edf8}
 .dark .bj-student-game :is(#daily-goal-progress-card,#today-personalized-study-plan-card,#progress-panel,#badges-section) :is(.text-slate-600,.text-slate-500,.text-zinc-500){color:#b9cfe0}
+.dark .bj-student-game .bj-game-progress-toggle{background:linear-gradient(120deg,#254760,#373b59);border-color:#4c6e8b;box-shadow:0 4px 0 #10283c;color:#dfedfc}.dark .bj-game-progress-toggle small{color:#b5cde4}
 @media(prefers-reduced-motion:reduce){.bj-student-game *,.bj-student-game *:before,.bj-student-game *:after,.bj-game-page *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 .bj-student-game[data-reduced-motion=true] *,.bj-student-game[data-reduced-motion=true] *:before,.bj-student-game[data-reduced-motion=true] *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 

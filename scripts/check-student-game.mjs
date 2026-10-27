@@ -33,6 +33,12 @@ try {
       assert.deepEqual(broken,[],`${screen} has unresolved material definitions`);
       if(width===390||width===1440&&['modes','skills','native-story'].includes(screen))await page.screenshot({path:`${output}/${screen}-${width}.png`,fullPage:true,animations:'disabled'});
       if(screen==='modes') {
+        if(width<1000){
+          const drawer=page.getByRole('button',{name:'Hedeflerim ve serim',exact:false});
+          assert.equal(await page.locator('.zp-daily-snapshot').isVisible(),false);
+          await drawer.click();assert.equal(await page.locator('.zp-daily-snapshot').isVisible(),true);
+          await drawer.click();assert.equal(await page.locator('.zp-daily-snapshot').isVisible(),false);
+        }
         await page.getByRole('button',{name:'Konu Anlatımları',exact:false}).click();
         assert.equal(await page.getByLabel('İşlem kaydı').textContent(),'student-lessons');
       }
