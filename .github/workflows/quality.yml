@@ -54,6 +54,8 @@ jobs:
         run: npm run test:english-browser
 
   topic-lessons:
+    env:
+      BILSEM_LESSON_VISUAL_PREVIEW: '1'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
