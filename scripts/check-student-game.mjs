@@ -17,14 +17,18 @@ try {
   page.on('pageerror',error=>errors.push(error.message));
   page.on('console',message=>{if(message.type()==='error'&&/same key|unique.*key/i.test(message.text()))errors.push(message.text());});
   const screens=['modes','plan','skills','challenges','progress','tests','native-story','native-study','native-rewards','native-profile','achievements','mistakes','glossary','growth'];
-  let checks=0;
+  let checks=0;const layoutProblems=[];
   for(const width of [320,390,820,1440]) {
     await page.setViewportSize({width,height:width<700?844:1000});
     for(const screen of screens) {
       await page.goto(`${origin}/tests/browser/student-game.html?screen=${screen}`);
       await page.locator('.bj-student-game,.bj-game-page').first().waitFor();
       if(screen==='plan')await page.locator('#today-personalized-study-plan-card').waitFor();
-      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,`${screen} overflows ${width}`);
+      if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1)) {
+        const offenders=await page.evaluate(()=>Array.from(document.querySelectorAll('body *')).map(el=>({tag:el.tagName,cls:el.className?.baseVal??el.className,box:el.getBoundingClientRect(),text:(el.textContent||'').slice(0,70)})).filter(el=>el.box.width>0&&(el.box.right>innerWidth+1||el.box.left< -1)).slice(-16).map(el=>({tag:el.tag,cls:el.cls,left:el.box.left,right:el.box.right,text:el.text})));
+        layoutProblems.push({screen,width});console.error(JSON.stringify({screen,width,offenders}));
+        await page.screenshot({path:`${output}/overflow-${screen}-${width}.png`,fullPage:true,animations:'disabled'});
+      }
       const broken=await page.evaluate(()=>Array.from(document.querySelectorAll('svg [fill^="url(#"]'),el=>el.getAttribute('fill').slice(5,-1)).filter(id=>!document.getElementById(id)));
       assert.deepEqual(broken,[],`${screen} has unresolved material definitions`);
       if(width===390||width===1440&&['modes','skills','native-story'].includes(screen))await page.screenshot({path:`${output}/${screen}-${width}.png`,fullPage:true,animations:'disabled'});
@@ -49,6 +53,6 @@ try {
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
     await page.screenshot({path:`${output}/${screen}-dark.png`,fullPage:true,animations:'disabled'});
   }
-  assert.deepEqual(errors,[]);
+  assert.deepEqual(errors,[]);assert.deepEqual(layoutProblems,[],'Student pages must fit their viewport');
   console.log(`Student game world: ${checks} page/viewport combinations; lesson/plan navigation, material definitions, dark mode and no live writes passed.`);
 } finally {await browser?.close();await server.close();}
