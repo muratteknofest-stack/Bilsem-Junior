@@ -27,7 +27,7 @@ try{
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
   await page.getByRole('searchbox',{name:'Konu anlatımı ara'}).fill('hafıza');assert.equal(await page.locator('[data-lesson]').count(),1);await page.getByRole('searchbox',{name:'Konu anlatımı ara'}).fill('');
   await page.screenshot({path:`${output}/library-${width}.png`,fullPage:true});
-  for(const card of LESSON_CATALOG){await page.locator(`[data-lesson="${card.id}"]`).click();await page.getByRole('heading',{name:lessonDocument(card.id)!.steps[0].title,exact:true}).waitFor();
+  for(const card of LESSON_CATALOG){await page.locator(`[data-lesson="${card.id}"]`).click();await page.getByRole('heading',{name:lessonDocument(card.id)!.steps[0].title,exact:true}).waitFor({timeout:10000}).catch(async()=>{await page.screenshot({path:`${output}/failure-${card.id}-${width}.png`,fullPage:true});throw Error(`Lesson ${card.id}: ${await page.locator('main').innerText()} | ${errors.join('; ')}`);});
    for(let step=0;step<4;step++){assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,`${card.id} ${step} ${width}`);if(step<3)await page.getByRole('button',{name:'Sonraki',exact:true}).click();scenes++;}
    const doc=lessonDocument(card.id)!;await page.getByRole('radio').nth((doc.correctIndex+1)%doc.options.length).check();await page.getByRole('button',{name:'Cevabımı kontrol et',exact:true}).click();await page.getByText('Bir kez daha düşünelim.',{exact:true}).waitFor();
    await page.getByRole('radio').nth(doc.correctIndex).check();await page.getByRole('button',{name:'Cevabımı kontrol et',exact:true}).click();await page.getByText('Buldun! Kuralı yakaladın.',{exact:true}).waitFor();

@@ -14,7 +14,8 @@ const documentSchema=z.object({id:z.string(),version:z.number().int().positive()
 async function loadLesson(id:string,signal:AbortSignal):Promise<LessonDocument>{
  const response=await authenticatedFetch(`/api/student/lessons/${id}`,{signal});
  if(!response.ok)throw Object.assign(Error(response.status===403?'Bu anlatım tam üyelik kapsamında. Velinle birlikte üyelik alanını inceleyebilirsin.':'Anlatım yüklenemedi. Bağlantını kontrol edip yeniden deneyebilirsin.'),{membership:response.status===403});
- const value=documentSchema.parse(await response.json());if(value.id!==id||value.correctIndex>=value.options.length)throw Error('Anlatım doğrulanamadı.');return value as LessonDocument;
+ let parsed:ReturnType<typeof documentSchema.safeParse>;try{parsed=documentSchema.safeParse(await response.json());}catch{throw Error('Anlatım yüklenemedi. Biraz sonra yeniden deneyebilirsin.');}
+ if(!parsed.success||parsed.data.id!==id||parsed.data.correctIndex>=parsed.data.options.length)throw Error('Anlatım şu anda açılamıyor. Biraz sonra yeniden deneyebilirsin.');return parsed.data as LessonDocument;
 }
 function readCompleted(owner:string):string[]{try{const value=JSON.parse(localStorage.getItem(`bilsem-lessons-v1:${owner}`)||'[]');return Array.isArray(value)?value.filter(id=>LESSON_CATALOG.some(item=>item.id===id)):[];}catch{return[];}}
 interface Props {studentId:string;grade:number;onBack:()=>void;onPractice:(id:QuestionType)=>void;onMembership:()=>void;}
