@@ -18,7 +18,7 @@ export function dispatchAndroidBack(target: EventTarget) {
 export function androidParentRoute(route: string, role: string): string | null {
   if (route === 'login') return 'landing';
   if (role !== 'student' || ['dashboard', 'landing'].includes(route)) return null;
-  if (['student-tests', 'student-topics', 'student-plan', 'student-skills', 'mistakes', 'glossary'].includes(route)) return 'student-study';
+  if (['student-tests', 'student-topics', 'student-lessons', 'student-plan', 'student-skills', 'mistakes', 'glossary'].includes(route)) return 'student-study';
   if (['student-challenges', 'student-progress', 'achievements', 'leaderboard'].includes(route)) return 'student-rewards';
   return 'dashboard';
 }

@@ -11,9 +11,9 @@ export const ADVENTURE_PHOTOS = {
   compass:{src:'/adventure/photos/compass.webp',alt:'Haritanın üzerindeki gerçek pusula',author:'Chris Lawton',url:'https://unsplash.com/photos/compass-on-map-book-page-o0l-M8W_7wA'},
 } as const;
 export type AdventurePhoto = keyof typeof ADVENTURE_PHOTOS;
-export const FEATURE_PHOTOS:Record<string,AdventurePhoto>={adaptive:'puzzles',exams:'notebook',practice:'valley','student-tests':'puzzles','student-topics':'notebook',mistakes:'notebook','student-plan':'compass','student-skills':'forest',glossary:'notebook','student-challenges':'compass',achievements:'stars',leaderboard:'sky','student-progress':'harbor'};
+export const FEATURE_PHOTOS:Record<string,AdventurePhoto>={adaptive:'puzzles',exams:'notebook',practice:'valley','student-tests':'puzzles','student-topics':'notebook','student-lessons':'notebook',mistakes:'notebook','student-plan':'compass','student-skills':'forest',glossary:'notebook','student-challenges':'compass',achievements:'stars',leaderboard:'sky','student-progress':'harbor'};
 export const STUDY_GROUPS=[
-  {id:'tests',label:'Testler',routes:['adaptive','exams','practice','student-tests','student-topics']},
+  {id:'tests',label:'Testler',routes:['adaptive','exams','practice','student-tests','student-topics','student-lessons']},
   {id:'tools',label:'Araçlar',routes:['mistakes','glossary']},
   {id:'growth',label:'Gelişim',routes:['student-plan','student-skills']},
 ] as const;

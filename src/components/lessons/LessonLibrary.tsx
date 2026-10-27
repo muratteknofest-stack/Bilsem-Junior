@@ -1,0 +1,64 @@
+import React,{useEffect,useRef,useState} from 'react';
+import {ArrowLeft,ArrowRight,BookOpen,Check,ChevronRight,Headphones,LockKeyhole,Pause,Play,RotateCcw,Search,Sparkles,Volume2} from 'lucide-react';
+import {z} from 'zod';
+import {LESSON_CATALOG,LESSON_GROUPS,type LessonCard,type LessonDocument} from '../../features/lessons/catalog';
+import {authenticatedFetch} from '../../lib/api-client';
+import {claimAndroidBack} from '../../lib/android-navigation';
+import {useStudentReducedMotion} from '../../features/student/experience-preferences';
+import type {QuestionType} from '../../types';
+import {LessonScene} from './LessonScene';
+import {useLessonVoice} from './useLessonVoice';
+import './lessons.css';
+
+const documentSchema=z.object({id:z.string(),version:z.number().int().positive(),steps:z.array(z.object({title:z.string().min(1),narration:z.string().min(1)})).length(4),question:z.string().min(1),options:z.array(z.string().min(1)).min(2).max(4),correctIndex:z.number().int().nonnegative(),explanation:z.string().min(1),tip:z.string().min(1),audio:z.array(z.object({narrator:z.string(),source:z.literal('human-recording'),url:z.string()}).nullable()).length(4)});
+async function loadLesson(id:string,signal:AbortSignal):Promise<LessonDocument>{
+ const response=await authenticatedFetch(`/api/student/lessons/${id}`,{signal});
+ if(!response.ok)throw Object.assign(Error(response.status===403?'Bu anlatım tam üyelik kapsamında. Velinle birlikte üyelik alanını inceleyebilirsin.':'Anlatım yüklenemedi. Bağlantını kontrol edip yeniden deneyebilirsin.'),{membership:response.status===403});
+ let parsed:ReturnType<typeof documentSchema.safeParse>;try{parsed=documentSchema.safeParse(await response.json());}catch{throw Error('Anlatım yüklenemedi. Biraz sonra yeniden deneyebilirsin.');}
+ if(!parsed.success||parsed.data.id!==id||parsed.data.correctIndex>=parsed.data.options.length)throw Error('Anlatım şu anda açılamıyor. Biraz sonra yeniden deneyebilirsin.');return parsed.data as LessonDocument;
+}
+function readCompleted(owner:string):string[]{try{const value=JSON.parse(localStorage.getItem(`bilsem-lessons-v1:${owner}`)||'[]');return Array.isArray(value)?value.filter(id=>LESSON_CATALOG.some(item=>item.id===id)):[];}catch{return[];}}
+interface Props {studentId:string;grade:number;onBack:()=>void;onPractice:(id:QuestionType)=>void;onMembership:()=>void;}
+export function LessonLibrary({studentId,grade,onBack,onPractice,onMembership}:Props){
+ const [selected,setSelected]=useState<LessonCard|null>(null),[search,setSearch]=useState(''),[group,setGroup]=useState('Tümü'),[completed,setCompleted]=useState(()=>readCompleted(studentId)),[fullAccess,setFullAccess]=useState<boolean|null>(null);
+ const titleRef=useRef<HTMLHeadingElement>(null);
+ useEffect(()=>{setCompleted(readCompleted(studentId));setSelected(null);setFullAccess(null);const controller=new AbortController();
+  authenticatedFetch('/api/student/lessons/access',{signal:controller.signal}).then(async r=>{if(r.ok){const value=await r.json();if(typeof value.fullAccess==='boolean'&&!controller.signal.aborted)setFullAccess(value.fullAccess);}}).catch(()=>{});return()=>controller.abort();},[studentId]);
+ useEffect(()=>{if(!selected)titleRef.current?.focus({preventScroll:true});},[selected]);
+ const complete=(id:string)=>{const next=[...new Set([...completed,id])];setCompleted(next);try{localStorage.setItem(`bilsem-lessons-v1:${studentId}`,JSON.stringify(next));}catch{}};
+ const visible=LESSON_CATALOG.filter(item=>(group==='Tümü'||item.group===group)&&`${item.title} ${item.description}`.toLocaleLowerCase('tr-TR').includes(search.trim().toLocaleLowerCase('tr-TR')));
+ if(selected)return <LessonPlayer key={`${studentId}-${selected.id}`} card={selected} onBack={()=>setSelected(null)} onComplete={()=>complete(selected.id)} onPractice={()=>onPractice(selected.id)} onMembership={onMembership}/>;
+ return <main className="bj-lessons"><div className="bj-lessons-width">
+  <button type="button" className="bj-lesson-back" onClick={onBack}><ArrowLeft size={18}/>Çalışma alanıma dön</button>
+  <header className="bj-lessons-hero"><div><span className="bj-lesson-eyebrow"><Sparkles size={15}/>KÜÇÜK KEŞİFLER, BÜYÜK FİKİRLER</span><h1 ref={titleRef} tabIndex={-1}>Önce keşfet.<br/><em>Sonra kendin çöz.</em></h1><p>Şekiller canlansın, kurallar görünür olsun. Kısa anlatımlarla öğren, küçük bir denemeyle pekiştir.</p><div className="bj-lesson-hero-tags"><span><Play size={14}/>18 animasyonlu konu</span><span><BookOpen size={14}/>{grade}. sınıf · kendi hızında</span></div></div><div className="bj-lesson-guide" aria-hidden="true"><i>✦</i><img src="/brand/junior-fox.svg" alt="" width={160} height={160}/><span>Birlikte bulalım!</span></div></header>
+  <div className="bj-lesson-library-heading"><div><span className="bj-lesson-eyebrow">KEŞİF KÜTÜPHANEN</span><h2>Bugün ne öğrenelim?</h2></div><span>{completed.length} / {LESSON_CATALOG.length} tamamlandı <small>Bu cihazda</small></span></div>
+  <label className="bj-lesson-search"><Search size={19}/><input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Örüntü, küp, hafıza…" aria-label="Konu anlatımı ara"/></label>
+  <nav className="bj-lesson-filters" aria-label="Anlatım alanları">{['Tümü',...LESSON_GROUPS].map(label=><button type="button" key={label} aria-pressed={group===label} onClick={()=>setGroup(label)}>{label}</button>)}</nav>
+  <section className="bj-lesson-cards" aria-label="Konu anlatımları">{visible.map(card=><button type="button" key={card.id} className="bj-lesson-card" data-tone={card.tone} data-lesson={card.id} onClick={()=>setSelected(card)}><div className="bj-lesson-card-top"><span className="bj-lesson-card-symbol" aria-hidden="true">{card.symbol}</span><span className="bj-lesson-card-badge">{completed.includes(card.id)?<><Check size={12}/>Tamamlandı</>:card.preview?'Ücretsiz keşif':fullAccess===false?<><LockKeyhole size={12}/>Tam üyelik</>:'4 adımda keşfet'}</span></div><h3>{card.title}</h3><p>{card.description}</p><span className="bj-lesson-card-footer">Anlatımı keşfet<ChevronRight size={17}/></span></button>)}</section>
+  {!visible.length&&<p role="status" className="bj-lesson-empty">Bu aramada konu bulunamadı. Başka bir sözcük deneyebilirsin.</p>}
+ </div></main>;
+}
+function LessonPlayer({card,onBack,onComplete,onPractice,onMembership}:{card:LessonCard;onBack:()=>void;onComplete:()=>void;onPractice:()=>void;onMembership:()=>void}){
+ const [lesson,setLesson]=useState<LessonDocument|null>(null),[error,setError]=useState(''),[membership,setMembership]=useState(false),[attempt,setAttempt]=useState(0),[step,setStep]=useState(0),[moving,setMoving]=useState(true),[answer,setAnswer]=useState<number|null>(null),[checked,setChecked]=useState(false);
+ const reduced=useStudentReducedMotion(),heading=useRef<HTMLHeadingElement>(null);
+ const voice=useLessonVoice(lesson?.steps[step]?.narration||'',lesson?.audio[step]||null);
+ const back=()=>{voice.stop();onBack();};
+ useEffect(()=>{const controller=new AbortController();setError('');setMembership(false);loadLesson(card.id,controller.signal).then(value=>{if(!controller.signal.aborted)setLesson(value);}).catch(cause=>{if(!controller.signal.aborted){setError(cause.message||'Anlatım yüklenemedi.');setMembership(!!cause.membership);}});return()=>controller.abort();},[card.id,attempt]);
+ useEffect(()=>claimAndroidBack(window,back));
+ useEffect(()=>{heading.current?.focus({preventScroll:true});},[step,lesson]);
+ if(!lesson)return <main className="bj-lessons"><div className="bj-lessons-width"><button type="button" className="bj-lesson-back" onClick={back}><ArrowLeft size={18}/>Konu kütüphanesine dön</button><div className="bj-lesson-load" role={error?'alert':'status'}><BookOpen size={38}/><h1>{card.title}</h1><p>{error||'Keşif hazırlanıyor…'}</p>{error&&<button type="button" className="bj-lesson-primary" onClick={()=>membership?onMembership():setAttempt(n=>n+1)}>{membership?'Velimle üyeliği incele':'Yeniden dene'}</button>}</div></div></main>;
+ const current=lesson.steps[step],correct=answer===lesson.correctIndex;
+ const go=(next:number)=>{voice.stop();setStep(next);setAnswer(null);setChecked(false);};
+ return <main className="bj-lessons" data-reduced-motion={reduced}><div className="bj-lessons-width">
+  <button type="button" className="bj-lesson-back" onClick={back}><ArrowLeft size={18}/>Konu kütüphanesine dön</button>
+  <header className="bj-lesson-player-heading"><div><span className="bj-lesson-eyebrow">BİRLİKTE KEŞFEDELİM</span><h1>{card.title}</h1></div><span>{step+1} / 4 adım</span></header>
+  <div className="bj-lesson-player-layout"><aside className="bj-lesson-outline" aria-label="Anlatım adımları">{lesson.steps.map((item,n)=><button key={item.title} type="button" aria-current={step===n?'step':undefined} onClick={()=>go(n)}><span>{n+1}</span><div><small>{['GÖZLEMLE','KURALI BUL','BİRLİKTE ÇÖZ','SIRA SENDE'][n]}</small><strong>{item.title}</strong></div>{n<step&&<Check size={15}/>}</button>)}<div className="bj-lesson-tip"><Sparkles size={20}/><p>{lesson.tip}</p></div></aside>
+  <section className="bj-lesson-player" data-tone={card.tone} aria-label="Animasyonlu anlatım"><div className="bj-lesson-stage-bar"><span><span className="bj-lesson-status-dot"/>KEŞİF SAHNESİ</span><button type="button" onClick={()=>setMoving(value=>!value)} disabled={reduced} aria-pressed={moving&&!reduced}>{moving&&!reduced?<Pause size={14}/>:<Play size={14}/>}<span>{reduced?'Hareket azaltıldı':moving?'Hareketi durdur':'Hareketi başlat'}</span></button></div>
+   <LessonScene key={`${card.id}-${step}-${moving}`} id={card.id} step={step} playing={moving&&!reduced} title={`${current.title}. ${current.narration}`}/>
+   <div className="bj-lesson-narration"><div className="bj-lesson-voice-line"><span><Headphones size={16}/>{lesson.audio[step]?`İnsan kaydı · ${lesson.audio[step]!.narrator}`:'Cihaz sesi · yapay sesli okuma'}</span><button type="button" onClick={()=>void voice.play()} aria-label={voice.speaking?'Sesli anlatımı durdur':'Bu adımı sesli dinle'}>{voice.speaking?<Pause size={17}/>:<Volume2 size={17}/>}<span>{voice.speaking?'Durdur':'Dinle'}</span></button></div><h2 ref={heading} tabIndex={-1}>{current.title}</h2><p>{current.narration}</p>{voice.error&&<p role="status" className="bj-lesson-voice-note">{voice.error}</p>}</div>
+   <footer className="bj-lesson-player-controls"><button type="button" disabled={step===0} onClick={()=>go(step-1)}><ArrowLeft size={17}/>Önceki</button><div className="bj-lesson-progress" role="progressbar" aria-label="Anlatım ilerlemesi" aria-valuemin={0} aria-valuemax={4} aria-valuenow={step+1}><span style={{width:`${(step+1)*25}%`}}/></div>{step<3?<button type="button" className="bj-lesson-primary" onClick={()=>go(step+1)}>Sonraki<ArrowRight size={17}/></button>:<a className="bj-lesson-primary" href="#lesson-try">Kendim deneyeyim<ArrowRight size={17}/></a>}</footer>
+  </section></div>
+  {step===3&&<section id="lesson-try" className="bj-lesson-try" aria-labelledby="lesson-try-title"><span className="bj-lesson-eyebrow">KÜÇÜK BİR DENEME</span><h2 id="lesson-try-title">Şimdi senin fikrin!</h2><p>{lesson.question}</p><fieldset><legend className="sr-only">Cevabını seç</legend>{lesson.options.map((option,n)=><label key={option} data-selected={answer===n}><input type="radio" name="lesson-answer" checked={answer===n} onChange={()=>{setAnswer(n);setChecked(false);}}/><span>{String.fromCharCode(65+n)}</span>{option}</label>)}</fieldset><button type="button" className="bj-lesson-primary" disabled={answer===null} onClick={()=>{setChecked(true);if(correct)onComplete();}}>Cevabımı kontrol et<Check size={17}/></button>{checked&&<div className="bj-lesson-feedback" role="status" data-correct={correct}><strong>{correct?'Buldun! Kuralı yakaladın.':'Bir kez daha düşünelim.'}</strong><p>{correct?lesson.explanation:lesson.tip}</p>{correct&&<button type="button" className="bj-lesson-primary" onClick={()=>{voice.stop();onPractice();}}>Bu konuda pratik yap<ArrowRight size={17}/></button>}</div>}<button type="button" className="bj-lesson-replay" onClick={()=>go(0)}><RotateCcw size={16}/>Anlatımı yeniden keşfet</button></section>}
+  <p className="bj-lesson-recording-note">Anlatımı okuyarak da tamamlayabilirsin. {lesson.audio[step]?'Bu adımı gerçek insan seslendirmesiyle dinleyebilirsin.':'Bu adımın insan seslendirmesi henüz eklenmedi; “Dinle” bu cihazda bulunan yerel Türkçe yapay sesi kullanır.'}</p>
+ </div></main>;
+}

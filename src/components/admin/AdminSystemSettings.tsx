@@ -9,6 +9,7 @@ import {
   type PlatformSettings,
 } from "../../lib/platform-settings";
 import { LEARNING_EXAMS } from "../../features/student/learning-contract";
+import {AdminLessonAudio} from './AdminLessonAudio';
 
 export function AdminSystemSettings({
   onSyncNeeded,
@@ -361,6 +362,7 @@ export function AdminSystemSettings({
           </fieldset>
         </form>
       )}
+      <AdminLessonAudio/>
       <section className="rounded-2xl border bg-white p-5">
         <h3 className="text-lg font-bold">Tarayıcı tercihleri</h3>
         <p className="my-3">

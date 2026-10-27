@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ArrowRight, ArrowUpRight, Clock3, Target, RotateCcw, BookOpen, Trophy, Star, Sparkles } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Clock3, Target, RotateCcw, BookOpen, Trophy, Star, Sparkles, Play } from 'lucide-react';
 import { StudentAdventureAtmosphere } from './StudentMotion';
 import { sound } from '../../lib/sound';
 import { useStudentReducedMotion } from '../../features/student/experience-preferences';
@@ -46,6 +46,7 @@ export function StudentModesGrid(p: StudentModesGridProps) {
       <div className="bj-path-finish"><Trophy size={23} aria-hidden="true" /><span>Küçük adımlar. Büyük keşifler.</span><Star size={15} aria-hidden="true" /></div>
     </div>
     <div className="zp-mode-links">
+      <button type="button" onClick={()=>p.onNavigate('student-lessons')}><Play size={19} aria-hidden="true"/><span>Konu Anlatımları<small>Animasyonla keşfet, adım adım öğren</small></span><ArrowUpRight size={16} aria-hidden="true"/></button>
       <button type="button" onClick={() => { sound.playClick(); p.onNavigate('glossary'); }}><BookOpen size={19} aria-hidden="true" /><span>Bilişsel Sözlük<small>Görsel kavramlar ve mini oyunlar</small></span><ArrowUpRight size={16} aria-hidden="true" /></button>
       <button type="button" onClick={() => { sound.playClick(); p.onOpenChallenges(); }}><Trophy size={19} aria-hidden="true" /><span>Haftalık Görevler<small>Yeni bir hedef belirle</small></span><ArrowUpRight size={16} aria-hidden="true" /></button>
     </div>

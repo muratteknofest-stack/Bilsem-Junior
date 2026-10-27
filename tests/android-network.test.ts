@@ -9,6 +9,15 @@ const response = (status = 200, data: unknown = { ok: true }): HttpResponse => (
 const neverBrowser: typeof fetch = async () => { throw Error('native request used the browser'); };
 const native = (request: (options: HttpOptions) => Promise<HttpResponse>, timeoutMs?: number) => createApiTransport({ baseUrl, pageOrigin, nativeRequest: request, browserFetch: neverBrowser, timeoutMs });
 
+test('Android narration preserves binary bytes and does not decode JSON errors as audio', async () => {
+  const bytes=Buffer.from([0x49,0x44,0x33,0x00,0xff,0x80,0x0a]);
+  const transport=native(async options=>{assert.equal(options.responseType,'arraybuffer');return{...response(200,bytes.toString('base64')+'\n'),headers:{'content-type':'audio/mpeg'}};});
+  assert.deepEqual(Buffer.from(await(await transport('/api/student/lessons/visual_sequence/audio/0')).arrayBuffer()),bytes);
+  const denied=await native(async()=>response(403,{error:'Üyelik gerekli'}))('/api/student/lessons/dice_unfold/audio/0');
+  assert.equal(denied.status,403);assert.deepEqual(await denied.json(),{error:'Üyelik gerekli'});
+  await assert.rejects(native(async()=>({...response(200,'%%%'),headers:{'content-type':'audio/mpeg'}}))('/api/student/lessons/visual_sequence/audio/0'));
+});
+
 test('API transport never forwards credentials to another host or a non-API URL', () => {
   for (const input of ['https://evil.example/api/test', '//evil.example/api/test', '/assets/test', 'https://user:pass@api.example.test/api/test', '/api/test#secret', '/api/../admin']) {
     assert.throws(() => apiRequestUrl(input, baseUrl, pageOrigin), /doğrulanamadı/);
