@@ -42,9 +42,9 @@
 .bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy {flex:1;min-width:0;padding:10px 12px;border-radius:17px;border:1px solid transparent;gap:5px}
 .bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy>strong {color:#315971;font-size:16px;line-height:1.25}
 .bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy>small {font-size:7px;letter-spacing:.8px;color:#7f76ab}
-.bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy>span {font-size:10px;color:#678497}
+.bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy>span {font-size:10px;color:#526d80}
 .bj-journey.bj-story-world .bj-journey-path>li[data-state=current] .bj-journey-node-copy {background:linear-gradient(120deg,#fff,var(--trail-soft));border-color:var(--trail-edge);box-shadow:0 4px 0 var(--trail-edge)}
-.bj-journey.bj-story-world .bj-journey-path>li[data-state=current] .bj-journey-node-copy>small {color:#379c83}
+.bj-journey.bj-story-world .bj-journey-path>li[data-state=current] .bj-journey-node-copy>small {color:#24785f}
 .bj-journey.bj-story-world .bj-journey-path>li[data-state=complete] .bj-story-node {background:linear-gradient(#ffefb0,#efc263);box-shadow:0 8px 0 #d4a14e,0 13px 7px #8d75562e,inset 0 4px 0 #fff8dd}
 .bj-journey.bj-story-world .bj-journey-path>li[data-state=complete] .bj-story-node-state {background:#35ad87;box-shadow:0 3px 0 #268461}
 .bj-journey.bj-story-world .bj-journey-path>li[data-state=complete] .bj-journey-node-copy>small {color:#ad8230}
@@ -55,7 +55,7 @@
 .bj-journey.bj-story-world .bj-journey-checkpoint {margin-top:13px;color:#ab8238;font-size:10px}
 .bj-journey.bj-story-world .bj-journey-chapter-reward {border:2px solid #e9cc88;border-radius:23px;background:linear-gradient(120deg,#fff5d3,#fffae9);box-shadow:0 5px 0 #e5d19c;padding:16px;gap:12px}
 .bj-journey-chapter-reward>.bj-game-art {width:88px}
-.bj-journey.bj-story-world .bj-journey-continue {border:2px solid #fff;outline:1px solid #b5dcd1;border-radius:18px;background:linear-gradient(#40b69b,#25987f);box-shadow:0 5px 0 #227b69;color:#fff}
+.bj-journey.bj-story-world .bj-journey-continue {border:2px solid #fff;outline:1px solid #b5dcd1;border-radius:18px;background:linear-gradient(#267f6d,#1d7261);box-shadow:0 5px 0 #175e51;color:#fff}
 .bj-journey.bj-story-world .bj-journey-book {border-radius:25px;border:2px solid #d3ddec;box-shadow:0 6px 0 #d1d9e9}
 .bj-journey.bj-story-world .bj-journey-book-art {height:140px;overflow:visible;margin-bottom:13px}
 .bj-journey.bj-story-world .bj-journey-book-art>.bj-game-landscape {overflow:hidden;border-radius:22px 22px 0 0}
@@ -118,6 +118,10 @@
 .dark .bj-journey.bj-story-world .bj-journey-stats {background:#233d54;border-color:#42647f;box-shadow:0 3px 0 #112b40}.dark .bj-journey.bj-story-world .bj-journey-stats>span {color:#b8d1e5}.dark .bj-journey.bj-story-world .bj-journey-stats strong {color:#e3f0ff}
 .dark .bj-journey.bj-story-world .bj-journey-dialogue>div {background:#263f54;border-color:#4b6d87;box-shadow:0 4px 0 #132d42}.dark .bj-journey.bj-story-world .bj-journey-dialogue strong {color:#e3f1ff}.dark .bj-journey.bj-story-world .bj-journey-dialogue p {color:#bbd0e2}
 .dark .bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy>strong {color:#dfedfb}.dark .bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy>span {color:#afc7da}
+.dark .bj-journey.bj-story-world .bj-journey-path>li[data-state=current] .bj-journey-node-copy {background:linear-gradient(120deg,#304e64,#243d54);border-color:#608397;box-shadow:0 4px 0 #173246}
+.dark .bj-journey.bj-story-world .bj-journey-path>li[data-state=current] .bj-journey-node-copy>small {color:#9be5ca}
+.dark .bj-journey.bj-story-world .bj-journey-path>li[data-state=complete] .bj-journey-node-copy>small {color:#e3bf74}
+.dark .bj-journey.bj-story-world .bj-journey-path>li[data-state=locked] .bj-journey-node-copy>small {color:#b3a2e3}
 .dark .bj-journey.bj-story-world .bj-journey-path>li[data-state=locked] .bj-story-node {background:linear-gradient(#61778d,#435b75);border-color:#8197ad;box-shadow:0 7px 0 #2a4059}
 .dark .bj-journey.bj-story-world .bj-journey-path>li[data-state=locked] .bj-story-node-islet {background:linear-gradient(#7883a7,#52658b)}
 .dark .bj-journey.bj-story-world .bj-journey-book,.dark .bj-journey.bj-story-world .bj-journey-badges article {background:linear-gradient(#294359,#263c54);border-color:#4f6a86;box-shadow:0 5px 0 #132b40}

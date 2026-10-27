@@ -24,12 +24,27 @@ try {
     if(screen==='native-story-collection')await page.getByRole('button',{name:'Koleksiyonum',exact:true}).click();
     if(screen==='native-story-complete')await page.getByRole('button',{name:'Önceki hikâye bölümü',exact:true}).click();
   };
+  const checkStoryContrast=async()=>{
+    const ratios=await page.evaluate(()=>{
+      const rgb=value=>value.match(/[\d.]+/g).slice(0,3).map(Number);
+      const luminance=color=>rgb(color).map(v=>{const c=v/255;return c<=.04045?c/12.92:((c+.055)/1.055)**2.4;}).reduce((sum,c,i)=>sum+c*[.2126,.7152,.0722][i],0);
+      const contrast=(text,bg)=>{const a=luminance(text),b=luminance(bg);return(Math.max(a,b)+.05)/(Math.min(a,b)+.05);};
+      const card=document.querySelector('.bj-story-stages li[data-state=current] .bj-journey-node-copy');
+      const button=document.querySelector('.bj-journey-continue');
+      return [[card,['strong','small','span']],[button,[null]]].flatMap(([container,selectors])=>{
+        const style=getComputedStyle(container),stops=style.backgroundImage.match(/rgba?\([^)]+\)/g)||[style.backgroundColor];
+        return selectors.map(selector=>{const target=selector?container.querySelector(selector):container;return{selector:selector||'continue',ratio:Math.min(...stops.map(bg=>contrast(getComputedStyle(target).color,bg)))};});
+      });
+    });
+    assert.ok(ratios.every(item=>item.ratio>=4.5),`Story text contrast: ${JSON.stringify(ratios)}`);
+  };
   let checks=0;const layoutProblems=[];
   for(const width of [320,390,820,1440]) {
     await page.setViewportSize({width,height:width<700?844:1000});
     for(const screen of screens) {
       await openScreen(screen);
       if(screen==='plan')await page.locator('#today-personalized-study-plan-card').waitFor();
+      if(screen==='native-story-progress')await checkStoryContrast();
       if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1)) {
         const offenders=await page.evaluate(()=>Array.from(document.querySelectorAll('body *')).map(el=>({tag:el.tagName,cls:el.className?.baseVal??el.className,box:el.getBoundingClientRect(),text:(el.textContent||'').slice(0,70)})).filter(el=>el.box.width>0&&(el.box.right>innerWidth+1||el.box.left< -1)).slice(-16).map(el=>({tag:el.tag,cls:el.cls,left:el.box.left,right:el.box.right,text:el.text})));
         layoutProblems.push({screen,width});console.error(JSON.stringify({screen,width,offenders}));
@@ -90,6 +105,7 @@ try {
     await page.setViewportSize({width:390,height:844});
     await openScreen(screen);
     await page.evaluate(()=>document.documentElement.classList.add('dark'));
+    if(screen==='native-story-progress')await checkStoryContrast();
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
     await page.screenshot({path:`${output}/${screen}-dark.png`,fullPage:true,animations:'disabled'});
   }
