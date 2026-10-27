@@ -16,13 +16,19 @@ try {
   const page=await context.newPage(),errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   page.on('console',message=>{if(message.type()==='error'&&/same key|unique.*key/i.test(message.text()))errors.push(message.text());});
-  const screens=['modes','plan','skills','challenges','progress','tests','native-story','native-study','native-rewards','native-profile','achievements','mistakes','glossary','growth'];
+  const screens=['modes','plan','skills','challenges','progress','tests','native-story','native-study','native-rewards','native-profile','achievements','mistakes','glossary','growth','native-story-progress','native-story-complete','native-story-library','native-story-collection','story-result'];
+  const openScreen=async screen=>{
+    await page.goto(`${origin}/tests/browser/student-game.html?screen=${screen}`);
+    await page.locator('.bj-student-game,.bj-game-page').first().waitFor();
+    if(screen==='native-story-library')await page.getByRole('button',{name:'Hikâyeler',exact:true}).click();
+    if(screen==='native-story-collection')await page.getByRole('button',{name:'Koleksiyonum',exact:true}).click();
+    if(screen==='native-story-complete')await page.getByRole('button',{name:'Önceki hikâye bölümü',exact:true}).click();
+  };
   let checks=0;const layoutProblems=[];
   for(const width of [320,390,820,1440]) {
     await page.setViewportSize({width,height:width<700?844:1000});
     for(const screen of screens) {
-      await page.goto(`${origin}/tests/browser/student-game.html?screen=${screen}`);
-      await page.locator('.bj-student-game,.bj-game-page').first().waitFor();
+      await openScreen(screen);
       if(screen==='plan')await page.locator('#today-personalized-study-plan-card').waitFor();
       if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1)) {
         const offenders=await page.evaluate(()=>Array.from(document.querySelectorAll('body *')).map(el=>({tag:el.tagName,cls:el.className?.baseVal??el.className,box:el.getBoundingClientRect(),text:(el.textContent||'').slice(0,70)})).filter(el=>el.box.width>0&&(el.box.right>innerWidth+1||el.box.left< -1)).slice(-16).map(el=>({tag:el.tag,cls:el.cls,left:el.box.left,right:el.box.right,text:el.text})));
@@ -60,16 +66,33 @@ try {
         const toys=await page.locator('.bj-reward-object>.bj-game-art>svg').evaluateAll(items=>items.map(el=>el.getBoundingClientRect().width));
         assert.equal(toys.length,4);assert.ok(toys.every(size=>size>=75),'Reward artwork must retain its full toy size');
       }
+      if(screen==='native-story-progress') {
+        assert.equal(await page.locator('.bj-story-stages li[data-state=complete]').count(),2);
+        assert.equal(await page.locator('.bj-story-stages button:disabled').count(),3);
+        assert.equal(await page.getByRole('progressbar',{name:'Bu bölümde tamamlanan görevler',exact:true}).getAttribute('aria-valuenow'),'2');
+        await page.locator('.bj-story-stages li[data-state=current] button').click();
+        assert.match(await page.getByLabel('İşlem kaydı').textContent(),/:2$/);
+        await page.locator('.bj-story-stages li[data-state=complete] button').first().click();
+        assert.match(await page.getByLabel('İşlem kaydı').textContent(),/:0$/);
+        assert.equal(await page.locator('.bj-story-stages li[data-state=complete]').count(),2,'Decorative interactions cannot advance a stage');
+      }
+      if(screen==='native-story-complete') {
+        assert.equal(await page.locator('.bj-story-stages li[data-state=complete]').count(),6);
+        assert.equal(await page.getByRole('progressbar',{name:'Bu bölümde tamamlanan görevler',exact:true}).getAttribute('aria-valuenow'),'6');
+        await page.getByRole('button',{name:'Sıradaki bölümü aç',exact:false}).click();
+        assert.equal(await page.getByRole('progressbar',{name:'Bu bölümde tamamlanan görevler',exact:true}).getAttribute('aria-valuenow'),'0');
+      }
+      if(screen==='story-result')assert.equal(await page.getByRole('meter',{name:'Macera yıldızları',exact:true}).getAttribute('aria-valuenow'),'3.5');
       checks++;
     }
   }
-  for(const screen of ['plan','native-profile','native-rewards','modes']) {
+  for(const screen of ['plan','native-profile','native-rewards','modes','native-story-progress','native-story-library','native-story-collection','story-result']) {
     await page.setViewportSize({width:390,height:844});
-    await page.goto(`${origin}/tests/browser/student-game.html?screen=${screen}`);await page.locator('.bj-student-game').first().waitFor();
+    await openScreen(screen);
     await page.evaluate(()=>document.documentElement.classList.add('dark'));
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
     await page.screenshot({path:`${output}/${screen}-dark.png`,fullPage:true,animations:'disabled'});
   }
   assert.deepEqual(errors,[]);assert.deepEqual(layoutProblems,[],'Student pages must fit their viewport');
-  console.log(`Student game world: ${checks} page/viewport combinations; lesson/plan navigation, material definitions, dark mode and no live writes passed.`);
+  console.log(`Student game world: ${checks} page/viewport combinations; lesson/plan navigation, story locking/replay/chapter progress, proportional result stars, material definitions, dark mode and no live writes passed.`);
 } finally {await browser?.close();await server.close();}

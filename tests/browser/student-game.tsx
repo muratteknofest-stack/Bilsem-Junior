@@ -7,7 +7,9 @@ import { AchievementsView } from '../../src/components/AchievementsView';
 import { MistakeNotebookView } from '../../src/components/MistakeNotebookView';
 import { CognitiveGlossaryView } from '../../src/components/CognitiveGlossaryView';
 import { LeaderboardView } from '../../src/components/LeaderboardView';
-import { emptyStoryProgress } from '../../src/features/student/story-adventure';
+import { emptyStoryProgress, type StoryProgress } from '../../src/features/student/story-adventure';
+import { campaignsForGrade } from '../../src/features/student/story-catalog';
+import { StoryResultCelebration } from '../../src/components/student/StoryStars';
 import { syncUserFromSupabase } from '../../src/services/modules/profile-service';
 import { dataService } from '../../src/services/data-service';
 import { auth, supabase } from '../../src/lib/supabase';
@@ -42,10 +44,14 @@ function Gallery() {
   if (screen.startsWith('native-')) {
     const nativeRoutes: Record<string,string> = {'native-story':'dashboard','native-study':'student-study','native-rewards':'student-rewards','native-profile':'student-profile'};
     const route = nativeRoutes[screen] || 'dashboard';
-    content = <AndroidStudentHub route={route} user={student} progress={emptyStoryProgress()} saveError="" onNavigate={setAction} onStartStory={()=>setAction('story-start')} onUserUpdate={update} onReminder={()=>setAction('reminder')} onLogout={()=>setAction('logout')}/>;
+    const story=campaignsForGrade(student.grade||2)[0];
+    const completed=screen==='native-story-complete'?6:['native-story-progress','native-story-library','native-story-collection'].includes(screen)?2:0;
+    const progress:StoryProgress={...emptyStoryProgress(),selectedStoryId:story.id,campaigns:{[story.id]:completed},skillPractice:{pattern:completed*20},stageResults:Object.fromEntries(Array.from({length:completed},(_,index)=>[`${story.id}:${index}`,{bestCorrect:18,lastCorrect:18,totalQuestions:20,attempts:1}]))};
+    content = <AndroidStudentHub route={route} user={student} progress={progress} saveError="" onNavigate={setAction} onStartStory={stage=>setAction(stage.id)} onUserUpdate={update} onReminder={()=>setAction('reminder')} onLogout={()=>setAction('logout')}/>;
   } else if (screen === 'achievements') content = <AchievementsView user={student} onNavigateHome={home} onUserUpdate={update} onStartPractice={()=>setAction('practice')}/>;
   else if (screen === 'mistakes') content = <MistakeNotebookView onNavigateHome={home}/>;
   else if (screen === 'glossary') content = <CognitiveGlossaryView onNavigateHome={home} onStartPractice={()=>setAction('practice')}/>;
+  else if (screen === 'story-result') content = <main className="bj-game-page"><StoryResultCelebration correct={14} total={20} bestCorrect={18} bestTotal={20}/></main>;
   else if (screen === 'growth') content = <LeaderboardView currentUser={student} onNavigateHome={home} onStartPractice={()=>setAction('practice')}/>;
   else content = <StudentDashboard key={screen} initialSection={screen as StudentSection} user={student} mistakes={[]} storyProgress={emptyStoryProgress()} onStartStory={()=>setAction('story-start')} onUserUpdate={update} onNavigate={setAction} onStartPractice={()=>setAction('practice')} onStartTopicPractice={id=>setAction(id)} onStartAdaptive={()=>setAction('adaptive')} onStartExam={()=>setAction('exam')} onOpenMistakes={()=>setAction('mistakes')}/>;
   return <div className={`bilsem-junior-skin ${screen.startsWith('native-')?'bj-native-shell':''}`} data-student-space="true"><output aria-label="İşlem kaydı" className="sr-only">{action}</output>{content}</div>;

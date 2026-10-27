@@ -1,0 +1,123 @@
+/* Story maps share the toy-world language while retaining actual saved stage states. */
+.bj-journey.bj-story-world {
+  --trail-ink:#315970;--trail-soft:#edf8f2;--trail-edge:#c4dfd0;--trail-accent:#36aa87;
+  background:linear-gradient(#f2fbff,#f7fbf2 570px);border-radius:24px;
+}
+.bj-journey.bj-story-world[data-scene=sky] {--trail-soft:#eaf3ff;--trail-edge:#c4d9ed;--trail-accent:#5d9cc9}
+.bj-journey.bj-story-world[data-scene=valley] {--trail-soft:#f6f8e9;--trail-edge:#dbdfb8;--trail-accent:#9da956}
+.bj-journey.bj-story-world[data-scene=cave] {--trail-soft:#f0eaff;--trail-edge:#d5c9ec;--trail-accent:#9b79c9}
+.bj-journey.bj-story-world[data-scene=harbor] {--trail-soft:#e9f8fa;--trail-edge:#bce0e3;--trail-accent:#3aa9b2}
+.bj-journey.bj-story-world[data-scene=stars] {--trail-soft:#eceffd;--trail-edge:#cdd3ee;--trail-accent:#838fcb}
+.bj-journey.bj-story-world .bj-journey-top>div>span {display:inline-flex;padding:5px 8px;border:1px solid #d6d5ef;border-radius:8px;background:#f5f0ff;color:#8d72b4;font-size:7px;letter-spacing:.8px}
+.bj-journey.bj-story-world .bj-journey-top h1 {color:#2b5571}
+.bj-journey.bj-story-world .bj-journey-tabs {padding:6px;border:2px solid #d1e0ed;box-shadow:0 4px 0 #c2d4e4;border-radius:18px}
+.bj-journey.bj-story-world .bj-journey-tabs button[aria-pressed=true] {border-color:#c1b1e3;color:#7b59ac;background:linear-gradient(#fff,#f3edff);box-shadow:0 3px 0 #c5b4e2}
+.bj-journey.bj-story-world .bj-journey-stats {border:1px solid #d3e2ee;border-radius:15px;background:#fff;box-shadow:0 3px 0 #d8e6f0}
+.bj-journey.bj-story-world .bj-journey-cover {border:2px solid #c8dfec;border-radius:22px;box-shadow:0 5px 0 #bfd5e1}
+.bj-journey.bj-story-world .bj-journey-cover:after {background:linear-gradient(90deg,#204a71f2,#315c7970 53%,transparent 80%)}
+.bj-journey.bj-story-world .bj-journey-cover>.bj-story-cover-copy {padding:15px 19px;gap:5px;position:relative;z-index:1;max-width:68%}
+.bj-journey.bj-story-world .bj-story-cover-copy>strong {font-size:25px;line-height:1.1;color:#fff}
+.bj-journey.bj-story-world .bj-story-cover-copy>span {font-size:7px;letter-spacing:.7px;color:#ffedb9}
+.bj-journey.bj-story-world .bj-story-cover-copy>p {font-size:10px;color:#e8f3f3}
+.bj-story-cover-copy .bj-story-chapter-meter {display:flex;gap:5px;margin-top:2px;max-width:138px}
+.bj-journey.bj-story-world .bj-story-chapter-meter>span {display:block;flex:1;height:7px;border:1px solid #ffffff82;border-radius:4px;background:#ffffff24;box-shadow:0 1px 0 #14314d40}
+.bj-journey.bj-story-world .bj-story-chapter-meter>span[data-done=true] {background:linear-gradient(#fff3bb,#ffc85a);border-color:#fff2b5;box-shadow:0 2px 0 #d0983d}
+.bj-journey.bj-story-world .bj-journey-dialogue>div {border:2px solid #d3e2ef;background:linear-gradient(120deg,#fff,#f7fcff);box-shadow:0 4px 0 #d5e3ed}
+.bj-journey.bj-story-world .bj-journey-path {max-width:470px;padding:8px 0;margin-bottom:24px}
+.bj-journey.bj-story-world .bj-journey-path:before {left:38px;top:43px;bottom:75px;width:65px;border-width:6px;border-color:var(--trail-edge);opacity:.9}
+.bj-journey.bj-story-world .bj-journey-path>li {min-height:116px}
+.bj-journey.bj-story-world .bj-journey-path>li>button {gap:16px;padding-block:12px;min-height:105px}
+.bj-journey.bj-story-world .bj-journey-path .bj-story-node {
+  width:74px;height:62px;border:3px solid #fff;border-radius:50%;background:linear-gradient(#d7f7e5,#8ed5bd);
+  box-shadow:0 8px 0 #58a28d,0 13px 7px #315c7530,inset 0 4px 0 #ffffff9c;
+}
+.bj-journey.bj-story-world .bj-journey-path .bj-story-node:before {inset:7px;border-color:#f5ffeb8c}
+.bj-story-node-islet {position:absolute;left:-6px;right:-6px;height:23px;bottom:-13px;border-radius:50%;background:linear-gradient(#c2b0e0,#8a88bb);box-shadow:0 5px 0 #777fb433;z-index:-1}
+.bj-story-node-toy {position:relative;display:block;width:73px;height:67px;transform:translateY(-10px) rotate(7deg);z-index:1;line-height:0}
+.bj-story-node-toy>.bj-game-art {width:73px;max-width:none}
+.bj-journey.bj-story-world .bj-story-node-toy>.bj-game-art>svg {width:100%;height:auto;filter:none}
+.bj-story-node-state {position:absolute;display:grid;place-items:center;right:-6px;top:1px;width:23px;height:23px;border:2px solid #fff;border-radius:8px;background:#7c5abd;color:#fff;box-shadow:0 3px 0 #5a4294;z-index:2}
+.bj-journey.bj-story-world .bj-story-node-state>svg {width:12px;height:12px;filter:none;stroke-width:2.5}
+.bj-journey.bj-story-world .bj-journey-path .bj-story-node>i {right:-1px;bottom:-13px;width:24px;height:24px;border-radius:9px;background:#fff1bc;border-color:#fff;color:#986f27;box-shadow:0 3px 0 #d9bc77;z-index:3}
+.bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy {flex:1;min-width:0;padding:10px 12px;border-radius:17px;border:1px solid transparent;gap:5px}
+.bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy>strong {color:#315971;font-size:16px;line-height:1.25}
+.bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy>small {font-size:7px;letter-spacing:.8px;color:#7f76ab}
+.bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy>span {font-size:10px;color:#678497}
+.bj-journey.bj-story-world .bj-journey-path>li[data-state=current] .bj-journey-node-copy {background:linear-gradient(120deg,#fff,var(--trail-soft));border-color:var(--trail-edge);box-shadow:0 4px 0 var(--trail-edge)}
+.bj-journey.bj-story-world .bj-journey-path>li[data-state=current] .bj-journey-node-copy>small {color:#379c83}
+.bj-journey.bj-story-world .bj-journey-path>li[data-state=complete] .bj-story-node {background:linear-gradient(#ffefb0,#efc263);box-shadow:0 8px 0 #d4a14e,0 13px 7px #8d75562e,inset 0 4px 0 #fff8dd}
+.bj-journey.bj-story-world .bj-journey-path>li[data-state=complete] .bj-story-node-state {background:#35ad87;box-shadow:0 3px 0 #268461}
+.bj-journey.bj-story-world .bj-journey-path>li[data-state=complete] .bj-journey-node-copy>small {color:#ad8230}
+.bj-journey.bj-story-world .bj-journey-path>li[data-state=locked] .bj-story-node {background:linear-gradient(#e6edf5,#c5d6e5);box-shadow:0 7px 0 #a8bfce,0 12px 6px #65849e19;filter:none}
+.bj-journey.bj-story-world .bj-journey-path>li[data-state=locked] .bj-story-node-toy {filter:grayscale(.65);opacity:.62}
+.bj-journey.bj-story-world .bj-journey-path>li[data-state=locked] .bj-story-node-state {background:#9caec0;color:#fff;box-shadow:0 3px 0 #7d96aa}
+.bj-journey.bj-story-world .bj-journey-path>li[data-state=locked] .bj-story-node-islet {background:linear-gradient(#d5dce9,#b3bed4)}
+.bj-journey.bj-story-world .bj-journey-checkpoint {margin-top:13px;color:#ab8238;font-size:10px}
+.bj-journey.bj-story-world .bj-journey-chapter-reward {border:2px solid #e9cc88;border-radius:23px;background:linear-gradient(120deg,#fff5d3,#fffae9);box-shadow:0 5px 0 #e5d19c;padding:16px;gap:12px}
+.bj-journey-chapter-reward>.bj-game-art {width:88px}
+.bj-journey.bj-story-world .bj-journey-continue {border:2px solid #fff;outline:1px solid #b5dcd1;border-radius:18px;background:linear-gradient(#40b69b,#25987f);box-shadow:0 5px 0 #227b69;color:#fff}
+.bj-journey.bj-story-world .bj-journey-book {border-radius:25px;border:2px solid #d3ddec;box-shadow:0 6px 0 #d1d9e9}
+.bj-journey.bj-story-world .bj-journey-book-art {height:140px;overflow:visible;margin-bottom:13px}
+.bj-journey.bj-story-world .bj-journey-book-art>.bj-game-landscape {overflow:hidden;border-radius:22px 22px 0 0}
+.bj-journey.bj-story-world .bj-journey-book-art:after {border-radius:22px 22px 0 0}
+.bj-journey.bj-story-world .bj-story-book-token {position:absolute;left:auto;right:12px;top:auto;bottom:-20px;width:69px;padding:5px;border:2px solid #fff;border-radius:20px;background:#eee6ff;box-shadow:0 4px 0 #c3b1dc;line-height:0;transform:rotate(7deg)}
+.bj-story-book-token>.bj-game-art {width:58px}.bj-story-book-token>.bj-game-art>svg {width:100%;height:auto}
+.bj-story-collection-heading {position:relative;padding-right:88px;min-height:108px}
+.bj-story-collection-heading>.bj-game-art {position:absolute;right:0;top:0;width:90px;transform:rotate(7deg)}
+.bj-journey.bj-story-world .bj-story-badge-art {position:relative;width:78px;height:77px;border:0;background:none;box-shadow:none;margin:0 auto 11px;transform:none;overflow:visible}
+.bj-story-badge-art>.bj-game-art {width:80px;max-width:none}
+.bj-journey.bj-story-world .bj-story-badge-art>.bj-game-art>svg {width:100%;height:auto}
+.bj-journey.bj-story-world .bj-journey-badges article[data-earned=false] .bj-story-badge-art>.bj-game-art {filter:grayscale(.7);opacity:.6}
+.bj-story-badge-lock {position:absolute;display:grid;place-items:center;right:-1px;bottom:5px;width:25px;height:25px;border:2px solid #fff;border-radius:9px;background:#8c9db0;color:#fff;box-shadow:0 3px 0 #6c8097}
+.bj-journey.bj-story-world .bj-journey-badges article[data-earned=true]>.bj-story-badge-art {background:none;box-shadow:none}
+.bj-journey.bj-story-world .bj-journey-badges article {border:2px solid #d8dfed;border-radius:23px;background:linear-gradient(#fff,#f4f6ff);box-shadow:0 4px 0 #d0d9e9}
+.bj-journey.bj-story-world .bj-journey-badges article[data-earned=true] {background:linear-gradient(#fffaf0,#fff2d1);border-color:#ead193;box-shadow:0 4px 0 #e2c883}
+
+/* Result art remains decorative. Stars and personal-best values keep their original calculation. */
+.bj-story-celebration.bj-story-result-world {border:2px solid #e5cd89;border-radius:27px;box-shadow:0 5px 0 #e6d4a2;background:radial-gradient(ellipse at 50% 0,#fffaf0,#fff0c9)}
+.bj-story-result-world .bj-story-celebration-art {height:128px;max-width:100%}
+.bj-story-result-podium {position:absolute;left:66px;right:66px;bottom:5px;height:24px;border-radius:50%;background:linear-gradient(#fff3b6,#e9bf61);border:2px solid #fff4cb;box-shadow:0 8px 0 #cc9b48,0 13px 8px #856a3924}
+.bj-story-result-world .bj-story-celebration-art>img {width:92px;height:102px;align-self:end;margin-bottom:21px}
+.bj-story-result-toy {position:absolute;left:6px;bottom:11px;width:62px;transform:rotate(-12deg);z-index:2}
+.bj-story-result-toy>.bj-game-art {width:62px}
+.bj-story-result-world .bj-story-result-toy>.bj-game-art>svg {width:100%;height:auto}
+.bj-story-result-world .bj-story-celebration-art .bj-celebration-ring {border-color:#e9c86e;background:#fff1ba40}
+.bj-story-result .bj-story-result-world .bj-story-celebration-art {height:100px}
+.bj-story-result .bj-story-result-world .bj-story-celebration-art>img {width:75px;height:82px;margin-bottom:16px}
+.bj-story-result .bj-story-result-world .bj-story-result-podium {left:76px;right:76px;height:20px;bottom:5px}
+.bj-story-result .bj-story-result-world .bj-story-result-toy {width:51px;left:22px;bottom:7px}.bj-story-result .bj-story-result-world .bj-story-result-toy>.bj-game-art {width:51px}
+.bj-story-result-world[data-celebration=orbit] {background:radial-gradient(ellipse at 50% 0,#f5fbff,#e4f2ff);border-color:#b7d6e9;box-shadow:0 5px 0 #b5cfdf}
+.bj-story-result-world[data-celebration=grow] {background:radial-gradient(ellipse at 50% 0,#fbfff1,#eaf7df);border-color:#c9dfa9;box-shadow:0 5px 0 #bed5a6}
+
+@media(max-width:649px) {
+  .bj-journey.bj-story-world .bj-journey-cover>.bj-story-cover-copy {padding:12px 15px;gap:4px;max-width:70%}
+  .bj-journey.bj-story-world .bj-story-cover-copy>strong {font-size:21px}
+  .bj-journey.bj-story-world .bj-journey-path>li>button {gap:12px;min-height:100px}
+  .bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy {padding:9px 10px}
+  .bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy>strong {font-size:15px}
+}
+@media(max-width:359px) {
+  .bj-journey.bj-story-world .bj-journey-path .bj-story-node {width:64px;height:56px}
+  .bj-story-node-toy {width:65px;height:61px}.bj-story-node-toy>.bj-game-art {width:65px}
+  .bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy {padding-inline:8px}
+  .bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy>strong {font-size:14px}
+  .bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy>span {font-size:9px}
+  .bj-journey.bj-story-world .bj-journey-checkpoint {margin-left:71px;font-size:9px}
+  .bj-story-collection-heading {padding-right:73px}.bj-story-collection-heading>.bj-game-art {width:75px}
+  .bj-journey-chapter-reward>.bj-game-art {width:65px}
+}
+.dark .bj-journey.bj-story-world {--trail-ink:#ddedfa;--trail-soft:#294b5c;--trail-edge:#426a7c;background:linear-gradient(#183448,#1e3549);color:#d5e8f7}
+.dark .bj-journey.bj-story-world .bj-journey-top h1 {color:#e7f2ff}.dark .bj-journey.bj-story-world .bj-journey-top>div>span {background:#3b3659;color:#dcc8ff;border-color:#685f89}
+.dark .bj-journey.bj-story-world .bj-journey-tabs {background:#213d54;border-color:#4d6d88;box-shadow:0 4px 0 #10293e}
+.dark .bj-journey.bj-story-world .bj-journey-tabs button {color:#b3d1e8}.dark .bj-journey.bj-story-world .bj-journey-tabs button[aria-pressed=true] {background:linear-gradient(#534574,#3d395e);border-color:#8c74aa;color:#f6eaff;box-shadow:0 3px 0 #2a2545}
+.dark .bj-journey.bj-story-world .bj-journey-stats {background:#233d54;border-color:#42647f;box-shadow:0 3px 0 #112b40}.dark .bj-journey.bj-story-world .bj-journey-stats>span {color:#b8d1e5}.dark .bj-journey.bj-story-world .bj-journey-stats strong {color:#e3f0ff}
+.dark .bj-journey.bj-story-world .bj-journey-dialogue>div {background:#263f54;border-color:#4b6d87;box-shadow:0 4px 0 #132d42}.dark .bj-journey.bj-story-world .bj-journey-dialogue strong {color:#e3f1ff}.dark .bj-journey.bj-story-world .bj-journey-dialogue p {color:#bbd0e2}
+.dark .bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy>strong {color:#dfedfb}.dark .bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy>span {color:#afc7da}
+.dark .bj-journey.bj-story-world .bj-journey-path>li[data-state=locked] .bj-story-node {background:linear-gradient(#61778d,#435b75);border-color:#8197ad;box-shadow:0 7px 0 #2a4059}
+.dark .bj-journey.bj-story-world .bj-journey-path>li[data-state=locked] .bj-story-node-islet {background:linear-gradient(#7883a7,#52658b)}
+.dark .bj-journey.bj-story-world .bj-journey-book,.dark .bj-journey.bj-story-world .bj-journey-badges article {background:linear-gradient(#294359,#263c54);border-color:#4f6a86;box-shadow:0 5px 0 #132b40}
+.dark .bj-journey.bj-story-world .bj-journey-badges article[data-earned=true] {background:linear-gradient(#4a4331,#3e3d37);border-color:#a38a59;box-shadow:0 4px 0 #292d33}
+.dark .bj-journey.bj-story-world .bj-journey-chapter-reward {background:linear-gradient(120deg,#50452e,#423f37);border-color:#958051;color:#ffe6b0;box-shadow:0 5px 0 #2d2d30}
+.dark .bj-story-celebration.bj-story-result-world {background:radial-gradient(ellipse at 50% 0,#53492e,#343437);border-color:#9a8452;color:#ffe7b1;box-shadow:0 5px 0 #292a2f}
+.dark .bj-story-result-world[data-celebration=orbit] {background:radial-gradient(ellipse at 50% 0,#35536a,#263a53);border-color:#577d9b;box-shadow:0 5px 0 #162b41}
+.dark .bj-story-result-world[data-celebration=grow] {background:radial-gradient(ellipse at 50% 0,#3b5344,#2b413c);border-color:#708c62;box-shadow:0 5px 0 #1d302b}
