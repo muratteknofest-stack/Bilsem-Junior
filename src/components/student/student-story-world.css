@@ -24,17 +24,17 @@
 .bj-journey.bj-story-world .bj-story-chapter-meter>span[data-done=true] {background:linear-gradient(#fff3bb,#ffc85a);border-color:#fff2b5;box-shadow:0 2px 0 #d0983d}
 .bj-journey.bj-story-world .bj-journey-dialogue>div {border:2px solid #d3e2ef;background:linear-gradient(120deg,#fff,#f7fcff);box-shadow:0 4px 0 #d5e3ed}
 .bj-journey.bj-story-world .bj-journey-path {max-width:470px;padding:8px 0;margin-bottom:24px}
-.bj-journey.bj-story-world .bj-journey-path:before {left:38px;top:43px;bottom:75px;width:65px;border-width:6px;border-color:var(--trail-edge);opacity:.9}
+.bj-journey.bj-story-world .bj-journey-path:before {left:45px;top:43px;bottom:75px;width:65px;border-width:6px;border-color:var(--trail-edge);opacity:.9}
 .bj-journey.bj-story-world .bj-journey-path>li {min-height:116px}
 .bj-journey.bj-story-world .bj-journey-path>li>button {gap:16px;padding-block:12px;min-height:105px}
 .bj-journey.bj-story-world .bj-journey-path .bj-story-node {
-  width:74px;height:62px;border:3px solid #fff;border-radius:50%;background:linear-gradient(#d7f7e5,#8ed5bd);
+  width:88px;height:73px;border:3px solid #fff;border-radius:50%;background:linear-gradient(#d7f7e5,#8ed5bd);
   box-shadow:0 8px 0 #58a28d,0 13px 7px #315c7530,inset 0 4px 0 #ffffff9c;
 }
 .bj-journey.bj-story-world .bj-journey-path .bj-story-node:before {inset:7px;border-color:#f5ffeb8c}
 .bj-story-node-islet {position:absolute;left:-6px;right:-6px;height:23px;bottom:-13px;border-radius:50%;background:linear-gradient(#c2b0e0,#8a88bb);box-shadow:0 5px 0 #777fb433;z-index:-1}
-.bj-story-node-toy {position:relative;display:block;width:73px;height:67px;transform:translateY(-10px) rotate(7deg);z-index:1;line-height:0}
-.bj-story-node-toy>.bj-game-art {width:73px;max-width:none}
+.bj-story-node-toy {position:relative;display:block;width:90px;height:83px;transform:translateY(-10px) rotate(7deg);z-index:1;line-height:0}
+.bj-story-node-toy>.bj-game-art {width:90px;max-width:none}
 .bj-journey.bj-story-world .bj-story-node-toy>.bj-game-art>svg {width:100%;height:auto;filter:none}
 .bj-story-node-state {position:absolute;display:grid;place-items:center;right:-6px;top:1px;width:23px;height:23px;border:2px solid #fff;border-radius:8px;background:#7c5abd;color:#fff;box-shadow:0 3px 0 #5a4294;z-index:2}
 .bj-journey.bj-story-world .bj-story-node-state>svg {width:12px;height:12px;filter:none;stroke-width:2.5}
@@ -54,18 +54,18 @@
 .bj-journey.bj-story-world .bj-journey-path>li[data-state=locked] .bj-story-node-islet {background:linear-gradient(#d5dce9,#b3bed4)}
 .bj-journey.bj-story-world .bj-journey-checkpoint {margin-top:13px;color:#ab8238;font-size:10px}
 .bj-journey.bj-story-world .bj-journey-chapter-reward {border:2px solid #e9cc88;border-radius:23px;background:linear-gradient(120deg,#fff5d3,#fffae9);box-shadow:0 5px 0 #e5d19c;padding:16px;gap:12px}
-.bj-journey-chapter-reward>.bj-game-art {width:88px}
+.bj-journey-chapter-reward>.bj-game-art {width:106px}
 .bj-journey.bj-story-world .bj-journey-continue {border:2px solid #fff;outline:1px solid #b5dcd1;border-radius:18px;background:linear-gradient(#267f6d,#1d7261);box-shadow:0 5px 0 #175e51;color:#fff}
 .bj-journey.bj-story-world .bj-journey-book {border-radius:25px;border:2px solid #d3ddec;box-shadow:0 6px 0 #d1d9e9}
 .bj-journey.bj-story-world .bj-journey-book-art {height:140px;overflow:visible;margin-bottom:13px}
 .bj-journey.bj-story-world .bj-journey-book-art>.bj-game-landscape {overflow:hidden;border-radius:22px 22px 0 0}
 .bj-journey.bj-story-world .bj-journey-book-art:after {border-radius:22px 22px 0 0}
-.bj-journey.bj-story-world .bj-story-book-token {position:absolute;left:auto;right:12px;top:auto;bottom:-20px;width:69px;padding:5px;border:2px solid #fff;border-radius:20px;background:#eee6ff;box-shadow:0 4px 0 #c3b1dc;line-height:0;transform:rotate(7deg)}
-.bj-story-book-token>.bj-game-art {width:58px}.bj-story-book-token>.bj-game-art>svg {width:100%;height:auto}
+.bj-journey.bj-story-world .bj-story-book-token {position:absolute;left:auto;right:12px;top:auto;bottom:-20px;width:82px;padding:5px;border:2px solid #fff;border-radius:20px;background:#eee6ff;box-shadow:0 4px 0 #c3b1dc;line-height:0;transform:rotate(7deg)}
+.bj-story-book-token>.bj-game-art {width:70px}.bj-story-book-token>.bj-game-art>svg {width:100%;height:auto}
 .bj-story-collection-heading {position:relative;padding-right:88px;min-height:108px}
 .bj-story-collection-heading>.bj-game-art {position:absolute;right:0;top:0;width:90px;transform:rotate(7deg)}
-.bj-journey.bj-story-world .bj-story-badge-art {position:relative;width:78px;height:77px;border:0;background:none;box-shadow:none;margin:0 auto 11px;transform:none;overflow:visible}
-.bj-story-badge-art>.bj-game-art {width:80px;max-width:none}
+.bj-journey.bj-story-world .bj-story-badge-art {position:relative;width:96px;height:94px;border:0;background:none;box-shadow:none;margin:0 auto 11px;transform:none;overflow:visible}
+.bj-story-badge-art>.bj-game-art {width:98px;max-width:none}
 .bj-journey.bj-story-world .bj-story-badge-art>.bj-game-art>svg {width:100%;height:auto}
 .bj-journey.bj-story-world .bj-journey-badges article[data-earned=false] .bj-story-badge-art>.bj-game-art {filter:grayscale(.7);opacity:.6}
 .bj-story-badge-lock {position:absolute;display:grid;place-items:center;right:-1px;bottom:5px;width:25px;height:25px;border:2px solid #fff;border-radius:9px;background:#8c9db0;color:#fff;box-shadow:0 3px 0 #6c8097}
@@ -102,14 +102,14 @@
   .bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy>strong {font-size:15px}
 }
 @media(max-width:359px) {
-  .bj-journey.bj-story-world .bj-journey-path .bj-story-node {width:64px;height:56px}
-  .bj-story-node-toy {width:65px;height:61px}.bj-story-node-toy>.bj-game-art {width:65px}
+  .bj-journey.bj-story-world .bj-journey-path .bj-story-node {width:76px;height:65px}
+  .bj-story-node-toy {width:78px;height:73px}.bj-story-node-toy>.bj-game-art {width:78px}
   .bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy {padding-inline:8px}
   .bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy>strong {font-size:14px}
   .bj-journey.bj-story-world .bj-journey-path .bj-journey-node-copy>span {font-size:9px}
   .bj-journey.bj-story-world .bj-journey-checkpoint {margin-left:71px;font-size:9px}
   .bj-story-collection-heading {padding-right:73px}.bj-story-collection-heading>.bj-game-art {width:75px}
-  .bj-journey-chapter-reward>.bj-game-art {width:65px}
+  .bj-journey-chapter-reward>.bj-game-art {width:78px}
 }
 .dark .bj-journey.bj-story-world {--trail-ink:#ddedfa;--trail-soft:#294b5c;--trail-edge:#426a7c;background:linear-gradient(#183448,#1e3549);color:#d5e8f7}
 .dark .bj-journey.bj-story-world .bj-journey-top h1 {color:#e7f2ff}.dark .bj-journey.bj-story-world .bj-journey-top>div>span {background:#3b3659;color:#dcc8ff;border-color:#685f89}
