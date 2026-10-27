@@ -50,10 +50,17 @@ try {
     await page.screenshot({path:`test-artifacts/student-motion/story-${width}.png`,fullPage:true});shots.push(width);
   }
   // Each illustrated chapter keeps the motion layer and its actual navigation.
+  const picturedBiomes=new Set();
   for(const chapter of ['Duran Değirmen','Bulut Gözlemevi','Kristal Geçit','Unutulan Liman','Rüzgârın Kütüphanesi','Yıldızların Şifresi','Atlasın Kalbi']){
     await page.getByRole('button',{name:'Sonraki hikâye bölümü',exact:true}).click();
     await page.getByRole('heading',{name:chapter,exact:true}).waitFor();
     assert.equal(await page.locator('.bj-story-stages button:disabled').count(),6);
+    const biome=await page.locator('.bj-journey').getAttribute('data-scene');
+    assert.deepEqual(await page.evaluate(()=>Array.from(document.querySelectorAll('svg [fill^="url(#"]'),el=>el.getAttribute('fill').slice(5,-1)).filter(id=>!document.getElementById(id))),[]);
+    if(!picturedBiomes.has(biome)){
+      await page.screenshot({path:`test-artifacts/student-motion/biome-${biome}.png`,fullPage:true,animations:'disabled'});
+      picturedBiomes.add(biome);
+    }
   }
   const nav=page.getByRole('navigation',{name:'Yerel kontrol'});
   await nav.getByRole('button',{name:'Çalış',exact:true}).click();

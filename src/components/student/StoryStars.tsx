@@ -1,4 +1,5 @@
 import React, { useId, type CSSProperties, type ReactNode } from 'react';
+import { StudentGameArt } from './StudentToyArt';
 import { storyCelebration, storyStars, STORY_QUESTION_COUNT } from '../../features/student/story-adventure';
 const starPath='M14 2.5 17.5 9.6 25.4 10.8 19.7 16.3 21 24.1 14 20.4 7 24.1 8.3 16.3 2.6 10.8 10.5 9.6Z';
 export function StoryStars({correct,total=STORY_QUESTION_COUNT,compact=false,label='Macera yıldızları'}:{correct:number;total?:number;compact?:boolean;label?:string}) {
@@ -12,8 +13,8 @@ export function StoryStars({correct,total=STORY_QUESTION_COUNT,compact=false,lab
 export function StoryResultCelebration({correct,total=STORY_QUESTION_COUNT,bestCorrect,bestTotal=total}:{correct:number;total?:number;bestCorrect?:number;bestTotal?:number}) {
   const kind=storyCelebration(correct,total);
   const titles={perfect:'Kusursuz macera!',sparkle:'Yıldızların parlıyor!',orbit:'Yeni bir yörünge keşfettin!',grow:'Her denemede yeni bir keşif!'};
-  return <section className="bj-story-celebration" data-celebration={kind} aria-label="Macera yıldız sonucu">
-    <div className="bj-story-celebration-art" aria-hidden="true"><span className="bj-celebration-ring"/><span className="bj-celebration-ring"/><img src="/brand/junior-fox.svg" alt="" width={92} height={100}/>{Array.from({length:12},(_,index)=><i key={index} style={{'--particle-index':index} as CSSProperties}>{kind==='grow'?'✧':kind==='orbit'?'●':'✦'}</i>)}</div>
+  return <section className="bj-story-celebration bj-story-result-world" data-celebration={kind} aria-label="Macera yıldız sonucu">
+    <div className="bj-story-celebration-art" aria-hidden="true"><span className="bj-celebration-ring"/><span className="bj-celebration-ring"/><span className="bj-story-result-podium"/><span className="bj-story-result-toy"><StudentGameArt kind={kind==='perfect'?'medal':kind==='grow'?'book':'rocket'}/></span><img src="/brand/junior-fox.svg" alt="" width={92} height={100}/>{Array.from({length:12},(_,index)=><i key={index} style={{'--particle-index':index} as CSSProperties}>{kind==='grow'?'✧':kind==='orbit'?'●':'✦'}</i>)}</div>
     <h3>{titles[kind]}</h3><p>{correct}/{total} doğru · Yıldızların doğru cevap oranına göre dolar.</p>
     <StoryStars correct={correct} total={total}/>
     {bestCorrect!==undefined&&<p className="bj-story-best">En iyi sonucun: {bestCorrect}/{bestTotal} doğru · {storyStars(bestCorrect,bestTotal).toLocaleString('tr-TR',{maximumFractionDigits:2})}/5 yıldız</p>}
