@@ -26,7 +26,7 @@ export function StudentStoryScene({ scene = 'forest' }: { scene?: string }) {
       <linearGradient id={`${id}-grass`} x2=".4" y2="1"><stop stopColor={colors.light}/><stop offset=".5" stopColor={colors.ground}/><stop offset="1" stopColor={colors.edge}/></linearGradient>
       <linearGradient id={`${id}-rock`} x2=".4" y2="1"><stop stopColor="#c4acec"/><stop offset=".5" stopColor="#9b8ac7"/><stop offset="1" stopColor="#626ea8"/></linearGradient>
       <linearGradient id={`${id}-leaf`} x2=".7" y2="1"><stop stopColor={colors.light}/><stop offset=".6" stopColor={colors.leaf}/><stop offset="1" stopColor={colors.edge}/></linearGradient>
-      <linearGradient id={`${id}-water`} x2="0" y2="1"><stop stopColor="#c2ffff"/><stop offset=".5" stopColor="#71d7ee"/><stop offset="1" stopColor="#54b3dc00"/></linearGradient>
+      <linearGradient id={`${id}-water`} x2="0" y2="1"><stop stopColor="#c2ffff"/><stop offset=".5" stopColor="#71d7ee"/><stop offset="1" stopColor="#54b3dc" stopOpacity="0"/></linearGradient>
       <linearGradient id={`${id}-roof`} x2=".4" y2="1"><stop stopColor="#e5b8ff"/><stop offset="1" stopColor="#9874d4"/></linearGradient>
       <linearGradient id={`${id}-gem`} x2=".5" y2="1"><stop stopColor="#effbff"/><stop offset=".5" stopColor="#a5dcff"/><stop offset="1" stopColor="#8d8be8"/></linearGradient>
     </defs>

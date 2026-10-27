@@ -90,6 +90,11 @@
 .bj-story-result-world[data-celebration=grow] {background:radial-gradient(ellipse at 50% 0,#fbfff1,#eaf7df);border-color:#c9dfa9;box-shadow:0 5px 0 #bed5a6}
 
 @media(max-width:649px) {
+  .bj-native-hub .bj-journey.bj-story-world .bj-journey-top {margin-bottom:6px}
+  .bj-native-hub .bj-journey.bj-story-world .bj-journey-stats {margin-block:8px}
+  .bj-native-hub .bj-journey.bj-story-world .bj-journey-chapter-nav {margin-bottom:8px}
+  .bj-native-hub .bj-journey.bj-story-world .bj-journey-cover {margin-bottom:9px}
+  .bj-native-hub .bj-journey.bj-story-world .bj-journey-dialogue {margin-block:6px}
   .bj-journey.bj-story-world .bj-journey-cover>.bj-story-cover-copy {padding:12px 15px;gap:4px;max-width:70%}
   .bj-journey.bj-story-world .bj-story-cover-copy>strong {font-size:21px}
   .bj-journey.bj-story-world .bj-journey-path>li>button {gap:12px;min-height:100px}
