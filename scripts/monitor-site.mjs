@@ -3,7 +3,7 @@ import {pathToFileURL} from 'node:url';
 import {performance} from 'node:perf_hooks';
 export async function monitorSite(fetcher=fetch, {expectedPaidSales}={}){
  const checks=[];
- for(const path of ['/','/blog','/api/health','/api/public/platform','/api/public/membership','/bilgi/gizlilik-ve-veriler','/bilgi/abonelik-iptal-ve-iade','/api/account/export','/api/admin/platform-settings']){
+ for(const path of ['/','/blog','/konu-anlatimlari','/api/health','/api/public/platform','/api/public/membership','/bilgi/gizlilik-ve-veriler','/bilgi/abonelik-iptal-ve-iade','/api/account/export','/api/admin/platform-settings']){
   const start=performance.now();let ok=false;
   try{
    const response=await fetcher(new URL(path,'https://bilsemjunior.vercel.app'),{redirect:'manual',signal:AbortSignal.timeout(20_000)});

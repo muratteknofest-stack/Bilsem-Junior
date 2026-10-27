@@ -5,9 +5,11 @@ function healthy(sales=false):typeof fetch {return async input=>{const path=new 
  return new Response(body,{status:['/api/account/export','/api/admin/platform-settings'].includes(path)?401:200,headers:{'x-content-type-options':'nosniff','cache-control':'no-store'}});
 };}
 test('monitor checks public/legal/sales and private boundaries without exposing response bodies',async()=>{
- const good=await monitorSite(healthy(),{expectedPaidSales:false});assert.equal(good.ok,true);assert.equal(good.checks.length,9);
+ const good=await monitorSite(healthy(),{expectedPaidSales:false});assert.equal(good.ok,true);assert.equal(good.checks.length,10);
  const broken:typeof fetch=async(input,init)=>new URL(String(input)).pathname==='/api/health'?new Response('{"status":"unavailable","customer":"must-not-log"}',{status:503}):healthy()(input,init);
- const bad=await monitorSite(broken);assert.equal(bad.ok,false);assert.equal(bad.checks.length,9);assert.match(monitorSummary(bad),/FAILURE/);assert.ok(!JSON.stringify(bad).includes('must-not-log'));
+ const bad=await monitorSite(broken);assert.equal(bad.ok,false);assert.equal(bad.checks.length,10);assert.match(monitorSummary(bad),/FAILURE/);assert.ok(!JSON.stringify(bad).includes('must-not-log'));
+ const missingLesson:typeof fetch=async(input,init)=>new URL(String(input)).pathname==='/konu-anlatimlari'?new Response('Not found',{status:404}):healthy()(input,init);
+ assert.equal((await monitorSite(missingLesson)).ok,false);
 });
 test('monitor detects unexpected sales reopening and anonymous account exposure',async()=>{
  assert.equal((await monitorSite(healthy(true),{expectedPaidSales:false})).ok,false);

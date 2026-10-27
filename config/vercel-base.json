@@ -81,7 +81,7 @@
       "destination": "/index.html"
     },
     {
-      "source": "/((?:admin(?:/giris)?|reset-password|wordwall|dashboard|parent|login|register|practice|exam|adaptive)/?)",
+      "source": "/((?:admin(?:/giris)?|reset-password|wordwall|konu-anlatimlari|dashboard|parent|login|register|practice|exam|adaptive)/?)",
       "destination": "/index.html"
     }
   ],
@@ -160,7 +160,7 @@
       ]
     },
     {
-      "source": "/((?:admin(?:/giris)?|reset-password|wordwall|dashboard|parent|login|register|practice|exam|adaptive)/?)",
+      "source": "/((?:admin(?:/giris)?|reset-password|wordwall|konu-anlatimlari|dashboard|parent|login|register|practice|exam|adaptive)/?)",
       "headers": [
         {
           "key": "Cache-Control",
