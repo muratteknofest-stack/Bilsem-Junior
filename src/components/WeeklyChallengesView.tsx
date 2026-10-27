@@ -452,8 +452,8 @@ export const WeeklyChallengesView: React.FC<WeeklyChallengesViewProps> = ({
             >
               <div>
                 {/* Header of card */}
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div className="flex items-center gap-3">
+                <div className="bj-game-weekly-card-head flex flex-wrap items-start justify-between gap-3 mb-4">
+                  <div className="flex min-w-0 items-center gap-3">
                     <div
                       className={`w-12 h-12 rounded-2xl ${cfg.bgLight} ${cfg.color} border ${cfg.borderLight} flex items-center justify-center group-hover:scale-105 transition-transform shrink-0`}
                     >
