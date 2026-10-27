@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { registrationReadySettings, salesReadySettings } from './fixtures/launch-settings';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
@@ -35,6 +36,8 @@ test('license testing is opt-in, bound to one parent/student pair, expires withi
   assert.equal(licenseTestStudentId(env,Date.parse(env.GOOGLE_PLAY_LICENSE_TEST_UNTIL)),null);
   const settings=defaultPlatformSettings(); assert.equal(licenseTestLegalReady(settings),false);
   settings.business={legalName:'Operator',address:'Address',contactEmail:'test@example.com',legalBases:'Purposes',retention:'Retention',transfers:'Providers'};
+  assert.equal(licenseTestLegalReady(settings),false);
+  Object.assign(settings,registrationReadySettings());
   assert.equal(licenseTestLegalReady(settings),true);
   settings.business.address='  ';assert.equal(licenseTestLegalReady(settings),false);
 });
@@ -174,8 +177,9 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     assert.equal((await post('parent/google-play/prepare',{studentId:student})).status,503);assert.equal(events.length,0); // missing seller information blocks sales
     assert.equal((await verify()).status,409);assert.equal(events.length,0);
     platform.business={legalName:'Fixture operator',address:'Fixture address',contactEmail:'fixture@example.com',legalBases:'Fixture purposes',retention:'Fixture retention',transfers:'Fixture transfers'};
-    // The sales switch and legal/setup/catalog checks are independent of uncompleted platform acceptance flags.
-    assert.equal(platform.release.emailTested,false);
+    assert.equal((await publicPlayMembership(async()=>({settings:platform,revision:1,updatedAt:null}))).ready,false);
+    assert.equal((await post('parent/google-play/prepare',{studentId:student})).status,503);
+    Object.assign(platform,salesReadySettings()); // Fixture evidence, never production acceptance.
     assert.equal((await publicPlayMembership(async()=>({settings:platform,revision:1,updatedAt:null}))).ready,true);
     const prepared=await post('parent/google-play/prepare',{studentId:student});assert.equal(prepared.status,200);assert.equal(prepared.body.accountId,binding.accountId);assert.equal(prepared.body.profileId,binding.profileId);assert.deepEqual(events,['catalog']);
     events=[];payload=subscription({externalAccountIdentifiers:{obfuscatedExternalAccountId:binding.accountId,obfuscatedExternalProfileId:'b'.repeat(64)}});assert.equal((await verify()).status,409);assert.deepEqual(events,['google']);
@@ -251,6 +255,7 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     process.env.GOOGLE_PLAY_LICENSE_TEST_ENABLED='false';
     process.env.GOOGLE_PLAY_PAID_ACCESS_FROM='2026-10-27T00:00:00Z';
     process.env.GOOGLE_PLAY_BILLING_ENABLED='true';
+    Object.assign(platform,salesReadySettings());
     assert.equal((await publicPlayMembership(async()=>({settings:platform,revision:1,updatedAt:null}))).paidAccessFrom,'2026-10-27T00:00:00.000Z');
     ledger=[];preparedBinding=false;events=[];
     authCreatedAt='2026-10-26T23:59:59.999Z';
@@ -290,7 +295,7 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     await assert.rejects(requireLearningAccess(student),e=>(e as any).status===503);authUnavailable=false;
     authCreatedAt='invalid';
     await assert.rejects(requireLearningAccess(student),e=>(e as any).status===503);
-    assert.equal(platform.release.emailTested,false);assert.equal(platform.release.restoreTested,false);
+    assert.equal(platform.commercial.purchase.reference,'Automated fixture reference only');
   }finally{
     await new Promise<void>(resolve=>server.close(()=>resolve()));globalThis.fetch=originalFetch;GoogleAuth.prototype.getAccessToken=originalToken;OAuth2Client.prototype.verifyIdToken=originalVerify;
     for(const k of Object.keys(process.env))if(!(k in savedEnv))delete process.env[k];Object.assign(process.env,savedEnv);

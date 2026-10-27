@@ -1,5 +1,7 @@
 # Bilsem Junior
 
+> 27 Ekim 2026 güncellemesi: Bu dosya 24 Ekim tarihli tarihsel taslaktır. Aşağıdaki marka/adres beyanı doğrulanmış işletmeci kimliği değildir; canlıya veya sözleşmelere olduğu gibi aktarılmamalıdır. Güncel engeller ve tekrar açma sırası için [tamamlama kaydına](../commercial-launch-20261027.md) bakın. Eski Play Console ilerleme sayıları güncel yayın durumunu göstermez.
+
 Gizlilik ve Google Play yayın hazırlık dosyası
 
 24 Ekim 2026 | 1.0 - İşletmeci incelemesine hazır taslak

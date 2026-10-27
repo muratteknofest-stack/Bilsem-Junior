@@ -3,6 +3,8 @@ import { authenticatedFetch } from "../../lib/api-client";
 import { downloadSafePreferences } from "../../lib/safe-preferences";
 import {
   releaseBlockers,
+  registrationBlockers,
+  COMMERCIAL_CHECKS,
   type SettingsRecord,
   type PlatformSettings,
 } from "../../lib/platform-settings";
@@ -39,7 +41,7 @@ export function AdminSystemSettings({
     setBusy(true);setError('');setNotice('');
     try { const response=await authenticatedFetch('/api/admin/platform-settings/billing-diagnostics');const report=await response.json();
       if(!response.ok)throw Error('Google Play durumu okunamadı.');
-      setNotice(`Google Play: ${report.configured?'Sunucu ayarları mevcut':'Sunucu ayarları eksik'} · ${report.catalogVerified?'Üç abonelik dönemi doğrulandı':'Ürün kataloğu doğrulanmadı'} · ${report.enabled?'Satış açık':'Satış kapalı'} · ${report.blockers.length} yayın eksiği`);
+      setNotice(`Google Play: ${report.configured?'Sunucu ayarları mevcut':'Sunucu ayarları eksik'} · ${report.catalogVerified?'Üç abonelik dönemi doğrulandı':'Ürün kataloğu doğrulanmadı'} · ${report.ready?'Satış hazır':'Satış kapalı'} · ${report.blockers.length} yayın eksiği`);
     } catch {setError('Google Play yapılandırması denetlenemedi.');}finally{setBusy(false);}
   }
 
@@ -95,6 +97,7 @@ export function AdminSystemSettings({
     brandName: "Marka adı (şirket unvanı yerine geçmez)",
     legalName: "Yasal satıcı / veri sorumlusu adı veya unvanı",
     address: "İşletmeci adresi",
+    contactPhone: "İşletmeci iş telefonu",
     contactEmail: "İletişim ve veri talebi e-postası",
     legalBases: "Her işleme amacı ve hukuki dayanağı",
     retention: "Veri türlerine göre saklama ve silme süreleri",
@@ -225,6 +228,18 @@ export function AdminSystemSettings({
               </div>
             </section>
             <section className="space-y-4 rounded-2xl border bg-white p-5">
+              <h3 className="text-lg font-bold">Yayın hazırlığı ve ödeme kabul kayıtları</h3>
+              <p>Yalnız tamamlanan inceleme veya gerçek cihaz testini onaylayın. Belgenin ya da test kaydının tarihini ve güvenli kayıt referansını yazın. Bunlar yönetici beyanıdır; hukuki uygunluk sertifikası değildir. Parola, API anahtarı, satın alma tokenı veya müşteri belgesi eklemeyin.</p>
+              {(Object.keys(COMMERCIAL_CHECKS) as Array<keyof typeof COMMERCIAL_CHECKS>).map(key => <div key={key} className="space-y-2 border-t pt-3">
+                <label className="flex items-start gap-3"><input type="checkbox" className="mt-1 h-5 w-5" checked={record.settings.commercial[key].confirmed}
+                  onChange={event => { const confirmed = event.target.checked; setRecord(r => r && ({...r,settings:{...r.settings,commercial:{...r.settings.commercial,[key]:{...r.settings.commercial[key],confirmed}}}})); setNotice(''); }}/><span>{COMMERCIAL_CHECKS[key].label}</span></label>
+                <label className="block text-sm">{COMMERCIAL_CHECKS[key].label} — kanıt tarihi ve kayıt referansı
+                  <textarea rows={2} maxLength={2000} className="mt-2 w-full rounded-lg border p-3" value={record.settings.commercial[key].reference}
+                    onChange={event => { const reference = event.target.value; setRecord(r => r && ({...r,settings:{...r.settings,commercial:{...r.settings.commercial,[key]:{...r.settings.commercial[key],reference}}}})); setNotice(''); }}/>
+                </label>
+              </div>)}
+            </section>
+            <section className="space-y-4 rounded-2xl border bg-white p-5">
               <h3 className="text-lg font-bold">
                 Kayıt öncesinde yayımlanan işletmeci bilgileri
               </h3>
@@ -237,10 +252,10 @@ export function AdminSystemSettings({
                 (key) => (
                   <label className="block" key={key}>
                     {labels[key]}
-                    {key === "contactEmail" ? (
+                    {key === "contactEmail" || key === "contactPhone" ? (
                       <input
-                        type="email"
-                        maxLength={254}
+                        type={key === "contactEmail" ? "email" : "tel"}
+                        maxLength={key === "contactEmail" ? 254 : 60}
                         value={record.settings.business[key] || ""}
                         onChange={(e) => business(key, e.target.value)}
                         className="mt-2 w-full rounded-lg border p-3"
@@ -305,6 +320,7 @@ export function AdminSystemSettings({
               <label className="flex items-start gap-3">
                 <input
                   type="checkbox"
+                  disabled={!record.settings.release.registrationEnabled && registrationBlockers(record.settings).length > 0}
                   checked={record.settings.release.registrationEnabled}
                   onChange={(e) => {
                     const enabled = e.target.checked;
@@ -330,12 +346,10 @@ export function AdminSystemSettings({
                 </span>
               </label>
               <p>
-                Kayıt açma ayarı bağımsızdır. Yukarıdaki hazırlık kayıtları
-                eksik işleri gösterir; kayıt açıldığında tamamlandı sayılmaz.
+                Yeni kayıt için işletmeci, aydınlatma, saklama-silme, aktarım ve eski anahtarların iptal kayıtları tamamlanmalıdır. Kayıt açılması ödeme testlerini veya diğer işletim kontrollerini tamamlanmış saymaz.
               </p>
               <p>
-                Ücretli satış etkin değildir. Ödeme sağlayıcısı ve sunucu
-                kullanım hakları kurulana kadar abonelik satışı açılmaz.
+                Yeni satışlar, sunucudaki satış anahtarı ve tüm yayın kayıtları tamamlandığında açılır. Mevcut abonelik doğrulaması ve geri yükleme bu anahtardan bağımsızdır.
               </p>
             </section>
             <button

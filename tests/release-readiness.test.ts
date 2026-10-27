@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { registrationReadySettings, salesReadySettings } from './fixtures/launch-settings';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createServer as createHttpServer} from 'node:http';
@@ -7,6 +8,9 @@ import { defaultPlatformSettings, registrationOpen, releaseBlockers, platformSet
 import { exportSafePreferences } from '../src/lib/safe-preferences';
 import { publicPolicy, policyHtml } from '../server/platform-policy';
 import { readPlatformSettings } from '../server/platform-settings';
+import express from 'express';
+import createPlatformRoutes from '../server/routes/platform-routes';
+import { createCachedRead } from '../server/cached-read';
 // @ts-ignore JavaScript operation helper is also used by the backup workflow.
 import { backupKey, encryptBackup, decryptBackup } from '../scripts/backup-crypto.mjs';
 
@@ -17,18 +21,23 @@ test('export can never enumerate storage or request an authentication key', () =
   assert.deepEqual(data.preferences, { zekapark_theme: 'dark' });
   assert.ok(!JSON.stringify(data).includes('sb-'));
 });
-test('registration uses explicit operator enablement while readiness records remain independent', () => {
-  const complete = defaultPlatformSettings();
-  assert.equal(registrationOpen(complete), false); assert.equal(releaseBlockers(complete).length, 10);
-  complete.release.registrationEnabled = true;
-  assert.equal(registrationOpen(complete), true);
-  assert.equal(releaseBlockers(complete).length, 10);
-  assert.equal(complete.release.emailTested, false);
-  complete.business = { legalName: 'Test İşletmesi', address: 'Yalnızca test adresi', contactEmail: 'test@example.com', legalBases: 'Test amaç ve dayanak', retention: 'Test saklama süresi', transfers: 'Test aktarım açıklaması' };
-  complete.release = { registrationEnabled: true, emailTested: true, restoreTested: true, familyPilotTested: true, monitoringTested: true };
-  assert.equal(registrationOpen(complete), true);
-  for (const key of Object.keys(complete.business) as Array<keyof typeof complete.business>) assert.equal(registrationOpen({ ...complete, business: { ...complete.business, [key]: '' } }), true, key);
-  for (const key of Object.keys(complete.release) as Array<keyof typeof complete.release>) assert.equal(registrationOpen({ ...complete, release: { ...complete.release, [key]: false } }), key !== 'registrationEnabled', key);
+test('registration needs explicit enablement plus documented identity/privacy; operational checks remain separate', () => {
+  const incomplete = defaultPlatformSettings();
+  assert.equal(registrationOpen(incomplete), false); assert.equal(releaseBlockers(incomplete).length, 22);
+  incomplete.release.registrationEnabled = true;
+  assert.equal(registrationOpen(incomplete), false);
+  const complete = salesReadySettings();
+  assert.equal(registrationOpen(complete), true); assert.equal(releaseBlockers(complete).length,0);
+  for (const key of Object.keys(complete.business) as Array<keyof typeof complete.business>)
+    assert.equal(registrationOpen({ ...complete, business: { ...complete.business, [key]: '' } }), false, key);
+  for (const key of Object.keys(complete.release) as Array<keyof typeof complete.release>)
+    assert.equal(registrationOpen({ ...complete, release: { ...complete.release, [key]: false } }), key !== 'registrationEnabled', key);
+  assert.equal(registrationOpen(registrationReadySettings()),true); // Sales/backup acceptance does not stand in for privacy preparation.
+  for (const key of Object.keys(complete.commercial) as Array<keyof typeof complete.commercial>) {
+    const missing = structuredClone(complete); missing.commercial[key].reference='';
+    assert.ok(releaseBlockers(missing).length>0,key);
+    if(['operatorIdentity','privacyAndRetention','internationalTransfers','credentialRotation'].includes(key))assert.equal(registrationOpen(missing),false,key);
+  }
   assert.equal(platformSettingsSchema.safeParse({ ...complete, serviceRoleKey: 'forged' }).success, false);
   assert.equal(platformSettingsSchema.safeParse({ ...complete, exams: { ...complete.exams, mini: { count: 100, seconds: 900 } } }).success, false);
   complete.exams.mini = { count: 7, seconds: 420 }; assert.equal(configuredExams(complete)[0].count, 7); assert.equal(configuredExams(complete)[0].seconds, 420);
@@ -51,11 +60,15 @@ test('loading enabled registration preserves recorded checks and never invents a
         const url = new URL(String(input));
         assert.equal(url.origin, origin);
         assert.equal(url.pathname, '/rest/v1/platform_settings');
-        return Response.json({ settings: { release: recorded }, revision: 2, updated_at: null });
+        return Response.json({ settings: {release:recorded,business:{legalName:'Quantum tech',address:'Trabzon tekno kent',contactEmail:'test@example.invalid'}}, revision: 2, updated_at: null });
       };
       const result = await readPlatformSettings();
-      assert.equal(registrationOpen(result.settings), true);
+      assert.equal(registrationOpen(result.settings), false);
       assert.deepEqual(result.settings.release, platformSettingsSchema.parse({ release: recorded }).release);
+      assert.equal(result.settings.business.legalBases,'');
+      assert.equal(result.settings.business.retention,'');
+      assert.equal(result.settings.business.transfers,'');
+      assert.equal(result.settings.commercial.operatorIdentity.confirmed,false);
       assert.equal(result.settings.release.restoreTested, false);
       assert.equal(result.settings.release.familyPilotTested, false);
       assert.ok(releaseBlockers(result.settings).includes('Şifreli yedekten geri yükleme kabul testi'));
@@ -69,10 +82,63 @@ test('loading enabled registration preserves recorded checks and never invents a
     }
   }
 });
+
+test('admin HTTP writes reject premature opening, preserve MFA/revisions and allow closing', async () => {
+  const keys = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'VERCEL', 'VERCEL_ENV'] as const;
+  const previous = new Map(keys.map(key => [key, process.env[key]]));
+  const originalFetch = globalThis.fetch;
+  const admin = '88888888-8888-4888-8888-888888888888';
+  process.env.SUPABASE_URL = 'https://launch-fixture.invalid';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_fixture';
+  delete process.env.VERCEL; delete process.env.VERCEL_ENV;
+  let stored = defaultPlatformSettings(), revision = 4, writes = 0;
+  globalThis.fetch = async (input, init) => {
+    const request = new Request(input, init), url = new URL(request.url);
+    assert.equal(url.origin, 'https://launch-fixture.invalid');
+    if (url.pathname === '/auth/v1/user') return Response.json({id:admin,email:'test@example.invalid',email_confirmed_at:'2026-10-27T00:00:00Z',app_metadata:{role:'admin'}});
+    if (url.pathname === '/rest/v1/rpc/is_user_session_active') return Response.json(true);
+    if (url.pathname === '/rest/v1/profiles') return Response.json({id:admin,role:'admin'});
+    assert.equal(url.pathname, '/rest/v1/platform_settings');
+    if (request.method === 'PATCH') {
+      if (url.searchParams.get('revision') !== `eq.${revision}`) return Response.json(null);
+      const body = await request.json();
+      assert.equal(body.updated_by,admin); assert.equal(body.revision,revision+1);
+      stored = body.settings; revision = body.revision; writes++;
+      return Response.json({revision});
+    }
+    return Response.json({settings:stored,revision,updated_at:null});
+  };
+  const app=express(); app.use(express.json());
+  app.use('/api',createPlatformRoutes(createCachedRead(readPlatformSettings,5000)));
+  const server=app.listen(0,'127.0.0.1'); await new Promise<void>(resolve=>server.once('listening',resolve));
+  const address=server.address(); assert.ok(address&&typeof address!=='string');
+  const origin=`http://127.0.0.1:${address.port}`;
+  const token=(aal:string)=>['fixture',Buffer.from(JSON.stringify({aal,session_id:'99999999-9999-4999-8999-999999999999'})).toString('base64url'),'fixture'].join('.');
+  const put=(settings:unknown,version=4,aal:string|null='aal2')=>originalFetch(origin+'/api/admin/platform-settings',{method:'PUT',headers:{'Content-Type':'application/json',...(aal?{Authorization:`Bearer ${token(aal)}`}:{})},body:JSON.stringify({settings,revision:version})});
+  try {
+    assert.equal((await put({},4,null)).status,401);
+    assert.equal((await put({},4,'aal1')).status,403);
+    assert.equal((await originalFetch(origin+'/api/public/platform')).status,200); // Prime cache.
+    const premature=defaultPlatformSettings(); premature.release.registrationEnabled=true;
+    const rejected=await put(premature); assert.equal(rejected.status,422);
+    assert.ok((await rejected.json()).blockers.includes('Paylaşılmış sunucu anahtarlarının değiştirilmesi ve eski anahtarların iptal doğrulaması'));
+    assert.equal(writes,0);
+    assert.equal((await put(registrationReadySettings())).status,200); assert.equal(writes,1);
+    assert.equal((await (await originalFetch(origin+'/api/public/platform')).json()).registrationOpen,true);
+    assert.equal((await put(registrationReadySettings())).status,409); assert.equal(writes,1);
+    assert.equal((await put(defaultPlatformSettings(),5)).status,200); assert.equal(writes,2);
+    assert.equal((await (await originalFetch(origin+'/api/public/platform')).json()).registrationOpen,false);
+  } finally {
+    await new Promise<void>(resolve=>server.close(()=>resolve()));
+    globalThis.fetch=originalFetch;
+    for (const [key,value] of previous) { if(value===undefined)delete process.env[key];else process.env[key]=value; }
+  }
+});
 test('policy keeps missing information visible and escapes operator-supplied HTML', () => {
-  const settings = defaultPlatformSettings();
-  assert.match(policyHtml(publicPolicy('gizlilik-ve-veriler', settings)!), /henüz belirtilmemiştir/);
-  settings.business = { legalName: '<script>alert(1)</script>', address: 'Test adresi', contactEmail: 'test@example.com', legalBases: 'Test', retention: 'Test', transfers: 'Test' };
+  const settings = salesReadySettings();
+  const missing = defaultPlatformSettings();
+  assert.match(policyHtml(publicPolicy('gizlilik-ve-veriler', missing)!), /henüz belirtilmemiştir/);
+  settings.business = { legalName: '<script>alert(1)</script>', address: 'Test adresi', contactPhone:'+90 555 000 0000', contactEmail: 'test@example.com', legalBases: 'Test', retention: 'Test', transfers: 'Test' };
   const html = policyHtml(publicPolicy('gizlilik-ve-veriler', settings)!);
   assert.ok(!html.includes('<script>alert(1)</script>')); assert.ok(html.includes('&lt;script&gt;')); assert.ok(!html.includes('henüz belirtilmemiştir'));
   assert.match(html, /Wordwall/); assert.match(html, /KVKK/); assert.equal(publicPolicy('does-not-exist', settings), undefined);
@@ -108,12 +174,12 @@ test('operator identity and contact links remain visible while legal details are
     assert.match(html, /Quantum tech lab/);
     assert.match(html, /href="mailto:contact@example.com"/);
     assert.ok(!html.includes('Doğrulanmış Kurumsal Bilgi'));
-    assert.ok(!html.includes('kimlik ve adres bilgileri henüz'));
+    assert.ok(!html.includes('Yasal satıcı ve veri sorumlusu'));
   }
   const privacy = policyHtml(publicPolicy('gizlilik-ve-veriler', settings)!);
   assert.match(privacy, /hukuki dayanak/);
-  assert.match(privacy, /henüz tamamlanmamıştır/);
-  assert.equal(releaseBlockers(settings).length, 7);
+  assert.match(privacy, /henüz belirtilmemiştir/);
+  assert.equal(releaseBlockers(settings).length, 19);
 });
 
 test('an invalid contact in direct HTML input cannot inject a mail link', () => {
@@ -128,7 +194,7 @@ import {commercialReadiness} from '../server/commercial-readiness';
 import {verifyPublicRelease,fetchReleaseResource} from '../scripts/check-live-release.mjs';
 
 test('commercial readiness uses the real operator settings and verified Google Play products',()=>{
- const settings=defaultPlatformSettings();settings.business={legalName:'Test Operator',address:'Test postal address',contactEmail:'test@example.invalid',legalBases:'Test purposes',retention:'Test retention',transfers:'Test providers'};
+ const settings=salesReadySettings();
  settings.release={registrationEnabled:true,emailTested:true,restoreTested:true,familyPilotTested:true,monitoringTested:true};
  const checks={databaseReady:true,originReady:true,playSetupReady:true,productsVerified:true};
  assert.equal(commercialReadiness(settings,checks).readyForPaidLaunch,true);assert.equal(commercialReadiness(settings,checks).paidSalesEnabled,false);
@@ -139,7 +205,7 @@ test('commercial readiness uses the real operator settings and verified Google P
 });
 
 test('free registration does not imply completed commercial launch checks',()=>{
- const settings=defaultPlatformSettings();settings.release.registrationEnabled=true;
+ const settings=registrationReadySettings();
  const report=commercialReadiness(settings,{databaseReady:true,originReady:true,playSetupReady:false,productsVerified:false});
  assert.equal(report.registrationOpen,true);assert.equal(report.readyForPaidLaunch,false);assert.ok(report.blockers.some(b=>b.includes('Google Play')));assert.ok(report.blockers.some(b=>b.includes('geri yükleme')));
 });

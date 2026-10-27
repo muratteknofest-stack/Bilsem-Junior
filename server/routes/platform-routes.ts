@@ -5,6 +5,7 @@ import {
   configuredExams,
   platformSettingsSchema,
   registrationOpen,
+  registrationBlockers,
   releaseBlockers,
 } from "../../src/lib/platform-settings";
 import { readPlatformSettings } from "../platform-settings";
@@ -19,6 +20,7 @@ import {
 import { accountSecurityLimiter } from "../rate-limiters";
 import { playConfig, playSetupReady, verifyPlayCatalog } from '../google-play-client';
 import { paidAccessStartsAt } from '../paid-access-policy';
+import { paidSalesReady } from '../google-play-sales';
 import type { CachedRead } from '../cached-read';
 import type { SettingsRecord } from '../../src/lib/platform-settings';
 import { isPublicPolicySlug } from '../../src/content/legal-documents';
@@ -66,7 +68,7 @@ export default function createPlatformRoutes(publicSettings: CachedRead<Settings
   routes.get('/admin/platform-settings/billing-diagnostics', async (_req,res) => {
     const {settings}=await readPlatformSettings();const config=playConfig(),configured=playSetupReady();let catalogVerified=false;
     if(configured)try{await verifyPlayCatalog();catalogVerified=true;}catch{}
-    res.json({provider:'google_play',configured,catalogVerified,enabled:config.enabled,enforced:config.enforced,paidAccessFrom:paidAccessStartsAt()===null?null:process.env.GOOGLE_PLAY_PAID_ACCESS_FROM,packageName:config.packageName,productId:config.productId,blockers:releaseBlockers(settings)});
+    res.json({provider:'google_play',configured,catalogVerified,enabled:config.enabled,ready:paidSalesReady(settings)&&catalogVerified,enforced:config.enforced,paidAccessFrom:paidAccessStartsAt()===null?null:process.env.GOOGLE_PLAY_PAID_ACCESS_FROM,packageName:config.packageName,productId:config.productId,blockers:releaseBlockers(settings)});
   });
 
   routes.put(
@@ -82,6 +84,8 @@ export default function createPlatformRoutes(publicSettings: CachedRead<Settings
       if (!parsed.success)
         return res.status(400).json({ error: "Ayar bilgileri geçersiz." });
       const { settings, revision } = parsed.data;
+      if (settings.release.registrationEnabled && registrationBlockers(settings).length)
+        return res.status(422).json({error:'Yeni aile kaydı için işletmeci, veri koruma ve anahtar güvenliği hazırlığı tamamlanmalıdır.',blockers:registrationBlockers(settings)});
       const { data, error } = await getServiceClient()
         .from("platform_settings")
         .update({

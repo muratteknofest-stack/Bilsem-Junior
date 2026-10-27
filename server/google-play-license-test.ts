@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { PlatformSettings } from '../src/lib/platform-settings';
+import { registrationBlockers, type PlatformSettings } from '../src/lib/platform-settings';
 
 // A short, operator-configured session for ONE parent/student pair. Never accept a client
 // flag, email, user_metadata claim, or a student-supplied parent identifier.
@@ -23,6 +23,5 @@ export function isLicenseTestFamily(parentId: string, studentId: string, env: No
 // Technical acceptance tests must not be marked passed just to run a test.
 // Legal information and all normal auth/family/setup checks still apply.
 export function licenseTestLegalReady(settings: PlatformSettings): boolean {
-  const { legalName, address, contactEmail, legalBases, retention, transfers } = settings.business;
-  return [legalName, address, contactEmail, legalBases, retention, transfers].every(value => value.trim().length > 0);
+  return registrationBlockers(settings).length === 0;
 }
