@@ -13,6 +13,7 @@ import { useStudentReducedMotion } from '../features/student/experience-preferen
 import { levelProgress } from '../features/student/study-hub-model';
 import { dailyMissions } from '../features/student/gamification-model';
 import { getStudyFavorites, saveStudyFavorites } from '../services/student-preferences-service';
+import { StudentGameBanner } from './student/StudentGameArt';
 import { StudentHeroBanner } from './student/StudentHeroBanner';
 import { StudentModesGrid } from './student/StudentModesGrid';
 import { StudentMissionStrip } from './student/StudentMissionStrip';
@@ -127,6 +128,7 @@ export function StudentDashboard({ storyProgress, storySaveError, onStartStory, 
   const activeUser = user || dataService.getCurrentUser();
   const activeMistakes = mistakes ?? dataService.getMistakes();
   const [activeTab, setActiveTab] = useState<Section>(initialSection);
+  const [showProgress, setShowProgress] = useState(false);
   const [favorites, setFavorites] = useState(getStudyFavorites);
   const [skillSearch, setSkillSearch] = useState('');
   const [skillFilter, setSkillFilter] = useState<'all' | 'practice' | 'new'>('all');
@@ -159,7 +161,11 @@ export function StudentDashboard({ storyProgress, storySaveError, onStartStory, 
         <div className="zp-student-workspace" data-study-section={activeTab}>
           <section id="zp-student-section" className="zp-student-section" aria-label={SECTIONS.find(section => section.id === activeTab)!.label}>
             <AnimatePresence mode="wait" initial={false}>
-              <motion.div key={activeTab} initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: reduced ? 0 : .18 }} className="zp-student-section-stack">
+              <motion.div key={activeTab} initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: reduced ? 0 : .18 }} className="zp-student-section-stack" data-game-section={activeTab}>
+                {activeTab==='plan'&&<StudentGameBanner kind="compass" tone="mint" title="Kendi keşif rotanı çiz" description="Küçük bir hedef seç. Her alıştırma seni bir adım ileri taşısın."/>}
+                {activeTab==='skills'&&<StudentGameBanner kind="puzzle" tone="violet" title="Yetenek atölyelerin" description="Bir alan seç, yeni bir yol keşfet. Kendi hızında güçlen."/>}
+                {activeTab==='challenges'&&<StudentGameBanner kind="target" tone="gold" title="Görev panon hazır" description="Bugünün küçük görevlerini seç, ilerlemeni birlikte görelim."/>}
+                {activeTab==='progress'&&<StudentGameBanner kind="map" title="Keşif günlüğün" description="Çalışmalarına göz at, öğrendiklerini ve rozetlerini keşfet."/>}
                 {activeTab === 'adventure' && storyProgress && onStartStory && <StoryAdventure key={`${activeUser.id}-${activeUser.grade}`} user={activeUser} progress={storyProgress} saveError={storySaveError} onStartStory={onStartStory} onSelectStory={onSelectStory} onStudy={()=>switchSection('modes')}/>}
                 {activeTab === 'modes' && <>
                   <StudentMissionStrip user={activeUser} weeklyQuestions={weekly.thisWeekTotal} />
@@ -179,7 +185,9 @@ export function StudentDashboard({ storyProgress, storySaveError, onStartStory, 
               </motion.div>
             </AnimatePresence>
           </section>
-          {activeTab !== 'tests' && activeTab !== 'adventure' && <aside className="zp-student-aside" aria-label="Günlük ilerlemem">
+          {activeTab !== 'tests' && activeTab !== 'adventure' && <aside className="zp-student-aside" aria-label="Günlük ilerlemem" data-expanded={showProgress}>
+            <button type="button" className="bj-game-progress-toggle" aria-expanded={showProgress} aria-controls="student-progress-drawer" onClick={()=>setShowProgress(value=>!value)}><span><strong>Hedeflerim ve serim</strong><small>{dailyGoal.current}/{dailyGoal.target} soru · {activeUser.streak||0} günlük seri</small></span><span aria-hidden="true">{showProgress?'−':'+'}</span></button>
+            <div id="student-progress-drawer" className="bj-game-progress-panels">
             <article className="zp-daily-snapshot" aria-labelledby="zp-daily-snapshot-title">
               <div className="zp-panel-eyebrow"><Target size={16} aria-hidden="true" /> BUGÜNKÜ HEDEFİN</div>
               <h2 id="zp-daily-snapshot-title">{dailyGoal.completed ? 'Hedefini tamamladın!' : 'Her soru bir adım.'}</h2>
@@ -191,6 +199,7 @@ export function StudentDashboard({ storyProgress, storySaveError, onStartStory, 
             <article className="zp-week-overview"><div className="zp-panel-eyebrow"><BarChart3 size={16} aria-hidden="true" /> BU HAFTA</div><h2>Küçük adımlar, kalıcı ilerleme.</h2><div className="zp-week-stats"><div><strong>{weekly.thisWeekTotal}</strong><span>çözülen soru</span></div><div><strong>{activeUser.streak || 0}<Flame size={19} aria-hidden="true" /></strong><span>günlük seri</span></div></div><button type="button" onClick={() => switchSection('progress')}>İlerlememi incele <ArrowUpRight size={16} aria-hidden="true" /></button></article>
             <DailyStreakCard user={activeUser} onUserUpdate={onUserUpdate} onStartPractice={() => onStartPractice('mixed')} onOpenDetailsModal={() => onNavigate('achievements')} />
             <p className="zp-study-note"><Sparkles size={17} aria-hidden="true" /> Kendi hızında ilerle. Her soru yeni bir keşif.</p>
+            </div>
           </aside>}
         </div>
       </main>

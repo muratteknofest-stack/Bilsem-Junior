@@ -24,7 +24,7 @@ try {
   };
   await page.goto(base);await page.getByRole('heading',{name:'Fısıldayan Orman',exact:true}).waitFor();
   assert.equal((await style('.bj-story-dialogue img')).name,'bj-guide-float');
-  assert.equal((await style('.bj-expedition-cover>img')).name,'bj-photo-breathe');
+  assert.equal((await style('.bj-expedition-scenery')).name,'bj-world-drift');
   assert.equal((await style('.bj-story-node','::after')).name,'bj-beacon');
   assert.equal(await page.locator('.bj-adventure-atmosphere>i').count(),7);
   const firstTransform=await page.locator('.bj-story-dialogue img').evaluate(el=>getComputedStyle(el).transform);
@@ -49,7 +49,7 @@ try {
     const task=await page.locator('.bj-story-stages button').first().boundingBox();assert.ok(task.y+task.height<844);
     await page.screenshot({path:`test-artifacts/student-motion/story-${width}.png`,fullPage:true});shots.push(width);
   }
-  // Each photographic chapter keeps the motion layer and its actual navigation.
+  // Each illustrated chapter keeps the motion layer and its actual navigation.
   for(const chapter of ['Duran Değirmen','Bulut Gözlemevi','Kristal Geçit','Unutulan Liman','Rüzgârın Kütüphanesi','Yıldızların Şifresi','Atlasın Kalbi']){
     await page.getByRole('button',{name:'Sonraki hikâye bölümü',exact:true}).click();
     await page.getByRole('heading',{name:chapter,exact:true}).waitFor();
@@ -60,7 +60,7 @@ try {
   for(const group of ['Testler','Araçlar','Gelişim']){
     await page.getByRole('navigation',{name:'Çalışma alanı grupları'}).getByRole('button',{name:group,exact:true}).click();
     await page.locator('.bj-native-feature-grid button').first().waitFor();
-    assert.equal((await style('.bj-feature-photo>span')).name,'bj-badge-float');
+    assert.equal((await style('.bj-feature-key')).name,'bj-badge-float');
     await page.locator('.bj-native-feature-grid button').first().click();
     assert.ok((await page.getByLabel('Son işlem').textContent()).length>0);
   }
@@ -135,6 +135,7 @@ try {
   await page.locator('.bj-quest-start').click();assert.equal(await page.getByLabel('Son işlem').textContent(),'adaptive');
   await pause.click();await assertStill();
   await page.getByRole('button',{name:'Animasyonları başlat',exact:true}).click();
+  await page.setViewportSize({width:390,height:300});
   await page.locator('.zp-student-topline').scrollIntoViewIfNeeded();
   await page.waitForFunction(()=>document.querySelector('.bj-quest-path').dataset.motionOffscreen==='true');
   assert.equal((await style('.bj-quest-start .bj-quest-coin')).state,'paused');

@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Brain, Play, Sparkles } from 'lucide-react';
+import { StudentGameArt } from './StudentGameArt';
 import { sound } from '../../lib/sound';
 import type { SkillMastery } from '../../types';
 
@@ -35,7 +36,7 @@ export const StudentSkillsGrid: React.FC<StudentSkillsGridProps> = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.25 }}
-      className="space-y-6"
+      className="space-y-6 bj-game-skills"
     >
       <div className="flex items-center justify-between">
         <div>
@@ -114,7 +115,7 @@ export const StudentSkillsGrid: React.FC<StudentSkillsGridProps> = ({
             gradient: 'from-indigo-500 to-purple-500',
             icon: Sparkles,
           };
-          const Icon = cfg.icon;
+
           const masteryPct = Math.min(100, Math.max(0, m.mastery || 0));
 
           return (
@@ -124,14 +125,14 @@ export const StudentSkillsGrid: React.FC<StudentSkillsGridProps> = ({
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3, delay: i * 0.05 }}
               whileHover={{ y: -3 }}
-              className="zp-dashboard-surface p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-sm flex flex-col justify-between group"
+              className="bj-game-skill-card zp-dashboard-surface p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-sm flex flex-col justify-between group"
             >
               <div>
                 <div className="flex items-start justify-between mb-3">
                   <div
-                    className={`w-11 h-11 rounded-2xl ${cfg.bgLight} ${cfg.color} flex items-center justify-center border ${cfg.borderLight} group-hover:scale-110 transition-transform`}
+                    className={`bj-game-skill-art w-11 h-11 rounded-2xl ${cfg.bgLight} ${cfg.color} flex items-center justify-center border ${cfg.borderLight} group-hover:scale-110 transition-transform`}
                   >
-                    <Icon className="w-5 h-5" />
+                    <StudentGameArt kind={m.category==='spatial'?'cubes':m.category==='attention'?'target':m.category==='numerical'?'rocket':'puzzle'}/>
                   </div>
                   <span
                     className={`text-xs font-black px-2.5 py-1 rounded-full ${cfg.bgLight} ${cfg.color} border ${cfg.borderLight}`}

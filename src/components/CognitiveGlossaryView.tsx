@@ -1,3 +1,4 @@
+import { StudentGameArt } from './student/StudentGameArt';
 import React, { useState, useMemo } from 'react';
 import { GLOSSARY_TERMS } from '../data/glossary-terms';
 import { GlossaryTerm, CognitiveCategory } from '../types';
@@ -76,9 +77,9 @@ export const CognitiveGlossaryView: React.FC<CognitiveGlossaryViewProps> = ({
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 py-8 pb-28 space-y-6">
+    <div className="bj-game-page bj-game-glossary w-full max-w-5xl mx-auto px-4 py-8 pb-28 space-y-6">
       {/* Header Hero Banner */}
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-900 via-indigo-800 to-purple-900 text-white p-6 sm:p-8 ">
+      <div className="bj-game-glossary-hero relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-900 via-indigo-800 to-purple-900 text-white p-6 sm:p-8 ">
         <div className="absolute -top-12 -right-12 w-52 h-52 rounded-full bg-amber-400/20 blur-3xl pointer-events-none" />
         <div className="absolute -bottom-10 -left-10 w-44 h-44 rounded-full bg-indigo-500/20 blur-2xl pointer-events-none" />
 
@@ -102,16 +103,7 @@ export const CognitiveGlossaryView: React.FC<CognitiveGlossaryViewProps> = ({
             </p>
           </div>
 
-          {/* Quick Practice Pill */}
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/15 text-xs text-indigo-100 flex flex-col gap-2 shrink-0 max-w-xs">
-            <div className="flex items-center gap-2 text-amber-300 font-bold">
-              <Sparkles className="w-4 h-4" />
-              <span>Dokunarak Öğren!</span>
-            </div>
-            <p className="text-[11px] text-indigo-200">
-              Her terimin altında yer alan canlı simülatörlerle döndürme, ayna yansıması ve örüntü mantığını test edebilirsin.
-            </p>
-          </div>
+          <div className="bj-game-glossary-toy"><StudentGameArt kind="book"/><span>Dokunarak Öğren!</span></div>
         </div>
       </div>
 

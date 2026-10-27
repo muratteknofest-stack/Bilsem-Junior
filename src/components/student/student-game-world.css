@@ -1,0 +1,217 @@
+/* One illustrated game world for student screens; no styles reach parent/admin pages. */
+.bj-game-art{display:inline-block;position:relative;width:112px;max-width:100%;line-height:0;flex:none;vertical-align:middle}
+.bj-game-art>svg{display:block;width:100%;height:auto;overflow:visible}
+.bj-game-landscape{display:block;width:100%;height:100%;overflow:hidden;line-height:0}
+.bj-game-landscape>svg{display:block;width:100%;height:100%}
+.bilsem-junior-skin[data-student-space=true]{background:#eff7ff!important;color:#193e5d}
+.bilsem-junior-skin[data-student-space=true] .bj-native-header{background:#fff;border-color:#d7e5f2;color:#244b6c;box-shadow:0 3px 0 #dce9f4}
+.bilsem-junior-skin[data-student-space=true] .bj-native-bottom{background:#fffffff5;border-color:#cbdff0;box-shadow:0 -6px 20px #38668a0c}
+.bilsem-junior-skin[data-student-space=true] .bj-native-bottom button[aria-current=page]{background:var(--nav-bg);color:var(--nav);border-color:var(--nav-edge);box-shadow:0 3px 0 var(--nav-edge)}
+.bj-student-game{--game-ink:#193e5d;--game-muted:#526e86;--game-edge:#d6e4f1;--game-paper:#fff;--game-sky:#edf7ff}
+.zp-student-pro.bj-student-game,.bj-native-hub.bj-student-game,.bj-game-page{color:var(--game-ink,#193e5d);background:radial-gradient(ellipse at 90% 0,#e5e9ff80,transparent 55%),linear-gradient(180deg,#eef8ff,#f8fbff 700px);background-size:auto;background-repeat:no-repeat}
+.zp-student-pro.bj-student-game{--student-ink:#193e5d;--student-muted:#526e86;--student-accent:#2984ce}
+.bj-native-hub.bj-student-game{font-family:inherit;border-radius:0;--native-ink:#193e5d;--native-muted:#526e86}
+.bj-student-game :focus-visible,.bj-game-page :focus-visible{outline:3px solid #387fc7;outline-offset:4px}
+.bj-student-game .bj-motion-toggle{border-color:#cce0ef;background:#fff;box-shadow:0 3px 0 #dfebf3;color:#476b88}
+
+/* Player card and inventory navigation. All counters keep their existing source. */
+.zp-student-pro.bj-student-game .zp-pro-hero,.bj-native-hub.bj-student-game.bj-game-profile .zp-pro-hero{border:2px solid #d4e6f3;border-radius:26px;background:radial-gradient(ellipse at 90% 0,#fff6d8,transparent 60%),linear-gradient(130deg,#e5f5ff,#eef2ff);box-shadow:0 6px 0 #d1e1ef,0 15px 30px #244b6c0a}
+.zp-student-pro.bj-student-game .zp-student-avatar,.bj-native-hub.bj-student-game.bj-game-profile .zp-student-avatar{border-color:#fff4c5;background:linear-gradient(145deg,#fff0b7,#ffd779);box-shadow:0 6px 0 #ddb453,inset 0 2px 0 #fff9;transform:rotate(-4deg)}
+.zp-student-pro.bj-student-game .zp-student-avatar small,.bj-native-hub.bj-student-game.bj-game-profile .zp-student-avatar small{background:#6253a5;color:#fff;border:2px solid #fff;border-radius:10px;box-shadow:0 3px 0 #443580}
+.zp-student-pro.bj-student-game .zp-profile-xp-track,.bj-native-hub.bj-student-game.bj-game-profile .zp-profile-xp-track{height:13px;border:2px solid #fff;background:#cddfeb;box-shadow:inset 0 2px 0 #9db9cf55}
+.zp-student-pro.bj-student-game .zp-profile-xp-track>span,.bj-native-hub.bj-student-game.bj-game-profile .zp-profile-xp-track>span{background:linear-gradient(180deg,#66dbb5,#28ae93);box-shadow:inset 0 3px 0 #b3f4d870}
+.zp-student-pro.bj-student-game .zp-study-navigation{padding:7px;border:1px solid #d9e5f1;border-radius:20px;background:#e2edf8;gap:6px;box-shadow:inset 0 2px 0 #d1deee}
+.zp-student-pro.bj-student-game .zp-study-navigation button{border-radius:14px;color:#54718b;min-height:48px;font-weight:800;border:1px solid transparent}
+.zp-student-pro.bj-student-game .zp-study-navigation button[aria-pressed=true]{background:#fff;border-color:#c6dbed;color:#286ba6;box-shadow:0 4px 0 #b8cfe3}
+.zp-student-pro.bj-student-game .zp-study-navigation button>svg{padding:4px;box-sizing:content-box;border-radius:9px;background:#dcecfb;color:#3679b5}
+.zp-student-pro.bj-student-game .zp-study-navigation button:nth-child(3n)>svg{background:#f2e9ff;color:#865db8}
+.zp-student-pro.bj-student-game .zp-study-navigation button:nth-child(4n)>svg{background:#e4f6ef;color:#299b7b}
+.zp-student-pro.bj-student-game .zp-nav-indicator{display:none}
+
+/* A prominent lesson portal, followed by a compact board of four game modes. */
+.bj-student-game .bj-game-lesson-portal{position:relative;max-width:none;margin:20px 0 22px;justify-content:flex-start;gap:15px;padding:18px 22px;border:2px solid #cfe4f5;border-radius:24px;background:linear-gradient(115deg,#e5f4ff,#f4efff);box-shadow:0 5px 0 #ccdfef}
+.bj-student-game .bj-fox-welcome.bj-game-lesson-portal .zp-feature-art{flex:0 0 72px;width:72px;height:86px}
+.bj-student-game .bj-game-lesson-portal .bj-fox-bubble{flex:1;min-width:0;background:transparent;border:0;box-shadow:none;padding:0}
+.bj-student-game .bj-game-lesson-portal .bj-fox-bubble:before,.bj-student-game .bj-game-lesson-portal .bj-fox-bubble:after{display:none}
+.bj-student-game .bj-game-lesson-portal .bj-fox-bubble strong{font-size:20px;color:#244a70;letter-spacing:-.5px}
+.bj-student-game .bj-game-lesson-portal .bj-fox-bubble p{font-size:12px;color:#58718c;line-height:1.7;margin:5px 0 10px}
+.bj-student-game .bj-game-portal-button{display:inline-flex;align-items:center;gap:8px;min-height:43px;border:1px solid #2878c5;border-radius:12px;background:linear-gradient(#4ca8f2,#2a83d2);color:#fff;padding:9px 13px;font-size:12px;font-weight:850;box-shadow:0 4px 0 #2063a4,inset 0 2px 0 #ffffff40}
+.bj-game-portal-button:active{transform:translateY(3px);box-shadow:0 1px 0 #2063a4}
+.bj-game-lesson-portal>.bj-game-art{width:115px;transform:rotate(5deg)}
+.zp-student-pro.bj-student-game .bj-quest-path{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-width:none;gap:16px;padding:0;margin:0}
+.bj-student-game .bj-quest-path>.bj-quest-connector,.bj-student-game .bj-quest-path>.bj-world-cloud,.bj-student-game .bj-quest-path>.bj-world-spark,.bj-student-game .bj-quest-path>.bj-world-plant{display:none}
+.zp-student-pro.bj-student-game .bj-quest-path>.bj-quest-stop[data-tone]{--tile-color:#8761bf;--tile-soft:#f4edff;display:flex;align-items:center;align-self:stretch;flex-direction:column;gap:4px;min-height:235px;width:100%;padding:15px 15px 19px;background:linear-gradient(155deg,#fff,var(--tile-soft));border:2px solid color-mix(in srgb,var(--tile-color),white 72%);border-radius:24px;box-shadow:0 6px 0 color-mix(in srgb,var(--tile-color),white 68%);text-align:center;overflow:visible}
+.zp-student-pro.bj-student-game .bj-quest-path>.bj-quest-stop[data-tone=blue]{--tile-color:#2d8bc9;--tile-soft:#ebf7ff}
+.zp-student-pro.bj-student-game .bj-quest-path>.bj-quest-stop[data-tone=teal]{--tile-color:#23a88c;--tile-soft:#eafaf1}
+.zp-student-pro.bj-student-game .bj-quest-path>.bj-quest-stop[data-tone=amber]{--tile-color:#cf9a32;--tile-soft:#fff8e5}
+.bj-student-game .bj-quest-path .bj-quest-coin{background:transparent;border:0;box-shadow:none;width:118px;height:108px;display:grid;place-items:center}
+.bj-student-game .bj-quest-path .bj-quest-coin>.bj-game-art{width:118px}
+.bj-student-game .bj-quest-tool-icon{position:absolute;right:-2px;bottom:9px;display:grid;place-items:center;width:30px;height:30px;border:2px solid #fff;border-radius:10px;background:var(--tile-color);color:#fff;box-shadow:0 3px 0 color-mix(in srgb,var(--tile-color),black 18%)}
+.bj-student-game .bj-quest-stop-copy{align-items:center;gap:6px}
+.zp-student-pro.bj-student-game .bj-quest-stop h3{font-size:21px;color:#244969;line-height:1.2;letter-spacing:-.5px}
+.zp-student-pro.bj-student-game .bj-quest-stop .zp-tool-number{color:var(--tile-color);font-size:8px;letter-spacing:1px}
+.bj-student-game .bj-quest-description{font-size:12px;color:#56718b;line-height:1.6}
+.bj-student-game .bj-quest-action{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:9px;background:#fff;padding:6px 10px;color:var(--tile-color);font-size:10px;border:1px solid color-mix(in srgb,var(--tile-color),white 75%)}
+.bj-student-game .bj-path-finish{grid-column:1/-1;min-height:35px;margin:6px 0;color:#6e85a0;font-size:11px}
+.zp-student-pro.bj-student-game .zp-mode-links{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:19px}
+.zp-student-pro.bj-student-game .zp-mode-links>button{border:1px solid #d1e1f0;border-radius:17px;background:#fff;box-shadow:0 4px 0 #dbe7f2}
+
+/* Shared worlds and authentic work/progress surfaces. */
+.bj-game-banner{--banner:#377ab7;--banner-soft:#e8f5ff;display:grid;grid-template-columns:minmax(0,1fr) 130px;gap:18px;align-items:center;padding:22px 25px;border:2px solid color-mix(in srgb,var(--banner),white 75%);border-radius:25px;background:linear-gradient(120deg,var(--banner-soft),#fff);box-shadow:0 5px 0 color-mix(in srgb,var(--banner),white 78%);overflow:hidden}
+.bj-game-banner[data-game-tone=mint]{--banner:#218c73;--banner-soft:#e4f8ed}.bj-game-banner[data-game-tone=violet]{--banner:#8054b5;--banner-soft:#f0eaff}.bj-game-banner[data-game-tone=gold]{--banner:#ad7d25;--banner-soft:#fff4d6}
+.bj-game-banner>div{min-width:0}.bj-game-banner>div>span{font-size:9px;letter-spacing:1.3px;font-weight:850;color:var(--banner)}
+.bj-game-banner h1,.bj-game-banner h2{font-size:27px;line-height:1.2;font-weight:850;letter-spacing:-.8px;color:#244868;margin:8px 0}
+.bj-game-banner p{font-size:13px;line-height:1.75;color:#587187;max-width:490px}.bj-game-banner>.bj-game-art{width:130px;transform:rotate(4deg)}
+.bj-student-game .zp-dashboard-surface,.bj-student-game #daily-goal-progress-card,.bj-student-game #today-personalized-study-plan-card,.bj-student-game #progress-panel,.bj-student-game #badges-section,.bj-game-page .bj-game-panel{border-radius:24px;border:1px solid #d6e3ee;box-shadow:0 5px 0 #dce7f1;background-color:#fff}
+.bj-student-game .zp-daily-snapshot,.bj-student-game .zp-week-overview,.bj-student-game .zp-daily-streak-card{border-color:#d4e2f0;border-radius:23px;box-shadow:0 4px 0 #dce7f1}
+.bj-student-game .zp-daily-start{background:linear-gradient(#43b895,#259a7b);box-shadow:0 4px 0 #1c765e;border-radius:12px}
+.bj-student-game .zp-daily-ring{box-shadow:inset 0 0 0 5px #fff,0 3px 0 #cee1dc}
+.bj-game-progress-toggle{display:none}
+.bj-game-progress-panels{display:grid;gap:18px}
+.bj-student-game .bj-game-skill-card{position:relative;overflow:hidden;border-width:2px;background:linear-gradient(150deg,#fff,#f7f4ff)}
+.bj-game-skill-card:before{content:'';position:absolute;left:0;right:0;top:0;height:5px;background:linear-gradient(90deg,#b395e5,#72ccec)}
+.bj-game-skills .bj-game-skill-art{width:76px;height:76px;border:0;background:transparent;box-shadow:none}
+.bj-game-skill-art>.bj-game-art{width:82px}
+.bj-game-skills .bj-game-skill-card>button{min-height:46px;background:#eef0ff;color:#67509a;border:1px solid #d8ceef;border-radius:13px;box-shadow:0 3px 0 #d1c9e5}
+.bj-game-skills input[type=search]{border:2px solid #d5e3f0;border-radius:16px;background:#fff;box-shadow:0 3px 0 #e2ebf3}
+.bj-student-game .bj-game-weekly-filters button{min-height:44px;white-space:normal}
+
+/* Native game shelf: six destinations fit in a concise two-column menu. */
+.bj-native-hub.bj-student-game .bj-native-page-title{margin-bottom:16px}.bj-native-hub.bj-student-game .bj-native-page-title>svg{padding:10px;border:2px solid #fff;background:linear-gradient(#c7e9ff,#8fc8f2);border-radius:18px;box-shadow:0 4px 0 #91b9da;color:#28689d}
+.bj-native-hub.bj-student-game .bj-native-page-title h1{color:#244868;letter-spacing:-.7px}.bj-native-hub.bj-student-game .bj-native-page-title p{color:#6a8aa8}
+.bj-native-hub.bj-student-game .bj-field-guide-banner{display:flex;align-items:center;gap:8px;min-height:90px;padding:5px 15px;border:2px solid #d4e8f7;border-radius:22px;background:linear-gradient(115deg,#e2f4ff,#f2edff);box-shadow:0 4px 0 #d4e3f0;overflow:hidden}
+.bj-native-hub.bj-student-game .bj-field-guide-banner>.bj-game-art{position:static;width:88px;height:auto;transform:rotate(-8deg)}
+.bj-native-hub.bj-student-game .bj-field-guide-banner>div{position:static;padding:0;min-width:0;color:#31577c;background:none}
+.bj-native-hub.bj-student-game .bj-field-guide-banner strong{color:#31577c;font-size:15px}.bj-native-hub.bj-student-game .bj-field-guide-banner span:not(.bj-game-art){color:#6180a0;font-size:8px}
+.bj-native-hub.bj-student-game .bj-study-groups{background:#e1edf9;border:1px solid #d1e0ee;padding:5px;border-radius:16px;box-shadow:inset 0 2px 0 #cbddec}
+.bj-native-hub.bj-student-game .bj-study-groups button{color:#587694;border-radius:11px;min-height:42px}
+.bj-native-hub.bj-student-game .bj-study-groups button[aria-pressed=true]{background:#fff;color:#2b74b3;border-color:#c3d8e9;box-shadow:0 3px 0 #bdcfe0}
+.bj-native-hub.bj-student-game .bj-native-feature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 12px;margin-top:18px}
+.bj-native-hub.bj-student-game .bj-native-feature-grid>button{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:6px;position:relative;min-width:0;min-height:174px;padding:10px 12px 15px;border:2px solid var(--feature-edge,#cadff0);border-radius:23px;background:linear-gradient(155deg,#fff,var(--feature-bg,#edf6ff));box-shadow:0 6px 0 var(--feature-edge,#cadff0);text-align:left;overflow:visible}
+.bj-native-hub.bj-student-game .bj-native-feature-grid>button>svg{position:absolute;right:10px;bottom:15px;width:15px;color:var(--feature);opacity:.7}
+.bj-native-hub.bj-student-game .bj-native-feature-grid h2{font-size:15px;line-height:1.25;color:#264d70;font-weight:850;padding-right:9px}
+.bj-native-hub.bj-student-game .bj-native-feature-grid p{font-size:10px;line-height:1.5;color:#5d7890;margin-top:4px;padding-right:8px}
+.bj-native-hub.bj-student-game .bj-native-feature-grid>button:active{transform:translateY(4px);box-shadow:0 2px 0 var(--feature-edge,#cadff0)}
+.bj-native-hub.bj-student-game .bj-game-feature-art{display:block;position:relative;align-self:center;width:91px!important;height:82px!important;flex:none;background:transparent!important;box-shadow:none!important;border:0;border-radius:0;transform:none;color:var(--feature)}
+.bj-game-feature-art>.bj-game-art{width:91px;position:absolute;left:0;top:-6px}
+.bj-game-feature-art>.bj-feature-key{display:grid;place-items:center;position:absolute;right:-5px;bottom:2px;width:27px;height:27px;border:2px solid #fff;background:var(--feature);border-radius:9px;color:#fff;box-shadow:0 3px 0 var(--feature-edge)}
+.bj-feature-key>svg{width:14px;height:14px}
+.bj-native-hub.bj-student-game .bj-reward-object{position:relative;width:94px!important;height:86px!important;align-self:center;margin:0;background:transparent;box-shadow:none;border:0;transform:none}
+.bj-native-hub.bj-student-game .bj-reward-object>.bj-game-art{position:static;width:96px;height:auto;padding:0;background:transparent;border:0;border-radius:0;box-shadow:none;transform:none}
+.bj-native-hub.bj-student-game .bj-reward-object>.bj-game-art:after{display:none}
+.bj-native-hub.bj-student-game .bj-reward-object>i{font-size:17px;right:-5px;top:4px}
+
+/* The story book opens onto a local illustrated floating island. */
+.bj-student-game .bj-journey{--journey-ink:#244a6a;--journey-muted:#5b7690;--journey-paper:#fff;max-width:980px}
+.bj-student-game .bj-journey .bj-journey-tabs{background:#e1edf9;border:1px solid #d2e1ef}.bj-journey .bj-journey-tabs button{color:#557795}
+.bj-student-game .bj-journey .bj-journey-tabs button[aria-pressed=true]{background:#fff;color:#326eae;border-color:#c7dcee;box-shadow:0 3px 0 #bfd3e7}
+.bj-student-game .bj-journey .bj-journey-stats{padding:10px;border:1px solid #d9e5f1;border-radius:14px;background:#fff;box-shadow:0 3px 0 #e0e9f2}
+.bj-student-game .bj-journey .bj-journey-stats>span{color:#56708a}.bj-journey .bj-journey-stats strong{color:#275473}
+.bj-student-game .bj-journey .bj-journey-cover{border:2px solid #d8e9f4;background:#ccebf8;box-shadow:0 5px 0 #c9ddeb}
+.bj-student-game .bj-journey .bj-expedition-scenery{display:block;position:absolute;inset:-5px;width:calc(100% + 10px);height:calc(100% + 10px);z-index:-2}
+.bj-student-game .bj-journey .bj-journey-cover:after{background:linear-gradient(90deg,#194e79e8,#31567b50 57%,transparent)}
+.bj-student-game .bj-journey .bj-journey-cover>.bj-expedition-scenery .bj-game-landscape{height:100%}
+.bj-student-game .bj-journey .bj-journey-book-art>.bj-game-landscape{position:absolute;inset:0;width:100%;height:100%}
+.bj-student-game .bj-journey .bj-journey-book{border:2px solid #d3e2f0;border-radius:24px;box-shadow:0 5px 0 #d4e2ee;background:#fff}
+.bj-student-game .bj-journey .bj-journey-story-title,.bj-journey .bj-journey-chapter-nav>button{border-color:#d2e2ef;box-shadow:0 3px 0 #d3e1ed;background:#fff;border-radius:14px;color:#3e6c92}
+.bj-student-game .bj-journey .bj-journey-dialogue>div{border:2px solid #d4e5f3;border-radius:20px 20px 20px 4px;box-shadow:0 4px 0 #d4e2ef;background:#fff}
+.bj-student-game .bj-journey .bj-journey-dialogue strong{color:#31567c}.bj-journey .bj-journey-dialogue p{color:#57748e}
+.bj-student-game .bj-journey .bj-story-node{border:3px solid #fff;box-shadow:0 8px 0 color-mix(in srgb,var(--journey-color),black 22%),inset 0 5px 0 #ffffff50}
+.bj-student-game .bj-journey .bj-story-stages li[data-state=locked] .bj-story-node{background:#d8e4ef;color:#738ba0;box-shadow:0 7px 0 #b6c9db,inset 0 4px 0 #ffffff60}
+.bj-student-game .bj-journey .bj-story-stages li[data-state=complete] .bj-story-node{background:linear-gradient(#ffe39a,#edbc43);color:#976319;box-shadow:0 7px 0 #c8942c,inset 0 4px 0 #fff6}
+.bj-student-game .bj-journey .bj-journey-continue,.bj-journey .bj-journey-study{border-radius:16px;box-shadow:0 4px 0 #c9ddeb}
+.bj-student-game .bj-journey .bj-journey-badges article{border-radius:22px;border-color:#d2e1ef;box-shadow:0 4px 0 #dce6ef}
+
+/* Profile passport, treasure shelf and secondary pages. */
+.bj-native-hub.bj-student-game.bj-game-profile .bj-passport,.bj-native-hub.bj-student-game .bj-treasure{border:2px solid #e8d69f;border-radius:27px;background:radial-gradient(ellipse at 80% 20%,#fffbe9,transparent 55%),linear-gradient(120deg,#fff3ce,#fff8e9);box-shadow:0 6px 0 #e5d4a5}
+.bj-native-hub.bj-student-game.bj-game-profile .bj-passport-copy h2,.bj-native-hub.bj-student-game .bj-treasure-copy h2{color:#765328}
+.bj-native-hub.bj-student-game .bj-treasure-cup{background:transparent;box-shadow:none;border:0;width:126px;height:120px;transform:rotate(5deg)}
+.bj-native-hub.bj-student-game .bj-treasure-cup>.bj-game-art{width:126px;height:auto;position:static;background:none;box-shadow:none;border:0;border-radius:0;padding:0}
+.bj-native-hub.bj-student-game.bj-game-profile .bj-profile-settings{background:#f6faff;border:2px solid #d5e5f2;border-radius:25px;box-shadow:0 5px 0 #d8e5ef}
+.bj-native-hub.bj-student-game.bj-game-profile .bj-profile-action{border-width:2px;border-radius:19px;box-shadow:0 5px 0 var(--profile-key-edge,#d4e3ef)}
+.bj-native-hub.bj-student-game.bj-game-profile .bj-profile-heading-key{background:linear-gradient(#d4bcfa,#b08ce2);color:#604293;border-color:#f4eaff;box-shadow:0 4px 0 #a58ac8}
+.bj-game-page{--game-ink:#193e5d;--game-edge:#d6e4f1;min-height:70vh;border-radius:28px}
+.bj-game-page>.bj-game-page-heading{padding:19px;border:2px solid #d5e5f3;border-radius:24px;background:linear-gradient(120deg,#edf6ff,#fbf7ff);box-shadow:0 5px 0 #d7e4ef;flex-wrap:wrap;gap:14px}
+.bj-game-page-heading h1{color:#244a6a;line-height:1.3;min-width:0}.bj-game-page-heading .bj-game-art{width:72px;flex:none}
+.bj-game-notebook .bj-game-page-heading>div:first-child{min-width:0;flex:1}.bj-game-notebook .bj-game-page-heading h1{flex-wrap:wrap;gap:8px}
+.bj-game-achievements .bj-game-page-heading h1{font-size:21px}.bj-game-achievements .bj-game-page-heading>div:first-child{min-width:0;flex:1}
+.bj-game-page .bj-game-vitrine{border-radius:26px;box-shadow:0 5px 0 #bcc6e2;background:linear-gradient(120deg,#344a89,#675da5);border-color:#8994c7}
+.bj-game-page .bj-game-glossary-hero{border:2px solid #b5a4e2;border-radius:27px;background:linear-gradient(125deg,#6452a1,#4587b0);box-shadow:0 6px 0 #b9b3d8}
+.bj-game-glossary-toy{display:grid;place-items:center;flex:none;min-width:130px}.bj-game-glossary-toy>.bj-game-art{width:145px}
+.bj-game-glossary-toy>span:last-child{padding:7px 11px;border:1px solid #ffffff70;border-radius:12px;background:#ffffff20;color:#fff3ca;font-size:11px;font-weight:800}
+.bj-game-page .bg-white.rounded-xl{border-radius:22px;border-color:#d8e3ef;box-shadow:0 4px 0 #dce6f0}
+.bj-student-game .ww-category-card{border-radius:22px;border-width:2px;box-shadow:0 5px 0 #dce6ef}
+
+@keyframes bj-world-drift{0%,100%{transform:scale(1.015) translateY(0)}50%{transform:scale(1.045) translateY(-2px)}}
+.bj-motion-world .bj-expedition-scenery{animation:bj-world-drift 18s ease-in-out infinite}
+.bj-motion-world .bj-feature-key{animation:bj-badge-float 4.4s ease-in-out infinite}
+
+@media(max-width:600px){
+  .bj-native-hub.bj-student-game .bj-field-guide-banner{display:none}
+  .zp-student-pro.bj-student-game .zp-pro-hero{padding:19px 16px;border-radius:24px}
+  .bj-student-game .bj-game-lesson-portal{padding:14px 13px;gap:10px;margin:16px 0 19px}
+  .bj-student-game .bj-fox-welcome.bj-game-lesson-portal .zp-feature-art{width:54px;height:73px;flex-basis:54px}
+  .bj-student-game .bj-game-lesson-portal .bj-fox-bubble strong{font-size:16px}
+  .bj-student-game .bj-game-lesson-portal .bj-fox-bubble p{font-size:11px;margin:4px 0 8px}
+  .bj-game-lesson-portal>.bj-game-art{display:none}
+  .bj-student-game .bj-game-portal-button{font-size:10px;gap:5px;padding:8px 10px;min-height:42px}
+  .zp-student-pro.bj-student-game .bj-quest-path{gap:14px 10px}
+  .zp-student-pro.bj-student-game .bj-quest-path>.bj-quest-stop[data-tone]{min-height:215px;padding:10px 10px 15px;border-radius:22px}
+  .bj-student-game .bj-quest-path .bj-quest-coin{width:92px;height:91px}.bj-student-game .bj-quest-path .bj-quest-coin>.bj-game-art{width:103px}
+  .bj-student-game .bj-quest-tool-icon{width:25px;height:25px;right:-3px;bottom:4px;border-radius:8px}.bj-quest-tool-icon>svg{width:13px;height:13px}
+  .zp-student-pro.bj-student-game .bj-quest-stop h3{font-size:17px}.bj-student-game .bj-quest-description{font-size:11px;min-height:34px}
+  .bj-student-game .bj-quest-action{font-size:8px;padding:5px 7px}.bj-student-game .bj-path-finish{font-size:9px}
+  .zp-student-pro.bj-student-game .zp-mode-links{grid-template-columns:1fr;gap:10px}
+  .bj-game-banner{grid-template-columns:minmax(0,1fr) 84px;gap:9px;padding:17px;border-radius:23px}
+  .bj-game-banner>.bj-game-art{width:90px}.bj-game-banner h1,.bj-game-banner h2{font-size:22px;margin:6px 0}.bj-game-banner p{font-size:11px;line-height:1.7}.bj-game-banner>div>span{font-size:7px;letter-spacing:.8px}
+  .bj-game-page>.bj-game-page-heading{padding:14px;gap:12px}.bj-game-page-heading .bj-game-art{width:52px}
+  .bj-game-page-heading h1,.bj-game-achievements .bj-game-page-heading h1{font-size:20px}
+  .bj-game-achievements .bj-game-page-heading h1+span{display:none}
+  .bj-game-glossary-hero>.relative{flex-direction:row;gap:12px;align-items:center}.bj-game-glossary-hero h1{font-size:22px}.bj-game-glossary-toy{min-width:74px}.bj-game-glossary-toy>.bj-game-art{width:84px}.bj-game-glossary-toy>span:last-child{font-size:8px;padding:5px 6px}
+  .bj-native-hub.bj-student-game .bj-native-feature-grid h2{font-size:14px}.bj-native-hub.bj-student-game .bj-native-feature-grid p{font-size:10px}
+  .bj-native-hub.bj-student-game .bj-native-feature-grid>button{min-height:175px;padding:8px 10px 14px}
+  .bj-native-hub.bj-student-game .bj-treasure-cup{width:105px;height:106px}.bj-native-hub.bj-student-game .bj-treasure-cup>.bj-game-art{width:108px}
+}
+@media(max-width:999px){
+  .bj-student-game .bj-game-progress-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:78px;text-align:left;padding:15px 18px;border:2px solid #d6e5f3;border-radius:21px;background:linear-gradient(120deg,#eaf6ff,#f1efff);color:#315d83;box-shadow:0 4px 0 #d4e2ef}
+  .bj-game-progress-toggle strong{display:block;font-size:14px;font-weight:850}.bj-game-progress-toggle small{display:block;font-size:11px;color:#617d97;margin-top:5px}.bj-game-progress-toggle>span:last-child{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:11px;background:#fff;color:#6f61a9;font-size:24px;font-weight:700}
+  .bj-student-game .bj-game-progress-panels{display:none}.bj-student-game .zp-student-aside[data-expanded=true] .bj-game-progress-panels{display:grid;margin-top:16px}
+}
+@media(max-width:359px){
+  .bj-native-hub.bj-student-game .bj-native-feature-grid{gap:13px 10px}
+  .bj-native-hub.bj-student-game .bj-native-feature-grid>button{min-height:177px;padding-inline:9px}
+  .bj-game-banner{grid-template-columns:minmax(0,1fr) 68px;padding:14px}.bj-game-banner>.bj-game-art{width:76px}.bj-game-banner h1,.bj-game-banner h2{font-size:20px}
+  .bj-game-glossary-hero>.relative{flex-direction:column;align-items:stretch}.bj-game-glossary-toy{display:none}
+  .bj-game-page-heading .bj-game-art{width:46px}.bj-game-achievements .bj-game-page-heading h1{font-size:18px}
+}
+@media(min-width:1050px){.bj-native-hub.bj-student-game .bj-native-feature-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.dark .bilsem-junior-skin[data-student-space=true]{background:#142b40!important;color:#dbe9f6}
+.dark .zp-student-pro.bj-student-game,.dark .bj-native-hub.bj-student-game,.dark .bj-game-page{--game-ink:#deedf9;--game-muted:#b3c9df;--game-paper:#213c53;--game-edge:#41617d;background:linear-gradient(#172e46,#173044);color:#deedf9}
+.dark .zp-student-pro.bj-student-game .zp-pro-hero,.dark .bj-native-hub.bj-student-game.bj-game-profile .zp-pro-hero{background:linear-gradient(130deg,#23465f,#353955);border-color:#53728a;box-shadow:0 5px 0 #0b2235}
+.dark .zp-student-pro.bj-student-game .zp-study-navigation,.dark .bj-native-hub.bj-student-game .bj-study-groups,.dark .bj-journey .bj-journey-tabs{background:#203f58;border-color:#486580}
+.dark .zp-student-pro.bj-student-game .zp-study-navigation button,.dark .bj-native-hub.bj-student-game .bj-study-groups button,.dark .bj-journey .bj-journey-tabs button{color:#b8d1e6}
+.dark .zp-student-pro.bj-student-game .zp-study-navigation button[aria-pressed=true],.dark .bj-native-hub.bj-student-game .bj-study-groups button[aria-pressed=true],.dark .bj-journey .bj-journey-tabs button[aria-pressed=true]{background:#345773;color:#e0efff;border-color:#6d91ac;box-shadow:0 3px 0 #102d43}
+.dark .zp-student-pro.bj-student-game .bj-quest-path>.bj-quest-stop[data-tone],.dark .bj-native-hub.bj-student-game .bj-native-feature-grid>button{background:linear-gradient(145deg,#2c455e,#253a52);border-color:#4c6886;box-shadow:0 5px 0 #10293e}
+.dark .bj-student-game .bj-game-lesson-portal,.dark .bj-native-hub.bj-student-game .bj-field-guide-banner,.dark .bj-game-banner,.dark .bj-game-page>.bj-game-page-heading{background:linear-gradient(120deg,#244963,#383858);border-color:#4d718f;box-shadow:0 5px 0 #102c42}
+.dark .bj-student-game .bj-game-lesson-portal .bj-fox-bubble strong,.dark .bj-game-banner h1,.dark .bj-game-banner h2,.dark .bj-native-hub.bj-student-game .bj-field-guide-banner strong,.dark .bj-native-hub.bj-student-game .bj-native-feature-grid h2,.dark .bj-game-page-heading h1,.dark .zp-student-pro.bj-student-game .bj-quest-stop h3,.dark .bj-native-hub.bj-student-game .bj-native-page-title h1{color:#e0efff}
+.dark .bj-game-banner p,.dark .bj-student-game .bj-game-lesson-portal .bj-fox-bubble p,.dark .bj-student-game .bj-quest-description,.dark .bj-native-hub.bj-student-game .bj-native-feature-grid p{color:#bcd2e8}
+.dark .bj-game-banner>div>span{color:#b3d9ff}
+.dark .bj-student-game .zp-dashboard-surface,.dark .bj-student-game #daily-goal-progress-card,.dark .bj-student-game #today-personalized-study-plan-card,.dark .bj-student-game #progress-panel,.dark .bj-student-game #badges-section,.dark .bj-game-page .bj-game-panel,.dark .bj-game-page .bg-white.rounded-xl{background-color:#213c53;border-color:#43617b;box-shadow:0 5px 0 #0e293e}
+.dark .bj-native-hub.bj-student-game.bj-game-profile .bj-passport,.dark .bj-native-hub.bj-student-game .bj-treasure{background:linear-gradient(120deg,#4d422d,#413d37);border-color:#8f7950;box-shadow:0 5px 0 #2a2b2f}
+.dark .bj-native-hub.bj-student-game.bj-game-profile .bj-passport-copy h2,.dark .bj-native-hub.bj-student-game .bj-treasure-copy h2{color:#ffe5b1}
+.dark .bj-native-hub.bj-student-game.bj-game-profile .bj-profile-settings{background:#1b354b;border-color:#42637f;box-shadow:0 5px 0 #10283c}
+.dark .bj-student-game :is(#daily-goal-progress-card,#today-personalized-study-plan-card,#progress-panel,#badges-section){background:#fff!important;color:#244a6a}
+.dark .bj-student-game :is(#daily-goal-progress-card,#today-personalized-study-plan-card,#progress-panel,#badges-section) :is(.text-slate-900,.text-slate-800,.text-zinc-900){color:#244a6a}
+.dark .bj-student-game :is(#daily-goal-progress-card,#today-personalized-study-plan-card,#progress-panel,#badges-section) :is(.text-slate-600,.text-slate-500,.text-zinc-500){color:#58718a}
+.dark .bj-student-game .zp-dashboard-surface{background:#253f56!important}.dark .bj-student-game .zp-dashboard-surface :is(.text-zinc-900,.text-zinc-800){color:#e1edfb}
+.dark .bj-student-game .bj-game-progress-toggle{background:linear-gradient(120deg,#254760,#373b59);border-color:#4c6e8b;box-shadow:0 4px 0 #10283c;color:#dfedfc}.dark .bj-game-progress-toggle small{color:#b5cde4}
+@media(prefers-reduced-motion:reduce){.bj-student-game *,.bj-student-game *:before,.bj-student-game *:after,.bj-game-page *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+.bj-student-game[data-reduced-motion=true] *,.bj-student-game[data-reduced-motion=true] *:before,.bj-student-game[data-reduced-motion=true] *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+
+.bj-student-game .bj-quest-path .bj-quest-stop:hover .bj-quest-coin{box-shadow:none}
+.bilsem-junior-skin[data-student-space=true] .bj-native-header>button{font-family:inherit}
+.bj-native-hub.bj-student-game.bj-game-profile .bj-passport-copy>span,.bj-native-hub.bj-student-game.bj-game-profile .bj-passport-copy>p{color:#8b7042}
+.bj-native-hub.bj-student-game.bj-game-profile .bj-passport-stamps{background:#f3e5bf;border-color:#e8d59e;color:#7b633c}
+.bj-native-hub.bj-student-game.bj-game-profile .bj-passport-stamps>span{background:#fff9e8;border:1px solid #e6d5a4;color:#7b633c}
+.dark .bj-native-hub.bj-student-game.bj-game-profile .bj-passport-copy>span,.dark .bj-native-hub.bj-student-game.bj-game-profile .bj-passport-copy>p{color:#e4c995}
+.dark .bj-native-hub.bj-student-game.bj-game-profile .bj-passport-stamps{background:#3e382d;border-color:#8e764e}.dark .bj-native-hub.bj-student-game.bj-game-profile .bj-passport-stamps>span{background:#4a4336;color:#ffe6b5;border-color:#8c7954}

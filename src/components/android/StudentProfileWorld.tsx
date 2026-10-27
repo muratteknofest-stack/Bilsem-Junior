@@ -31,7 +31,7 @@ export function StudentProfileWorld({ user, progress, onNavigate, onUserUpdate, 
   const surface = useStudentMotionSurface('profile-world');
   const goToParent = () => { sound.playClick(); onNavigate('parent'); };
 
-  return <main ref={surface} className="bj-native-hub bj-student-game bj-motion-world bj-native-profile bj-profile-world" data-reduced-motion={reduced}>
+  return <main ref={surface} className="bj-native-hub bj-student-game bj-motion-world bj-native-profile bj-profile-world bj-game-profile" data-reduced-motion={reduced}>
     <StudentMotionToggle />
     <header className="bj-profile-heading">
       <span className="bj-profile-heading-key" aria-hidden="true"><UserRound /></span>

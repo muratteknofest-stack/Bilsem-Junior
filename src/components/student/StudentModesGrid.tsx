@@ -4,6 +4,7 @@ import { ArrowRight, ArrowUpRight, Clock3, Target, RotateCcw, BookOpen, Trophy, 
 import { StudentAdventureAtmosphere } from './StudentMotion';
 import { sound } from '../../lib/sound';
 import { useStudentReducedMotion } from '../../features/student/experience-preferences';
+import { StudentGameArt, type GameArtKind } from './StudentGameArt';
 
 export interface StudentModesGridProps {
   unresolvedMistakesCount: number; onStartAdaptive: () => void; onStartExam: () => void;
@@ -25,9 +26,10 @@ export function StudentModesGrid(p: StudentModesGridProps) {
       <div><p className="zp-panel-eyebrow">KEŞİF YOLU · BİLSEM HAZIRLIK</p><h2 id="zp-mode-title">Bugün nasıl çalışmak istersin?</h2></div>
       <span className="bj-chapter-star" aria-hidden="true"><Sparkles size={38} /></span>
     </div>
-    <div className="bj-fox-welcome" data-motion-zone>
+    <div className="bj-fox-welcome bj-game-lesson-portal" data-motion-zone>
       <span className="zp-feature-art" aria-hidden="true"><img src="/brand/junior-fox.svg" alt="" width={160} height={160} decoding="async" /></span>
-      <div className="bj-fox-bubble"><strong>Haydi, keşfedelim!</strong><p>Bir durak seç, zihnini oyuna davet et.</p><span><Sparkles size={14} aria-hidden="true" /> Her soru yeni bir keşif!</span></div>
+      <div className="bj-fox-bubble"><strong>Önce keşfet, sonra oyna!</strong><p>Şekiller canlansın, yeni bir kural öğren.</p><button type="button" className="bj-game-portal-button" onClick={()=>p.onNavigate('student-lessons')}><Play size={16} aria-hidden="true"/>Konu Anlatımları<ArrowRight size={16} aria-hidden="true"/></button></div>
+      <StudentGameArt kind="book" />
     </div>
     <div className="bj-quest-path" data-motion-zone>
       <svg className="bj-quest-connector" viewBox="0 0 520 650" preserveAspectRatio="none" aria-hidden="true"><path d="M70 65 C70 170 175 110 175 230 S70 300 70 395 S175 470 175 580" /></svg>
@@ -40,13 +42,12 @@ export function StudentModesGrid(p: StudentModesGridProps) {
           transition={{ duration: .25, delay: reduced ? 0 : index * .05 }}
           whileTap={reduced ? undefined : { y: 5 }}
           onClick={() => { sound.playClick(); action(); }}>
-          <span className="bj-quest-coin" aria-hidden="true"><span className="bj-coin-glint" /><Icon size={36} strokeWidth={2.8} fill={index === 0 ? 'currentColor' : 'none'} />{index === 0 && <span className="bj-coin-spark">✦</span>}</span>
+          <span className="bj-quest-coin" aria-hidden="true"><StudentGameArt kind={(['rocket','target','cubes','book'] as GameArtKind[])[index]}/><span className="bj-quest-tool-icon"><Icon size={18}/></span></span>
           <span className="bj-quest-stop-copy"><span className="zp-tool-number">DURAK {number}</span><h3>{title}</h3><span className="bj-quest-description">{text}</span><span className="bj-quest-action">{tag}<ArrowRight size={14} aria-hidden="true" /></span></span>
         </motion.button>)}
       <div className="bj-path-finish"><Trophy size={23} aria-hidden="true" /><span>Küçük adımlar. Büyük keşifler.</span><Star size={15} aria-hidden="true" /></div>
     </div>
     <div className="zp-mode-links">
-      <button type="button" onClick={()=>p.onNavigate('student-lessons')}><Play size={19} aria-hidden="true"/><span>Konu Anlatımları<small>Animasyonla keşfet, adım adım öğren</small></span><ArrowUpRight size={16} aria-hidden="true"/></button>
       <button type="button" onClick={() => { sound.playClick(); p.onNavigate('glossary'); }}><BookOpen size={19} aria-hidden="true" /><span>Bilişsel Sözlük<small>Görsel kavramlar ve mini oyunlar</small></span><ArrowUpRight size={16} aria-hidden="true" /></button>
       <button type="button" onClick={() => { sound.playClick(); p.onOpenChallenges(); }}><Trophy size={19} aria-hidden="true" /><span>Haftalık Görevler<small>Yeni bir hedef belirle</small></span><ArrowUpRight size={16} aria-hidden="true" /></button>
     </div>
