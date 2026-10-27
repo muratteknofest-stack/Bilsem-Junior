@@ -112,3 +112,5 @@
 .dark .bj-lesson-try label[data-selected=true]{background:#2a5270;border-color:#91c8f9}
 @media(prefers-reduced-motion:reduce){.bj-lessons *,.bj-lessons *:before,.bj-lessons *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 .bj-lessons[data-reduced-motion=true] *,.bj-lessons[data-reduced-motion=true] *:before,.bj-lessons[data-reduced-motion=true] *:after{animation:none!important;transition:none!important}
+
+.bj-lesson-stage{background-size:auto;background-repeat:no-repeat}
