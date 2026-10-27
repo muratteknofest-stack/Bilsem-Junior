@@ -33,6 +33,11 @@ try {
       assert.deepEqual(broken,[],`${screen} has unresolved material definitions`);
       if(width===390||width===1440&&['modes','skills','native-story'].includes(screen))await page.screenshot({path:`${output}/${screen}-${width}.png`,fullPage:true,animations:'disabled'});
       if(screen==='modes') {
+        const portal=page.getByRole('region',{name:'Junior ile keşif adası',exact:true});
+        await portal.locator('.bj-explorer-guide').evaluate(image=>image.decode());
+        assert.ok(await portal.locator('.bj-explorer-guide').evaluate(image=>image.naturalWidth>0),'The local guide must load');
+        const inventory=await page.locator('.bj-inventory-art>.bj-game-art>svg').evaluateAll(items=>items.map(el=>el.getBoundingClientRect().width));
+        assert.ok(inventory.length>=6&&inventory.every(size=>size>=30),'Inventory toys must retain their full size');
         if(width<1000){
           const drawer=page.getByRole('button',{name:'Hedeflerim ve serim',exact:false});
           assert.equal(await page.locator('.zp-daily-snapshot').isVisible(),false);
@@ -43,11 +48,17 @@ try {
         assert.equal(await page.getByLabel('İşlem kaydı').textContent(),'student-lessons');
       }
       if(screen==='native-study') {
+        await page.getByRole('region',{name:'Junior ile keşif adası',exact:true}).getByRole('button',{name:'Konu Anlatımları',exact:true}).click();
+        assert.equal(await page.getByLabel('İşlem kaydı').textContent(),'student-lessons');
         await page.getByRole('button').filter({has:page.getByRole('heading',{name:'Konu Anlatımları',exact:true})}).click();
         assert.equal(await page.getByLabel('İşlem kaydı').textContent(),'student-lessons');
         await page.getByRole('button',{name:'Gelişim',exact:true}).click();
         await page.getByRole('button').filter({has:page.getByRole('heading',{name:'Kişisel Planım',exact:true})}).click();
         assert.equal(await page.getByLabel('İşlem kaydı').textContent(),'student-plan');
+      }
+      if(screen==='native-rewards') {
+        const toys=await page.locator('.bj-reward-object>.bj-game-art>svg').evaluateAll(items=>items.map(el=>el.getBoundingClientRect().width));
+        assert.equal(toys.length,4);assert.ok(toys.every(size=>size>=75),'Reward artwork must retain its full toy size');
       }
       checks++;
     }

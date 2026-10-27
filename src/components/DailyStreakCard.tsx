@@ -417,7 +417,7 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({
       </div>
 
       {/* Interactive Quick Actions Footer */}
-      <div className="mt-5 pt-4 border-t border-zinc-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="bj-streak-actions mt-5 pt-4 border-t border-zinc-200 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 text-xs text-slate-500">
           <Zap className="w-4 h-4 text-amber-500" />
           <span>Her gün düzenli 1 pratik zeka puanını ve BİLSEM başarını katlar.</span>

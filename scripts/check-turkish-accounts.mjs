@@ -272,7 +272,7 @@ try{
    await page.getByRole('heading',{name:'Bugün nasıl çalışmak istersin?',exact:true}).waitFor();
    // The tactile artwork must resolve in the real bundled app, including on narrow screens.
    await page.waitForFunction(()=>{
-    const image=document.querySelector('.zp-feature-art img');
+    const image=document.querySelector('.bj-explorer-guide');
     return image instanceof HTMLImageElement && image.complete && image.naturalWidth>0;
    });
    await page.waitForFunction(()=>[...document.querySelectorAll('.zp-mode-card')].every(e=>parseFloat(getComputedStyle(e).opacity)>=.99));

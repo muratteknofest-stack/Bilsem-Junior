@@ -1,6 +1,7 @@
 import { StoryAdventure } from '../student/StoryAdventure';
 import { STUDY_GROUPS } from '../../features/student/adventure-art';
 import { StudentGameArt, GAME_ROUTE_ART } from '../student/StudentGameArt';
+import { StudentExplorerPortal } from '../student/StudentExplorerWorld';
 import { useState } from 'react';
 import { BookOpen, Brain, ChevronRight, Clock3, Compass, Flame, GraduationCap, RotateCcw, Shapes, Sparkles, Star, Target, Trophy, type LucideIcon } from 'lucide-react';
 import type { UserProfile } from '../../types';
@@ -49,7 +50,7 @@ export function AndroidStudentHub({route,user,progress,saveError,onNavigate,onSt
     <div className="bj-native-page-title">{route==='student-rewards'?<Trophy aria-hidden="true"/>:<Shapes aria-hidden="true"/>}<div><p>{route==='student-rewards'?'HER ADIMIN DEĞERLİ':'BİLSEM HAZIRLIK ALANIN'}</p><h1>{route==='student-rewards'?'Ödüller ve gelişim':'Bugün ne keşfedelim?'}</h1></div></div>
     {route==='student-rewards'&&<StudentTreasure user={user} progress={progress} achievements={dataService.getAchievements()}/>}
     {route==='student-rewards'&&<StudentMissionStrip user={user} weeklyQuestions={dataService.getWeeklyQuestionProgressData(user).summary.thisWeekTotal}/>}
-    {route==='student-study'&&<><div className="bj-field-guide-banner" data-motion-zone><StudentGameArt kind="map"/><div><span>KAŞİFİN ÇALIŞMA GÜNLÜĞÜ</span><strong>Her keşif bir soruyla başlar.</strong></div></div><nav className="bj-study-groups" aria-label="Çalışma alanı grupları">{STUDY_GROUPS.map(group=><button key={group.id} aria-pressed={studyGroup===group.id} onClick={()=>{sound.playClick();setStudyGroup(group.id);}}>{group.label}</button>)}</nav></>}
+    {route==='student-study'&&<><StudentExplorerPortal onLessons={()=>go('student-lessons')}/><nav className="bj-study-groups" aria-label="Çalışma alanı grupları">{STUDY_GROUPS.map(group=><button key={group.id} aria-pressed={studyGroup===group.id} onClick={()=>{sound.playClick();setStudyGroup(group.id);}}>{group.label}</button>)}</nav></>}
     <div key={studyGroup} className="bj-native-feature-grid" data-motion-zone>{links.map(({route,title,detail,icon:Icon,tone})=><button key={route} onClick={()=>go(route)} data-tone={tone}>{isRewards?<span className="bj-reward-object" aria-hidden="true"><StudentGameArt kind={GAME_ROUTE_ART[route] || "medal"}/><i>✦</i></span>:<span className="bj-game-feature-art"><StudentGameArt kind={GAME_ROUTE_ART[route] || "cubes"}/><span className="bj-feature-key"><Icon aria-hidden="true"/></span></span>}<div><h2>{title}</h2><p>{detail}</p></div><ChevronRight aria-hidden="true"/></button>)}</div>
   </main>;
   return <main className="bj-native-hub bj-student-game"><StoryAdventure user={user} progress={progress} saveError={saveError} onStartStory={onStartStory} onSelectStory={onSelectStory} onStudy={()=>go('student-study')}/></main>;
