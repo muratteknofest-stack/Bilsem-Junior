@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import confetti from 'canvas-confetti';
-import { Copy, Check, Flame, ShieldCheck, ArrowUpRight, Trophy } from 'lucide-react';
+import { Copy, Check, Flame, ShieldCheck, ArrowUpRight, Trophy, Sparkles } from 'lucide-react';
 import { sound } from '../../lib/sound';
 import { StudentGradeSelector } from '../StudentGradeSelector';
 import type { UserProfile } from '../../types';
@@ -34,7 +34,7 @@ export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({ user, gree
     sound.playLevelUp();
     if (!prefersReducedMotion) confetti({ particleCount: 24, spread: 45, ticks: 100, disableForReducedMotion: true, origin: { y: .3 } });
   };
-  return <motion.section className="zp-dashboard-hero zp-pro-hero"
+  return <motion.section className="zp-dashboard-hero zp-pro-hero bj-player-hero"
     initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .25 }}>
     <div className="zp-pro-hero-content">
       <div className="zp-student-profile">
@@ -42,6 +42,7 @@ export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({ user, gree
           {avatarImageSrc ? <img src={avatarImageSrc} alt="" width={46} height={53} /> : <span>{user.avatar || '🦊'}</span>}<small>SEVİYE {xpProgress.level}</small>
         </button>
         <div className="zp-student-profile-copy">
+          <span className="bj-player-label"><Sparkles size={11} aria-hidden="true"/> KAŞİF KARTIN</span>
           <p className="zp-dashboard-kicker">BUGÜN DE HARİKALAR KEŞFEDELİM</p>
           <h1>{greeting.text}, {user.name?.split(' ')[0] || 'Kaşif'}<span className="zp-profile-period" aria-hidden="true">.</span></h1>
           <div className="zp-profile-settings">

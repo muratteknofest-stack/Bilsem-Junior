@@ -1,10 +1,11 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ArrowRight, ArrowUpRight, Clock3, Target, RotateCcw, BookOpen, Trophy, Star, Sparkles, Play } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Clock3, Target, RotateCcw, BookOpen, Trophy, Star, Sparkles } from 'lucide-react';
 import { StudentAdventureAtmosphere } from './StudentMotion';
 import { sound } from '../../lib/sound';
 import { useStudentReducedMotion } from '../../features/student/experience-preferences';
 import { StudentGameArt, type GameArtKind } from './StudentGameArt';
+import { StudentExplorerPortal } from './StudentExplorerWorld';
 
 export interface StudentModesGridProps {
   unresolvedMistakesCount: number; onStartAdaptive: () => void; onStartExam: () => void;
@@ -26,11 +27,7 @@ export function StudentModesGrid(p: StudentModesGridProps) {
       <div><p className="zp-panel-eyebrow">KEŞİF YOLU · BİLSEM HAZIRLIK</p><h2 id="zp-mode-title">Bugün nasıl çalışmak istersin?</h2></div>
       <span className="bj-chapter-star" aria-hidden="true"><Sparkles size={38} /></span>
     </div>
-    <div className="bj-fox-welcome bj-game-lesson-portal" data-motion-zone>
-      <span className="zp-feature-art" aria-hidden="true"><img src="/brand/junior-fox.svg" alt="" width={160} height={160} decoding="async" /></span>
-      <div className="bj-fox-bubble"><strong>Önce keşfet, sonra oyna!</strong><p>Şekiller canlansın, yeni bir kural öğren.</p><button type="button" className="bj-game-portal-button" onClick={()=>p.onNavigate('student-lessons')}><Play size={16} aria-hidden="true"/>Konu Anlatımları<ArrowRight size={16} aria-hidden="true"/></button></div>
-      <StudentGameArt kind="book" />
-    </div>
+    <StudentExplorerPortal onLessons={()=>p.onNavigate('student-lessons')}/>
     <div className="bj-quest-path" data-motion-zone>
       <svg className="bj-quest-connector" viewBox="0 0 520 650" preserveAspectRatio="none" aria-hidden="true"><path d="M70 65 C70 170 175 110 175 230 S70 300 70 395 S175 470 175 580" /></svg>
       <span className="bj-world-cloud bj-world-cloud-one" aria-hidden="true" /><span className="bj-world-cloud bj-world-cloud-two" aria-hidden="true" />

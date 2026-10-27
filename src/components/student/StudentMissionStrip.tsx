@@ -1,4 +1,5 @@
 import { Check, Flame, Star, Target, Trophy } from 'lucide-react';
+import type { CSSProperties } from 'react';
 import type { UserProfile } from '../../types';
 import { dailyMissions, weeklyLeague } from '../../features/student/gamification-model';
 
@@ -11,7 +12,7 @@ export function StudentMissionStrip({ user, weeklyQuestions }: { user: UserProfi
     <div className="bj-mission-cards">{missions.map((mission, index) => {
       const Icon = icons[index];
       return <article key={mission.id} data-complete={mission.completed}>
-        <span className="bj-mission-token" aria-hidden="true">{mission.completed ? <Check size={20} /> : <Icon size={20} />}</span>
+        <span className="bj-mission-ring" style={{'--mission-progress':`${mission.progress}%`} as CSSProperties} aria-hidden="true"><span className="bj-mission-token"><Icon size={20}/></span>{mission.completed&&<span className="bj-mission-complete"><Check size={11}/></span>}</span>
         <div><h3>{mission.title}</h3><span>{mission.current} / {mission.target} {index === 0 ? 'soru' : index === 1 ? 'dk' : 'oturum'}</span>
           <progress aria-label={mission.title} max={mission.target} value={Math.min(mission.current, mission.target)} />
         </div>

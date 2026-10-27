@@ -129,8 +129,11 @@ try {
   assert.equal(await pause.getAttribute('aria-pressed'),'true');
   await page.emulateMedia({reducedMotion:'no-preference'});
   await page.goto(base+'?web=1');await page.locator('.bj-quest-path').waitFor();await page.setViewportSize({width:390,height:844});
-  await page.locator('.bj-fox-welcome').scrollIntoViewIfNeeded();
-  assert.equal((await style('.bj-fox-welcome img')).name,'bj-guide-float');
+  await page.locator('.bj-explorer-portal').scrollIntoViewIfNeeded();
+  assert.equal((await style('.bj-explorer-islands')).name,'bj-explorer-hover');
+  await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
+  assert.equal((await style('.bj-explorer-islands')).state,'paused');
+  await page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});
   assert.equal((await style('.bj-quest-start .bj-quest-coin')).name,'bj-node-bob');
   await page.locator('.bj-quest-start').click();assert.equal(await page.getByLabel('Son işlem').textContent(),'adaptive');
   await pause.click();await assertStill();

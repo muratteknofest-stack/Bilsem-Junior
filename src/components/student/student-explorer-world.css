@@ -1,0 +1,124 @@
+/* A contained illustrated playfield. Every decoration is local and has no learning state. */
+.bj-student-game .bj-explorer-portal {
+  position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);
+  align-items:center;gap:0;min-height:260px;margin:0 0 22px;padding:24px 24px 49px;
+  border:2px solid #a7dce7;border-radius:28px;overflow:hidden;
+  background:radial-gradient(ellipse at 85% 0,#d9f9ff,transparent 62%),linear-gradient(125deg,#effcf4,#e1f5ff 68%,#e4e5ff);
+  box-shadow:0 6px 0 #9ecad8,0 15px 30px #327caa0b;
+}
+.bj-student-game .bj-explorer-portal:before {
+  content:'';position:absolute;inset:9px;border:1px solid #ffffffb3;border-radius:20px;pointer-events:none;
+}
+.bj-explorer-portal-copy {position:relative;z-index:2;min-width:0;align-self:center}
+.bj-student-game .bj-explorer-eyebrow {display:flex;align-items:center;gap:5px;font-size:8px;letter-spacing:1.1px;font-weight:850;color:#398786}
+.bj-student-game .bj-explorer-portal h2 {color:#235675;font-size:30px;line-height:1.12;letter-spacing:-1px;font-weight:900;margin:10px 0}
+.bj-student-game .bj-explorer-portal p {color:#537487;font-size:12px;line-height:1.8;margin:0 0 16px}
+.bj-student-game .bj-explorer-portal .bj-game-portal-button {white-space:normal;min-height:44px;font-size:11px;padding:10px 12px;gap:7px;background:linear-gradient(#8c6ae8,#7150d4);border-color:#7450cb;box-shadow:0 4px 0 #5339a6,inset 0 2px 0 #ffffff4d}
+.bj-explorer-portal .bj-explorer-scene {margin:-18px -38px -15px -55px;max-width:none;width:calc(100% + 93px);align-self:center}
+.bj-explorer-scene {position:relative;line-height:0;pointer-events:none;user-select:none;min-width:0}
+.bj-explorer-islands {position:relative;transform-origin:50% 55%;will-change:auto}
+.bj-explorer-islands>svg {display:block;width:100%;height:auto;overflow:visible}
+.bj-explorer-guide {position:absolute;left:40.4%;top:14.5%;width:18%;height:40%;object-fit:contain;filter:drop-shadow(0 5px 2px #556b7c25)}
+.bj-explorer-orbit {position:absolute;line-height:1;color:#ffd164;text-shadow:0 2px 0 #c9914b30;font-size:22px;left:41%;top:2%}
+.bj-explorer-orbit-two {left:69%;top:25%;font-size:15px;color:#fff}
+.bj-explorer-route {position:absolute;z-index:2;bottom:0;inset-inline:0;display:flex;align-items:center;justify-content:center;gap:14px;padding:10px 16px;background:#ffffffb5;border-top:1px solid #c4e1e9;color:#527689;font-size:10px;font-weight:800;line-height:1.2}
+.bj-explorer-route>span {display:flex;align-items:center;gap:7px;white-space:nowrap}
+.bj-explorer-route b {display:grid;place-items:center;flex:none;width:23px;height:23px;border:1px solid #b3dcda;border-radius:8px;background:#def4e8;color:#388975;font-size:10px;box-shadow:0 2px 0 #badbd4}
+.bj-explorer-route>span:nth-of-type(2) b {background:#e9e1ff;color:#7c58ba;border-color:#d2c4ee;box-shadow:0 2px 0 #d0c1e8}
+.bj-explorer-route>span:nth-of-type(3) b {background:#fff0c4;color:#9e772a;border-color:#ead292;box-shadow:0 2px 0 #e2cc94}
+.bj-explorer-route>i {width:26px;border-top:2px dotted #b9d3dc}
+.bj-motion-world .bj-explorer-islands {animation:bj-explorer-hover 7s ease-in-out infinite}
+.bj-motion-world .bj-explorer-orbit {animation:bj-explorer-twinkle 4s ease-in-out infinite}
+.bj-motion-world .bj-explorer-orbit-two {animation-delay:-1.8s}
+@keyframes bj-explorer-hover {0%,100%{transform:translateY(0) rotate(-.4deg)}50%{transform:translateY(-5px) rotate(.4deg)}}
+@keyframes bj-explorer-twinkle {0%,100%{transform:scale(.85) rotate(-8deg);opacity:.65}50%{transform:scale(1.1) rotate(8deg);opacity:1}}
+
+/* A small player HUD, tactile inventory tabs and real mission rings. */
+.zp-student-pro.bj-student-game .zp-pro-hero.bj-player-hero,.bj-native-hub.bj-student-game .zp-pro-hero.bj-player-hero {position:relative;overflow:visible;background:linear-gradient(120deg,#e6f7ff,#f0ecff 72%,#fff4d6);border-color:#c9d7f3}
+.bj-player-hero .bj-player-label {display:inline-flex;align-items:center;gap:5px;margin-bottom:9px;padding:4px 8px;border:1px solid #d4c7ed;border-radius:8px;background:#ffffffb8;color:#7a5aab;font-size:8px;font-weight:850;letter-spacing:1px}
+.bj-player-hero .zp-dashboard-kicker {font-size:8px;letter-spacing:1px}
+.bj-player-hero .zp-profile-progress {position:relative}
+.bj-player-hero .zp-profile-progress>div:first-child>span {display:flex;align-items:center;gap:5px}
+.zp-student-pro.bj-student-game .zp-study-navigation {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;padding:7px;background:linear-gradient(#f7fbff,#e5edf8);border:2px solid #d1e0ef;box-shadow:0 5px 0 #c5d6e7}
+.zp-student-pro.bj-student-game .zp-study-navigation button {display:flex;flex-direction:column;justify-content:center;gap:7px;min-height:82px;padding:9px 4px;font-size:10px;line-height:1.25;text-align:center}
+.bj-inventory-art {display:block;flex:none;width:39px;height:36px;line-height:0;transition:transform .18s}
+.bj-inventory-art>.bj-game-art {width:42px;height:39px}
+.zp-student-pro.bj-student-game .zp-study-navigation button[aria-pressed=true] {background:linear-gradient(#fff,#f4efff);border-color:#c6b2e8;box-shadow:0 4px 0 #bda4df;color:#7751b2}
+.zp-student-pro.bj-student-game .zp-study-navigation button[aria-pressed=true] .bj-inventory-art {transform:translateY(-2px) rotate(-6deg)}
+.bj-student-game .bj-mission-strip {border:2px solid #e8cf8e;border-radius:24px;background:linear-gradient(125deg,#fffbeb,#fff4d4);box-shadow:0 5px 0 #e5cd90;padding:14px}
+.bj-student-game .bj-mission-heading {margin-bottom:12px}
+.bj-student-game .bj-mission-heading>span:first-child {color:#987327;font-size:12px}
+.bj-student-game .bj-mission-cards {gap:9px}
+.bj-student-game .bj-mission-cards article {--mission-color:#31ad96;position:relative;display:flex;flex-direction:row;align-items:center;gap:10px;min-width:0;padding:12px 10px;background:#fffefa;border:1px solid #e8d89e;border-radius:17px;box-shadow:0 3px 0 #eadba9}
+.bj-student-game .bj-mission-cards article:nth-child(2) {--mission-color:#ed936d;background:#fff6ee;border-color:#f1d3b6;box-shadow:0 3px 0 #edcfb0}
+.bj-student-game .bj-mission-cards article:nth-child(3) {--mission-color:#a17ad7;background:#f6efff;border-color:#decaf3;box-shadow:0 3px 0 #d8c4ec}
+.bj-student-game .bj-mission-cards article[data-complete=true] {--mission-color:#27ab83;background:#edf9e8;border-color:#a4d4a9;box-shadow:0 3px 0 #b4d6ae}
+.bj-student-game .bj-mission-cards article>div {min-width:0;flex:1}
+.bj-student-game .bj-mission-cards h3 {font-size:11px;line-height:1.3;color:#3b5a6f}
+.bj-student-game .bj-mission-cards article>div>span {font-size:10px;color:#607b8d}
+.bj-student-game .bj-mission-ring {position:relative;display:grid;place-items:center;flex:none;width:45px;height:45px;padding:4px;border-radius:50%;background:conic-gradient(var(--mission-color) var(--mission-progress),#e9e8e2 0);box-shadow:0 2px 0 #c4c9bf4d}
+.bj-student-game .bj-mission-ring .bj-mission-token {display:grid;place-items:center;width:35px;height:35px;border:2px solid #fff;border-radius:50%;color:var(--mission-color);background:#fff;box-shadow:none}
+.bj-mission-complete {position:absolute;right:-3px;bottom:-2px;display:grid;place-items:center;width:19px;height:19px;border-radius:50%;border:2px solid #fff;background:#28ad85;color:#fff}
+.bj-student-game .bj-mission-cards progress {width:100%;height:5px;margin-top:6px;accent-color:var(--mission-color)}
+.bj-student-game .bj-mission-cards progress::-webkit-progress-value {background:var(--mission-color)}
+
+/* Saturated toy pedestals make each destination feel like a place to play. */
+.bj-student-game .bj-quest-coin:before,.bj-student-game .bj-game-feature-art:before {content:'';position:absolute;left:5%;right:5%;bottom:1px;height:23%;border-radius:50%;background:linear-gradient(#eefbff,#c9dce9);border:1px solid #c9dfeb;box-shadow:0 5px 0 #a9c9db66}
+.bj-student-game .bj-quest-coin>.bj-game-art {position:relative;z-index:1}
+.bj-native-hub.bj-student-game .bj-reward-object>.bj-game-art>svg {width:100%;height:auto;stroke-width:initial}
+.bj-native-hub.bj-student-game .bj-reward-object {padding-top:0}
+.bj-native-hub.bj-student-game .bj-explorer-portal {margin:0 0 22px;min-height:225px}
+.bj-native-hub.bj-student-game .bj-explorer-portal h2 {font-size:27px}
+.bj-native-hub.bj-student-game .bj-native-feature-grid>button {background:linear-gradient(150deg,#fff 25%,var(--feature-bg));border-color:color-mix(in srgb,var(--feature),white 62%);box-shadow:0 6px 0 color-mix(in srgb,var(--feature),white 66%)}
+.bj-student-game .bj-quest-path>.bj-quest-stop[data-tone] {border-color:color-mix(in srgb,var(--tile-color),white 56%);box-shadow:0 6px 0 color-mix(in srgb,var(--tile-color),white 60%)}
+
+@media(max-width:850px) {
+  .bj-student-game .bj-mission-cards article {flex-direction:column;align-items:flex-start;gap:7px;padding:10px 8px}
+  .bj-student-game .bj-mission-cards article>div {width:100%}
+  .bj-student-game .bj-mission-ring {width:38px;height:38px;padding:3px}
+  .bj-student-game .bj-mission-ring .bj-mission-token {width:32px;height:32px}
+  .bj-student-game .bj-mission-ring .bj-mission-token>svg {width:17px;height:17px}
+}
+@media(max-width:650px) {
+  .zp-student-pro.bj-student-game .zp-study-navigation {grid-template-columns:repeat(4,minmax(0,1fr));margin-block:16px;gap:6px;padding:7px;border-radius:20px}
+  .zp-student-pro.bj-student-game .zp-study-navigation button {min-height:69px;gap:4px;font-size:9px;padding:6px 2px;border-radius:13px}
+  .bj-inventory-art {width:32px;height:30px}.bj-inventory-art>.bj-game-art {width:34px;height:32px}
+  .bj-player-hero .bj-player-label {font-size:7px;padding:4px 6px;margin-bottom:6px}
+  .bj-student-game .bj-explorer-portal,.bj-native-hub.bj-student-game .bj-explorer-portal {grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);min-height:215px;padding:20px 16px 52px;border-radius:24px}
+  .bj-student-game .bj-explorer-eyebrow {font-size:6px;letter-spacing:.55px;gap:3px}
+  .bj-student-game .bj-explorer-eyebrow>svg {width:11px;flex:none}
+  .bj-student-game .bj-explorer-portal h2,.bj-native-hub.bj-student-game .bj-explorer-portal h2 {font-size:22px;letter-spacing:-.7px;margin:8px 0;max-width:170px}
+  .bj-student-game .bj-explorer-portal p {font-size:10px;line-height:1.6;margin-bottom:11px}
+  .bj-explorer-portal .bj-explorer-scene {margin:-9px -80px -6px -54px;width:calc(100% + 134px);z-index:0}
+  .bj-student-game .bj-explorer-portal .bj-game-portal-button {font-size:9px;padding:8px;gap:4px;min-height:43px}
+  .bj-explorer-portal .bj-game-portal-button>svg {width:12px;flex:none}
+  .bj-explorer-route {gap:10px;font-size:9px;padding:9px 12px}.bj-explorer-route>i {width:17px}
+  .bj-student-game .bj-mission-strip {padding:12px 10px;border-radius:21px}
+  .bj-student-game .bj-mission-cards {gap:7px}
+  .bj-student-game .bj-mission-cards h3 {font-size:10px}
+  .bj-student-game .bj-mission-cards article>div>span {font-size:9px}
+}
+@media(max-width:359px) {
+  .bj-student-game .bj-explorer-portal,.bj-native-hub.bj-student-game .bj-explorer-portal {padding-inline:13px;min-height:210px}
+  .bj-student-game .bj-explorer-portal h2,.bj-native-hub.bj-student-game .bj-explorer-portal h2 {font-size:20px}
+  .bj-student-game .bj-explorer-eyebrow {font-size:5.5px;letter-spacing:.3px}
+  .bj-explorer-route {gap:7px}.bj-explorer-route>span {gap:5px}.bj-explorer-route>i {width:11px}
+  .zp-student-pro.bj-student-game .zp-study-navigation button {font-size:8px}
+  .bj-student-game .bj-mission-cards article {padding-inline:6px}
+}
+.dark .bj-student-game .bj-explorer-portal {background:radial-gradient(ellipse at 85% 0,#2f5978,transparent 62%),linear-gradient(125deg,#263f51,#2b335c);border-color:#4c6e91;box-shadow:0 6px 0 #112c42}
+.dark .bj-student-game .bj-explorer-portal h2 {color:#eff8ff}.dark .bj-student-game .bj-explorer-portal p {color:#c6dbea}
+.dark .bj-student-game .bj-explorer-eyebrow {color:#a3dbd5}.dark .bj-explorer-route {background:#1c344cd9;border-color:#476181;color:#c3d8eb}
+.dark .zp-student-pro.bj-student-game .zp-pro-hero.bj-player-hero,.dark .bj-native-hub.bj-student-game .zp-pro-hero.bj-player-hero {background:linear-gradient(120deg,#24475f,#39375c);border-color:#54718b}
+.dark .bj-player-label {background:#293958;color:#dfc6ff;border-color:#6e6097}
+.dark .zp-student-pro.bj-student-game .zp-study-navigation {background:linear-gradient(#29465e,#223851);border-color:#4d6c8a;box-shadow:0 5px 0 #102b40}
+.dark .zp-student-pro.bj-student-game .zp-study-navigation button[aria-pressed=true] {background:linear-gradient(#5a497c,#433860);color:#f6eaff;border-color:#9a82b5;box-shadow:0 4px 0 #2e2447}
+.dark .bj-student-game .bj-mission-strip {background:linear-gradient(125deg,#403c2d,#3c3540);border-color:#887451;box-shadow:0 5px 0 #242833}
+.dark .bj-student-game .bj-mission-heading>span:first-child {color:#ffe4a7}
+.dark .bj-student-game .bj-mission-cards article,.dark .bj-student-game .bj-mission-cards article:nth-child(2),.dark .bj-student-game .bj-mission-cards article:nth-child(3) {background:#294355;border-color:#64727d;box-shadow:0 3px 0 #192e40}
+.dark .bj-student-game .bj-mission-cards article[data-complete=true] {background:#294d43;border-color:#558e73;box-shadow:0 3px 0 #18372f}
+.dark .bj-student-game .bj-mission-cards h3 {color:#ecf6ff}.dark .bj-student-game .bj-mission-cards article>div>span {color:#bcd0e1}
+.dark .bj-student-game .bj-mission-ring {background:conic-gradient(var(--mission-color) var(--mission-progress),#425465 0)}
+.dark .bj-student-game .bj-mission-ring .bj-mission-token {background:#253d51;border-color:#315066}
+.dark .bj-native-hub.bj-student-game .bj-native-feature-grid>button {background:linear-gradient(145deg,#2e4861,#293c55);border-color:#56718d;box-shadow:0 6px 0 #112b41}
+@media(prefers-reduced-motion:reduce) {.bj-explorer-islands,.bj-explorer-orbit {animation:none!important}}

@@ -2,7 +2,7 @@ import { StoryAdventure } from './student/StoryAdventure';
 import type { StoryProgress, StoryStage } from '../features/student/story-adventure';
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'motion/react';
-import { Activity, ArrowLeft, BarChart3, Brain, Compass, Layers, Lightbulb, Shapes, Sparkles, Target, Trophy, Zap, ArrowUpRight, BookOpen, Flame } from 'lucide-react';
+import { Activity, ArrowLeft, BarChart3, Brain, Compass, Layers, Lightbulb, Sparkles, Target, Zap, ArrowUpRight, Flame } from 'lucide-react';
 import type { DailyStudyPlan, QuestionType, SkillMastery, UserProfile } from '../types';
 import { isSchoolGrade } from '../features/questions/quality-policy';
 import { isDemoUser } from '../lib/demo-access';
@@ -13,7 +13,7 @@ import { useStudentReducedMotion } from '../features/student/experience-preferen
 import { levelProgress } from '../features/student/study-hub-model';
 import { dailyMissions } from '../features/student/gamification-model';
 import { getStudyFavorites, saveStudyFavorites } from '../services/student-preferences-service';
-import { StudentGameBanner } from './student/StudentGameArt';
+import { StudentGameArt, StudentGameBanner } from './student/StudentGameArt';
 import { StudentHeroBanner } from './student/StudentHeroBanner';
 import { StudentModesGrid } from './student/StudentModesGrid';
 import { StudentMissionStrip } from './student/StudentMissionStrip';
@@ -49,13 +49,13 @@ interface StudentDashboardProps {
 }
 const EMPTY_MASTERIES: SkillMastery[] = [];
 const SECTIONS = [
-  { id: 'adventure', label: 'Maceram', icon: Compass },
-  { id: 'modes', label: 'Çalışma alanım', icon: BookOpen },
-  { id: 'tests', label: 'Zeka Testleri', icon: Shapes },
-  { id: 'plan', label: 'Kişisel planım', icon: Compass },
-  { id: 'skills', label: 'Yeteneklerim', icon: Brain },
-  { id: 'challenges', label: 'Görevlerim', icon: Trophy },
-  { id: 'progress', label: 'İlerlemem', icon: BarChart3 },
+  { id: 'adventure', label: 'Maceram', art: 'map' },
+  { id: 'modes', label: 'Çalışma alanım', art: 'rocket' },
+  { id: 'tests', label: 'Zeka Testleri', art: 'cubes' },
+  { id: 'plan', label: 'Kişisel planım', art: 'compass' },
+  { id: 'skills', label: 'Yeteneklerim', art: 'puzzle' },
+  { id: 'challenges', label: 'Görevlerim', art: 'target' },
+  { id: 'progress', label: 'İlerlemem', art: 'medal' },
 ] as const;
 type Section = typeof SECTIONS[number]['id'];
 const CATEGORY_STYLE_CONFIG: Record<string, {
@@ -154,9 +154,9 @@ export function StudentDashboard({ storyProgress, storySaveError, onStartStory, 
         <div className="zp-student-topline"><span><span className="zp-brand-dot" /> Bilsem Junior <span className="zp-topline-divider">/</span> Çalışma masam</span><StudentExperienceControls /></div>
         {activeTab!=='adventure'&&<StudentMotionToggle />}
         {activeTab !== 'tests' && activeTab !== 'adventure' && <StudentHeroBanner user={activeUser} greeting={greeting} xpProgress={xpProgress} onUserUpdate={onUserUpdate} onNavigate={onNavigate} prefersReducedMotion={reduced} />}
-        <nav className="zp-study-navigation" aria-label="Öğrenci paneli bölümleri">{SECTIONS.filter(section=>section.id!=='adventure'||!!onStartStory).map(({ id, label, icon: Icon }) =>
+        <nav className="zp-study-navigation" aria-label="Öğrenci paneli bölümleri">{SECTIONS.filter(section=>section.id!=='adventure'||!!onStartStory).map(({ id, label, art }) =>
           <button type="button" key={id} aria-pressed={activeTab === id} aria-controls="zp-student-section" onClick={() => switchSection(id)}>
-            <Icon size={18} aria-hidden="true" /><span>{label}</span>{activeTab === id && <span className="zp-nav-indicator" aria-hidden="true" />}
+            <span className="bj-inventory-art" aria-hidden="true"><StudentGameArt kind={art}/></span><span>{label}</span>{activeTab === id && <span className="zp-nav-indicator" aria-hidden="true" />}
           </button>)}</nav>
         <div className="zp-student-workspace" data-study-section={activeTab}>
           <section id="zp-student-section" className="zp-student-section" aria-label={SECTIONS.find(section => section.id === activeTab)!.label}>
