@@ -1,6 +1,5 @@
 import React, { useId, type CSSProperties, type ReactNode } from 'react';
-import { StudentGameArt } from './StudentGameArt';
-import './student-story-world.css';
+import { StudentGameArt } from './StudentToyArt';
 import { storyCelebration, storyStars, STORY_QUESTION_COUNT } from '../../features/student/story-adventure';
 const starPath='M14 2.5 17.5 9.6 25.4 10.8 19.7 16.3 21 24.1 14 20.4 7 24.1 8.3 16.3 2.6 10.8 10.5 9.6Z';
 export function StoryStars({correct,total=STORY_QUESTION_COUNT,compact=false,label='Macera yıldızları'}:{correct:number;total?:number;compact?:boolean;label?:string}) {
