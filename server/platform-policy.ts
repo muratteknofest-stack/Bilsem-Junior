@@ -5,7 +5,7 @@ import {
   PLATFORM_INFO,
   type PlatformInfo,
 } from "../src/content/platform-info";
-import type { PlatformSettings } from "../src/lib/platform-settings";
+import { evidenceComplete, registrationBlockers, type PlatformSettings } from "../src/lib/platform-settings";
 import { escapeHtml } from "./security";
 
 export function publicPolicy(
@@ -16,15 +16,16 @@ export function publicPolicy(
   if (!source) return undefined;
   const info: PlatformInfo = structuredClone(source),
     b = settings.business;
-  const hasIdentity = !!(b.legalName && b.address && b.contactEmail);
+  const hasIdentity = !!(b.legalName && b.address && b.contactEmail && b.contactPhone && evidenceComplete(settings.commercial.operatorIdentity));
   const hasContact = !!(b.contactEmail && (b.brandName || b.legalName));
-  const hasLegalDetails = !!(b.legalBases && b.retention && b.transfers);
+  const hasLegalDetails = registrationBlockers(settings).length === 0;
   info.contactEmail = b.contactEmail || SUPPORT_EMAIL;
   const identity = {
     title: hasIdentity ? "Yasal satıcı ve veri sorumlusu" : "Marka ve iletişim",
     paragraphs: [
       b.brandName ? `Marka: ${b.brandName}` : "", b.legalName, b.address,
       b.contactEmail ? `İletişim ve veri talepleri: ${b.contactEmail}` : "",
+      b.contactPhone ? `İş telefonu: ${b.contactPhone}` : "",
     ].filter(Boolean),
   };
   if (slug === "gizlilik-ve-veriler") {

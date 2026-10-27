@@ -1,4 +1,4 @@
-# ZekaPark üretim kabul ve işletim rehberi
+# Bilsem Junior üretim kabul ve işletim rehberi
 
 ## Yayın hedefi ve kayıt kapısı
 
@@ -7,7 +7,7 @@ Hedef `https://bilsemjunior.vercel.app`, Supabase projesi `vtcsoqohkiagbwatlabk`
 Yönetici girişi `/admin/giris`. Yönetici TOTP kurulumu veya doğrulaması tamamlanmadan panel yüklenmez; API ve soru bankası politikaları AAL2 ister.
 Kayıt durumu `/api/public/platform` ile kontrol edilir. Mevcut hesapların giriş ve çalışma erişimi kayıt kapısından etkilenmez.
 
-Yeni aile kayıtlarını yalnızca `release.registrationEnabled` açar veya kapatır. İşletmeci bilgileri ve kabul testi beyanları yönetici panelinde ayrı bir hazırlık listesi olarak kalır; eksik olmaları bu anahtarı geçersiz kılmaz. Kayıt açmak testleri yapılmış olarak işaretlemez. E-posta doğrulama, güçlü şifre, istek sınırı, güncel metin onayı ve aileler arası yetki kontrolleri kayıt açıkken de uygulanır. Ayarlar okunamazsa kayıt açılmaz.
+Yeni aile kaydı için `release.registrationEnabled` yanında tam işletmeci bilgileri, veri koruma/aktarım ve eski anahtar iptali kayıtları da gerekir. Her kabul kaydı hem yönetici onayı hem de en az 12 karakterlik güvenli kanıt referansı ister. Eksik hazırlıkla kayıt açmaya çalışan yönetici isteği HTTP 422 alır; kapatma her zaman mümkündür. Bunlar yönetici beyanıdır, bağımsız uygunluk denetimi değildir. Kayıt açmak testleri yapılmış olarak işaretlemez. E-posta doğrulama, güçlü şifre, istek sınırı, güncel metin onayı ve aileler arası yetki kontrolleri kayıt açıkken de uygulanır. Ayarlar okunamazsa kayıt açılmaz.
 
 Sistem ayarları Supabase'de sunucuya özel `platform_settings` tablosunda saklanır. Eşzamanlı yönetici değişiklikleri sürüm kontrolüyle reddedilir. Yeni denemeler kaydedilen soru sayısı ve süreyi kullanır; eski oturumların süreleri değiştirilmez.
 
@@ -66,7 +66,7 @@ Bu araç yalnızca özel klasöre çözer; veritabanını değiştirmez. Supabas
 
 ## İzleme ve kapasite
 
-Production health monitor 15 dakika aralıkla site/blog/API/veritabanı hazırlığını denetler. GitHub Actions başarısızlık bildirimlerini işletim sorumlusunun hesabında açın ve teslim edildiğini doğrulayın. Bu çalışma profesyonel alarm sisteminin veya kesin 15 dakika SLA'nın yerine geçmez.
+Production health monitor 15 dakika aralıkla site/blog/API/veritabanını, iki hukuki sayfayı, abonelik durumunu ve iki özel uç noktanın anonim erişimi reddetmesini denetler. `MONITOR_EXPECT_PAID_SALES=false` beklenmeyen satış açılışını hata sayar; satış gerçekten yeniden açılacağı zaman bu beklenti aynı yayın değişikliğinde güncellenir. Tek seferlik kontrol, zamanlanmış işin ve alarm teslimatının çalıştığını kanıtlamaz. GitHub Actions başarısızlık bildirimlerini işletim sorumlusunun hesabında açın ve teslim edildiğini doğrulayın. Bu çalışma profesyonel alarm sisteminin veya kesin 15 dakika SLA'nın yerine geçmez.
 
 Sunucu hataları gizli istek içeriğini loglamaz; hata kategorisi ve requestId kullanır. Vercel ve Supabase panel hesaplarında MFA etkinleştirilmelidir. WAF, kota, günlük saklama ve destek sorumlusunu provider panellerinden doğrulayın.
 
@@ -74,7 +74,9 @@ Yük testini staging'de, hedef eşzamanlı öğrenci sayısıyla yapın. Soru ba
 
 ## Ücretli yayın
 
-Ücretli yayın halen kapalıdır. Ödeme sağlayıcısı ve işletmeci hesabı seçilmeden kart toplama veya sahte satın alma akışı eklenmez. İmzalı webhook, sunucu kullanım hakkı, mükerrer olay koruması, iptal/iade ve satış metinleri gerçek sağlayıcının test ortamında doğrulanmalıdır.
+27 Ekim 2026 itibarıyla yeni satış anahtarı kapalıdır. Google Play entegrasyonu vardır; yapılandırmanın bulunması satışa hazır olunduğu anlamına gelmez. Satış için `GOOGLE_PLAY_BILLING_ENABLED=true`, eksiksiz sunucu yapılandırması ve bütün `releaseBlockers` kayıtları gerekir; satın alma hazırlığı ayrıca Google ürün kataloğunu doğrular. Eski abonelik doğrulaması, geri yükleme ve bildirimler yeni satış anahtarından bağımsızdır. Kayıt hazırlığı için gerekenlere ek olarak tüketici metinleri, vergi/çalışma uygunluğu, WAF, dört ödeme kabul testi ve dört işletim testi tamamlanmalıdır.
+
+Gerçek cihaz kabul testleri genel satışı açmak için uydurma başarı kaydı girilerek yapılmaz. [27 Ekim tamamlama ve tekrar açma rehberi](commercial-launch-20261027.md) içindeki izole test sırası izlenir. Yeni öğrenci abonelik kesim tarihi ve eski kullanıcıların erişim politikası korunur.
 
 Kaynaklar:
 - https://supabase.com/docs/guides/auth/auth-mfa/totp

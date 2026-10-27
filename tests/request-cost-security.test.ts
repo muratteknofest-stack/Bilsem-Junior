@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { registrationReadySettings } from './fixtures/launch-settings';
 import assert from 'node:assert/strict';
 import type { AddressInfo } from 'node:net';
 import type { Response as ExpressResponse } from 'express';
@@ -52,7 +53,7 @@ async function fixture(options: { limits?: { apiPerMinute?: number; publicPerMin
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'fixture-server-key';
   const originalFetch = globalThis.fetch;
   const counts = { auth: 0, head: 0, settings: 0, rpc: 0 };
-  let settings = defaultPlatformSettings(); settings.release.registrationEnabled = true;
+  let settings = registrationReadySettings();
   globalThis.fetch = async (input, init) => {
     const request = new Request(input, init), url = new URL(request.url);
     if (url.hostname === '127.0.0.1') return originalFetch(input, init);

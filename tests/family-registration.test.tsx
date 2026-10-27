@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { registrationReadySettings } from './fixtures/launch-settings';
 import assert from 'node:assert/strict';
 import type { Request, Response as ExpressResponse } from 'express';
 import React from 'react';
@@ -33,8 +34,7 @@ test('direct registration and login addresses preserve the public account form a
 const input = { parentEmail: ' VELI@example.com ', parentPassword: 'VeliGüvenli937', studentPassword: 'ÖğrenciGüvenli938', studentName: ' Deniz ', grade: 2, examFocus: 'Genel Zihinsel Yetenek', consentAccepted: true, termsAccepted: true, guardianConfirmed: true, policyVersion: '2026-10-11.1' };
 async function run(options: { fail?: 'config'|'password'|'parent'|'student'|'profiles'|'mail'|'cleanup'; closed?: boolean; stale?: boolean; collision?: boolean; incompleteReadiness?: boolean; body?: unknown } = {}) {
   const actions: string[] = [], profiles: Array<Record<string, unknown>> = [];
-  const settings = defaultPlatformSettings();
-  settings.business = { legalName: 'Test', address: 'Test', contactEmail: 'test@example.invalid', legalBases: 'Test', retention: 'Test', transfers: 'Test' };
+  const settings = registrationReadySettings();
   settings.release = { registrationEnabled: !options.closed, emailTested: true, restoreTested: true, familyPilotTested: true, monitoringTested: true };
   if (options.incompleteReadiness) {
     settings.business = defaultPlatformSettings().business;
@@ -70,10 +70,10 @@ test('family registration creates two unverified users and saves reciprocal prof
   assert.equal(result.profiles[0].role, 'parent'); assert.deepEqual(result.profiles[0].linkedStudentIds, [studentId]);
   assert.equal(result.profiles[1].linkedParentId, parentId); assert.equal(result.payload.student.code, 'DENIZ1234');
 });
-test('enabled registration reaches account creation with incomplete readiness and still leaves users unverified', async () => {
+test('an enable flag cannot create accounts with incomplete identity and privacy preparation', async () => {
   const result = await run({ incompleteReadiness: true });
-  assert.equal(result.status, 201);
-  assert.deepEqual(result.actions, ['config','parent','student','profiles','mail']);
+  assert.equal(result.status, 503);
+  assert.deepEqual(result.actions, ['config']);
 });
 test('mail outage keeps completed accounts and reports delivery failure without repeating registration', async () => {
   const result = await run({ fail: 'mail' }); assert.equal(result.status, 201); assert.equal(result.payload.success, true); assert.equal(result.payload.verificationSent, false);
