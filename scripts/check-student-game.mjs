@@ -36,6 +36,8 @@ try {
         const portal=page.getByRole('region',{name:'Junior ile keşif adası',exact:true});
         await portal.locator('.bj-explorer-guide').evaluate(image=>image.decode());
         assert.ok(await portal.locator('.bj-explorer-guide').evaluate(image=>image.naturalWidth>0),'The local guide must load');
+        const inventory=await page.locator('.bj-inventory-art>.bj-game-art>svg').evaluateAll(items=>items.map(el=>el.getBoundingClientRect().width));
+        assert.ok(inventory.length>=6&&inventory.every(size=>size>=30),'Inventory toys must retain their full size');
         if(width<1000){
           const drawer=page.getByRole('button',{name:'Hedeflerim ve serim',exact:false});
           assert.equal(await page.locator('.zp-daily-snapshot').isVisible(),false);

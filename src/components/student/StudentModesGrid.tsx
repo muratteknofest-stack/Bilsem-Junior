@@ -23,11 +23,11 @@ export function StudentModesGrid(p: StudentModesGridProps) {
   ];
 
   return <section className="zp-modes-section bj-quest-world" aria-labelledby="zp-mode-title">
+    <StudentExplorerPortal onLessons={()=>p.onNavigate('student-lessons')}/>
     <div className="zp-mode-section-heading bj-chapter-heading" data-motion-zone><StudentAdventureAtmosphere />
       <div><p className="zp-panel-eyebrow">KEŞİF YOLU · BİLSEM HAZIRLIK</p><h2 id="zp-mode-title">Bugün nasıl çalışmak istersin?</h2></div>
       <span className="bj-chapter-star" aria-hidden="true"><Sparkles size={38} /></span>
     </div>
-    <StudentExplorerPortal onLessons={()=>p.onNavigate('student-lessons')}/>
     <div className="bj-quest-path" data-motion-zone>
       <svg className="bj-quest-connector" viewBox="0 0 520 650" preserveAspectRatio="none" aria-hidden="true"><path d="M70 65 C70 170 175 110 175 230 S70 300 70 395 S175 470 175 580" /></svg>
       <span className="bj-world-cloud bj-world-cloud-one" aria-hidden="true" /><span className="bj-world-cloud bj-world-cloud-two" aria-hidden="true" />
