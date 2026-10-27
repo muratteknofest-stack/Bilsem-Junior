@@ -21,11 +21,13 @@ export function useLessonVoice(text:string,recording:LessonAudio|null){
    } catch {if(current===sequence.current){stop();setError('Ses kaydı yüklenemedi. Tekrar deneyebilir veya metinle ilerleyebilirsin.');}}return;
   }
   if(!('speechSynthesis' in window)||!('SpeechSynthesisUtterance' in window)){setError('Bu cihazda sesli okuma bulunmuyor. Anlatımın tamamını aşağıda okuyabilirsin.');return;}
+  try {
   const utterance=new SpeechSynthesisUtterance(text);utterance.lang='tr-TR';utterance.rate=.9;
   const voice=window.speechSynthesis.getVoices().find(item=>item.lang.toLowerCase().startsWith('tr')&&item.localService);
   if(!voice){setError('Bu cihazda yerel Türkçe ses bulunamadı. Metni okuyarak devam edebilirsin.');return;}
   utterance.voice=voice;utterance.onend=()=>{if(current===sequence.current)setSpeaking(false);};utterance.onerror=()=>{if(current===sequence.current){setSpeaking(false);setError('Cihaz sesi kesildi. Yeniden deneyebilirsin.');}};
   setSpeaking(true);window.speechSynthesis.speak(utterance);
+  } catch {stop();setError('Cihaz sesi başlatılamadı. Metni okuyarak devam edebilirsin.');}
  }
  return {speaking,error,play,stop};
 }
