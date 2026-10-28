@@ -57,3 +57,9 @@ Aydınlatma sayfası yazmak veya bir kutuyu işaretletmek bu belgeleri oluşturm
 - [Google Play hesap silme](https://support.google.com/googleplay/android-developer/answer/13327111), [Families](https://support.google.com/googleplay/android-developer/answer/9893335) ve [Data safety](https://support.google.com/googleplay/android-developer/answer/11043825): mağaza yükümlülükleri; bunlar kanunun yerine geçmez.
 - [Vercel Hobby koşulları](https://vercel.com/docs/plans/hobby): kişisel ve ticari olmayan kullanım.
 - [Supabase parola güvenliği](https://supabase.com/docs/guides/auth/password-security): sağlayıcı düzeyinde ek koruma.
+
+## Ek kapanış: veri koruma işletimi
+
+İkinci turda hesap dışa aktarımına aileyle sınırlı destek talepleri eklendi; iç yönetici notları, inceleyici kimliği ve cevap anahtarları süzüldü. Mevcut yedek iş akışının 30 günlük saklama sınırı geri yüklemede de zorunlu tutuldu. Altı yasal sayfa ve kayıt/satışın beklenmedik açılması 15 dakikalık izleme işine eklendi. Güncel veri envanteri, yazılı/elektronik başvuru yanıtı, silme/geri yükleme mutabakatı ve olay işletimi [işletim kaydında](data-protection-operations.md) yer alır.
+
+Bu tur 617 test geçti. Gerçek başvuru yanıtı gönderilmedi, üretim yedeği geri yüklenmedi ve kişisel veri silinmedi. Kurumsal kimlik, onaylı saklama/aktarım belgeleri, anahtar iptali ve gerçek cihaz/operasyon kabulü tamamlanmış sayılmadı. Kayıt ve satış kapalı kaldı.

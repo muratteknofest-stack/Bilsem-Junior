@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
 import {PGlite} from '@electric-sql/pglite';
-import {backupManifest,verifyBackupManifest} from '../scripts/backup-manifest.mjs';
+import {backupManifest,verifyBackupManifest,backupExpiry} from '../scripts/backup-manifest.mjs';
 import {encryptBackup,decryptBackup} from '../scripts/backup-crypto.mjs';
 import {isolatedRestoreTarget} from '../scripts/restore-backup.mjs';
 
@@ -26,4 +26,20 @@ test('restore rejects missing Auth, altered manifests, wrong keys and corrupt ar
  const files={'roles.sql':'roles','schema.sql':'schema','data.sql':'data','auth-data.sql':'auth'},manifest=backupManifest(files),key=randomBytes(32),archive=encryptBackup(Buffer.from(JSON.stringify(manifest)),key);
  assert.throws(()=>verifyBackupManifest({...manifest,authIncluded:false}));assert.throws(()=>verifyBackupManifest({...manifest,files:{...manifest.files,'auth-data.sql':''}}));assert.throws(()=>verifyBackupManifest({...manifest,files:{...manifest.files,'data.sql':'tampered'}}));assert.throws(()=>decryptBackup(archive,randomBytes(32)));
  const damaged=Buffer.from(archive);damaged[damaged.length-1]^=1;assert.throws(()=>decryptBackup(damaged,key));assert.throws(()=>verifyBackupManifest({format:'zekapark-db-v1',files}));
+});
+
+test('backup restoration enforces the configured lifetime including legacy archives and exact expiry',()=>{
+ const created='2028-02-01T12:00:00.000Z',expires='2028-03-02T12:00:00.000Z';
+ const files={'roles.sql':'roles','schema.sql':'schema','data.sql':'data','auth-data.sql':'auth'};
+ const archive=backupManifest(files,created);
+ assert.equal(backupExpiry(created),expires);
+ verifyBackupManifest(archive,{now:Date.parse(expires)-1});
+ assert.throws(()=>verifyBackupManifest(archive,{now:Date.parse(expires)}),/30 günlük/);
+ const {expiresAt,...legacy}=archive;
+ verifyBackupManifest(legacy,{now:Date.parse(expires)-1});
+ assert.throws(()=>verifyBackupManifest(legacy,{now:Date.parse(expires)+1}),/30 günlük/);
+ assert.throws(()=>verifyBackupManifest({...archive,expiresAt:'2030-01-01T00:00:00.000Z'},{now:Date.parse(created)}),/değiştirilemez/);
+ assert.throws(()=>verifyBackupManifest(archive,{now:Date.parse(created)-6*60_000}),/gelecekte/);
+ assert.throws(()=>verifyBackupManifest(archive,{now:NaN}));
+ assert.throws(()=>backupExpiry('not-a-date'));
 });

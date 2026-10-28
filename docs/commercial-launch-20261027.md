@@ -51,9 +51,7 @@ Google satın alma tokenı şifreleme ve aile bağlama anahtarları bu işlem s�
 
 ## WAF ve kurtarma
 
-Aktif/taslak WAF yapılandırmasını okuma ve bir log kuralı oluşturma denemeleri sağlayıcı API'sinde `404 Seawall Config not found` verdi. Özel kuralın kurulduğu veya engellemenin etkin olduğu kanıtlanmadı. Bu sonuç bütün Vercel DDoS korumasının kapalı olduğu anlamına gelmez. Aynı başarısız API çağrısı tekrarlanarak başarı varsayılmaz.
-
-Hazırlanan kural yalnız kullanılmayan `.env`, `.git`, WordPress ve phpMyAdmin yollarını kapsar; önce log, ardından test ve kontrollü engelleme gerekir. Giriş, ödeme bildirimi, destek, gizlilik ve hesap silme yollarını etkilememelidir. Sağlayıcı panelinden yapılandırma/yetki engeli çözülmeden `firewall` kaydı onaylanmaz.
+28 Ekim 2026 tarihli yeniden kontrolde `/.env`, `/.git/config`, `/wp-login.php` ve `/phpmyadmin` yolları 403 ve `x-vercel-mitigated: deny` döndü. Önceki API 404 sonucu, 27 Ekim'deki sonraki panel kurulumu ve canlı doğrulama ile aşılmıştır. Kural yalnız bu tam yolları kapsar; bütün saldırılara karşı kapsamlı koruma iddiası değildir. Ana sayfa, hesap ve yasal belge erişimi ayrıca izlenir.
 
 Günlük şifreli yedek ve 15 dakikalık izleme iş tanımları bulunur. Test verisiyle kripto/geri yükleme testinin geçmesi, üretim yedeğinin gerçekten alındığını ve ayrı Supabase ortamına geri yüklendiğini kanıtlamaz. İlk gerçek yedek, ayrı ortam geri yükleme süresi, Storage içeriği/ayarların kurtarma kapsamı ve alarm teslimi özel kayıtla tamamlanır. Üretimin üzerine test geri yüklemesi yapılmaz.
 
