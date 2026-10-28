@@ -5,6 +5,7 @@ import path from 'node:path';
 import { encryptBackup, decryptBackup } from './backup-crypto.mjs';
 import {backupManifest,verifyBackupManifest} from './backup-manifest.mjs';
 import {backupConfiguration} from './backup-config.mjs';
+import {postgresChildEnvironment} from './postgres-child-environment.mjs';
 
 process.umask(0o077);
 const {key,dbUrl:secureUrl}=backupConfiguration();
@@ -14,7 +15,7 @@ try {
   for (const [name, flags] of [['roles.sql', ['--role-only']], ['schema.sql', []], ['data.sql', ['--data-only', '--use-copy']], ['auth-data.sql',['--schema','auth','--data-only','--use-copy','--exclude','auth.sessions,auth.refresh_tokens,auth.one_time_tokens,auth.flow_state,auth.mfa_challenges,auth.schema_migrations,auth.instances']]]) {
     const file = path.join(dir, name);
     await new Promise((resolve, reject) => {
-      const child = spawn('npx', ['--yes', 'supabase@2.81.3', 'db', 'dump', '--db-url', secureUrl, '--file', file, ...flags], { stdio: 'ignore', timeout: 15 * 60_000 });
+      const child = spawn('npx', ['--yes', 'supabase@2.81.3', 'db', 'dump', '--db-url', secureUrl, '--file', file, ...flags], { env: postgresChildEnvironment(), stdio: 'ignore', timeout: 15 * 60_000 });
       child.on('error', () => reject(Error('Yedekleme aracı başlatılamadı.')));
       child.on('exit', code => code === 0 ? resolve() : reject(Error('Veritabanı yedeği oluşturulamadı. Bağlantı ve Docker hazırlığını kontrol edin.')));
     });

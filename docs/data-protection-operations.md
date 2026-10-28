@@ -53,7 +53,17 @@ Bu çalışma herhangi bir kişiye/kuruma bildirim göndermedi veya sözleşme i
 2. `BACKUP_ENCRYPTION_KEY` için kriptografik olarak rastgele 32 baytın Base64 karşılığını ayrı ortam sırrı olarak girin. Anahtar yalnız güvenli parola/anahtar kasasında yedeklenmelidir. Sohbete, kaynak koduna, rapora veya ekran görüntüsüne yazmayın. Daha önce kullanılan bir yedek anahtarı varsa onu rastgele değiştirmeyin; eski arşivler o anahtara bağlıdır.
 3. [Yedekleme işini](https://github.com/muratteknofest-stack/Bilsem-Junior/actions/workflows/backup.yml) ana dalda elle çalıştırın. Başarıyı ve yalnız şifreli arşiv oluştuğunu doğrulayın. Sonra ayrı yerel Supabase ortamında geri yükleme, silme talepleriyle mutabakat ve süre ölçümü yapın. Başarılı dosya üretimi tek başına geri yükleme kabulü değildir.
 
-Bu alanlar mevcut GitHub bağlantısının değiştirebildiği ayarlar arasında değildir; bu tur gerçek parola veya anahtar oluşturulmadı ve mevcut anahtar değiştirilmedi.
+Gerçek veritabanı bağlantısı ve ayrı kasada saklanan yedek anahtarı sağlanmadığı için bu alanlar boş kalır. Bu tur gerçek parola veya anahtar oluşturulmadı ve mevcut anahtar değiştirilmedi. Yönetici erişiminin bulunması, bu iki değerin bilindiği veya yedeğin çalıştığı anlamına gelmez.
+
+## Dal koruması ve yedekleme alt süreçleri
+
+28 Ekim 2026 tarihinde GitHub API ile `main` dalı koruması etkinleştirildi ve ayrıca dal metaverisinde doğrulandı. Birleştirme için pull request, güncel dal ve GitHub Actions uygulamasından gelen `quality` ve `android` kontrolleri gerekir. Kurallar yöneticilere de uygulanır; zorla yazma ve dal silme kapalıdır, açık inceleme konuşmaları çözülmelidir. Tek kişilik depoda kişinin kendi onayını vermesini gerektirmemek için zorunlu onay sayısı sıfırdır. `production-backup` ortamı yalnız `main` dalına açıktır.
+
+Yedekleme ve geri yükleme araçları artık devralınan `PG*` değişkenlerini alt süreçlerden temizler. Özellikle `PGHOSTADDR`, URL veya `PGHOST` doğrulansa bile gerçek ağ hedefini değiştirebildiğinden, yalnız URL kontrolü yeterli değildi. Geri yükleme ön kontrolü ve uygulaması yalnız doğrulanmış yerel bağlantı alanlarını alır. Şifreleme anahtarı ve gereksiz yedek/geri yükleme URL değişkenleri `npx`/`psql` ortamına geçirilmez. Döküm aracının ihtiyacı olan bağlantı hâlâ doğrulanmış komut satırı parametresidir; süreç listelerine erişim güvenilir işletim ortamıyla sınırlandırılmalıdır.
+
+İki regresyon testi gerçek giriş betiklerini sahte `npx`/`psql` ile çalıştırır, yönlendirme ayarlarının ve arşiv anahtarının alt süreçlere ulaşmadığını doğrular. Testler üretim verisine veya gerçek veritabanına bağlanmaz; gerçek yedek/izole geri yükleme kabulünün yerine geçmez.
+
+Kaynak: [PostgreSQL bağlantıda host/hostaddr davranışı](https://www.postgresql.org/docs/current/libpq-connect.html) ve [libpq ortam değişkenleri](https://www.postgresql.org/docs/current/libpq-envars.html).
 
 ## Kapanışı bekleyen somut işler
 

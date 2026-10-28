@@ -1,10 +1,64 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
+import {mkdtempSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join,resolve} from 'node:path';
+import {spawnSync} from 'node:child_process';
 import {PGlite} from '@electric-sql/pglite';
 import {backupManifest,verifyBackupManifest,backupExpiry} from '../scripts/backup-manifest.mjs';
 import {encryptBackup,decryptBackup} from '../scripts/backup-crypto.mjs';
 import {isolatedRestoreTarget} from '../scripts/restore-backup.mjs';
+
+// Substitute only the command-line tools. Exercise the real backup/restore
+// entrypoints without a network connection, database or production archive.
+function databaseToolProbe(kind:'backup'|'restore'){
+ const dir=mkdtempSync(join(tmpdir(),'bilsem-db-environment-'));
+ try{
+  const log=join(dir,'child-environment.jsonl'),key=randomBytes(32);
+  const tool=kind==='backup'?'npx':'psql';
+  writeFileSync(join(dir,tool),`#!/usr/bin/env node
+const fs=require('node:fs');
+fs.appendFileSync(process.env.BILSEM_DB_PROBE_LOG,JSON.stringify({
+ pg:Object.fromEntries(Object.entries(process.env).filter(([name])=>/^PG/i.test(name))),
+ hasBackupKey:!!process.env.BACKUP_ENCRYPTION_KEY,
+ hasBackupUrl:!!process.env.SUPABASE_DB_URL,
+ hasRestoreUrl:!!process.env.RESTORE_DATABASE_URL
+})+'\\n');
+const fileIndex=process.argv.indexOf('--file');
+if(process.argv.includes('dump'))fs.writeFileSync(process.argv[fileIndex+1],
+ 'COPY auth.users(id) FROM stdin;\\n\\\\.\\nCOPY auth.identities(id) FROM stdin;\\n\\\\.\\n');
+`,{mode:0o700});
+  const archive=join(dir,'fixture.enc');
+  const files={'roles.sql':'roles','schema.sql':'schema','auth-data.sql':'auth','data.sql':'data'};
+  writeFileSync(archive,encryptBackup(Buffer.from(JSON.stringify(backupManifest(files))),key));
+  const result=spawnSync(process.execPath,[resolve(`scripts/${kind==='backup'?'backup-database':'restore-backup'}.mjs`),...(kind==='restore'?[archive]:[])],{
+   cwd:dir,encoding:'utf8',timeout:20_000,env:{...process.env,
+    PATH:`${dir}:${process.env.PATH}`,BILSEM_DB_PROBE_LOG:log,
+    BACKUP_ENCRYPTION_KEY:key.toString('base64'),
+    SUPABASE_DB_URL:'postgresql://postgres:fixture@db.vtcsoqohkiagbwatlabk.supabase.co:5432/postgres',
+    RESTORE_DATABASE_URL:'postgresql://fixture:local-only@127.0.0.1:54322/postgres',
+    PGHOST:'external.invalid',PGHOSTADDR:'203.0.113.55',PGPORT:'6543',PGDATABASE:'wrong',
+    PGUSER:'wrong',PGPASSWORD:'wrong',PGSERVICE:'redirect',PGSERVICEFILE:'/fixture/service',
+    PGSYSCONFDIR:'/fixture',PGPASSFILE:'/fixture/passwords',PGOPTIONS:'-c search_path=wrong',
+    PGSSLMODE:'disable',PGSSLROOTCERT:'/fixture/ca',PGSSLKEY:'/fixture/key',PGREQUIRESSL:'0'
+   }
+  });
+  assert.equal(result.status,0,result.stderr);
+  const records=readFileSync(log,'utf8').trim().split('\n').map(line=>JSON.parse(line));
+  assert.equal(records.length,kind==='backup'?4:2);
+  for(const record of records){
+   assert.deepEqual(record.pg,kind==='backup'?{}:{PGHOST:'127.0.0.1',PGPORT:'54322',PGUSER:'fixture',PGPASSWORD:'local-only',PGDATABASE:'postgres',PGSSLMODE:'disable'});
+   assert.equal(record.hasBackupKey,false,'Encryption key must stay in the parent process');
+   assert.equal(record.hasBackupUrl,false);
+   assert.equal(record.hasRestoreUrl,false);
+  }
+  if(kind==='backup')verifyBackupManifest(JSON.parse(decryptBackup(readFileSync(join(dir,'zekapark-database.enc')),key).toString()));
+ }finally{rmSync(dir,{recursive:true,force:true});}
+}
+
+test('backup subprocesses cannot inherit libpq redirection or the archive encryption key',()=>databaseToolProbe('backup'));
+test('restore preflight and execution keep the validated local target despite inherited libpq settings',()=>databaseToolProbe('restore'));
 
 test('restore target refuses production, external hosts and ambiguous targets',()=>{
  assert.equal(isolatedRestoreTarget('postgresql://fixture:example@127.0.0.1:54322/postgres').PGHOST,'127.0.0.1');
