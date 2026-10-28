@@ -3,12 +3,13 @@ import {mkdtemp,rm,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {createHash} from 'node:crypto';
 import {backupKey} from './backup-crypto.mjs';
 import {postgresChildEnvironment} from './postgres-child-environment.mjs';
 
 const input=process.argv[2];
 if(!input)throw Error('Şifreli yedek dosyası gerekli.');
-backupKey(process.env.BACKUP_ENCRYPTION_KEY);
+const keyFingerprint=createHash('sha256').update(backupKey(process.env.BACKUP_ENCRYPTION_KEY)).digest('hex');
 const archive=path.resolve(input),dir=await mkdtemp(path.join(tmpdir(),'bilsem-restore-check-'));
 const clean=postgresChildEnvironment();
 function run(command,args,env=clean,timeout=600_000){return new Promise((resolve,reject)=>{
@@ -28,6 +29,6 @@ try{
  verified=true;
  console.log('Şifreli yedek taze yerel Supabase ortamına geri yüklendi; Auth/profil ve aile bağlantıları doğrulandı.');
 }finally{
- await writeFile(path.resolve('backup-restore-verification.json'),JSON.stringify({verified,isolated:true,checkedAt:new Date().toISOString(),storageObjectsIncluded:false})+'\n',{mode:0o600});
+ await writeFile(path.resolve('backup-restore-verification.json'),JSON.stringify({verified,isolated:true,checkedAt:new Date().toISOString(),storageObjectsIncluded:false,keyFingerprint})+'\n',{mode:0o600});
  try{await cli(['stop','--no-backup']);}finally{await rm(dir,{recursive:true,force:true});}
 }
