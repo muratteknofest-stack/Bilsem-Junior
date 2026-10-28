@@ -1,4 +1,4 @@
-import { currentPolicyVersion } from '../src/lib/policy-version';
+import { currentPolicyVersion, POLICY_VERSION_PATTERN } from '../src/lib/policy-version';
 import { randomInt } from 'node:crypto';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
@@ -18,7 +18,7 @@ export const registerFamilySchema = z.object({
   consentAccepted: z.literal(true, { error: 'Kişisel veriler aydınlatma metnini okumalısınız.' }),
   termsAccepted: z.literal(true, { error: 'Kullanım koşullarını kabul etmelisiniz.' }),
   guardianConfirmed: z.literal(true, { error: 'Velilik/yasal temsilcilik beyanı gerekli.' }),
-  policyVersion: z.string().regex(/^\d{4}-\d{2}-\d{2}\.\d{1,10}$/, 'Kayıt bilgilerini yenileyip tekrar deneyin.'),
+  policyVersion: z.string().regex(POLICY_VERSION_PATTERN, 'Kayıt bilgilerini yenileyip tekrar deneyin.'),
 }).strict().refine(value => value.parentPassword !== value.studentPassword, {
   message: 'Veli ve öğrenci şifreleri farklı olmalıdır.', path: ['studentPassword'],
 });

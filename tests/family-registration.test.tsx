@@ -1,3 +1,4 @@
+import { currentPolicyVersion, isPolicyVersion } from '../src/lib/policy-version';
 import test from 'node:test';
 import { registrationReadySettings } from './fixtures/launch-settings';
 import assert from 'node:assert/strict';
@@ -128,4 +129,11 @@ test('changed legal copy invalidates an old content version even when saved sett
   const stale = await run({ body: { ...input, policyVersion: '2026-10-11.1' } });
   assert.equal(stale.status, 409); assert.equal(stale.payload.code, 'POLICY_UPDATED');
   assert.deepEqual(stale.actions, ['config']);
+});
+
+
+test('availability accepts versioned disclosure content while rejecting malformed or non-string versions', () => {
+  assert.equal(isPolicyVersion(currentPolicyVersion(5)), true);
+  assert.equal(isPolicyVersion('2026-10-11.5'), true);
+  for (const bad of [null, 28, {}, '2026-10-28', '2026-10-28.5junk', '2026-10-28.99999999999999999']) assert.equal(isPolicyVersion(bad), false);
 });
