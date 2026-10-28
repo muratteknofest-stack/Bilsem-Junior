@@ -37,7 +37,7 @@ test('deletion instructions work without reinstalling and use the configured ope
   assert.match(html, /Talebin kaydedilmesi silmenin tamamlandığı anlamına gelmez/);
   assert.match(html, /Google Play aboneliğinizi kendiliğinden iptal etmez/);
   assert.ok(!html.includes('mailto:zeka.kupu.test@gmail.com'));
-  assert.match(html, /25 Ekim 2026/);
+  assert.match(html, /28 Ekim 2026/);
   assert.ok(!html.includes('<form'));
 });
 
@@ -75,4 +75,19 @@ test('legal UI provides real copyable links and keeps the compact entry and purc
   assert.match(entry, /Yasal bilgiler/); assert.equal((entry.match(/<a /g) || []).length, 2);
   const purchase = renderToStaticMarkup(<LegalLinks mode="purchase"/>);
   assert.match(purchase, /abonelik-iptal-ve-iade/); assert.equal((purchase.match(/<a /g) || []).length, 3);
+});
+
+
+test('rights and response deadlines remain public when operator legal details are incomplete', () => {
+  const settings = defaultPlatformSettings();
+  const privacy = policyHtml(publicPolicy('gizlilik-ve-veriler', settings)!);
+  assert.match(privacy, /KVKK kapsamındaki haklarınız/);
+  assert.match(privacy, /en geç 30 gün/);
+  assert.match(privacy, /Toplama yöntemleri/);
+  assert.match(privacy, /okuduğunu belirtmek açık rıza değildir|genel açık rıza oluşturmaz/);
+  assert.match(privacy, /henüz belirtilmemiştir/);
+  assert.doesNotMatch(privacy, /Google Fonts üzerinden yüklenebilir/);
+  const deletion = policyHtml(publicPolicy('hesap-ve-veri-silme', settings)!);
+  assert.match(deletion, /ilk|ulaşmasından itibaren/);
+  assert.match(deletion, /en geç 30 gün/);
 });

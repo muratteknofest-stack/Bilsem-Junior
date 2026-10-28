@@ -1,11 +1,10 @@
 import { BaseQuestion, AiMistakeExplanation, QuestionType } from '../types';
-import { authenticatedFetch } from '../lib/api-client';
 
 class AiMistakeService {
   private cache: Map<string, AiMistakeExplanation> = new Map();
 
   /**
-   * Fetches an AI-powered or pedagogical mistake explanation for a given question and wrong answer.
+   * Builds a local pedagogical mistake explanation for a given question and wrong answer.
    */
   public async explainMistake(
     question: BaseQuestion,
@@ -17,56 +16,7 @@ class AiMistakeService {
       return this.cache.get(cacheKey)!;
     }
 
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
-
-      const response = await authenticatedFetch('/api/ai-explain-mistake', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({
-          questionId: question.id,
-          questionType: question.type,
-          category: question.category,
-          difficulty: question.difficulty,
-          prompt: question.prompt,
-          secondaryPrompt: question.secondaryPrompt,
-          explanation: question.explanation,
-          options: question.options.map((o) => ({ id: o.id, label: o.label })),
-          selectedOptionId,
-          correctOptionId: question.correctOptionId,
-        }),
-      });
-
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && !data.fallback) {
-          const result: AiMistakeExplanation = {
-            questionId: question.id,
-            selectedOptionId,
-            correctOptionId: question.correctOptionId,
-            category: question.category,
-            questionType: question.type,
-            difficulty: question.difficulty,
-            empatheticIntro: data.empatheticIntro,
-            misconceptionTrap: data.misconceptionTrap,
-            differenceAnalysis: data.differenceAnalysis,
-            goldenRuleTip: data.goldenRuleTip,
-            bilsemSuperPower: data.bilsemSuperPower,
-            isAiGenerated: true,
-            modelUsed: data.modelUsed || 'gemini-3.8-flash',
-          };
-          this.cache.set(cacheKey, result);
-          return result;
-        }
-      }
-    } catch (err) {
-      console.warn('AI Mistake service API call failed, falling back to procedural analyzer:', err);
-    }
-
+    // Child learning assistance stays on the device; no profile or answer payload is uploaded.
     // High quality procedural fallback based on question domain
     const fallback = this.generateProceduralMistakeExplanation(question, selectedOptionId);
     this.cache.set(cacheKey, fallback);

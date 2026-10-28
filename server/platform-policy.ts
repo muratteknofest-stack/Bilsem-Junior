@@ -44,12 +44,6 @@ export function publicPolicy(
         title: "Alıcılar ve yurt dışı aktarım koşulları",
         paragraphs: [b.transfers],
       },
-      {
-        title: "KVKK kapsamındaki haklarınız",
-        paragraphs: [
-          "KVKK 11. madde kapsamında verilerinizin işlenip işlenmediğini öğrenme, bilgi talep etme, amacına uygun kullanımı ve alıcıları öğrenme, düzeltme, silme veya yok etme talebi, bu işlemlerin alıcılara bildirilmesi, otomatik analiz sonucuna itiraz ve zararın giderilmesini talep etme haklarınız için yukarıdaki iletişim kanalından başvurabilirsiniz.",
-        ],
-      },
     );
   } else if (slug === "kullanim-kosullari") {
     if (hasIdentity || hasContact) info.sections.unshift(identity);

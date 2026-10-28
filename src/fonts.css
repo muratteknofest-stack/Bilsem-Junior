@@ -1,0 +1,15 @@
+/* Original SIL Open Font License files are distributed in public/fonts. */
+@font-face {
+  font-family: 'Outfit';
+  src: url('/fonts/outfit-variable-466d6245.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/fonts/plus-jakarta-sans-variable-0cb13a99.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+}

@@ -13,7 +13,8 @@ try {
   browser=await chromium.launch({headless:true});
   const context=await browser.newContext({reducedMotion:'reduce'});
   await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
-  const page=await context.newPage(),errors=[];
+  const page=await context.newPage(),errors=[],externalFontRequests=[];
+  page.on('request', request=>{if(/fonts\.(googleapis|gstatic)\.com/.test(request.url()))externalFontRequests.push(request.url());});
   page.on('pageerror',error=>errors.push(error.message));
   page.on('console',message=>{if(message.type()==='error'&&/same key|unique.*key/i.test(message.text()))errors.push(message.text());});
   const screens=['modes','plan','skills','challenges','progress','tests','native-story','native-study','native-rewards','native-profile','achievements','mistakes','glossary','growth','native-story-progress','native-story-complete','native-story-library','native-story-collection','story-result'];
@@ -43,6 +44,13 @@ try {
     await page.setViewportSize({width,height:width<700?844:1000});
     for(const screen of screens) {
       await openScreen(screen);
+      if(screen==='modes') {
+        const fonts=await page.evaluate(async()=>{
+          const loaded=await Promise.all([document.fonts.load('600 16px Outfit','ĞğİıŞşÇçÖöÜü'),document.fonts.load('600 16px "Plus Jakarta Sans"','ĞğİıŞşÇçÖöÜü')]);
+          return loaded.map(faces=>faces.length>0&&faces.every(face=>face.status==='loaded'));
+        });
+        assert.deepEqual(fonts,[true,true],'Local Turkish fonts must load without an external provider');
+      }
       if(screen==='plan')await page.locator('#today-personalized-study-plan-card').waitFor();
       if(screen==='native-story-progress')await checkStoryContrast();
       if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1)) {
@@ -123,6 +131,7 @@ try {
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
     await page.screenshot({path:`${output}/${screen}-dark.png`,fullPage:true,animations:'disabled'});
   }
+  assert.deepEqual(externalFontRequests,[],'Opening student screens must not contact Google Fonts');
   assert.deepEqual(errors,[]);assert.deepEqual(layoutProblems,[],'Student pages must fit their viewport');
   console.log(`Student game world: ${checks} page/viewport combinations; lesson/plan navigation, story locking/replay/chapter progress, proportional result stars, material definitions, dark mode and no live writes passed.`);
 } finally {await browser?.close();await server.close();}

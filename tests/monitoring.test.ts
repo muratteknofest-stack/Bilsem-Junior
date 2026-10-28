@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {monitorSite,monitorSummary} from '../scripts/monitor-site.mjs';
 function healthy(sales=false):typeof fetch {return async input=>{const path=new URL(String(input)).pathname;
- const body=path==='/api/health'?JSON.stringify({status:'ok',database:'ready',projectRef:'vtcsoqohkiagbwatlabk'}):path==='/api/public/platform'?JSON.stringify({registrationOpen:false,policyVersion:'2026-10-11.4'}):path==='/api/public/membership'?JSON.stringify({ready:sales,plans:[{},{},{}]}):'<html>fixture</html>';
+ const body=path==='/api/health'?JSON.stringify({status:'ok',database:'ready',projectRef:'vtcsoqohkiagbwatlabk'}):path==='/api/public/platform'?JSON.stringify({registrationOpen:false,policyVersion:'2026-10-28.4'}):path==='/api/public/membership'?JSON.stringify({ready:sales,plans:[{},{},{}]}):'<html>fixture</html>';
  return new Response(body,{status:['/api/account/export','/api/admin/platform-settings'].includes(path)?401:200,headers:{'x-content-type-options':'nosniff','cache-control':'no-store'}});
 };}
 test('monitor checks public/legal/sales and private boundaries without exposing response bodies',async()=>{

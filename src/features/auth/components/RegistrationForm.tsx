@@ -1,3 +1,4 @@
+import { isPolicyVersion } from '../../../lib/policy-version';
 import { compactRegistrationPages, compactPageErrors, firstInvalidCompactPage } from '../compact-registration';
 import { useAndroidBack } from '../../../hooks/useAndroidBack';
 import { apiFetch } from '../../../lib/api-fetch';
@@ -50,7 +51,7 @@ export function RegistrationForm({ compact = false, onPageChange, setErrorMessag
     apiFetch(apiUrl('/api/public/platform'), { signal: controller.signal, cache: 'no-store' }).then(async response => {
       if (!response.ok) throw Error();
       const value = await response.json();
-      if (typeof value.registrationOpen !== 'boolean' || !/^2026-10-11\.\d+$/.test(value.policyVersion)) throw Error();
+      if (typeof value.registrationOpen !== 'boolean' || !isPolicyVersion(value.policyVersion)) throw Error();
       if (mounted) setAvailability(value);
     }).catch(() => { if (mounted) setAvailabilityError('Kayıt durumu kontrol edilemedi. İnternet bağlantınızı kontrol edip yeniden deneyin.'); }).finally(() => clearTimeout(timeout));
     return () => { mounted = false; clearTimeout(timeout); controller.abort(); };

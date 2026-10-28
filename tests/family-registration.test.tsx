@@ -1,3 +1,4 @@
+import { currentPolicyVersion, isPolicyVersion } from '../src/lib/policy-version';
 import test from 'node:test';
 import { registrationReadySettings } from './fixtures/launch-settings';
 import assert from 'node:assert/strict';
@@ -31,7 +32,7 @@ test('direct registration and login addresses preserve the public account form a
   for (const path of ['/', '/admin/giris', '/register/extra', '/blog/login']) assert.equal(accountEntry(new URL(path, 'https://bilsemjunior.vercel.app')), null);
   assert.equal(accountEntryPath('register','parent'),'/register'); assert.equal(accountEntryPath('login','parent'),'/login?role=parent'); assert.equal(accountEntryPath('login','admin'),'/login');
 });
-const input = { parentEmail: ' VELI@example.com ', parentPassword: 'VeliGüvenli937', studentPassword: 'ÖğrenciGüvenli938', studentName: ' Deniz ', grade: 2, examFocus: 'Genel Zihinsel Yetenek', consentAccepted: true, termsAccepted: true, guardianConfirmed: true, policyVersion: '2026-10-11.1' };
+const input = { parentEmail: ' VELI@example.com ', parentPassword: 'VeliGüvenli937', studentPassword: 'ÖğrenciGüvenli938', studentName: ' Deniz ', grade: 2, examFocus: 'Genel Zihinsel Yetenek', consentAccepted: true, termsAccepted: true, guardianConfirmed: true, policyVersion: '2026-10-28.1' };
 async function run(options: { fail?: 'config'|'password'|'parent'|'student'|'profiles'|'mail'|'cleanup'; closed?: boolean; stale?: boolean; collision?: boolean; incompleteReadiness?: boolean; body?: unknown } = {}) {
   const actions: string[] = [], profiles: Array<Record<string, unknown>> = [];
   const settings = registrationReadySettings();
@@ -121,4 +122,18 @@ test('confirmation presents actual account state and code without passwords; log
   const html=renderToStaticMarkup(<RegistrationConfirmation result={{identifier:'veli@example.com',createdStudentCode:'DENIZ1234',verificationSent:false}} onLogin={()=>{}} />);
   assert.match(html,/Hesaplarınız oluşturuldu, ancak/);assert.match(html,/DENIZ1234/);assert.match(html,/Veli girişine geç/);assert.match(html,/yeniden gönder/);assert.doesNotMatch(html,/type="password"|VeliGüvenli937|ÖğrenciGüvenli938/);
   const login=readFileSync('src/features/auth/components/LoginForm.tsx','utf8'); assert.doesNotMatch(login,/handleQuickDemo|demo_student_user|Öğrenci denemesini aç|Hızlı Deneme/);
+});
+
+
+test('changed legal copy invalidates an old content version even when saved settings have the same revision', async () => {
+  const stale = await run({ body: { ...input, policyVersion: '2026-10-11.1' } });
+  assert.equal(stale.status, 409); assert.equal(stale.payload.code, 'POLICY_UPDATED');
+  assert.deepEqual(stale.actions, ['config']);
+});
+
+
+test('availability accepts versioned disclosure content while rejecting malformed or non-string versions', () => {
+  assert.equal(isPolicyVersion(currentPolicyVersion(5)), true);
+  assert.equal(isPolicyVersion('2026-10-11.5'), true);
+  for (const bad of [null, 28, {}, '2026-10-28', '2026-10-28.5junk', '2026-10-28.99999999999999999']) assert.equal(isPolicyVersion(bad), false);
 });

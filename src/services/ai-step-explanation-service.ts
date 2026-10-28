@@ -1,11 +1,10 @@
 import { BaseQuestion, AiStepByStepExplanation, AiExplanationStep } from '../types';
-import { authenticatedFetch } from '../lib/api-client';
 
 class AiStepExplanationService {
   private cache: Map<string, AiStepByStepExplanation> = new Map();
 
   /**
-   * Fetches an AI-generated step-by-step explanation for a question after answer submission.
+   * Builds a local step-by-step explanation for a question after answer submission.
    */
   public async getStepExplanation(
     question: BaseQuestion,
@@ -18,57 +17,8 @@ class AiStepExplanationService {
       return this.cache.get(cacheKey)!;
     }
 
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6500);
-
-      const response = await authenticatedFetch('/api/ai-step-explanation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({
-          questionId: question.id,
-          questionType: question.type,
-          category: question.category,
-          difficulty: question.difficulty,
-          prompt: question.prompt,
-          secondaryPrompt: question.secondaryPrompt,
-          explanation: question.explanation,
-          options: question.options.map((o) => ({ id: o.id, label: o.label })),
-          selectedOptionId,
-          correctOptionId: question.correctOptionId,
-          isCorrect,
-        }),
-      });
-
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && !data.fallback && Array.isArray(data.steps) && data.steps.length > 0) {
-          const result: AiStepByStepExplanation = {
-            questionId: question.id,
-            selectedOptionId,
-            correctOptionId: question.correctOptionId,
-            isCorrect,
-            category: question.category,
-            questionType: question.type,
-            difficulty: question.difficulty,
-            headlineTitle: data.headlineTitle || `${question.explanation.ruleTitle} Çözümü`,
-            pedagogicalSummary: data.pedagogicalSummary || question.explanation.summary,
-            steps: data.steps,
-            isAiGenerated: true,
-            modelUsed: data.modelUsed || 'gemini-3.8-flash',
-          };
-          this.cache.set(cacheKey, result);
-          return result;
-        }
-      }
-    } catch (e) {
-      console.warn('AI step explanation server error, using procedural fallback:', e);
-    }
-
-    // Procedural Fallback generator if offline, timeout, or no API key
+    // Child learning assistance stays on the device; no profile or answer payload is uploaded.
+    // Local rule-based explanation generator
     const fallback = this.generateProceduralExplanation(question, selectedOptionId, isCorrect);
     this.cache.set(cacheKey, fallback);
     return fallback;

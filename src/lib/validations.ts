@@ -90,7 +90,7 @@ export const registerStudentSchema = z.object({
   kvkkConsent: z
     .boolean()
     .refine((val) => val === true, {
-      message: 'KVKK ve Çocuk Verileri Koruma Aydınlatma Metni\'ni onaylamanız gerekmektedir.',
+      message: 'Kişisel veriler aydınlatma metnini okuduğunuzu belirtin.',
     }),
 });
 
@@ -137,7 +137,7 @@ export const registerParentSchema = z.object({
   kvkkConsent: z
     .boolean()
     .refine((val) => val === true, {
-      message: 'KVKK ve Veli Aydınlatma Sözleşmesi\'ni onaylamanız gerekmektedir.',
+      message: 'Kişisel veriler aydınlatma metnini okuduğunuzu belirtin.',
     }),
 }).refine((value) => value.password !== value.studentPassword, {
   message: 'Veli ve öğrenci için farklı şifreler belirleyiniz.',

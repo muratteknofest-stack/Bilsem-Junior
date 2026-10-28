@@ -40,7 +40,7 @@ try{
  if(u.pathname==='/api/account/requests'){value={requests:[...requests]};await new Promise(resolve=>setTimeout(resolve,800));}
  else if(u.pathname==='/api/account/export')value={format:'zekapark-account-export-v1',profiles:[parent,student],learningSessions:[]};
  else if(u.pathname==='/api/account/deletion-request'){assert.equal(activeRole,'parent');assert.deepEqual(body,{confirmed:true});const id=crypto.randomUUID();requests=[{id,kind:'deletion',status:'open',created_at:new Date().toISOString(),updated_at:new Date().toISOString()}];value={id};}
- else if(u.pathname==='/api/public/platform')value={registrationOpen:true,policyVersion:'2026-10-11.4'};
+ else if(u.pathname==='/api/public/platform')value={registrationOpen:true,policyVersion:'2026-10-28.4'};
  else if(u.pathname==='/api/register-family')value={success:true,parentProfile:{id:parentId,role:'parent'},student:{id:studentId,code:'EXPLORER1234',email:'explorer1234@zekapark.com'},verificationSent:true};
  else if(u.pathname==='/api/auth/resend-confirmation'){assert.equal(body.email,'parent@example.invalid');value={success:true,message:'Sent'};}
  else if(u.pathname.endsWith('/history')||u.pathname.includes('/parent/learning-history/'))value={sessions:[...sessions.values()].map(s=>({id:s.id,mode:s.mode,created_at:s.created_at,expires_at:s.expires_at,finished_at:s.finished_at,result:s.result,selection:s.selection}))};
