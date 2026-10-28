@@ -33,7 +33,7 @@ try {
     const submissions: unknown[] = [];
     await page.route('**/api/**', async route => {
       const path = new URL(route.request().url()).pathname;
-      let body: unknown = { registrationOpen: true, policyVersion: '2026-10-11.1' };
+      let body: unknown = { registrationOpen: true, policyVersion: '2026-10-28.1' };
       if (path === '/api/register-family') { submissions.push(route.request().postDataJSON()); body = { success: true, parentProfile: { id: '11111111-1111-4111-8111-111111111111', role: 'parent' }, student: { id: '22222222-2222-4222-8222-222222222222', code: 'DENIZ1234', email: 'deniz1234@zekapark.com' }, verificationSent: true }; }
       await route.fulfill({ json: body });
     });
@@ -90,7 +90,7 @@ try {
     await page.getByRole('button', { name: 'Aile hesabını oluştur', exact: true }).click();
     await page.getByRole('heading', { name: 'Aile hesabınız hazır!' }).waitFor(); await fits('registration-success');
     assert.equal(submissions.length, 1);
-    assert.deepEqual(submissions[0], { parentEmail: 'veli@example.invalid', parentPassword: 'Veli937546', studentPassword: 'Ogrenci937546', studentName: 'Deniz', grade: 2, examFocus: 'Genel Zihinsel Yetenek', consentAccepted: true, termsAccepted: true, guardianConfirmed: true, policyVersion: '2026-10-11.1' });
+    assert.deepEqual(submissions[0], { parentEmail: 'veli@example.invalid', parentPassword: 'Veli937546', studentPassword: 'Ogrenci937546', studentName: 'Deniz', grade: 2, examFocus: 'Genel Zihinsel Yetenek', consentAccepted: true, termsAccepted: true, guardianConfirmed: true, policyVersion: '2026-10-28.1' });
     await page.close();
   }
   assert.deepEqual(errors, []);

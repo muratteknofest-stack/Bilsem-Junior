@@ -28,7 +28,8 @@ try {
     for (const header of configuredHeaders) assert.equal(response.headers.get(header.key), header.value, `${path}: ${header.key}`);
     const csp = response.headers.get('content-security-policy') || '';
     assert.match(csp, /script-src-attr 'none'/);
-    assert.match(csp, /style-src-elem 'self' https:\/\/fonts.googleapis.com/);
+    assert.match(csp, /style-src-elem 'self'(?:;|$)/);
+    assert.ok(!csp.includes('fonts.googleapis.com') && !csp.includes('fonts.gstatic.com'));
     assert.ok(!csp.includes('*.') && !csp.includes('unsafe-eval'), path);
     if (path.startsWith('/api/') || path === '/bilgi/gizlilik-ve-veriler') assert.equal(response.headers.get('cache-control'), 'no-store', path);
     if (path.startsWith('/admin') || path === '/reset-password') {

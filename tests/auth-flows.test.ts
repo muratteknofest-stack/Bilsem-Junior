@@ -12,7 +12,7 @@ const family = {
   studentPassword: 'Öğrenci456',
   grade: 2,
   examFocus: 'Genel Yetenek',
-  consentAccepted: true, termsAccepted: true, guardianConfirmed: true, policyVersion: '2026-10-11.1',
+  consentAccepted: true, termsAccepted: true, guardianConfirmed: true, policyVersion: '2026-10-28.1',
 };
 
 test('family registration normalizes identity and requires distinct passwords and explicit consent', () => {

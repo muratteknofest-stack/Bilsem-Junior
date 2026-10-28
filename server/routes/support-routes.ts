@@ -82,7 +82,7 @@ routes.get('/admin/question-review-summary', ...access, requireProfileRole('admi
 routes.get('/admin/support-requests', ...access, adminAiLimiter, requireProfileRole('admin'), async (req, res) => {
   const status = z.enum(['open','reviewing','resolved','dismissed']).safeParse(req.query.status || 'open');
   if (!status.success) return res.status(400).json({ error: 'Geçersiz durum.' });
-  const { data, error } = await getServiceClient().from('support_requests').select('*').eq('status', status.data).order('created_at', { ascending: false }).limit(100);
+  const { data, error } = await getServiceClient().from('support_requests').select('*').eq('status', status.data).order('kind', { ascending: true }).order('created_at', { ascending: true }).order('id', { ascending: true }).limit(100);
   if (error) throw error;
   return res.json({ requests: data });
 });

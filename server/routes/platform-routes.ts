@@ -1,3 +1,4 @@
+import { currentPolicyVersion } from '../../src/lib/policy-version';
 import { Router } from "express";
 import { z } from "zod";
 import { defaultPlatformSettings } from "../../src/lib/platform-settings";
@@ -32,7 +33,7 @@ export default function createPlatformRoutes(publicSettings: CachedRead<Settings
     const { settings, revision } = await publicSettings.get();
     res.json({
       registrationOpen: registrationOpen(settings),
-      policyVersion: `2026-10-11.${revision}`,
+      policyVersion: currentPolicyVersion(revision),
       exams: configuredExams(settings),
     });
   });

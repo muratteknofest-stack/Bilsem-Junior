@@ -178,7 +178,7 @@ test('cached public registration metadata cannot keep account creation open afte
     const result = await api.call('/api/register-family', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ parentEmail: 'fixture@example.invalid', parentPassword: 'FixtureParent987', studentName: 'Test Kaşif',
         studentPassword: 'FixtureStudent987', grade: 2, examFocus: 'BİLSEM', consentAccepted: true, termsAccepted: true,
-        guardianConfirmed: true, policyVersion: '2026-10-11.1' }) });
+        guardianConfirmed: true, policyVersion: '2026-10-28.1' }) });
     assert.equal(result.status, 503); assert.equal((result.body as { code: string }).code, 'REGISTRATION_NOT_READY');
     assert.equal(api.counts.settings, 2); assert.equal(api.counts.auth, 0);
   } finally { await api.close(); }

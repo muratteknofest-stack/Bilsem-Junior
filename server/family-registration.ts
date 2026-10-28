@@ -1,3 +1,4 @@
+import { currentPolicyVersion } from '../src/lib/policy-version';
 import { randomInt } from 'node:crypto';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
@@ -17,7 +18,7 @@ export const registerFamilySchema = z.object({
   consentAccepted: z.literal(true, { error: 'Kişisel veriler aydınlatma metnini okumalısınız.' }),
   termsAccepted: z.literal(true, { error: 'Kullanım koşullarını kabul etmelisiniz.' }),
   guardianConfirmed: z.literal(true, { error: 'Velilik/yasal temsilcilik beyanı gerekli.' }),
-  policyVersion: z.string().regex(/^2026-10-11\.\d+$/, 'Kayıt bilgilerini yenileyip tekrar deneyin.'),
+  policyVersion: z.string().regex(/^\d{4}-\d{2}-\d{2}\.\d{1,10}$/, 'Kayıt bilgilerini yenileyip tekrar deneyin.'),
 }).strict().refine(value => value.parentPassword !== value.studentPassword, {
   message: 'Veli ve öğrenci şifreleri farklı olmalıdır.', path: ['studentPassword'],
 });
@@ -54,7 +55,7 @@ export function createFamilyRegistrationHandler(deps: RegistrationDependencies) 
     try {
       const configuration = await deps.configuration();
       if (!registrationOpen(configuration.settings)) return res.status(503).json({ error: 'Yeni aile kayıtları şu anda kapalı. Mevcut hesabınızla giriş yapabilirsiniz.', code: 'REGISTRATION_NOT_READY' });
-      if (parsed.data.policyVersion !== `2026-10-11.${configuration.revision}`) return res.status(409).json({ error: 'Aydınlatma metni güncellendi. Güncel metni okuyup yeniden onaylayın.', code: 'POLICY_UPDATED' });
+      if (parsed.data.policyVersion !== currentPolicyVersion(configuration.revision)) return res.status(409).json({ error: 'Aydınlatma metni güncellendi. Güncel metni okuduğunuzu yeniden belirtin.', code: 'POLICY_UPDATED' });
       const input = parsed.data;
       await Promise.all([deps.checkPassword(input.parentPassword), deps.checkPassword(input.studentPassword)]);
       const parent = await deps.createUser({ email: input.parentEmail, password: input.parentPassword, phoneNumber: input.parentPhone || undefined, emailVerified: false, displayName: `Veli (${input.studentName})` });

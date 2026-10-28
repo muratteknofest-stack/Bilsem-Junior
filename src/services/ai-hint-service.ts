@@ -1,11 +1,10 @@
 import { BaseQuestion, QuestionAiHint, AiHintStep, QuestionType } from '../types';
-import { authenticatedFetch } from '../lib/api-client';
 
 class AiHintService {
   private cache: Map<string, QuestionAiHint> = new Map();
 
   /**
-   * Fetches an AI-powered or Socratic step-by-step hint for a given question.
+   * Builds a local Socratic step-by-step hint for a given question.
    */
   public async getHintForQuestion(
     question: BaseQuestion,
@@ -22,55 +21,7 @@ class AiHintService {
       };
     }
 
-    try {
-      // Attempt to query server-side Gemini API
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout for fast UI fallback
-
-      const response = await authenticatedFetch('/api/ai-hint', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({
-          questionId: question.id,
-          questionType: question.type,
-          category: question.category,
-          difficulty: question.difficulty,
-          prompt: question.prompt,
-          secondaryPrompt: question.secondaryPrompt,
-          explanation: question.explanation,
-          options: question.options.map((o) => ({ id: o.id, label: o.label })),
-          correctOptionId: question.correctOptionId,
-          stepRequested: unlockedStepsCount,
-        }),
-      });
-
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && !data.fallback && Array.isArray(data.steps) && data.steps.length > 0) {
-          const result: QuestionAiHint = {
-            questionId: question.id,
-            category: question.category,
-            questionType: question.type,
-            difficulty: question.difficulty,
-            totalSteps: data.steps.length,
-            unlockedSteps: Math.min(data.steps.length, unlockedStepsCount),
-            introEncouragement: data.introEncouragement || 'Harika bir dedektifsin! Bu soruyu adım adım çözelim.',
-            steps: data.steps,
-            isAiGenerated: true,
-            modelUsed: data.modelUsed || 'gemini-3.8-flash',
-          };
-          this.cache.set(cacheKey, result);
-          return result;
-        }
-      }
-    } catch (err) {
-      // Non-blocking catch; fallback to algorithmic pedagogical hints seamlessly
-      console.warn('AI Hint API unavailable or timed out, switching to Socratic engine:', err);
-    }
-
+    // Child learning assistance stays on the device; no profile or answer payload is uploaded.
     // Fallback: Rich Pedagogical Socratic Hint Generator
     const proceduralHint = this.generateProceduralSocraticHint(question, unlockedStepsCount);
     this.cache.set(cacheKey, proceduralHint);
