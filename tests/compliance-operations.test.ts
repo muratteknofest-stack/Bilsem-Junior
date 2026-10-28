@@ -42,6 +42,7 @@ test('backup target is pinned to this project, permits session pooling and requi
  const key=randomBytes(32).toString('base64');
  for(const url of ['postgresql://postgres:fixture@db.vtcsoqohkiagbwatlabk.supabase.co/postgres','postgresql://postgres.vtcsoqohkiagbwatlabk:fixture@aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require']){
   const config=backupConfiguration({SUPABASE_DB_URL:url,BACKUP_ENCRYPTION_KEY:key});
+  assert.ok(config.dbUrl);
   assert.equal(new URL(config.dbUrl).searchParams.get('sslmode'),'verify-full');assert.equal(config.key.length,32);
  }
 });

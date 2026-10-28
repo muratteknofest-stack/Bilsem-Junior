@@ -47,11 +47,16 @@ Bu dosya kendi başına Supabase'e uygulanmaz; build sırasında bir PATCH yapı
    girişi, kurtarma ve sunucudan yönetilen aile kaydı ona ihtiyaç duyar.
 2. **Confirm Email** açık kalsın (`mailer_autoconfirm: false`); anonim giriş
    kapalı kalsın (`external_anonymous_users_enabled: false`).
+   Sağlayıcı minimum parola uzunluğu uygulamadaki veli/öğrenci kuralıyla aynı,
+   en az 8 olmalıdır (`password_min_length: 8`). 28 Ekim 2026'da canlı değer
+   6'dan 8'e yükseltildi ve yönetim API'sinden tekrar okunarak doğrulandı.
 3. E-posta/parola ayarlarında sızdırılmış parola korumasını etkinleştirin
    (`password_hibp_enabled: true`). Resmî belgelere göre bu özellik Pro ve üstü
    planlarda sunulur. Ücretli plan değişikliği bu kod tarafından yapılmaz.
    Özellik kullanılamıyorsa doğrudan Auth parola güncelleme açığı açık kalır;
    yalnızca uygulamadaki HIBP kontrolü veya Vercel WAF bu yolu kapatmaz.
+   28 Ekim 2026'daki gerçek etkinleştirme isteği HTTP 402 ile reddedildi;
+   ücretli plan alınmadı ve bu bulgu kapanmış sayılmadı.
 4. Projenin Site URL ve Redirect URLs değerlerini kendi ortamıyla eşleştirin.
    Production için ana adres ve `/reset-password` dönüşü kullanılır. Ayrı
    preview veritabanı yalnızca kendi preview adreslerine yönlendirsin; joker
