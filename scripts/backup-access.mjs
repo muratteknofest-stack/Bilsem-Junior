@@ -21,7 +21,10 @@ export function temporaryBackupAccess(token,fetcher=fetch){
    pooler=Array.isArray(rows)&&rows.find(row=>row.identifier===BACKUP_PROJECT_REF&&row.database_type==='PRIMARY'&&row.db_name==='postgres'&&/^[a-z0-9-]+\.pooler\.supabase\.com$/.test(row.db_host));
    if(!pooler)throw Error('Bu projeye ait birincil session pooler hedefi doğrulanamadı.');
   }
-  const login=await managementRequest('/cli/login-role',token,{read_only:true},fetcher);
+  // Supabase's reviewed dump filters SET ROLE postgres. The read-only CLI
+  // identity is not a postgres member; use the short-lived postgres identity
+  // and force read-only transactions in the actual libpq connection below.
+  const login=await managementRequest('/cli/login-role',token,{read_only:false},fetcher);
   if(!/^cli_login_[a-z_]+$/.test(login?.role||'')||typeof login.password!=='string'||!login.password||!Number.isFinite(login.ttl_seconds)||login.ttl_seconds<60||login.ttl_seconds>3600)
    throw Error('Süreli veritabanı kimliği doğrulanamadı.');
   // Shared pooler's documented session port is 5432 even when the project
@@ -34,5 +37,5 @@ export function temporaryBackupAccess(token,fetcher=fetch){
 
 export function backupConnectionEnvironment(value){
  const url=new URL(validatedBackupUrl(value));
- return {PGHOST:url.hostname,PGPORT:'5432',PGUSER:decodeURIComponent(url.username),PGPASSWORD:decodeURIComponent(url.password),PGDATABASE:'postgres',PGSSLMODE:'verify-full',PGSSLROOTCERT:'system',PGCONNECT_TIMEOUT:'15'};
+ return {PGHOST:url.hostname,PGPORT:'5432',PGUSER:decodeURIComponent(url.username),PGPASSWORD:decodeURIComponent(url.password),PGDATABASE:'postgres',PGSSLMODE:'verify-full',PGSSLROOTCERT:'system',PGCONNECT_TIMEOUT:'15',PGOPTIONS:'-c default_transaction_read_only=on'};
 }

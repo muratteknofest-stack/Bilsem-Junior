@@ -55,7 +55,7 @@ else if(process.argv.includes('--data-only'))console.log('COPY "public"."fixture
   const records=readFileSync(log,'utf8').trim().split('\n').map(line=>JSON.parse(line));
   assert.equal(records.length,kind==='backup'?4:2);
   for(const record of records){
-   assert.deepEqual(record.pg,kind==='backup'?{PGHOST:'db.vtcsoqohkiagbwatlabk.supabase.co',PGPORT:'5432',PGUSER:'postgres',PGPASSWORD:'fixture',PGDATABASE:'postgres',PGSSLMODE:'verify-full',PGSSLROOTCERT:'system',PGCONNECT_TIMEOUT:'15'}:{PGHOST:'127.0.0.1',PGPORT:'54322',PGUSER:'fixture',PGPASSWORD:'local-only',PGDATABASE:'postgres',PGSSLMODE:'disable'});
+   assert.deepEqual(record.pg,kind==='backup'?{PGHOST:'db.vtcsoqohkiagbwatlabk.supabase.co',PGPORT:'5432',PGUSER:'postgres',PGPASSWORD:'fixture',PGDATABASE:'postgres',PGSSLMODE:'verify-full',PGSSLROOTCERT:'system',PGCONNECT_TIMEOUT:'15',PGOPTIONS:'-c default_transaction_read_only=on'}:{PGHOST:'127.0.0.1',PGPORT:'54322',PGUSER:'fixture',PGPASSWORD:'local-only',PGDATABASE:'postgres',PGSSLMODE:'disable'});
    assert.equal(record.hasBackupKey,false,'Encryption key must stay in the parent process');
    assert.equal(record.hasBackupUrl,false);
    assert.equal(record.hasRestoreUrl,false);
@@ -81,13 +81,13 @@ test('temporary backup credentials are renewed per dump and confined to the pinn
   assert.equal(new Headers(options?.headers).get('authorization'),`Bearer ${token}`);
   assert.equal(options?.redirect,'error');assert.ok(options?.signal);
   if(url.endsWith('/pooler')){assert.equal(options?.method,'GET');return Response.json([{identifier:ref,database_type:'PRIMARY',db_name:'postgres',db_host:'aws-1-eu-central-1.pooler.supabase.com',db_port:6543}]);}
-  assert.equal(options?.method,'POST');assert.deepEqual(JSON.parse(String(options?.body)),{read_only:true});
+  assert.equal(options?.method,'POST');assert.deepEqual(JSON.parse(String(options?.body)),{read_only:false});
   return Response.json({role:'cli_login_postgres',password:'fixture-private-password',ttl_seconds:600});
  });
  for(let i=0;i<2;i++){
   const url=await access(),env=backupConnectionEnvironment(url);
   assert.equal(env.PGHOST,'aws-1-eu-central-1.pooler.supabase.com');assert.equal(env.PGPORT,'5432');
-  assert.equal(env.PGUSER,`cli_login_postgres.${ref}`);assert.equal(env.PGSSLMODE,'verify-full');assert.equal(env.PGSSLROOTCERT,'system');
+  assert.equal(env.PGUSER,`cli_login_postgres.${ref}`);assert.equal(env.PGSSLMODE,'verify-full');assert.equal(env.PGSSLROOTCERT,'system');assert.equal(env.PGOPTIONS,'-c default_transaction_read_only=on');
  }
  assert.equal(calls.filter(url=>url.endsWith('/pooler')).length,1);
  assert.equal(calls.filter(url=>url.endsWith('/login-role')).length,2);
