@@ -1,9 +1,17 @@
 import {writeFile,appendFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 import {performance} from 'node:perf_hooks';
-export async function monitorSite(fetcher=fetch, {expectedPaidSales}={}){
+const legalPages={
+ '/bilgi/gizlilik-ve-veriler':'Gizlilik ve hesap verileri',
+ '/bilgi/kullanim-kosullari':'Kullanım koşulları',
+ '/bilgi/cerez-ve-yerel-depolama':'Çerez ve yerel depolama',
+ '/bilgi/abonelik-iptal-ve-iade':'Abonelik, iptal ve iade',
+ '/bilgi/hesap-ve-veri-silme':'Hesap ve veri silme',
+ '/bilgi/iletisim-ve-destek':'İletişim ve destek',
+};
+export async function monitorSite(fetcher=fetch, {expectedPaidSales,expectedRegistrationOpen}={}){
  const checks=[];
- for(const path of ['/','/blog','/konu-anlatimlari','/api/health','/api/public/platform','/api/public/membership','/bilgi/gizlilik-ve-veriler','/bilgi/abonelik-iptal-ve-iade','/api/account/export','/api/admin/platform-settings']){
+ for(const path of ['/','/blog','/konu-anlatimlari','/api/health','/api/public/platform','/api/public/membership',...Object.keys(legalPages),'/api/account/export','/api/admin/platform-settings']){
   const start=performance.now();let ok=false;
   try{
    const response=await fetcher(new URL(path,'https://bilsemjunior.vercel.app'),{redirect:'manual',signal:AbortSignal.timeout(20_000)});
@@ -11,8 +19,9 @@ export async function monitorSite(fetcher=fetch, {expectedPaidSales}={}){
    ok=response.status===(privateRoute?401:200)&&!response.redirected&&response.headers.get('x-content-type-options')==='nosniff';
    if(path.startsWith('/api/'))ok=ok&&response.headers.get('cache-control')==='no-store';
    if(path==='/api/health'){const data=await response.json();ok=ok&&data.status==='ok'&&data.database==='ready'&&data.projectRef==='vtcsoqohkiagbwatlabk';}
-   else if(path==='/api/public/platform'){const data=await response.json();ok=ok&&typeof data.registrationOpen==='boolean'&&typeof data.policyVersion==='string';}
+   else if(path==='/api/public/platform'){const data=await response.json();ok=ok&&typeof data.registrationOpen==='boolean'&&typeof data.policyVersion==='string'&&(expectedRegistrationOpen===undefined||data.registrationOpen===expectedRegistrationOpen);}
    else if(path==='/api/public/membership'){const data=await response.json();ok=ok&&typeof data.ready==='boolean'&&Array.isArray(data.plans)&&data.plans.length===3&&(expectedPaidSales===undefined||data.ready===expectedPaidSales);}
+   else if(legalPages[path]){const html=await response.text();ok=ok&&response.headers.get('cache-control')==='no-store'&&html.includes('<h1>'+legalPages[path]+'</h1>')&&html.includes('mailto:');}
    else await response.arrayBuffer();
   }catch{}
   checks.push({path,ok,durationMs:Math.round(performance.now()-start)});
@@ -25,7 +34,9 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  if(origin.origin!=='https://bilsemjunior.vercel.app'||origin.pathname!=='/'||origin.search||origin.hash||origin.username||origin.password)throw Error('İzleme hedefi doğrulanamadı.');
  const expected=process.env.MONITOR_EXPECT_PAID_SALES;
  if(expected!==undefined&&!['true','false'].includes(expected))throw Error('İzleme satış beklentisi true veya false olmalıdır.');
- const report=await monitorSite(fetch,{expectedPaidSales:expected===undefined?undefined:expected==='true'});
+ const registration=process.env.MONITOR_EXPECT_REGISTRATION_OPEN;
+ if(registration!==undefined&&!['true','false'].includes(registration))throw Error('İzleme kayıt beklentisi true veya false olmalıdır.');
+ const report=await monitorSite(fetch,{expectedPaidSales:expected===undefined?undefined:expected==='true',expectedRegistrationOpen:registration===undefined?undefined:registration==='true'});
  if(process.env.GITHUB_STEP_SUMMARY)await appendFile(process.env.GITHUB_STEP_SUMMARY,monitorSummary(report));
  if(process.env.MONITOR_REPORT_FILE)await writeFile(process.env.MONITOR_REPORT_FILE,JSON.stringify(report,null,2));
  console.log(report.ok?'Site, blog, API ve veritabanı sağlık kontrolleri geçti.':'Hizmet kontrolü başarısız. GitHub Actions kontrol özeti incelenmeli.');process.exitCode=report.ok?0:1;

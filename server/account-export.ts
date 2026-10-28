@@ -14,3 +14,20 @@ export function exportLearningSession(value:unknown){
  const row=sessionSchema.parse(value),reveal=row.mode!=='exam'||!!row.finished_at;
  return {...row,result:row.finished_at?row.result:null,answers:Object.fromEntries(Object.entries(row.answers).map(([index,answer])=>[index,reveal?answer:{response:answer.response}]))};
 }
+
+const supportRequestSchema=z.object({
+ id:z.uuid(),actor_id:z.uuid(),kind:z.enum(['question','deletion']),
+ status:z.enum(['open','reviewing','resolved','dismissed']),created_at:z.string(),updated_at:z.string(),
+ payload:z.object({
+  reason:z.enum(['answer','unclear','visual','level']).optional(),
+  scope:z.enum(['self','family']).optional(),confirmedAt:z.string().optional(),
+  question:z.object({id:z.string().max(160),type:z.string().max(80),prompt:z.string().max(4000)}).optional(),
+ }),
+});
+
+/** User-facing request data only; internal reviewer notes and answer keys stay private. */
+export function exportSupportRequest(value:unknown,allowedActorIds:readonly string[]){
+ const row=supportRequestSchema.parse(value);
+ if(!allowedActorIds.includes(row.actor_id))throw Error('Account request scope could not be verified.');
+ return row;
+}

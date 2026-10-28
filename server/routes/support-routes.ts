@@ -7,7 +7,7 @@ import { accountSecurityLimiter, adminAiLimiter } from '../rate-limiters';
 import { sharedRateLimit } from '../shared-rate-limit';
 import { prepareQuestionReport, reviewRequestSchema, mayReviewRequest } from '../support-validation';
 import {readQuestionPages} from '../question-pages';
-import {exportLearningSession} from '../account-export';
+import {exportLearningSession,exportSupportRequest} from '../account-export';
 import {deletionConfirmation, deletionPreview, executeDeletion, DeletionError} from '../account-deletion';
 
 const routes = Router();
@@ -70,8 +70,14 @@ routes.get('/account/export', ...access, accountSecurityLimiter, sharedRateLimit
     if(afterId)query=query.gt('id',afterId);
     return await query;
   },'Account data could not be exported completely.');
+  const requests=await readQuestionPages<{id:string}>(async(afterId,size)=>{
+    let query=client.from('support_requests').select('id,actor_id,kind,status,created_at,updated_at,payload')
+      .in('actor_id',ids).lte('created_at',exportedAt).order('id').limit(size);
+    if(afterId)query=query.gt('id',afterId);
+    return await query;
+  },'Account requests could not be exported completely.');
   res.setHeader('Content-Disposition', 'attachment; filename="zekapark-hesap-verilerim.json"');
-  return res.json({ format: 'zekapark-account-export-v1', exportedAt, profiles, progress: progress.data, dailyChallenges: challenges, learningSessions:sessions.map(exportLearningSession) });
+  return res.json({ format: 'zekapark-account-export-v1', exportedAt, profiles, progress: progress.data, dailyChallenges: challenges, learningSessions:sessions.map(exportLearningSession), supportRequests:requests.map(row=>exportSupportRequest(row,ids)) });
 });
 
 routes.get('/admin/question-review-summary', ...access, requireProfileRole('admin'), adminAiLimiter, async(_req,res)=>{
