@@ -2,15 +2,12 @@ import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { backupKey, encryptBackup, decryptBackup } from './backup-crypto.mjs';
+import { encryptBackup, decryptBackup } from './backup-crypto.mjs';
 import {backupManifest,verifyBackupManifest} from './backup-manifest.mjs';
+import {backupConfiguration} from './backup-config.mjs';
 
 process.umask(0o077);
-const key = backupKey(process.env.BACKUP_ENCRYPTION_KEY), dbUrl = process.env.SUPABASE_DB_URL;
-const url = new URL(dbUrl || 'missing:');
-if (!['postgres:', 'postgresql:'].includes(url.protocol) || !url.hostname.endsWith('.supabase.com') && !url.hostname.endsWith('.supabase.co') || !url.password) throw Error('Supabase veritabanı bağlantısı güvenli ortamda yapılandırılmalıdır.');
-url.searchParams.set('sslmode', 'verify-full');
-const secureUrl = url.toString();
+const {key,dbUrl:secureUrl}=backupConfiguration();
 const dir = await mkdtemp(path.join(tmpdir(), 'zekapark-backup-'));
 try {
   const files = {};

@@ -45,6 +45,16 @@ Yerel öğrenci yardımı ve yazı tipleri üçüncü taraf model/font sunucusun
 
 Bu çalışma herhangi bir kişiye/kuruma bildirim göndermedi veya sözleşme imzalamadı. Olay ve başvuru görevlerinin gerçek sorumluları işletmeci tarafından atanmalıdır.
 
+## Yedekleme için hesap sahibinin tamamlayacağı iki alan
+
+28 Ekim 2026 tarihli gerçek `Encrypted database backup` çalışması başarısızdır: `production-backup` ortamında `SUPABASE_DB_URL` ve `BACKUP_ENCRYPTION_KEY` boş gelmiştir. Bu nedenle üretim yedeği alındığı veya gerçek geri yükleme yapıldığı söylenemez. Yeni ön kontrol eksik alanların adlarını değerlerini göstermeden raporlar. Bağlantının başka projeye veya URL parametresiyle başka sunucuya yönlendirilmesi de engellenir.
+
+1. [GitHub ortam ayarlarında](https://github.com/muratteknofest-stack/Bilsem-Junior/settings/environments) `production-backup` ortamını açın. Supabase'de ilgili projenin Connect bölümündeki veritabanı bağlantısını `SUPABASE_DB_URL` ortam sırrı olarak girin. Doğrudan veritabanı adresine erişilemiyorsa IPv4 session pooler ve 5432 seçilir; transaction pooler 6543 yedekleme hedefi olarak kabul edilmez. URI parola alanını URL kurallarına uygun kodlayın.
+2. `BACKUP_ENCRYPTION_KEY` için kriptografik olarak rastgele 32 baytın Base64 karşılığını ayrı ortam sırrı olarak girin. Anahtar yalnız güvenli parola/anahtar kasasında yedeklenmelidir. Sohbete, kaynak koduna, rapora veya ekran görüntüsüne yazmayın. Daha önce kullanılan bir yedek anahtarı varsa onu rastgele değiştirmeyin; eski arşivler o anahtara bağlıdır.
+3. [Yedekleme işini](https://github.com/muratteknofest-stack/Bilsem-Junior/actions/workflows/backup.yml) ana dalda elle çalıştırın. Başarıyı ve yalnız şifreli arşiv oluştuğunu doğrulayın. Sonra ayrı yerel Supabase ortamında geri yükleme, silme talepleriyle mutabakat ve süre ölçümü yapın. Başarılı dosya üretimi tek başına geri yükleme kabulü değildir.
+
+Bu alanlar mevcut GitHub bağlantısının değiştirebildiği ayarlar arasında değildir; bu tur gerçek parola veya anahtar oluşturulmadı ve mevcut anahtar değiştirilmedi.
+
 ## Kapanışı bekleyen somut işler
 
 | İş | Tamamlanma kanıtı |
@@ -63,3 +73,5 @@ Kayıt ve satışın kapalı tutulması bu işlemleri yapılmış saydırmaz; ta
 - [KVKK başvuru yanıtının bildirim usulü](https://www.kvkk.gov.tr/Icerik/9024/ilgili-kisilerin-basvurularina-verilecek-cevabin-bildirim-usulune-iliskin-kamuoyu-duyurusu)
 - [KVKK ihlal bildirimi](https://www.kvkk.gov.tr/Icerik/5362/Veri-Ihlali-Bildirimi)
 - [KVKK standart sözleşmeler](https://www.kvkk.gov.tr/Icerik/8170/Yurt-Disina-Kisisel-Veri-Aktariminda-Kullanilacak-Standart-Sozlesmelerde-Dikkat-Edilmesi-Gereken-Hususlara-Iliskin-Kamuoyu-Duyurusu)
+
+- [Supabase veritabanı bağlantı yöntemleri](https://supabase.com/docs/guides/database/connecting-to-postgres)

@@ -62,4 +62,6 @@ Aydınlatma sayfası yazmak veya bir kutuyu işaretletmek bu belgeleri oluşturm
 
 İkinci turda hesap dışa aktarımına aileyle sınırlı destek talepleri eklendi; iç yönetici notları, inceleyici kimliği ve cevap anahtarları süzüldü. Mevcut yedek iş akışının 30 günlük saklama sınırı geri yüklemede de zorunlu tutuldu. Altı yasal sayfa ve kayıt/satışın beklenmedik açılması 15 dakikalık izleme işine eklendi. Güncel veri envanteri, yazılı/elektronik başvuru yanıtı, silme/geri yükleme mutabakatı ve olay işletimi [işletim kaydında](data-protection-operations.md) yer alır.
 
-Bu tur 617 test geçti. Gerçek başvuru yanıtı gönderilmedi, üretim yedeği geri yüklenmedi ve kişisel veri silinmedi. Kurumsal kimlik, onaylı saklama/aktarım belgeleri, anahtar iptali ve gerçek cihaz/operasyon kabulü tamamlanmış sayılmadı. Kayıt ve satış kapalı kaldı.
+Bu tur ek testlerle doğrulandı. Gerçek başvuru yanıtı gönderilmedi, üretim yedeği geri yüklenmedi ve kişisel veri silinmedi. Kurumsal kimlik, onaylı saklama/aktarım belgeleri, anahtar iptali ve gerçek cihaz/operasyon kabulü tamamlanmış sayılmadı. Kayıt ve satış kapalı kaldı.
+
+Gerçek günlük yedekleme çalışmasının iki eksik ortam sırrı nedeniyle başarısız olduğu doğrulandı. Değer göstermeyen ön kontrol, proje/sunucu hedefi sabitleme ve libpq hedef değiştirme parametrelerini reddetme eklendi. Hesap sahibinin özel alanda gireceği iki ayar ve gerçek kabul adımları işletim kaydında açıklandı; üretim yedeği varmış gibi işaretlenmedi.
