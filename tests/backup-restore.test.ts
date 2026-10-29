@@ -6,12 +6,83 @@ import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {PGlite} from '@electric-sql/pglite';
+import {parse} from 'yaml';
 import {backupManifest,verifyBackupManifest,backupExpiry} from '../scripts/backup-manifest.mjs';
 import {encryptBackup,decryptBackup} from '../scripts/backup-crypto.mjs';
 import {isolatedRestoreTarget} from '../scripts/restore-backup.mjs';
 import {temporaryBackupAccess,backupConnectionEnvironment} from '../scripts/backup-access.mjs';
 import {backupConfiguration} from '../scripts/backup-config.mjs';
 import {BACKUP_CA_PATH,verifyBackupCaBundle} from '../scripts/backup-tls.mjs';
+import {diagnosticTail,runtimeFailureCategory,runtimeFailureDetails,startRuntimeWithRetry} from '../scripts/backup-runtime-diagnostics.mjs';
+
+test('runtime checks need no production or registry identity and production stays on main',()=>{
+ for(const file of ['backup-runtime.yml','backup.yml']){
+  const workflow=parse(readFileSync(resolve('.github/workflows',file),'utf8'));
+  assert.deepEqual(workflow.permissions,{contents:'read'});
+  const job=Object.values(workflow.jobs)[0] as {if?:string;environment?:string;steps:Array<{run?:string}>};
+  assert.doesNotMatch(JSON.stringify(workflow),/docker login|GHCR_JOB_TOKEN|packages:|DOCKER_CONFIG/);
+  if(file==='backup-runtime.yml')assert.doesNotMatch(JSON.stringify(workflow),/secrets\s*[.[]/);
+  else {
+   assert.equal(job.if,"github.ref == 'refs/heads/main'");assert.equal(job.environment,'production-backup');
+   assert.deepEqual(workflow.on.push,{branches:['main'],paths:['scripts/*backup*','.github/workflows/backup.yml']});
+   assert.ok(!('pull_request' in workflow.on),'PR code cannot trigger the production backup');
+  }
+ }
+});
+
+test('runtime diagnostics retain the final failure after long image progress without exposing private content',()=>{
+ const tail=diagnosticTail('progress\n'.repeat(20000),Buffer.from('supabase_auth_fixture is not ready: private-record-do-not-log'));
+ assert.equal(tail.length,65536);
+ assert.equal(runtimeFailureCategory(tail),'AUTH_UNHEALTHY');
+ assert.equal(runtimeFailureCategory('failed to pull private-image private-password'),'IMAGE_PULL');
+ assert.equal(runtimeFailureCategory('private-host private-password'),'COMMAND_FAILED');
+ assert.equal(runtimeFailureDetails('failed to pull https://public.ecr.aws/private?secret=private-password: 429 Too Many Requests'),'REGISTRY_ECR RATE_LIMIT HTTP_429');
+ assert.equal(runtimeFailureDetails('private-host private-password'),'');
+ assert.equal(runtimeFailureDetails('failed to pull registry-1.docker.io/private: unexpected EOF'),'REGISTRY_DOCKER EOF');
+});
+
+test('isolated startup retries only transient image transport failures, with cleanup and a fixed attempt limit',async()=>{
+ const failure=(code:string)=>Object.assign(new Error('fixture'),{code});
+ const events:string[]=[];let attempts=0;
+ await startRuntimeWithRetry(async()=>{events.push('start');if(++attempts<3)throw failure('IMAGE_PULL');},async()=>{events.push('clean');},async ms=>{events.push(`wait:${ms}`);});
+ assert.deepEqual(events,['start','clean','wait:2000','start','clean','wait:4000','start']);
+ for(const code of ['AUTH_UNHEALTHY','DB_UNHEALTHY','IMAGE_UNAVAILABLE','DOCKER_UNAVAILABLE','COMMAND_FAILED']){
+  let count=0;
+  await assert.rejects(startRuntimeWithRetry(async()=>{count++;throw failure(code);},async()=>{throw Error('Must not retry');},async()=>{}),{code});
+  assert.equal(count,1);
+ }
+ attempts=0;
+ await assert.rejects(startRuntimeWithRetry(async()=>{attempts++;throw failure('NETWORK');},async()=>{},async()=>{}),{code:'NETWORK'});
+ assert.equal(attempts,3);
+ assert.equal(runtimeFailureCategory('failed to pull image: manifest unknown'),'IMAGE_UNAVAILABLE');
+});
+
+test('runtime-only acceptance uses no backup credentials and never writes a restore success receipt',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'bilsem-runtime-probe-'));
+ try{
+  const log=join(dir,'commands.jsonl');
+  const probe=`#!/usr/bin/env node
+const fs=require('node:fs');
+fs.appendFileSync(process.env.BILSEM_RUNTIME_PROBE_LOG,JSON.stringify({args:process.argv.slice(2),registry:process.env.SUPABASE_INTERNAL_IMAGE_REGISTRY,dockerConfig:process.env.DOCKER_CONFIG,privateInput:['SUPABASE_ACCESS_TOKEN','BACKUP_ENCRYPTION_KEY','SUPABASE_DB_URL','RESTORE_DATABASE_URL'].some(k=>k in process.env)})+'\\n');
+if(process.env.BILSEM_RUNTIME_PROBE_FAIL&&process.argv.includes(process.env.BILSEM_RUNTIME_PROBE_FAIL)){process.stderr.end('progress\\n'.repeat(20000)+(process.env.BILSEM_RUNTIME_PROBE_FAIL==='pull'?'failed to pull registry-1.docker.io/private: 429 Too Many Requests private-runtime-detail':'supabase_auth_fixture is not ready: private-runtime-detail'),()=>{process.exitCode=1;});}
+`;
+  for(const tool of ['npx','psql','docker'])writeFileSync(join(dir,tool),probe,{mode:0o700});
+  for(const fail of ['', 'start', 'pull']){
+   writeFileSync(log,'');
+   const run=spawnSync(process.execPath,[resolve('scripts/verify-backup-restore.mjs'),'--runtime-check'],{cwd:dir,encoding:'utf8',timeout:20000,env:{...process.env,PATH:`${dir}:${process.env.PATH}`,BILSEM_RUNTIME_PROBE_LOG:log,BILSEM_RUNTIME_PROBE_FAIL:fail,BACKUP_ENCRYPTION_KEY:'not-a-valid-key',SUPABASE_ACCESS_TOKEN:'private-test-token',SUPABASE_DB_URL:'private-db-url',RESTORE_DATABASE_URL:'private-restore-url'}});
+   assert.equal(run.status,fail?1:0,run.stderr);
+   const calls=readFileSync(log,'utf8').trim().split('\n').map(line=>JSON.parse(line));
+   assert.ok(calls.every(call=>!call.privateInput&&call.registry==='docker.io'));
+   assert.deepEqual(calls.filter(call=>call.args[0]==='pull').map(call=>call.args),[['pull','supabase/postgres:17.6.1.095'],...(fail==='pull'?[]:[['pull','supabase/gotrue:v2.187.0']])]);
+   assert.throws(()=>readFileSync(calls[0].dockerConfig),{code:'ENOENT'},'Private Docker config is removed on success and failure');
+   if(fail==='pull')assert.ok(!calls.some(call=>call.args.includes('start')),'Image failure must stop before startup or import');
+   else assert.ok(calls.findIndex(call=>call.args.includes('start'))>calls.map(call=>call.args[0]).lastIndexOf('pull'));
+   assert.ok(calls.at(-1).args.includes('stop'),'Failure and success must clean up the local runtime');
+   assert.throws(()=>readFileSync(join(dir,'backup-restore-verification.json')),{code:'ENOENT'});
+   if(fail){assert.match(run.stderr,fail==='pull'?/Postgres image pull IMAGE_PULL REGISTRY_DOCKER RATE_LIMIT HTTP_429/:/AUTH_UNHEALTHY/);assert.doesNotMatch(run.stderr,/private-runtime-detail|private-test-token|private-db-url/);}
+  }
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
 
 // Substitute only the command-line tools. Exercise the real backup/restore
 // entrypoints without a network connection, database or production archive.
