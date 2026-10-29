@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {PGlite} from '@electric-sql/pglite';
+import {parse} from 'yaml';
 import {backupManifest,verifyBackupManifest,backupExpiry} from '../scripts/backup-manifest.mjs';
 import {encryptBackup,decryptBackup} from '../scripts/backup-crypto.mjs';
 import {isolatedRestoreTarget} from '../scripts/restore-backup.mjs';
@@ -13,6 +14,20 @@ import {temporaryBackupAccess,backupConnectionEnvironment} from '../scripts/back
 import {backupConfiguration} from '../scripts/backup-config.mjs';
 import {BACKUP_CA_PATH,verifyBackupCaBundle} from '../scripts/backup-tls.mjs';
 import {diagnosticTail,runtimeFailureCategory,runtimeFailureDetails,startRuntimeWithRetry} from '../scripts/backup-runtime-diagnostics.mjs';
+
+test('runtime and production jobs use a temporary read-only registry identity and always remove it',()=>{
+ for(const file of ['backup-runtime.yml','backup.yml']){
+  const workflow=parse(readFileSync(resolve('.github/workflows',file),'utf8'));
+  assert.deepEqual(workflow.permissions,{contents:'read',packages:'read'});
+  const job=Object.values(workflow.jobs)[0] as {env:Record<string,string>;steps:Array<{name?:string;env?:Record<string,string>;run?:string;if?:string}>};
+  assert.equal(job.env.DOCKER_CONFIG,'${{ runner.temp }}/bilsem-backup-ghcr');
+  const login=job.steps.find(step=>step.run?.includes('docker login'))!;
+  assert.equal(login.env?.GHCR_JOB_TOKEN,'${{ github.token }}');
+  assert.ok(login.run?.includes('--password-stdin'));
+  assert.ok(job.steps.some(step=>step.if==='always()'&&step.run?.includes('"$DOCKER_CONFIG/config.json"')));
+  if(file==='backup-runtime.yml')assert.doesNotMatch(JSON.stringify(workflow),/secrets\s*[.[]/);
+ }
+});
 
 test('runtime diagnostics retain the final failure after long image progress without exposing private content',()=>{
  const tail=diagnosticTail('progress\n'.repeat(20000),Buffer.from('supabase_auth_fixture is not ready: private-record-do-not-log'));
