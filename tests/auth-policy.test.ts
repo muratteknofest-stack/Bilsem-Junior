@@ -9,7 +9,7 @@ import { assessAuthSecurity, checkAuthSecurity } from '../scripts/auth-security.
 const origin = 'https://abcdefghijklmnopqrst.supabase.co';
 const env = { SUPABASE_URL: origin, VITE_SUPABASE_URL: origin, VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_fixture' };
 const publicSettings = { disable_signup: true, mailer_autoconfirm: false, external: { email: true, anonymous_users: false } };
-const managementSettings = { password_hibp_enabled: true, smtp_pass: 'fixture-sensitive-smtp-password' };
+const managementSettings = { password_hibp_enabled: true, password_min_length:8, smtp_pass: 'fixture-sensitive-smtp-password' };
 
 test('the app rejects raw signup, automatic OTP account creation and user mutation without contacting Auth', async () => {
   const server = createApiApp().listen(0, '127.0.0.1');
@@ -69,12 +69,13 @@ test('edge rules intercept only the prohibited mutations before the public Auth 
   assert.ok(config.rewrites.some(rule => rule.source === '/api/supabase/auth/v1/:path*' && rule.destination.startsWith(origin)));
 });
 
-test('provider security requires all five verified controls; missing and wrongly typed settings fail closed', () => {
+test('provider security requires all six verified controls; missing and wrongly typed settings fail closed', () => {
   assert.ok(assessAuthSecurity(publicSettings, managementSettings).every(check => check.passed));
   assert.ok(assessAuthSecurity(undefined, undefined).every(check => !check.passed));
   assert.equal(assessAuthSecurity({ ...publicSettings, disable_signup: false }, managementSettings)[0].passed, false);
   assert.equal(assessAuthSecurity({ ...publicSettings, mailer_autoconfirm: true }, managementSettings)[1].passed, false);
   assert.equal(assessAuthSecurity(publicSettings, { password_hibp_enabled: 'true' })[4].passed, false);
+  for(const length of [undefined,6,7,'8',8.5])assert.equal(assessAuthSecurity(publicSettings,{...managementSettings,password_min_length:length})[5].passed,false);
 });
 
 test('provider verification uses only GET with credentials confined to their intended host', async () => {
@@ -102,7 +103,7 @@ test('public settings alone cannot certify leaked password protection', async ()
   const result = await checkAuthSecurity(env, async () => { calls++; return Response.json(publicSettings); });
   assert.equal(calls, 1); assert.equal(result.passed, false);
   assert.equal(result.leakedPasswordProtectionVerified, false);
-  assert.deepEqual(result.checks.filter(check => !check.passed).map(check => check.code), ['LEAKED_PASSWORD_PROTECTION_ENABLED']);
+  assert.deepEqual(result.checks.filter(check => !check.passed).map(check => check.code), ['LEAKED_PASSWORD_PROTECTION_ENABLED','MINIMUM_PASSWORD_LENGTH_ENFORCED']);
 });
 
 test('provider redirects, non-JSON, malformed JSON and network failures never expose response bodies or credentials', async () => {

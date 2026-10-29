@@ -1,4 +1,4 @@
-const privateInputs = new Set(['BACKUP_ENCRYPTION_KEY', 'SUPABASE_DB_URL', 'RESTORE_DATABASE_URL']);
+const privateInputs = new Set(['BACKUP_ENCRYPTION_KEY', 'SUPABASE_DB_URL', 'RESTORE_DATABASE_URL', 'SUPABASE_ACCESS_TOKEN']);
 
 /** A validated URL/PGHOST alone does not override libpq's PGHOSTADDR or service
  * defaults. Start without inherited PG* settings, then add only the validated

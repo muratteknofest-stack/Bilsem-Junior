@@ -2,5 +2,6 @@
   "disable_signup": true,
   "password_hibp_enabled": true,
   "mailer_autoconfirm": false,
-  "external_anonymous_users_enabled": false
+  "external_anonymous_users_enabled": false,
+  "password_min_length": 8
 }

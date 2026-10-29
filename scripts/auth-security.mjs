@@ -9,6 +9,7 @@ export function assessAuthSecurity(publicSettings, managementSettings) {
     { code: 'EMAIL_PROVIDER_ENABLED', passed: publicSettings?.external?.email === true },
     { code: 'ANONYMOUS_SIGNIN_DISABLED', passed: publicSettings?.external?.anonymous_users === false },
     { code: 'LEAKED_PASSWORD_PROTECTION_ENABLED', passed: managementSettings?.password_hibp_enabled === true },
+    { code: 'MINIMUM_PASSWORD_LENGTH_ENFORCED', passed: Number.isInteger(managementSettings?.password_min_length) && managementSettings.password_min_length >= 8 },
   ];
 }
 
