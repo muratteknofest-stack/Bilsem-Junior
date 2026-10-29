@@ -13,7 +13,10 @@ if(!input)throw Error('Şifreli yedek dosyası gerekli.');
 const runtimeOnly=input==='--runtime-check';
 const keyFingerprint=runtimeOnly?null:createHash('sha256').update(backupKey(process.env.BACKUP_ENCRYPTION_KEY)).digest('hex');
 const archive=path.resolve(input),dir=await mkdtemp(path.join(tmpdir(),'bilsem-restore-check-'));
-const clean=postgresChildEnvironment();
+// Match supabase/setup-cli's registry choice for CLI versions 1.28.0–2.107.x.
+// Anonymous ECR pulls on shared runners hit RATE_LIMIT. Use Supabase's official
+// GHCR mirror with the same CLI-pinned image tags, never a user-supplied mirror.
+const clean={...postgresChildEnvironment(),SUPABASE_INTERNAL_IMAGE_REGISTRY:'ghcr.io'};
 function run(command,args,env=clean,timeout=600_000,label='yerel ortam'){return new Promise((resolve,reject)=>{
  const child=spawn(command,args,{cwd:dir,env,stdio:['ignore','ignore','pipe'],timeout});let diagnostic='';
  child.stderr.on('data',chunk=>{diagnostic=diagnosticTail(diagnostic,chunk);});

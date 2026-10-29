@@ -6,6 +6,7 @@ export function diagnosticTail(previous,chunk){return (previous+chunk.toString()
 export function runtimeFailureDetails(diagnostic){
  return [
   ['REGISTRY_ECR',/public\.ecr\.aws/i],
+  ['REGISTRY_GHCR',/ghcr\.io/i],
   ['REGISTRY_DOCKER',/registry-1\.docker\.io|registry\.hub\.docker\.com/i],
   ['RATE_LIMIT',/toomanyrequests|too many requests|rate.?limit/i],
   ['HTTP_403',/403 Forbidden|status(?: code)?:?\s*403\b/i],

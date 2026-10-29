@@ -47,7 +47,7 @@ test('runtime-only acceptance uses no backup credentials and never writes a rest
   const log=join(dir,'commands.jsonl');
   const probe=`#!/usr/bin/env node
 const fs=require('node:fs');
-fs.appendFileSync(process.env.BILSEM_RUNTIME_PROBE_LOG,JSON.stringify({args:process.argv.slice(2),privateInput:['SUPABASE_ACCESS_TOKEN','BACKUP_ENCRYPTION_KEY','SUPABASE_DB_URL','RESTORE_DATABASE_URL'].some(k=>k in process.env)})+'\\n');
+fs.appendFileSync(process.env.BILSEM_RUNTIME_PROBE_LOG,JSON.stringify({args:process.argv.slice(2),registry:process.env.SUPABASE_INTERNAL_IMAGE_REGISTRY,privateInput:['SUPABASE_ACCESS_TOKEN','BACKUP_ENCRYPTION_KEY','SUPABASE_DB_URL','RESTORE_DATABASE_URL'].some(k=>k in process.env)})+'\\n');
 if(process.env.BILSEM_RUNTIME_PROBE_FAIL&&process.argv.includes('start')){process.stderr.end('progress\\n'.repeat(20000)+'supabase_auth_fixture is not ready: private-runtime-detail',()=>{process.exitCode=1;});}
 `;
   for(const tool of ['npx','psql'])writeFileSync(join(dir,tool),probe,{mode:0o700});
@@ -56,7 +56,7 @@ if(process.env.BILSEM_RUNTIME_PROBE_FAIL&&process.argv.includes('start')){proces
    const run=spawnSync(process.execPath,[resolve('scripts/verify-backup-restore.mjs'),'--runtime-check'],{cwd:dir,encoding:'utf8',timeout:20000,env:{...process.env,PATH:`${dir}:${process.env.PATH}`,BILSEM_RUNTIME_PROBE_LOG:log,BILSEM_RUNTIME_PROBE_FAIL:fail?'1':'',BACKUP_ENCRYPTION_KEY:'not-a-valid-key',SUPABASE_ACCESS_TOKEN:'private-test-token',SUPABASE_DB_URL:'private-db-url',RESTORE_DATABASE_URL:'private-restore-url'}});
    assert.equal(run.status,fail?1:0,run.stderr);
    const calls=readFileSync(log,'utf8').trim().split('\n').map(line=>JSON.parse(line));
-   assert.ok(calls.every(call=>!call.privateInput));
+   assert.ok(calls.every(call=>!call.privateInput&&call.registry==='ghcr.io'));
    assert.ok(calls.at(-1).args.includes('stop'),'Failure and success must clean up the local runtime');
    assert.throws(()=>readFileSync(join(dir,'backup-restore-verification.json')),{code:'ENOENT'});
    if(fail){assert.match(run.stderr,/AUTH_UNHEALTHY/);assert.doesNotMatch(run.stderr,/private-runtime-detail|private-test-token|private-db-url/);}
