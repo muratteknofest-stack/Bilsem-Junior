@@ -20,6 +20,23 @@ jobs:
           persist-credentials: false
       - name: Install PostgreSQL 17 clients with system CA trust
         run: |
+          # Ubuntu 24.04 ships PostgreSQL 16. Add the official signed PGDG
+          # repository explicitly; a 16 client cannot dump the production 17 DB.
+          sudo apt-get update
+          sudo apt-get install --yes ca-certificates curl gnupg
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl --fail --silent --show-error \
+            --output /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          fingerprint="$(gpg --show-keys --with-colons /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc | awk -F: '$1 == "fpr" { print $10; exit }')"
+          test "$fingerprint" = 'B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8'
+          printf '%s\n' \
+            'Types: deb' \
+            'URIs: https://apt.postgresql.org/pub/repos/apt' \
+            'Suites: noble-pgdg' \
+            'Components: main' \
+            'Signed-By: /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc' \
+            | sudo tee /etc/apt/sources.list.d/pgdg.sources >/dev/null
           sudo apt-get update
           sudo apt-get install --yes postgresql-client-17
           echo '/usr/lib/postgresql/17/bin' >> "$GITHUB_PATH"

@@ -14,7 +14,7 @@ import {backupConfiguration} from '../scripts/backup-config.mjs';
 
 // Substitute only the command-line tools. Exercise the real backup/restore
 // entrypoints without a network connection, database or production archive.
-function databaseToolProbe(kind:'backup'|'restore'){
+function databaseToolProbe(kind:'backup'|'restore',failRestore=false){
  const dir=mkdtempSync(join(tmpdir(),'bilsem-db-environment-'));
  try{
   const log=join(dir,'child-environment.jsonl'),key=randomBytes(32);
@@ -30,6 +30,9 @@ fs.appendFileSync(process.env.BILSEM_DB_PROBE_LOG,JSON.stringify({
  hasManagementToken:!!process.env.SUPABASE_ACCESS_TOKEN,
  args:process.argv.slice(2)
 })+'\\n');
+if(process.env.BILSEM_DB_PROBE_FAIL&&process.argv.includes('--single-transaction')){
+ console.error('psql:/private-path/schema.sql:42: ERROR: 23503\\nDETAIL: private-record-do-not-log');process.exit(1);
+}
 if(process.argv.includes('--roles-only'))console.log('CREATE ROLE "fixture_custom";');
 else if(process.argv.includes('--schema-only'))console.log('CREATE TABLE public.fixture(id text);');
 else if(process.argv.includes('auth'))console.log('COPY "auth"."users" (id) FROM stdin;\\n\\\\.\\nCOPY "auth"."identities" (id) FROM stdin;\\n\\\\.');
@@ -40,7 +43,7 @@ else if(process.argv.includes('--data-only'))console.log('COPY "public"."fixture
   writeFileSync(archive,encryptBackup(Buffer.from(JSON.stringify(backupManifest(files))),key));
   const result=spawnSync(process.execPath,[resolve(`scripts/${kind==='backup'?'backup-database':'restore-backup'}.mjs`),...(kind==='restore'?[archive]:[])],{
    cwd:dir,encoding:'utf8',timeout:20_000,env:{...process.env,
-    PATH:`${dir}:${process.env.PATH}`,BILSEM_DB_PROBE_LOG:log,
+    PATH:`${dir}:${process.env.PATH}`,BILSEM_DB_PROBE_LOG:log,BILSEM_DB_PROBE_FAIL:failRestore?'1':'',
     BACKUP_ENCRYPTION_KEY:key.toString('base64'),
     SUPABASE_ACCESS_TOKEN:kind==='restore'?'sbp_'+ 'a'.repeat(40):'',
     SUPABASE_DB_URL:'postgresql://postgres:fixture@db.vtcsoqohkiagbwatlabk.supabase.co:5432/postgres',
@@ -51,7 +54,11 @@ else if(process.argv.includes('--data-only'))console.log('COPY "public"."fixture
     PGSSLMODE:'disable',PGSSLROOTCERT:'/fixture/ca',PGSSLKEY:'/fixture/key',PGREQUIRESSL:'0'
    }
   });
-  assert.equal(result.status,0,result.stderr);
+  assert.equal(result.status,failRestore?1:0,result.stderr);
+  if(failRestore){
+   assert.match(result.stderr,/SQLSTATE=23503 schema\.sql:42/);
+   assert.doesNotMatch(result.stderr,/private-record-do-not-log|private-path|local-only/);
+  }
   const records=readFileSync(log,'utf8').trim().split('\n').map(line=>JSON.parse(line));
   assert.equal(records.length,kind==='backup'?4:2);
   for(const record of records){
@@ -72,6 +79,7 @@ else if(process.argv.includes('--data-only'))console.log('COPY "public"."fixture
 
 test('backup subprocesses cannot inherit libpq redirection or the archive encryption key',()=>databaseToolProbe('backup'));
 test('restore preflight and execution keep the validated local target despite inherited libpq settings',()=>databaseToolProbe('restore'));
+test('restore failures expose only the SQLSTATE and archive location, never server records or paths',()=>databaseToolProbe('restore',true));
 
 test('temporary backup credentials are renewed per dump and confined to the pinned provider/project',async()=>{
  const ref='vtcsoqohkiagbwatlabk',token='sbp_'+'a'.repeat(40),calls:string[]=[];
