@@ -12,6 +12,15 @@ import {isolatedRestoreTarget} from '../scripts/restore-backup.mjs';
 import {temporaryBackupAccess,backupConnectionEnvironment} from '../scripts/backup-access.mjs';
 import {backupConfiguration} from '../scripts/backup-config.mjs';
 import {BACKUP_CA_PATH,verifyBackupCaBundle} from '../scripts/backup-tls.mjs';
+import {diagnosticTail,runtimeFailureCategory} from '../scripts/backup-runtime-diagnostics.mjs';
+
+test('runtime diagnostics retain the final failure after long image progress without exposing private content',()=>{
+ const tail=diagnosticTail('progress\n'.repeat(20000),Buffer.from('supabase_auth_fixture is not ready: private-record-do-not-log'));
+ assert.equal(tail.length,65536);
+ assert.equal(runtimeFailureCategory(tail),'AUTH_UNHEALTHY');
+ assert.equal(runtimeFailureCategory('failed to pull private-image private-password'),'IMAGE_PULL');
+ assert.equal(runtimeFailureCategory('private-host private-password'),'COMMAND_FAILED');
+});
 
 // Substitute only the command-line tools. Exercise the real backup/restore
 // entrypoints without a network connection, database or production archive.
