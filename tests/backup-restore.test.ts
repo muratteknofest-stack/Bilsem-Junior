@@ -9,7 +9,7 @@ import {PGlite} from '@electric-sql/pglite';
 import {parse} from 'yaml';
 import {backupManifest,verifyBackupManifest,backupExpiry} from '../scripts/backup-manifest.mjs';
 import {encryptBackup,decryptBackup} from '../scripts/backup-crypto.mjs';
-import {isolatedRestoreTarget} from '../scripts/restore-backup.mjs';
+import {isolatedRestoreTarget,localRestoreRoles} from '../scripts/restore-backup.mjs';
 import {temporaryBackupAccess,backupConnectionEnvironment} from '../scripts/backup-access.mjs';
 import {backupConfiguration} from '../scripts/backup-config.mjs';
 import {BACKUP_CA_PATH,verifyBackupCaBundle} from '../scripts/backup-tls.mjs';
@@ -212,6 +212,20 @@ test('vendored migration filters preserve the reviewed source bytes and license'
  const sources=JSON.parse(readFileSync(join(base,'sources.json'),'utf8'));
  for(const row of sources)assert.equal(createHash('sha256').update(readFileSync(join(base,row.file))).digest('hex'),row.sha256);
  assert.match(readFileSync(join(base,'LICENSE'),'utf8'),/Supabase, Inc/);
+});
+
+test('local replay preserves the managed superuser settings without swallowing other role errors',async()=>{
+ const statement='ALTER ROLE "supabase_admin" SET "statement_timeout" TO \'0\';';
+ const db=new PGlite();
+ try{
+  await db.exec('create role supabase_admin superuser; create role restore_operator createrole; set role restore_operator;');
+  await assert.rejects(()=>db.exec(statement),{code:'42501'});
+  await db.exec(localRestoreRoles(statement));
+  const ordinary='ALTER ROLE "authenticated" SET "statement_timeout" TO \'8s\';';
+  assert.equal(localRestoreRoles(ordinary),ordinary);
+  for(const unknown of ['ALTER ROLE "supabase_admin" SUPERUSER;', 'ALTER ROLE "supabase_admin" SET "search_path" TO \'public\';', 'ALTER ROLE "supabase_admin" SET "statement_timeout" TO \'0\'; SELECT invalid_statement;'])assert.equal(localRestoreRoles(unknown),unknown);
+  await assert.rejects(()=>db.exec(localRestoreRoles('ALTER ROLE "missing_role" SET "statement_timeout" TO \'0\';')),{code:'42704'});
+ }finally{await db.close();}
 });
 
 test('restore target refuses production, external hosts and ambiguous targets',()=>{
