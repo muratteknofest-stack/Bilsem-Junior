@@ -12,7 +12,7 @@ import {postgresChildEnvironment} from './postgres-child-environment.mjs';
 import {temporaryBackupAccess,backupConnectionEnvironment} from './backup-access.mjs';
 
 // Reviewed Supabase migration filters, vendored with license and hashes. Run
-// PostgreSQL 17 directly so libpq receives the verified TLS configuration.
+// PostgreSQL 17 directly so libpq receives the verified Supabase CA bundle.
 const vendor=fileURLToPath(new URL('./vendor/supabase-cli-2.81.3/',import.meta.url));
 const excluded=['information_schema','pg_*','_analytics','_realtime','_supavisor','auth','extensions','pgbouncer','realtime','storage','supabase_functions','supabase_migrations','cron','dbdev','graphql','graphql_public','net','pgmq','pgsodium','pgsodium_masks','pgtle','repack','tiger','tiger_data','timescaledb_*','_timescaledb_*','topology','vault'].join('|');
 const reserved=['anon','authenticated','authenticator','cli_login_.*','dashboard_user','pgbouncer','postgres','service_role','supabase_.*','pgsodium_keyholder','pgsodium_keyiduser','pgsodium_keymaker','pgtle_admin'].join('|');
@@ -27,11 +27,24 @@ async function verifyTool(tool){
  });
 }
 async function dump(script,file,env){
+ let diagnostic='';
  try{
-  const child=spawn('bash',[path.join(vendor,script)],{env:postgresChildEnvironment(env),stdio:['ignore','pipe','ignore'],timeout:15*60_000});
+  const child=spawn('bash',[path.join(vendor,script)],{env:postgresChildEnvironment(env),stdio:['ignore','pipe','pipe'],timeout:15*60_000});
+  child.stderr.on('data',chunk=>{if(diagnostic.length<8192)diagnostic+=chunk.toString();});
   const exit=new Promise((resolve,reject)=>{child.once('error',reject);child.once('close',code=>code===0?resolve():reject(Error()));});
   await Promise.all([exit,pipeline(child.stdout,createWriteStream(file,{mode:0o600}))]);
- }catch{throw Error(`Veritabanı dökümü doğrulanamadı (${path.basename(file)}); bağlantı ve kimlik bilgileri günlükte gösterilmedi.`);}
+ }catch{
+  // Emit only a fixed category, never pg_dump's message, SQL, row or address.
+  const category=[
+   ['TLS_CERTIFICATE',/certificate verify failed|unable to get local issuer|self[- ]signed certificate|root certificate|server certificate/i],
+   ['STARTUP_PARAMETER',/unsupported startup|unrecognized configuration parameter/i],
+   ['AUTHENTICATION',/password authentication failed|authentication failed|tenant or user not found/i],
+   ['ROLE_PRIVILEGE',/permission denied|must be.*member.*role|must be.*superuser/i],
+   ['CONNECTION_TIMEOUT',/timeout expired|timed out|connection timeout/i],
+   ['CONNECTION',/connection refused|could not connect|network is unreachable|could not translate host/i],
+  ].find(([,pattern])=>pattern.test(diagnostic))?.[0]||'COMMAND_FAILED';
+  throw Error(`Veritabanı dökümü doğrulanamadı (${path.basename(file)} ${category}); bağlantı ve kimlik bilgileri günlükte gösterilmedi.`);
+ }
 }
 process.umask(0o077);
 const config=backupConfiguration();
