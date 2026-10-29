@@ -6,6 +6,13 @@ import {pathToFileURL} from 'node:url';
 import {backupKey,decryptBackup} from './backup-crypto.mjs';
 import {verifyBackupManifest} from './backup-manifest.mjs';
 import {postgresChildEnvironment} from './postgres-child-environment.mjs';
+// The fresh runtime owns its managed superuser. An ordinary local postgres
+// restore cannot ALTER that superuser, even for an otherwise safe GUC. Keep
+// only this exact pg_dump form out of the local replay; all other statements
+// retain ON_ERROR_STOP and must succeed. The encrypted original is unchanged.
+export function localRestoreRoles(sql){
+ return sql.replace(/^ALTER ROLE "supabase_admin" SET "(?:pgaudit\.[a-z_]+|pgrst\.[a-z_]+|session_replication_role|statement_timeout|track_io_timing)" TO '(?:[^'\r\n]|'')*';$/gm,'-- Managed superuser settings are owned by the fresh local runtime.');
+}
 export function isolatedRestoreTarget(value){
  const url=new URL(value||'missing:');
  if(!['postgres:','postgresql:'].includes(url.protocol)||!['127.0.0.1','localhost','[::1]'].includes(url.hostname)||!url.username||!url.password||url.search||url.hash||!/^\/[a-zA-Z0-9_]+$/.test(url.pathname))throw Error('Geri yükleme yalnızca boş, yerel ve izole Supabase veritabanına yapılabilir.');
@@ -37,7 +44,8 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   const defaultsFile=path.join(dir,'defaults.sql');await writeFile(defaultsFile,'ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated;',{mode:0o600});args.push('--file',defaultsFile);
   for(const name of ['roles.sql','schema.sql','auth-data.sql','data.sql']){
    if(/(?:^|\n)\s*\\(?:connect|c\s|!)/i.test(archive.files[name])||/\bCOPY\b[^;]*\bPROGRAM\b/i.test(archive.files[name]))throw Error('Yedekte hedef değiştiren veya dış program çalıştıran komut kabul edilmedi.');
-   const file=path.join(dir,name);await writeFile(file,archive.files[name],{mode:0o600});args.push('--file',file);
+   const file=path.join(dir,name),sql=name==='roles.sql'?localRestoreRoles(archive.files[name]):archive.files[name];
+   await writeFile(file,sql,{mode:0o600});args.push('--file',file);
   }
   const verify="do $$ begin if exists(select 1 from public.profiles p left join auth.users u on u.id=p.id where u.id is null) or exists(select 1 from auth.sessions) or exists(select 1 from public.profiles c where c.linked_parent_id is not null and not exists(select 1 from public.profiles p where p.id::text=c.linked_parent_id and c.id::text=any(p.linked_student_ids))) then raise exception 'Restore integrity failed'; end if; end $$;";
   const checkFile=path.join(dir,'verify.sql');await writeFile(checkFile,verify,{mode:0o600});args.push('--file',checkFile);await psql(env,args);
