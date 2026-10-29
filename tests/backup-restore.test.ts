@@ -11,10 +11,11 @@ import {encryptBackup,decryptBackup} from '../scripts/backup-crypto.mjs';
 import {isolatedRestoreTarget} from '../scripts/restore-backup.mjs';
 import {temporaryBackupAccess,backupConnectionEnvironment} from '../scripts/backup-access.mjs';
 import {backupConfiguration} from '../scripts/backup-config.mjs';
+import {BACKUP_CA_PATH,verifyBackupCaBundle} from '../scripts/backup-tls.mjs';
 
 // Substitute only the command-line tools. Exercise the real backup/restore
 // entrypoints without a network connection, database or production archive.
-function databaseToolProbe(kind:'backup'|'restore',failRestore=false){
+function databaseToolProbe(kind:'backup'|'restore',failProbe=false){
  const dir=mkdtempSync(join(tmpdir(),'bilsem-db-environment-'));
  try{
   const log=join(dir,'child-environment.jsonl'),key=randomBytes(32);
@@ -33,6 +34,9 @@ fs.appendFileSync(process.env.BILSEM_DB_PROBE_LOG,JSON.stringify({
 if(process.env.BILSEM_DB_PROBE_FAIL&&process.argv.includes('--single-transaction')){
  console.error('psql:/private-path/schema.sql:42: ERROR: 23503\\nDETAIL: private-record-do-not-log');process.exit(1);
 }
+if(process.env.BILSEM_DB_PROBE_FAIL&&process.argv.includes('--roles-only')){
+ console.error('pg_dumpall: private-host private-password SSL error: certificate verify failed\\nDETAIL: private-record-do-not-log');process.exit(1);
+}
 if(process.argv.includes('--roles-only'))console.log('CREATE ROLE "fixture_custom";');
 else if(process.argv.includes('--schema-only'))console.log('CREATE TABLE public.fixture(id text);');
 else if(process.argv.includes('auth'))console.log('COPY "auth"."users" (id) FROM stdin;\\n\\\\.\\nCOPY "auth"."identities" (id) FROM stdin;\\n\\\\.');
@@ -43,7 +47,7 @@ else if(process.argv.includes('--data-only'))console.log('COPY "public"."fixture
   writeFileSync(archive,encryptBackup(Buffer.from(JSON.stringify(backupManifest(files))),key));
   const result=spawnSync(process.execPath,[resolve(`scripts/${kind==='backup'?'backup-database':'restore-backup'}.mjs`),...(kind==='restore'?[archive]:[])],{
    cwd:dir,encoding:'utf8',timeout:20_000,env:{...process.env,
-    PATH:`${dir}:${process.env.PATH}`,BILSEM_DB_PROBE_LOG:log,BILSEM_DB_PROBE_FAIL:failRestore?'1':'',
+    PATH:`${dir}:${process.env.PATH}`,BILSEM_DB_PROBE_LOG:log,BILSEM_DB_PROBE_FAIL:failProbe?'1':'',
     BACKUP_ENCRYPTION_KEY:key.toString('base64'),
     SUPABASE_ACCESS_TOKEN:kind==='restore'?'sbp_'+ 'a'.repeat(40):'',
     SUPABASE_DB_URL:'postgresql://postgres:fixture@db.vtcsoqohkiagbwatlabk.supabase.co:5432/postgres',
@@ -54,21 +58,21 @@ else if(process.argv.includes('--data-only'))console.log('COPY "public"."fixture
     PGSSLMODE:'disable',PGSSLROOTCERT:'/fixture/ca',PGSSLKEY:'/fixture/key',PGREQUIRESSL:'0'
    }
   });
-  assert.equal(result.status,failRestore?1:0,result.stderr);
-  if(failRestore){
-   assert.match(result.stderr,/SQLSTATE=23503 schema\.sql:42/);
-   assert.doesNotMatch(result.stderr,/private-record-do-not-log|private-path|local-only/);
+  assert.equal(result.status,failProbe?1:0,result.stderr);
+  if(failProbe){
+   assert.match(result.stderr,kind==='restore'?/SQLSTATE=23503 schema\.sql:42/:/roles\.sql TLS_CERTIFICATE/);
+   assert.doesNotMatch(result.stderr,/private-record-do-not-log|private-path|local-only|private-host|private-password/);
   }
   const records=readFileSync(log,'utf8').trim().split('\n').map(line=>JSON.parse(line));
-  assert.equal(records.length,kind==='backup'?4:2);
+  assert.equal(records.length,kind==='backup'?(failProbe?1:4):2);
   for(const record of records){
-   assert.deepEqual(record.pg,kind==='backup'?{PGHOST:'db.vtcsoqohkiagbwatlabk.supabase.co',PGPORT:'5432',PGUSER:'postgres',PGPASSWORD:'fixture',PGDATABASE:'postgres',PGSSLMODE:'verify-full',PGSSLROOTCERT:'system',PGCONNECT_TIMEOUT:'15',PGOPTIONS:'-c default_transaction_read_only=on'}:{PGHOST:'127.0.0.1',PGPORT:'54322',PGUSER:'fixture',PGPASSWORD:'local-only',PGDATABASE:'postgres',PGSSLMODE:'disable'});
+   assert.deepEqual(record.pg,kind==='backup'?{PGHOST:'db.vtcsoqohkiagbwatlabk.supabase.co',PGPORT:'5432',PGUSER:'postgres',PGPASSWORD:'fixture',PGDATABASE:'postgres',PGSSLMODE:'verify-full',PGSSLROOTCERT:BACKUP_CA_PATH,PGCONNECT_TIMEOUT:'15',PGOPTIONS:'-c default_transaction_read_only=on'}:{PGHOST:'127.0.0.1',PGPORT:'54322',PGUSER:'fixture',PGPASSWORD:'local-only',PGDATABASE:'postgres',PGSSLMODE:'disable'});
    assert.equal(record.hasBackupKey,false,'Encryption key must stay in the parent process');
    assert.equal(record.hasBackupUrl,false);
    assert.equal(record.hasRestoreUrl,false);
    assert.equal(record.hasManagementToken,false);
   }
-  if(kind==='backup'){
+  if(kind==='backup'&&!failProbe){
    const restored=JSON.parse(decryptBackup(readFileSync(join(dir,'zekapark-database.enc')),key).toString());verifyBackupManifest(restored);
    assert.match(restored.files['auth-data.sql'],/COPY "auth"\."users"/);
    assert.ok(records[2].args.some((value:string)=>value.includes('auth')&&value.includes('storage')),'General data dump excludes managed schemas');
@@ -80,6 +84,16 @@ else if(process.argv.includes('--data-only'))console.log('COPY "public"."fixture
 test('backup subprocesses cannot inherit libpq redirection or the archive encryption key',()=>databaseToolProbe('backup'));
 test('restore preflight and execution keep the validated local target despite inherited libpq settings',()=>databaseToolProbe('restore'));
 test('restore failures expose only the SQLSTATE and archive location, never server records or paths',()=>databaseToolProbe('restore',true));
+test('backup TLS failures expose only a fixed category, never server messages or credentials',()=>databaseToolProbe('backup',true));
+
+test('the official Supabase root bundle rejects tampering, additional roots and expired certificates',()=>{
+ const bundle=readFileSync(BACKUP_CA_PATH);
+ assert.equal(verifyBackupCaBundle(bundle),BACKUP_CA_PATH);
+ const changed=Buffer.from(bundle);changed[100]^=1;
+ for(const value of [changed,Buffer.concat([bundle,bundle])])assert.throws(()=>verifyBackupCaBundle(value),/CA paketi/);
+ assert.throws(()=>verifyBackupCaBundle(bundle,Date.parse('2040-01-01')),/CA paketi/);
+ assert.throws(()=>verifyBackupCaBundle(bundle,NaN),/CA paketi/);
+});
 
 test('temporary backup credentials are renewed per dump and confined to the pinned provider/project',async()=>{
  const ref='vtcsoqohkiagbwatlabk',token='sbp_'+'a'.repeat(40),calls:string[]=[];
@@ -95,7 +109,7 @@ test('temporary backup credentials are renewed per dump and confined to the pinn
  for(let i=0;i<2;i++){
   const url=await access(),env=backupConnectionEnvironment(url);
   assert.equal(env.PGHOST,'aws-1-eu-central-1.pooler.supabase.com');assert.equal(env.PGPORT,'5432');
-  assert.equal(env.PGUSER,`cli_login_postgres.${ref}`);assert.equal(env.PGSSLMODE,'verify-full');assert.equal(env.PGSSLROOTCERT,'system');assert.equal(env.PGOPTIONS,'-c default_transaction_read_only=on');
+  assert.equal(env.PGUSER,`cli_login_postgres.${ref}`);assert.equal(env.PGSSLMODE,'verify-full');assert.equal(env.PGSSLROOTCERT,BACKUP_CA_PATH);assert.equal(env.PGOPTIONS,'-c default_transaction_read_only=on');
  }
  assert.equal(calls.filter(url=>url.endsWith('/pooler')).length,1);
  assert.equal(calls.filter(url=>url.endsWith('/login-role')).length,2);

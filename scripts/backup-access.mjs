@@ -1,4 +1,5 @@
 import {BACKUP_PROJECT_REF,validatedBackupUrl} from './backup-config.mjs';
+import {backupCaPath} from './backup-tls.mjs';
 
 /** Project-pinned Management API. Responses can contain passwords: never expose
  * a body, request, token or cause in diagnostics. No redirect is followed. */
@@ -37,5 +38,5 @@ export function temporaryBackupAccess(token,fetcher=fetch){
 
 export function backupConnectionEnvironment(value){
  const url=new URL(validatedBackupUrl(value));
- return {PGHOST:url.hostname,PGPORT:'5432',PGUSER:decodeURIComponent(url.username),PGPASSWORD:decodeURIComponent(url.password),PGDATABASE:'postgres',PGSSLMODE:'verify-full',PGSSLROOTCERT:'system',PGCONNECT_TIMEOUT:'15',PGOPTIONS:'-c default_transaction_read_only=on'};
+ return {PGHOST:url.hostname,PGPORT:'5432',PGUSER:decodeURIComponent(url.username),PGPASSWORD:decodeURIComponent(url.password),PGDATABASE:'postgres',PGSSLMODE:'verify-full',PGSSLROOTCERT:backupCaPath(),PGCONNECT_TIMEOUT:'15',PGOPTIONS:'-c default_transaction_read_only=on'};
 }
