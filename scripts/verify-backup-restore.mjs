@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {backupKey} from './backup-crypto.mjs';
 import {postgresChildEnvironment} from './postgres-child-environment.mjs';
-import {diagnosticTail,runtimeFailureCategory,startRuntimeWithRetry} from './backup-runtime-diagnostics.mjs';
+import {diagnosticTail,runtimeFailureCategory,runtimeFailureDetails,startRuntimeWithRetry} from './backup-runtime-diagnostics.mjs';
 
 const input=process.argv[2];
 if(!input)throw Error('Şifreli yedek dosyası gerekli.');
@@ -22,9 +22,9 @@ function run(command,args,env=clean,timeout=600_000,label='yerel ortam'){return 
   if(code===0){resolve();return;}
   const state=diagnostic.match(/SQLSTATE=((?:[0-9][0-9A-Z]{4}|P0001|XX000))\b/)?.[1];
   const location=diagnostic.match(/\b(roles|schema|auth-data|data|defaults|verify)\.sql:(\d+)\b/);
-  const safe=[label,runtimeFailureCategory(diagnostic),state&&`SQLSTATE=${state}`,location&&`${location[1]}.sql:${location[2]}`].filter(Boolean).join(' ');
+  const safe=[label,runtimeFailureCategory(diagnostic),runtimeFailureDetails(diagnostic),state&&`SQLSTATE=${state}`,location&&`${location[1]}.sql:${location[2]}`].filter(Boolean).join(' ');
   const error=Error(`İzole geri yükleme kabulü başarısız (${safe}); gizli değerler gösterilmedi.`);
-  error.code=runtimeFailureCategory(diagnostic);reject(error);
+  error.code=runtimeFailureCategory(diagnostic);error.details=runtimeFailureDetails(diagnostic);reject(error);
  });
 });}
 const cli=(args,timeout=60_000)=>run('npx',['--yes','supabase@2.81.3',...args],clean,timeout,`Supabase ${args[0]}`);

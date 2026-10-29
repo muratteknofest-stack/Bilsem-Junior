@@ -12,7 +12,7 @@ import {isolatedRestoreTarget} from '../scripts/restore-backup.mjs';
 import {temporaryBackupAccess,backupConnectionEnvironment} from '../scripts/backup-access.mjs';
 import {backupConfiguration} from '../scripts/backup-config.mjs';
 import {BACKUP_CA_PATH,verifyBackupCaBundle} from '../scripts/backup-tls.mjs';
-import {diagnosticTail,runtimeFailureCategory,startRuntimeWithRetry} from '../scripts/backup-runtime-diagnostics.mjs';
+import {diagnosticTail,runtimeFailureCategory,runtimeFailureDetails,startRuntimeWithRetry} from '../scripts/backup-runtime-diagnostics.mjs';
 
 test('runtime diagnostics retain the final failure after long image progress without exposing private content',()=>{
  const tail=diagnosticTail('progress\n'.repeat(20000),Buffer.from('supabase_auth_fixture is not ready: private-record-do-not-log'));
@@ -20,6 +20,9 @@ test('runtime diagnostics retain the final failure after long image progress wit
  assert.equal(runtimeFailureCategory(tail),'AUTH_UNHEALTHY');
  assert.equal(runtimeFailureCategory('failed to pull private-image private-password'),'IMAGE_PULL');
  assert.equal(runtimeFailureCategory('private-host private-password'),'COMMAND_FAILED');
+ assert.equal(runtimeFailureDetails('failed to pull https://public.ecr.aws/private?secret=private-password: 429 Too Many Requests'),'REGISTRY_ECR RATE_LIMIT HTTP_429');
+ assert.equal(runtimeFailureDetails('private-host private-password'),'');
+ assert.equal(runtimeFailureDetails('failed to pull registry-1.docker.io/private: unexpected EOF'),'REGISTRY_DOCKER EOF');
 });
 
 test('isolated startup retries only transient image transport failures, with cleanup and a fixed attempt limit',async()=>{
