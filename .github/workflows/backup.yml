@@ -1,6 +1,12 @@
 name: Encrypted database backup
 on:
   workflow_dispatch:
+  # A reviewed backup change must prove recovery on the merged main source.
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/*backup*'
+      - '.github/workflows/backup.yml'
   schedule:
     - cron: '0 2 * * *'
 permissions:

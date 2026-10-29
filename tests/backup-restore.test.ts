@@ -22,7 +22,11 @@ test('runtime checks need no production or registry identity and production stay
   const job=Object.values(workflow.jobs)[0] as {if?:string;environment?:string;steps:Array<{run?:string}>};
   assert.doesNotMatch(JSON.stringify(workflow),/docker login|GHCR_JOB_TOKEN|packages:|DOCKER_CONFIG/);
   if(file==='backup-runtime.yml')assert.doesNotMatch(JSON.stringify(workflow),/secrets\s*[.[]/);
-  else {assert.equal(job.if,"github.ref == 'refs/heads/main'");assert.equal(job.environment,'production-backup');}
+  else {
+   assert.equal(job.if,"github.ref == 'refs/heads/main'");assert.equal(job.environment,'production-backup');
+   assert.deepEqual(workflow.on.push,{branches:['main'],paths:['scripts/*backup*','.github/workflows/backup.yml']});
+   assert.ok(!('pull_request' in workflow.on),'PR code cannot trigger the production backup');
+  }
  }
 });
 
