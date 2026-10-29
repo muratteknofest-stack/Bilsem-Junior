@@ -12,12 +12,19 @@ if(!input)throw Error('Şifreli yedek dosyası gerekli.');
 const keyFingerprint=createHash('sha256').update(backupKey(process.env.BACKUP_ENCRYPTION_KEY)).digest('hex');
 const archive=path.resolve(input),dir=await mkdtemp(path.join(tmpdir(),'bilsem-restore-check-'));
 const clean=postgresChildEnvironment();
-function run(command,args,env=clean,timeout=600_000){return new Promise((resolve,reject)=>{
- const child=spawn(command,args,{cwd:dir,env,stdio:'ignore',timeout});
+function run(command,args,env=clean,timeout=600_000,label='yerel ortam'){return new Promise((resolve,reject)=>{
+ const child=spawn(command,args,{cwd:dir,env,stdio:['ignore','ignore','pipe'],timeout});let diagnostic='';
+ child.stderr.on('data',chunk=>{if(diagnostic.length<8192)diagnostic+=chunk.toString();});
  child.once('error',()=>reject(Error('İzole geri yükleme aracı başlatılamadı.')));
- child.once('close',code=>code===0?resolve():reject(Error('İzole geri yükleme kabulü başarısız; gizli değerler gösterilmedi.')));
+ child.once('close',code=>{
+  if(code===0){resolve();return;}
+  const state=diagnostic.match(/SQLSTATE=((?:[0-9][0-9A-Z]{4}|P0001|XX000))\b/)?.[1];
+  const location=diagnostic.match(/\b(roles|schema|auth-data|data|defaults|verify)\.sql:(\d+)\b/);
+  const safe=[label,state&&`SQLSTATE=${state}`,location&&`${location[1]}.sql:${location[2]}`].filter(Boolean).join(' ');
+  reject(Error(`İzole geri yükleme kabulü başarısız (${safe}); gizli değerler gösterilmedi.`));
+ });
 });}
-const cli=args=>run('npx',['--yes','supabase@2.81.3',...args]);
+const cli=args=>run('npx',['--yes','supabase@2.81.3',...args],clean,600_000,`Supabase ${args[0]}`);
 let verified=false;
 try{
  await cli(['init']);
@@ -25,7 +32,7 @@ try{
  await run(process.execPath,[fileURLToPath(new URL('./restore-backup.mjs',import.meta.url)),archive],{
   ...clean,BACKUP_ENCRYPTION_KEY:process.env.BACKUP_ENCRYPTION_KEY,
   RESTORE_DATABASE_URL:'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
- });
+ },600_000,'SQL içe aktarma');
  verified=true;
  console.log('Şifreli yedek taze yerel Supabase ortamına geri yüklendi; Auth/profil ve aile bağlantıları doğrulandı.');
 }finally{

@@ -12,8 +12,19 @@ export function isolatedRestoreTarget(value){
  return {PGHOST:url.hostname==='[::1]'?'::1':url.hostname,PGPORT:url.port||'5432',PGUSER:decodeURIComponent(url.username),PGPASSWORD:decodeURIComponent(url.password),PGDATABASE:url.pathname.slice(1),PGSSLMODE:'disable'};
 }
 function psql(env,args,input){return new Promise((resolve,reject)=>{
- const child=spawn('psql',['--no-psqlrc','--set','ON_ERROR_STOP=on',...args],{env:postgresChildEnvironment(env),stdio:['pipe','pipe','ignore'],timeout:120_000});let output='';
- child.stdout.on('data',chunk=>{if(output.length<10000)output+=chunk.toString();});child.on('error',()=>reject(Error('Yerel PostgreSQL aracı başlatılamadı.')));child.on('close',code=>code===0?resolve(output.trim()):reject(Error('Geri yükleme veya ön koşul kontrolü başarısız. Başarı kaydı oluşturulmadı.')));child.stdin.end(input||'');
+ const child=spawn('psql',['--no-psqlrc','--set','ON_ERROR_STOP=on','--set','VERBOSITY=sqlstate',...args],{env:postgresChildEnvironment(env),stdio:['pipe','pipe','pipe'],timeout:120_000});let output='',diagnostic='';
+ child.stdout.on('data',chunk=>{if(output.length<10000)output+=chunk.toString();});
+ child.stderr.on('data',chunk=>{if(diagnostic.length<8192)diagnostic+=chunk.toString();});
+ child.on('error',()=>reject(Error('Yerel PostgreSQL aracı başlatılamadı.')));
+ child.on('close',code=>{
+  if(code===0){resolve(output.trim());return;}
+  // Emit only a SQLSTATE and a known archive filename/line. Never print the
+  // server message, statement, record, connection details or arbitrary path.
+  const state=diagnostic.match(/\b(?:ERROR|FATAL):\s*((?:[0-9][0-9A-Z]{4}|P0001|XX000))\b/)?.[1];
+  const location=diagnostic.match(/\/(roles|schema|auth-data|data|defaults|verify)\.sql:(\d+):/);
+  const safe=[state&&`SQLSTATE=${state}`,location&&`${location[1]}.sql:${location[2]}`].filter(Boolean).join(' ');
+  reject(Error(`Geri yükleme veya ön koşul kontrolü başarısız${safe?` (${safe})`:''}. Başarı kaydı oluşturulmadı.`));
+ });child.stdin.end(input||'');
 });}
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  let dir;try{

@@ -31,7 +31,7 @@ async function dump(script,file,env){
   const child=spawn('bash',[path.join(vendor,script)],{env:postgresChildEnvironment(env),stdio:['ignore','pipe','ignore'],timeout:15*60_000});
   const exit=new Promise((resolve,reject)=>{child.once('error',reject);child.once('close',code=>code===0?resolve():reject(Error()));});
   await Promise.all([exit,pipeline(child.stdout,createWriteStream(file,{mode:0o600}))]);
- }catch{throw Error('Veritabanı dökümü doğrulanamadı; bağlantı ve kimlik bilgileri günlükte gösterilmedi.');}
+ }catch{throw Error(`Veritabanı dökümü doğrulanamadı (${path.basename(file)}); bağlantı ve kimlik bilgileri günlükte gösterilmedi.`);}
 }
 process.umask(0o077);
 const config=backupConfiguration();
