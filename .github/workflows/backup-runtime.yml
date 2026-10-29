@@ -11,7 +11,6 @@ on:
       - '.github/workflows/backup*.yml'
 permissions:
   contents: read
-  packages: read
 jobs:
   backup-runtime:
     runs-on: ubuntu-24.04
@@ -24,20 +23,5 @@ jobs:
         with:
           package-manager-cache: false
           node-version: 22
-      - name: Authenticate official image pulls with the read-only job identity
-        env:
-          DOCKER_CONFIG: ${{ runner.temp }}/bilsem-backup-ghcr
-          GHCR_JOB_TOKEN: ${{ github.token }}
-          GHCR_JOB_ACTOR: ${{ github.actor }}
-        run: |
-          install -d -m 700 "$DOCKER_CONFIG"
-          printf '%s' "$GHCR_JOB_TOKEN" | docker login ghcr.io --username "$GHCR_JOB_ACTOR" --password-stdin
       - name: Check the restore runtime without production credentials or records
-        env:
-          DOCKER_CONFIG: ${{ runner.temp }}/bilsem-backup-ghcr
         run: node scripts/verify-backup-restore.mjs --runtime-check
-      - name: Remove temporary registry credentials
-        if: always()
-        env:
-          DOCKER_CONFIG: ${{ runner.temp }}/bilsem-backup-ghcr
-        run: rm -f "$DOCKER_CONFIG/config.json"

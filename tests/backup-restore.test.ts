@@ -15,20 +15,14 @@ import {backupConfiguration} from '../scripts/backup-config.mjs';
 import {BACKUP_CA_PATH,verifyBackupCaBundle} from '../scripts/backup-tls.mjs';
 import {diagnosticTail,runtimeFailureCategory,runtimeFailureDetails,startRuntimeWithRetry} from '../scripts/backup-runtime-diagnostics.mjs';
 
-test('runtime and production jobs use a temporary read-only registry identity and always remove it',()=>{
+test('runtime checks need no production or registry identity and production stays on main',()=>{
  for(const file of ['backup-runtime.yml','backup.yml']){
   const workflow=parse(readFileSync(resolve('.github/workflows',file),'utf8'));
-  assert.deepEqual(workflow.permissions,{contents:'read',packages:'read'});
-  const job=Object.values(workflow.jobs)[0] as {env:Record<string,string>;steps:Array<{name?:string;env?:Record<string,string>;run?:string;if?:string}>};
-  assert.doesNotMatch(JSON.stringify(job.env)||'',/runner\./,'Runner context is available only after job scheduling');
-  const registrySteps=job.steps.filter(step=>step.run?.includes('docker login')||step.run?.includes('verify-backup-restore.mjs')||step.run?.includes('"$DOCKER_CONFIG/config.json"'));
-  assert.equal(registrySteps.length,3);
-  assert.ok(registrySteps.every(step=>step.env?.DOCKER_CONFIG==='${{ runner.temp }}/bilsem-backup-ghcr'));
-  const login=job.steps.find(step=>step.run?.includes('docker login'))!;
-  assert.equal(login.env?.GHCR_JOB_TOKEN,'${{ github.token }}');
-  assert.ok(login.run?.includes('--password-stdin'));
-  assert.ok(job.steps.some(step=>step.if==='always()'&&step.run?.includes('"$DOCKER_CONFIG/config.json"')));
+  assert.deepEqual(workflow.permissions,{contents:'read'});
+  const job=Object.values(workflow.jobs)[0] as {if?:string;environment?:string;steps:Array<{run?:string}>};
+  assert.doesNotMatch(JSON.stringify(workflow),/docker login|GHCR_JOB_TOKEN|packages:|DOCKER_CONFIG/);
   if(file==='backup-runtime.yml')assert.doesNotMatch(JSON.stringify(workflow),/secrets\s*[.[]/);
+  else {assert.equal(job.if,"github.ref == 'refs/heads/main'");assert.equal(job.environment,'production-backup');}
  }
 });
 
@@ -65,19 +59,23 @@ test('runtime-only acceptance uses no backup credentials and never writes a rest
   const log=join(dir,'commands.jsonl');
   const probe=`#!/usr/bin/env node
 const fs=require('node:fs');
-fs.appendFileSync(process.env.BILSEM_RUNTIME_PROBE_LOG,JSON.stringify({args:process.argv.slice(2),registry:process.env.SUPABASE_INTERNAL_IMAGE_REGISTRY,privateInput:['SUPABASE_ACCESS_TOKEN','BACKUP_ENCRYPTION_KEY','SUPABASE_DB_URL','RESTORE_DATABASE_URL'].some(k=>k in process.env)})+'\\n');
-if(process.env.BILSEM_RUNTIME_PROBE_FAIL&&process.argv.includes('start')){process.stderr.end('progress\\n'.repeat(20000)+'supabase_auth_fixture is not ready: private-runtime-detail',()=>{process.exitCode=1;});}
+fs.appendFileSync(process.env.BILSEM_RUNTIME_PROBE_LOG,JSON.stringify({args:process.argv.slice(2),registry:process.env.SUPABASE_INTERNAL_IMAGE_REGISTRY,dockerConfig:process.env.DOCKER_CONFIG,privateInput:['SUPABASE_ACCESS_TOKEN','BACKUP_ENCRYPTION_KEY','SUPABASE_DB_URL','RESTORE_DATABASE_URL'].some(k=>k in process.env)})+'\\n');
+if(process.env.BILSEM_RUNTIME_PROBE_FAIL&&process.argv.includes(process.env.BILSEM_RUNTIME_PROBE_FAIL)){process.stderr.end('progress\\n'.repeat(20000)+(process.env.BILSEM_RUNTIME_PROBE_FAIL==='pull'?'failed to pull registry-1.docker.io/private: 429 Too Many Requests private-runtime-detail':'supabase_auth_fixture is not ready: private-runtime-detail'),()=>{process.exitCode=1;});}
 `;
-  for(const tool of ['npx','psql'])writeFileSync(join(dir,tool),probe,{mode:0o700});
-  for(const fail of [false,true]){
+  for(const tool of ['npx','psql','docker'])writeFileSync(join(dir,tool),probe,{mode:0o700});
+  for(const fail of ['', 'start', 'pull']){
    writeFileSync(log,'');
-   const run=spawnSync(process.execPath,[resolve('scripts/verify-backup-restore.mjs'),'--runtime-check'],{cwd:dir,encoding:'utf8',timeout:20000,env:{...process.env,PATH:`${dir}:${process.env.PATH}`,BILSEM_RUNTIME_PROBE_LOG:log,BILSEM_RUNTIME_PROBE_FAIL:fail?'1':'',BACKUP_ENCRYPTION_KEY:'not-a-valid-key',SUPABASE_ACCESS_TOKEN:'private-test-token',SUPABASE_DB_URL:'private-db-url',RESTORE_DATABASE_URL:'private-restore-url'}});
+   const run=spawnSync(process.execPath,[resolve('scripts/verify-backup-restore.mjs'),'--runtime-check'],{cwd:dir,encoding:'utf8',timeout:20000,env:{...process.env,PATH:`${dir}:${process.env.PATH}`,BILSEM_RUNTIME_PROBE_LOG:log,BILSEM_RUNTIME_PROBE_FAIL:fail,BACKUP_ENCRYPTION_KEY:'not-a-valid-key',SUPABASE_ACCESS_TOKEN:'private-test-token',SUPABASE_DB_URL:'private-db-url',RESTORE_DATABASE_URL:'private-restore-url'}});
    assert.equal(run.status,fail?1:0,run.stderr);
    const calls=readFileSync(log,'utf8').trim().split('\n').map(line=>JSON.parse(line));
-   assert.ok(calls.every(call=>!call.privateInput&&call.registry==='ghcr.io'));
+   assert.ok(calls.every(call=>!call.privateInput&&call.registry==='docker.io'));
+   assert.deepEqual(calls.filter(call=>call.args[0]==='pull').map(call=>call.args),[['pull','supabase/postgres:17.6.1.095'],...(fail==='pull'?[]:[['pull','supabase/gotrue:v2.187.0']])]);
+   assert.throws(()=>readFileSync(calls[0].dockerConfig),{code:'ENOENT'},'Private Docker config is removed on success and failure');
+   if(fail==='pull')assert.ok(!calls.some(call=>call.args.includes('start')),'Image failure must stop before startup or import');
+   else assert.ok(calls.findIndex(call=>call.args.includes('start'))>calls.map(call=>call.args[0]).lastIndexOf('pull'));
    assert.ok(calls.at(-1).args.includes('stop'),'Failure and success must clean up the local runtime');
    assert.throws(()=>readFileSync(join(dir,'backup-restore-verification.json')),{code:'ENOENT'});
-   if(fail){assert.match(run.stderr,/AUTH_UNHEALTHY/);assert.doesNotMatch(run.stderr,/private-runtime-detail|private-test-token|private-db-url/);}
+   if(fail){assert.match(run.stderr,fail==='pull'?/Postgres image pull IMAGE_PULL REGISTRY_DOCKER RATE_LIMIT HTTP_429/:/AUTH_UNHEALTHY/);assert.doesNotMatch(run.stderr,/private-runtime-detail|private-test-token|private-db-url/);}
   }
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
