@@ -12,7 +12,7 @@ import {isolatedRestoreTarget} from '../scripts/restore-backup.mjs';
 import {temporaryBackupAccess,backupConnectionEnvironment} from '../scripts/backup-access.mjs';
 import {backupConfiguration} from '../scripts/backup-config.mjs';
 import {BACKUP_CA_PATH,verifyBackupCaBundle} from '../scripts/backup-tls.mjs';
-import {diagnosticTail,runtimeFailureCategory} from '../scripts/backup-runtime-diagnostics.mjs';
+import {diagnosticTail,runtimeFailureCategory,startRuntimeWithRetry} from '../scripts/backup-runtime-diagnostics.mjs';
 
 test('runtime diagnostics retain the final failure after long image progress without exposing private content',()=>{
  const tail=diagnosticTail('progress\n'.repeat(20000),Buffer.from('supabase_auth_fixture is not ready: private-record-do-not-log'));
@@ -20,6 +20,22 @@ test('runtime diagnostics retain the final failure after long image progress wit
  assert.equal(runtimeFailureCategory(tail),'AUTH_UNHEALTHY');
  assert.equal(runtimeFailureCategory('failed to pull private-image private-password'),'IMAGE_PULL');
  assert.equal(runtimeFailureCategory('private-host private-password'),'COMMAND_FAILED');
+});
+
+test('isolated startup retries only transient image transport failures, with cleanup and a fixed attempt limit',async()=>{
+ const failure=(code:string)=>Object.assign(new Error('fixture'),{code});
+ const events:string[]=[];let attempts=0;
+ await startRuntimeWithRetry(async()=>{events.push('start');if(++attempts<3)throw failure('IMAGE_PULL');},async()=>{events.push('clean');},async ms=>{events.push(`wait:${ms}`);});
+ assert.deepEqual(events,['start','clean','wait:2000','start','clean','wait:4000','start']);
+ for(const code of ['AUTH_UNHEALTHY','DB_UNHEALTHY','IMAGE_UNAVAILABLE','DOCKER_UNAVAILABLE','COMMAND_FAILED']){
+  let count=0;
+  await assert.rejects(startRuntimeWithRetry(async()=>{count++;throw failure(code);},async()=>{throw Error('Must not retry');},async()=>{}),{code});
+  assert.equal(count,1);
+ }
+ attempts=0;
+ await assert.rejects(startRuntimeWithRetry(async()=>{attempts++;throw failure('NETWORK');},async()=>{},async()=>{}),{code:'NETWORK'});
+ assert.equal(attempts,3);
+ assert.equal(runtimeFailureCategory('failed to pull image: manifest unknown'),'IMAGE_UNAVAILABLE');
 });
 
 test('runtime-only acceptance uses no backup credentials and never writes a restore success receipt',()=>{
