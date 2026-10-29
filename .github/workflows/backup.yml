@@ -15,8 +15,6 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     environment: production-backup
-    env:
-      DOCKER_CONFIG: ${{ runner.temp }}/bilsem-backup-ghcr
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -57,6 +55,7 @@ jobs:
           BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
       - name: Authenticate official image pulls with the read-only job identity
         env:
+          DOCKER_CONFIG: ${{ runner.temp }}/bilsem-backup-ghcr
           GHCR_JOB_TOKEN: ${{ github.token }}
           GHCR_JOB_ACTOR: ${{ github.actor }}
         run: |
@@ -65,6 +64,7 @@ jobs:
       - name: Verify encrypted archive in a fresh isolated Supabase
         run: node scripts/verify-backup-restore.mjs zekapark-database.enc
         env:
+          DOCKER_CONFIG: ${{ runner.temp }}/bilsem-backup-ghcr
           BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
       - name: Retain encrypted archive
         if: always()
@@ -79,4 +79,6 @@ jobs:
           retention-days: 30
       - name: Remove working archive
         if: always()
+        env:
+          DOCKER_CONFIG: ${{ runner.temp }}/bilsem-backup-ghcr
         run: rm -f zekapark-database.enc backup-restore-verification.json "$DOCKER_CONFIG/config.json"

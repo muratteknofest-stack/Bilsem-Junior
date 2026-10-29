@@ -20,7 +20,10 @@ test('runtime and production jobs use a temporary read-only registry identity an
   const workflow=parse(readFileSync(resolve('.github/workflows',file),'utf8'));
   assert.deepEqual(workflow.permissions,{contents:'read',packages:'read'});
   const job=Object.values(workflow.jobs)[0] as {env:Record<string,string>;steps:Array<{name?:string;env?:Record<string,string>;run?:string;if?:string}>};
-  assert.equal(job.env.DOCKER_CONFIG,'${{ runner.temp }}/bilsem-backup-ghcr');
+  assert.doesNotMatch(JSON.stringify(job.env)||'',/runner\./,'Runner context is available only after job scheduling');
+  const registrySteps=job.steps.filter(step=>step.run?.includes('docker login')||step.run?.includes('verify-backup-restore.mjs')||step.run?.includes('"$DOCKER_CONFIG/config.json"'));
+  assert.equal(registrySteps.length,3);
+  assert.ok(registrySteps.every(step=>step.env?.DOCKER_CONFIG==='${{ runner.temp }}/bilsem-backup-ghcr'));
   const login=job.steps.find(step=>step.run?.includes('docker login'))!;
   assert.equal(login.env?.GHCR_JOB_TOKEN,'${{ github.token }}');
   assert.ok(login.run?.includes('--password-stdin'));
