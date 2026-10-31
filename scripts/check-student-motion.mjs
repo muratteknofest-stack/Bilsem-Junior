@@ -46,7 +46,8 @@ try {
     await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
     const hit=await pause.boundingBox();assert.ok(hit.height>=44&&hit.width>=44);
-    const task=await page.locator('.bj-story-stages button').first().boundingBox();assert.ok(task.y+task.height<844);
+    const start=await page.locator('.bj-journey-continue').boundingBox();assert.ok(start.y+start.height<844,'The next adventure action must be available in the first screen');
+    const task=await page.locator('.bj-story-stages button').first().boundingBox();assert.ok(task.width>=44&&task.height>=44);
     await page.screenshot({path:`test-artifacts/student-motion/story-${width}.png`,fullPage:true});shots.push(width);
   }
   // Each illustrated chapter keeps the motion layer and its actual navigation.
@@ -149,6 +150,7 @@ try {
   await page.locator('.zp-student-topline').scrollIntoViewIfNeeded();
   await page.waitForFunction(()=>document.querySelector('.bj-quest-path').dataset.motionOffscreen==='true');
   assert.equal((await style('.bj-quest-start .bj-quest-coin')).state,'paused');
+  await page.locator('.bj-more-navigation>summary').click();
   await page.getByRole('button',{name:'Görevlerim',exact:true}).click();
   await page.getByRole('button',{name:'Çalışma alanım',exact:true}).click();
   await page.locator('.bj-quest-path').waitFor();

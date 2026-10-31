@@ -4,8 +4,10 @@ import type { QuestionType, UserRole } from '../../types';
 import { Logo } from '../Logo';
 import { PremiumButton } from './PremiumUI';
 import './navigation.css';
+import type { RegistrationAvailability } from '../../hooks/useRegistrationAvailability';
 
 interface Props {
+  registration?: RegistrationAvailability;
   onLogin: (role: UserRole) => void;
   onRegister: () => void;
   onHome: () => void;
@@ -22,7 +24,7 @@ const areas = [
   { type: 'shape_counting' as QuestionType, name: 'Dikkat ve odak', text: 'Küçük ayrıntıları yakala', icon: ScanEye, color: 'peach' },
 ];
 
-export function LandingNav({ onLogin, onRegister, onHome, onDemo, moving, reducedMotion, onToggleMotion, soundActive, onToggleSound }: Props) {
+export function LandingNav({ registration, onLogin, onRegister, onHome, onDemo, moving, reducedMotion, onToggleMotion, soundActive, onToggleSound }: Props) {
   const [panel, setPanel] = useState<'explore' | 'login' | 'settings' | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const root = useRef<HTMLElement>(null);
@@ -65,6 +67,8 @@ export function LandingNav({ onLogin, onRegister, onHome, onDemo, moving, reduce
     // Wait for the native dialog to restore scroll before moving to the section.
     requestAnimationFrame(() => {
       const el = document.getElementById(target);
+      const disclosure = el?.closest('details');
+      if (disclosure) disclosure.open = true;
       const heading = el?.querySelector<HTMLElement>('h2');
       if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }
       el?.scrollIntoView({ behavior: moving ? 'smooth' : 'instant', block: 'start' });
@@ -79,7 +83,7 @@ export function LandingNav({ onLogin, onRegister, onHome, onDemo, moving, reduce
       <button type="button" className="zp-public-brand" aria-label="Bilsem Junior ana sayfa" onClick={() => act(onHome)}><Logo size="md" showTagline={false} /><span>BİLSEM hazırlığı · Düşün, keşfet, geliş.</span></button>
       <nav className="zp-public-links" aria-label="Ana menü">
         <div className="zp-nav-disclosure"><button type="button" className="zp-nav-link" aria-expanded={panel === 'explore'} aria-controls={`${id}-explore`} onClick={e => toggle('explore', e)}>Keşfet <ChevronDown size={14} /></button>
-          {panel === 'explore' && <div id={`${id}-explore`} className="zp-nav-popover zp-explore-popover"><div className="zp-popover-label">BİR ALAN SEÇ, HEMEN DENE</div>{areas.map(a => <button type="button" className="zp-nav-area" key={a.type} onClick={() => demo(a.type)}><span className={`zp-nav-area-icon zp-nav-area-${a.color}`}><a.icon size={20} /></span><span><strong>{a.name}</strong><small>{a.text}</small></span><ArrowUpRight size={16} /></button>)}<div className="zp-popover-bottom"><Check size={14} /> Örnek sorular için hesap gerekmez.</div></div>}
+          {panel === 'explore' && <div id={`${id}-explore`} className="zp-nav-popover zp-explore-popover"><div className="zp-popover-label">BİR ALAN SEÇ, HEMEN DENE</div>{areas.map(a => <button type="button" className="zp-nav-area" key={a.type} onClick={() => demo(a.type)}><span className={`zp-nav-area-icon zp-nav-area-${a.color}`}><a.icon size={20} /></span><span><strong>{a.name}</strong><small>{a.text}</small></span><ArrowUpRight size={16} /></button>)}<div className="zp-popover-bottom"><Check size={14} /> Bu cihazda 1 örnek soru · Hesap gerekmez.</div></div>}
         </div>
         <a className="zp-nav-link" href="#bilsem-rehberi" onClick={e => { e.preventDefault(); section('bilsem-rehberi'); }}>BİLSEM rehberi</a>
         <a className="zp-nav-link" href="#siniflar" onClick={e => { e.preventDefault(); section('siniflar'); }}>Sınıflar</a>
@@ -94,7 +98,7 @@ export function LandingNav({ onLogin, onRegister, onHome, onDemo, moving, reduce
         <div className="zp-nav-disclosure zp-desktop-login"><button type="button" className="zp-nav-login" aria-expanded={panel === 'login'} aria-controls={`${id}-login`} onClick={e => toggle('login', e)}>Giriş yap <ChevronDown size={13} /></button>
           {panel === 'login' && <div id={`${id}-login`} className="zp-nav-popover zp-login-popover"><div className="zp-popover-label">HESABINA DEVAM ET</div><button type="button" className="zp-nav-area" onClick={() => act(() => onLogin('student'))}><span className="zp-nav-area-icon zp-nav-area-purple"><GraduationCap size={21} /></span><span><strong>Öğrenci girişi</strong><small>Keşiflerine kaldığın yerden devam et</small></span><ArrowUpRight size={15} /></button><button type="button" className="zp-nav-area" onClick={() => act(() => onLogin('parent'))}><span className="zp-nav-area-icon zp-nav-area-mint"><Users size={21} /></span><span><strong>Veli girişi</strong><small>Çocuğunun gelişimine eşlik et</small></span><ArrowUpRight size={15} /></button></div>}
         </div>
-        <PremiumButton className="zp-nav-signup" onClick={() => act(onRegister)}>Kayıt ol <ArrowRight size={16} /></PremiumButton>
+        <PremiumButton className="zp-nav-signup" onClick={() => act(onRegister)}>{registration === 'closed' ? 'Kayıt bilgisi' : registration === 'open' ? 'Kayıt ol' : 'Kayıt durumu'} <ArrowRight size={16} /></PremiumButton>
         <button ref={mobileTrigger} type="button" className="zp-mobile-trigger" aria-label="Menüyü aç" aria-expanded={mobileOpen} aria-controls={`${id}-mobile`} onClick={() => { setPanel(null); setMobileOpen(true); }}><Menu size={22} /></button>
       </div>
     </div>
@@ -107,7 +111,7 @@ export function LandingNav({ onLogin, onRegister, onHome, onDemo, moving, reduce
     }} onCancel={e => { e.preventDefault(); closeMobile(); }} onClose={() => setMobileOpen(false)} onClick={e => { if (e.target === e.currentTarget) closeMobile(); }}>
       <div className="zp-mobile-sheet"><div className="zp-mobile-sheet-top"><div><strong id={`${id}-mobile-title`}>Bilsem Junior menüsü</strong><span>Hazırlık yolculuğuna hoş geldin.</span></div><button type="button" autoFocus className="zp-public-icon" aria-label="Menüyü kapat" onClick={closeMobile}><X size={21} /></button></div>
         <nav aria-label="Mobil ana menü"><p className="zp-popover-label">KEŞİF ALANLARI</p>{areas.map(a => <button type="button" className="zp-nav-area" key={a.type} onClick={() => demo(a.type)}><span className={`zp-nav-area-icon zp-nav-area-${a.color}`}><a.icon size={21} /></span><span><strong>{a.name}</strong><small>{a.text}</small></span><ArrowUpRight size={16} /></button>)}<div className="zp-mobile-section-links"><a href="#bilsem-rehberi" onClick={e => { e.preventDefault(); section('bilsem-rehberi'); }}>BİLSEM hazırlık rehberi <ArrowUpRight size={15} /></a><a href="/blog">Blog ve öğrenme rehberleri <ArrowUpRight size={15} /></a><a href="#siniflar" onClick={e => { e.preventDefault(); section('siniflar'); }}>Sınıfına göre keşfet <ArrowUpRight size={15} /></a><a href="#nasil" onClick={e => { e.preventDefault(); section('nasil'); }}>Nasıl çalışır? <ArrowUpRight size={15} /></a><a href="#aile" onClick={e => { e.preventDefault(); section('aile'); }}>Aileler için <ArrowUpRight size={15} /></a><a href="#yardim" onClick={e => { e.preventDefault(); section('yardim'); }}><span><CircleHelp size={16} /> Yardım ve sık sorulanlar</span><ArrowUpRight size={15} /></a></div></nav>
-        <div className="zp-mobile-account"><p className="zp-popover-label">HESABIN</p><div><button type="button" onClick={() => act(() => onLogin('student'))}><GraduationCap size={19} /> Öğrenci girişi</button><button type="button" onClick={() => act(() => onLogin('parent'))}><Users size={19} /> Veli girişi</button></div><PremiumButton className="zp-nav-signup" onClick={() => act(onRegister)}>Hesap oluştur <ArrowRight size={16} /></PremiumButton><button type="button" className="zp-mobile-demo-link" onClick={() => demo()}>Önce hesap açmadan dene</button></div>
+        <div className="zp-mobile-account"><p className="zp-popover-label">HESABIN</p><div><button type="button" onClick={() => act(() => onLogin('student'))}><GraduationCap size={19} /> Öğrenci girişi</button><button type="button" onClick={() => act(() => onLogin('parent'))}><Users size={19} /> Veli girişi</button></div><PremiumButton className="zp-nav-signup" onClick={() => act(onRegister)}>{registration === 'open' ? 'Hesap oluştur' : 'Kayıt bilgilerini incele'} <ArrowRight size={16} /></PremiumButton><button type="button" className="zp-mobile-demo-link" onClick={() => demo()}>Önce hesap açmadan dene</button></div>
         <div className="zp-mobile-preferences"><button type="button" disabled={reducedMotion} aria-pressed={!moving} onClick={onToggleMotion}>{moving ? <Pause size={16} /> : <Play size={16} />}{moving ? 'Hareketi durdur' : 'Hareketi başlat'}</button><button type="button" aria-pressed={soundActive} onClick={onToggleSound}>{soundActive ? <Volume2 size={16} /> : <VolumeX size={16} />}{soundActive ? 'Sesi kapat' : 'Sesi aç'}</button></div>{reducedMotion && <p className="zp-settings-note">Cihazının hareketi azalt tercihi etkin.</p>}
       </div>
     </dialog>

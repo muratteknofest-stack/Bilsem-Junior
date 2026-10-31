@@ -114,3 +114,32 @@
 .bj-lessons[data-reduced-motion=true] *,.bj-lessons[data-reduced-motion=true] *:before,.bj-lessons[data-reduced-motion=true] *:after{animation:none!important;transition:none!important}
 
 .bj-lesson-stage{background-size:auto;background-repeat:no-repeat}
+
+/* Compact library and readable controls on phones. */
+.bj-lesson-completion-filter{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:16px 0;color:var(--lesson-muted);font-size:13px}
+.bj-lesson-completion-filter select{min-height:44px;max-width:100%;background:var(--lesson-soft,#eef5ff);color:var(--lesson-ink);border:1px solid #bfd2de;border-radius:12px;padding:8px 12px}
+@media(max-width:680px){
+ .bj-lessons .bj-lessons-hero{padding:18px;gap:12px;min-height:0}
+ .bj-lessons .bj-lessons-hero h1{font-size:28px;line-height:1.15}
+ .bj-lessons .bj-lessons-hero p{font-size:13px;line-height:1.6}
+ .bj-lessons .bj-lesson-guide{display:none}
+ .bj-lessons .bj-lesson-card{min-height:180px;padding:16px 12px}
+ .bj-lessons .bj-lesson-card h3{font-size:15px;line-height:1.4}
+ .bj-lessons .bj-lesson-card p{font-size:12px;line-height:1.6;margin-block:8px}
+ .bj-lessons .bj-lesson-card-symbol{width:36px;height:36px;font-size:23px}
+ .bj-lessons .bj-lesson-card-badge{font-size:10px;max-width:100%;white-space:normal}
+ .bj-lessons .bj-lesson-card-top{gap:6px;flex-wrap:wrap}
+ .bj-lessons .bj-lesson-card-footer{font-size:11px;margin-top:auto}
+ .bj-lessons .bj-lesson-stage,.bj-lessons .bj-cube-stage{min-height:240px;padding:12px}
+ .bj-lessons .bj-lesson-narration{padding:16px}
+ .bj-lessons .bj-lesson-coach-heading{grid-template-columns:40px minmax(0,1fr);gap:10px;margin-bottom:10px}
+ .bj-lessons .bj-lesson-coach-avatar,.bj-lessons .bj-lesson-coach-avatar img{width:40px;height:40px}
+ .bj-lessons .bj-lesson-coach-heading h2{font-size:20px}
+ .bj-lessons .bj-lesson-narration>.bj-lesson-story-copy{font-size:14px;line-height:1.7;padding:12px}
+ .bj-lessons .bj-lesson-voice-line{margin-bottom:12px}
+ .bj-lessons .bj-lesson-voice-line>span{font-size:12px}
+ .bj-lessons .bj-lesson-player-controls{padding:12px}
+}
+
+.bj-lesson-show-more{display:flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:12px 18px;margin:24px auto}
+@media(max-width:680px){.bj-lessons .bj-lesson-card h3{min-height:0;margin:8px 0}.bj-lessons .bj-lesson-card p{min-height:0;font-size:12px;line-height:1.5;margin:4px 0 8px}.bj-lessons .bj-lesson-card-badge{font-size:9px;padding:4px 6px}.bj-lessons .bj-lesson-card-top{flex-wrap:nowrap}.bj-lessons .bj-lesson-card-footer{padding:10px 0 0}.bj-lessons .bj-lesson-hero-tags{flex-direction:row;flex-wrap:wrap;gap:6px}}

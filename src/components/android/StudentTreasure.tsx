@@ -1,3 +1,4 @@
+import '../student/compact-interface.css';
 import { Compass, Flame, Sparkles, Star, Trophy } from 'lucide-react';
 import type { Achievement, UserProfile } from '../../types';
 import type { StoryProgress } from '../../features/student/story-adventure';
@@ -25,6 +26,7 @@ export function StudentTreasure({ user, progress, achievements }: { user: UserPr
     <StudentAdventureAtmosphere />
     <div className="bj-treasure-copy"><span>KÜÇÜK ADIMLAR, BÜYÜK BAŞARILAR</span><h2>Emeklerin parlıyor!</h2><p>Görevlerini tamamla, koleksiyonunu büyüt.</p></div>
     <div className="bj-treasure-cup" aria-hidden="true"><StudentGameArt kind="treasure"/><i>✦</i><i>✧</i></div>
+    <details className="bj-reward-key"><summary>XP, rozet ve macera puanı nedir?</summary><p>XP, soru çalışmalarından kazandığın deneyim puanıdır ve seviyeni ilerletir. Rozetler tamamladığın başarıları gösterir. Macera puanları ise hikâyede tamamladığın yeni görevlerden gelir; XP ile ayrı takip edilir. Günlük yıldızlar o günkü küçük hedeflerini gösterir.</p></details>
     <dl className="bj-treasure-stats"><div><dt><Star size={14} aria-hidden="true"/>Toplam XP</dt><dd>{user.xp || 0}</dd></div><div><dt><Trophy size={14} aria-hidden="true"/>Açılan rozet</dt><dd>{unlocked}<small> / {achievements.length+storyAwards.length}</small></dd></div><div><dt><Flame size={14} aria-hidden="true"/>Keşif durağı</dt><dd>{progress.completedCount+collection.stops}</dd></div></dl>
   </section>;
 }

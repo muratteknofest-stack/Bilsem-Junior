@@ -66,7 +66,15 @@ try {
         await portal.locator('.bj-explorer-guide').evaluate(image=>image.decode());
         assert.ok(await portal.locator('.bj-explorer-guide').evaluate(image=>image.naturalWidth>0),'The local guide must load');
         const inventory=await page.locator('.bj-inventory-art>.bj-game-art>svg').evaluateAll(items=>items.map(el=>el.getBoundingClientRect().width));
-        assert.ok(inventory.length>=6&&inventory.every(size=>size>=44),'Inventory objects must remain visibly larger on phones');
+        assert.equal(inventory.length,3,'Three primary destinations keep the workspace focused');
+        assert.ok(inventory.every(size=>size>=44),'Primary objects must remain legible');
+        const more=page.locator('.bj-more-navigation');
+        assert.equal(await more.locator('nav button:visible').count(),0);
+        await more.locator('summary').click();
+        assert.equal(await more.locator('nav button:visible').count(),4,'All secondary areas remain reachable');
+        await more.locator('summary').click();
+        await page.getByRole('button',{name:'Çalışmaya başla',exact:true}).click();
+        assert.equal(await page.getByLabel('İşlem kaydı').textContent(),'adaptive');
         if(width<1000){
           const drawer=page.getByRole('button',{name:'Hedeflerim ve serim',exact:false});
           assert.equal(await page.locator('.zp-daily-snapshot').isVisible(),false);

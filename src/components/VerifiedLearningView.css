@@ -113,3 +113,7 @@
 .zp-learning .zp-result{animation:zp-result-arrive .4s ease-out both;background:linear-gradient(145deg,#f0fff5,#e7f7ff);border:2px solid #a3dec1;box-shadow:0 6px 0 #bce5d955}.zp-learning .zp-result>svg{color:#cb971e;filter:drop-shadow(0 3px 0 #ddbe6855)}
 @keyframes zp-result-arrive{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media(prefers-reduced-motion:reduce){.zp-learning .zp-result{animation:none}}
+
+.bj-solving-workspace,.bj-solving-board,.bj-solving-workspace>fieldset{min-width:0}
+@media(min-width:1000px){.bj-solving-workspace{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:24px;align-items:start}.zp-learning .bj-solving-workspace .zp-answer-workspace{padding-top:0}}
+@media(max-width:680px){.zp-learning .zp-question-nav{flex-wrap:nowrap;overflow-x:auto;padding:4px 4px 8px}.zp-learning .zp-question-nav button{flex-shrink:0;min-height:48px}.zp-learning .zp-puzzle-card{padding:12px}.zp-learning .zp-puzzle-card>p{font-size:12px;line-height:1.6;margin-bottom:10px}.zp-learning .zp-answer-grid{gap:10px}}

@@ -56,7 +56,7 @@ export function LearningSetupPanel(props: Props) {
         <legend><span>2</span> Meydan okuma düzeyin</legend>
         <div className="zp-level-choices" role="group" aria-label="Zorluk düzeyi">
           <button type="button" className="zp-toy-button" aria-pressed={difficulty === 'mixed'} onClick={() => { tap(1); onDifficulty('mixed'); }}><Sparkles size={18} aria-hidden="true" /><strong>Karışık</strong></button>
-          {difficultyChoices(grade).map(level => <button key={level.value} type="button" className="zp-toy-button" aria-label={level.label} aria-pressed={difficulty === level.value} onClick={() => { tap(level.value); onDifficulty(level.value); }}><span className="zp-level-number" aria-hidden="true">{level.value}</span><strong>{level.label.split(' · ')[1]}</strong></button>)}
+          {difficultyChoices(grade).map(level => <button key={level.value} type="button" className="zp-toy-button" aria-label={level.label} aria-pressed={difficulty === level.value} onClick={() => { tap(level.value); onDifficulty(level.value); }}><span className="zp-level-number" aria-hidden="true">{level.value}</span><strong>{level.value === 1 ? 'Kolay' : level.value === 6 ? 'Zor' : `Orta ${level.value - 1}`}</strong></button>)}
         </div>
       </fieldset>}
       {(mode === 'adaptive' || mode === 'practice') && !review && <fieldset className="zp-launch-group" disabled={busy}>
