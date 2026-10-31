@@ -13,7 +13,8 @@ import { VERIFIED_TYPES, RECOVERED_TYPES, STUDENT_TYPES, generateProfessionalQue
 import { generateRecoveredQuestion } from '../recovered-engine';
 import { ALL_TOPIC_TYPES, TOPIC_CATEGORY_TYPES, WORKSHOP_TYPES, topicAllowedForGrade } from '../topic-catalog';
 import { generateWorkshopQuestion } from '../workshop-engine';
-import { COMPLETE_TYPES, generateCompleteCurriculum } from '../complete-curriculum';
+import { generateCurriculumV2 } from '../curriculum-v2';
+import { COMPLETE_TYPES } from '../complete-curriculum';
 
 export const ALL_QUESTION_TYPES = ALL_TOPIC_TYPES;
 export const STUDENT_CATEGORY_TYPES = TOPIC_CATEGORY_TYPES;
@@ -75,7 +76,7 @@ export function generateQuestion(options: {
     let last='';
     for(let attempt=0;attempt<16;attempt++){try {
       const actualSeed=(seed+attempt*10007)%2147483647||1;
-      const q=COMPLETE_TYPES.includes(type)?generateCompleteCurriculum(type,actualSeed,difficulty,options.targetGrade):generateQuestion({...options,type,profile:undefined,seed:actualSeed,difficulty});
+      const q=COMPLETE_TYPES.includes(type)?generateCurriculumV2(type,actualSeed,difficulty,options.targetGrade):generateQuestion({...options,type,profile:undefined,seed:actualSeed,difficulty});
       assertQuestionReadyForStudents(q);return q;
     }catch(error){last=error instanceof Error?error.message:'Üretim başarısız.';}}
     throw Error('QUESTION_REVIEW_REQUIRED: '+last);

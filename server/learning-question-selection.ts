@@ -15,12 +15,15 @@ import { getServiceClient } from './supabase-admin';
 import { LearningError } from './learning-model';
 import { generateProfessionalQuestion as generateLegacyProfessional } from '../src/features/questions/professional-engine-v7';
 import { isQuestionReadyForStudents } from '../src/features/questions/quality';
-import { LEARNING_QUESTION_FORMAT, supportsReasoningFormat, supportsProfessionalV2Format, needsCurrentQuestionFormat, needsProfessionalV2Format, needsReasoningFormat } from '../src/features/student/learning-question-format';
+import { CURRICULUM_V2, generateCurriculumV2 } from '../src/features/questions/curriculum-v2';
+import { COMPLETE_TYPES } from '../src/features/questions/complete-curriculum';
+import { ALL_TOPIC_TYPES, topicAllowedForGrade } from '../src/features/questions/topic-catalog';
+import { LEARNING_QUESTION_FORMAT, supportsLabQuestionFormat, needsCurriculumV2Format, supportsReasoningFormat, supportsProfessionalV2Format, needsCurrentQuestionFormat, needsProfessionalV2Format, needsReasoningFormat } from '../src/features/student/learning-question-format';
 
 export const RECENT_SESSION_LIMIT = 30;
 export const RECENT_HISTORY_DAYS = 30;
 // Matches currentReasoningCandidate; push cheap engine filtering into the bank read.
-export const CURRENT_REASONING_ENGINES = ['reasoning-lab-1','symbolic-v2','verified-8','verified-4','colorful-3','workshop-3','workshop-reading-1'] as const;
+export const CURRENT_REASONING_ENGINES = ['curriculum-2','reasoning-lab-1','symbolic-v2','verified-8','verified-4','colorful-3','workshop-3','workshop-reading-1'] as const;
 type RecentSession = { questions: BaseQuestion[]; answers?: Record<string,{correct?:boolean}>; created_at: string };
 
 /** Renaming an equivalent topic cannot make the same displayed task fresh. */
@@ -32,10 +35,11 @@ export function learningStimulusKey(question: Pick<BaseQuestion,'type'|'visualCo
 }
 
 export function assertLearningQuestionFormat(questions:BaseQuestion[],format:unknown) {
-  if(questions.some(q=>needsCurrentQuestionFormat(q)?format!==LEARNING_QUESTION_FORMAT:needsProfessionalV2Format(q)?!supportsProfessionalV2Format(format):needsReasoningFormat(q)&&!supportsReasoningFormat(format)))throw new LearningError('Bu çalışmadaki yeni soru türleri için uygulamayı güncellemelisin. Önceki cevapların korunuyor.',426);
+  if(questions.some(q=>needsCurriculumV2Format(q)?format!==LEARNING_QUESTION_FORMAT:needsCurrentQuestionFormat(q)?!supportsLabQuestionFormat(format):needsProfessionalV2Format(q)?!supportsProfessionalV2Format(format):needsReasoningFormat(q)&&!supportsReasoningFormat(format)))throw new LearningError('Bu çalışmadaki yeni soru türleri için uygulamayı güncellemelisin. Önceki cevapların korunuyor.',426);
 }
 
-export function currentReasoningCandidate(q:BaseQuestion,grade:SchoolGrade,modern:boolean):boolean {
+export function currentReasoningCandidate(q:BaseQuestion,grade:SchoolGrade,modern:boolean,curriculumV2=false):boolean {
+  if(needsCurriculumV2Format(q))return modern&&curriculumV2&&q.targetGrade===grade&&topicAllowedForGrade(q.type,grade);
   if(!professionalGradeTypes(grade).includes(q.type))return false;
   if(!modern)return !needsReasoningFormat(q);
   const mode=(q.visualConfig as Record<string,unknown>).displayMode;
@@ -234,17 +238,17 @@ export function selectLearningQuestions(options: {
 }
 
 /** Prefer an unused, independently proved topic before repeating a template in that area. */
-export function generateVariedLearningQuestion(options:{grade:SchoolGrade; category:CognitiveCategory; difficulty:DifficultyLevel; seed:number; typeCounts:ReadonlyMap<QuestionType,number>; reasoningCounts?:ReadonlyMap<string,number>; exposure?:ReadonlyMap<string,number>; acceptCandidate?:(question:BaseQuestion)=>boolean; legacy?:boolean; lab?:boolean; randomIndex?:(max:number)=>number}) {
-  const pool=professionalGradeTypes(options.grade).filter(type=>STUDENT_CATEGORY_TYPES[options.category].includes(type));
+export function generateVariedLearningQuestion(options:{grade:SchoolGrade; category:CognitiveCategory; difficulty:DifficultyLevel; seed:number; typeCounts:ReadonlyMap<QuestionType,number>; reasoningCounts?:ReadonlyMap<string,number>; exposure?:ReadonlyMap<string,number>; acceptCandidate?:(question:BaseQuestion)=>boolean; legacy?:boolean; lab?:boolean; curriculumV2?:boolean; randomIndex?:(max:number)=>number}) {
+  const pool=(options.curriculumV2?ALL_TOPIC_TYPES.filter(type=>topicAllowedForGrade(type,options.grade)):professionalGradeTypes(options.grade)).filter(type=>STUDENT_CATEGORY_TYPES[options.category].includes(type));
   if(!pool.length)throw new LearningError('Bu alan için doğrulanmış soru türü bulunamadı.');
-  const variants=[...pool.map(type=>({type,mechanic:undefined as undefined|typeof LAB_MECHANICS[number]})),...(!options.legacy&&options.lab!==false?LAB_MECHANICS.filter(mechanic=>pool.includes(LAB_TOPICS[mechanic])).map(mechanic=>({type:LAB_TOPICS[mechanic],mechanic})):[])];
+  const variants=[...pool.map(type=>({type,mechanic:undefined as undefined|typeof LAB_MECHANICS[number],curriculum:false})),...(options.curriculumV2?pool.filter(type=>COMPLETE_TYPES.includes(type)).map(type=>({type,mechanic:undefined,curriculum:true})):[]),...(!options.legacy&&options.lab!==false?LAB_MECHANICS.filter(mechanic=>pool.includes(LAB_TOPICS[mechanic])).map(mechanic=>({type:LAB_TOPICS[mechanic],mechanic,curriculum:false})):[])];
   const choices=shuffle(variants,options.randomIndex||randomInt).sort((a,b)=>(options.typeCounts.get(a.type)||0)-(options.typeCounts.get(b.type)||0));
   const minimum=options.typeCounts.get(choices[0].type)||0;
   let best:BaseQuestion|undefined,bestRank:number[]|undefined;
-  for(const [typeIndex,{type,mechanic}] of choices.entries())for(let i=0;i<(mechanic?1:8);i++){
+  for(const [typeIndex,{type,mechanic,curriculum}] of choices.entries())for(let i=0;i<(mechanic?1:8);i++){
     try {
       const seed=(options.seed+i*10007+typeIndex*104729)%2147483647||1;
-      let q=mechanic?generateLabQuestion(mechanic,seed,options.difficulty,options.grade):generateQuestion({profile:'professional',targetGrade:options.grade,category:options.category,type,difficulty:options.difficulty,seed});
+      let q=curriculum?generateCurriculumV2(type,seed,options.difficulty,options.grade):mechanic?generateLabQuestion(mechanic,seed,options.difficulty,options.grade):generateQuestion({profile:'professional',targetGrade:options.grade,category:options.category,type,difficulty:options.difficulty,seed});
       if(options.legacy&&q.authoring?.engine==='verified-8')q={...generateLegacyProfessional(q.type,q.seed,q.difficulty),targetGrade:options.grade,targetGrades:[options.grade],ageGroup:options.grade<=2?'1-2':'3-4'};
       // A fresh seed may still draw a previously used stimulus. Search another
       // seed or mechanic inside this pass instead of returning that dead end.

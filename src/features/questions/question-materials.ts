@@ -1,5 +1,5 @@
 /** Bilsem Junior's physical puzzle pieces: vivid faces, quiet edges, readable marks. */
-export const PUZZLE_COLORS = ['#D93450','#2456D8','#F2BB35','#007F70','#7846CE','#EC7027'] as const;
+export const PUZZLE_COLORS = ['#E3264F','#145BEB','#F5B700','#00866B','#7C3AED','#F06B16'] as const;
 export const PUZZLE_INK = '#152D46';
 type RGB = [number, number, number];
 function rgb(color: string): RGB {
@@ -18,6 +18,6 @@ export function contrastRatio(a: string,b: string) {
   const x=luminance(a),y=luminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);
 }
 export function materialFor(face: string) {
-  return {face, light:mixColor(face,'#FFFFFF',.23),edge:mixColor(face,PUZZLE_INK,.52),
-    shade:mixColor(face,PUZZLE_INK,.18),ink:contrastRatio(face,'#FFFFFF')>=contrastRatio(face,PUZZLE_INK)?'#FFFFFF':PUZZLE_INK};
+  return {face, light:mixColor(face,'#FFFFFF',.16),edge:mixColor(face,PUZZLE_INK,.52),
+    shade:mixColor(face,PUZZLE_INK,.13),ink:contrastRatio(face,'#FFFFFF')>=contrastRatio(face,PUZZLE_INK)?'#FFFFFF':PUZZLE_INK};
 }

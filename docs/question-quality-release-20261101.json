@@ -1,0 +1,42 @@
+{
+  "batch": "owner-20261101-realism-v2",
+  "total": 8000,
+  "grades": {
+    "1": 2000,
+    "2": 2000,
+    "3": 2000,
+    "4": 2000
+  },
+  "topicsPerGrade": 44,
+  "coveredTopicLevelCells": 660,
+  "uniqueStems": 8000,
+  "uniqueVisuals": 8000,
+  "answerAndRenderChecks": "passed",
+  "arithmeticEqualities": 4128,
+  "wrongKeysRejected": 8000,
+  "duplicateOptionsRejected": 8000,
+  "individualHumanReview": false,
+  "sourceFileSha256": "16a2e86ec703aa1ca855551e8b8f192c19bf31354342d6e00c590314b65374d9",
+  "newFeatures": {
+    "photographicObjectQuestions": 364,
+    "inverseMachineQuestions": 86,
+    "independentAttributeSequences": 118,
+    "numberRules": {
+      "alternating-add": 84,
+      "multiply": 9,
+      "growing-difference": 42
+    }
+  },
+  "generation": {
+    "total": 8000,
+    "perGrade": 2000,
+    "topicCount": 44,
+    "existingCompared": 8000,
+    "attempts": 8896,
+    "rejections": {
+      "generation": 0,
+      "quality": 0,
+      "duplicate": 896
+    }
+  }
+}

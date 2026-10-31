@@ -45,6 +45,17 @@ jobs:
         run: npm run test:layout
       - name: Check original question artwork and silhouette uniqueness
         run: npm run test:question-art
+        env:
+          ART_OUTPUT: test-artifacts/question-art
+      - name: Save question artwork and responsive puzzle previews
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          include-hidden-files: false
+          name: question-art-previews
+          path: test-artifacts/question-art/
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Check entry routes, separate student progress and activity timer cleanup
         run: npm run test:audit-browser
 

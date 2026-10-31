@@ -2,18 +2,18 @@ import type { BaseQuestion } from '../../types';
 
 /** One drawing per identity. Text, answer controls and quality checks share this list. */
 export const VISUAL_SYMBOLS = {
-  '●': { label: 'daire', color: '#2456d8', path: 'M32 8a22 22 0 1 0 0 44a22 22 0 1 0 0-44Z' },
-  '▲': { label: 'üçgen', color: '#ec7027', path: 'M32 7 57 51H7Z' },
-  '■': { label: 'kare', color: '#7846ce', path: 'M12 9H52Q55 9 55 12V52Q55 55 52 55H12Q9 55 9 52V12Q9 9 12 9Z' },
-  '◆': { label: 'eşkenar dörtgen', color: '#007f70', path: 'M32 5 59 32 32 59 5 32Z' },
-  '★': { label: 'yıldız', color: '#f2bb35', path: 'M32 5 39 23 59 24 44 37 49 57 32 46 15 57 20 37 5 24 25 23Z' },
-  '⬟': { label: 'beşgen', color: '#d93450', path: 'M32 5 58 24 48 55H16L6 24Z' },
+  '●': { label: 'daire', color: '#145beb', path: 'M32 8a22 22 0 1 0 0 44a22 22 0 1 0 0-44Z' },
+  '▲': { label: 'üçgen', color: '#f06b16', path: 'M32 7 57 51H7Z' },
+  '■': { label: 'kare', color: '#7c3aed', path: 'M12 9H52Q55 9 55 12V52Q55 55 52 55H12Q9 55 9 52V12Q9 9 12 9Z' },
+  '◆': { label: 'eşkenar dörtgen', color: '#00866b', path: 'M32 5 59 32 32 59 5 32Z' },
+  '★': { label: 'yıldız', color: '#f5b700', path: 'M32 5 39 23 59 24 44 37 49 57 32 46 15 57 20 37 5 24 25 23Z' },
+  '⬟': { label: 'beşgen', color: '#e3264f', path: 'M32 5 58 24 48 55H16L6 24Z' },
   '⬢': { label: 'altıgen', color: '#16834a', path: 'M18 8H46L60 32 46 56H18L4 32Z' },
   '✚': { label: 'artı', color: '#176eaa', path: 'M24 7H40V24H57V40H40V57H24V40H7V24H24Z' },
-  '♥': { label: 'kalp', color: '#d93450', path: 'M32 55 9 32C-1 15 20-1 32 16C44-1 65 15 55 32Z' },
-  '☾': { label: 'hilal', color: '#7846ce', path: 'M47 8A25 25 0 1 0 47 56C24 53 16 18 47 8Z' },
+  '♥': { label: 'kalp', color: '#e3264f', path: 'M32 55 9 32C-1 15 20-1 32 16C44-1 65 15 55 32Z' },
+  '☾': { label: 'hilal', color: '#7c3aed', path: 'M47 8A25 25 0 1 0 47 56C24 53 16 18 47 8Z' },
   '❧': { label: 'yaprak', color: '#16834a', path: 'M9 54C1 23 21 8 56 8C56 43 41 62 9 54ZM9 54 43 21' },
-  'ϟ': { label: 'şimşek', color: '#ec7027', path: 'M35 5 12 35H29L24 59 53 25H36L44 5Z' },
+  'ϟ': { label: 'şimşek', color: '#f06b16', path: 'M35 5 12 35H29L24 59 53 25H36L44 5Z' },
 } as const;
 
 export type VisualSymbol = keyof typeof VISUAL_SYMBOLS;
@@ -39,10 +39,10 @@ export type TileMotif = keyof typeof TILE_MOTIFS;
 export type VisualTheme = { motif: TileMotif; color: string; light: string; dark: string; tint: string };
 const MOTIFS = Object.keys(TILE_MOTIFS) as TileMotif[];
 const PALETTES = [
-  { color: '#2456d8', light: '#9dacf1', dark: '#303982', tint: '#eef0ff' },
-  { color: '#007f70', light: '#60cbb1', dark: '#095044', tint: '#eaf7f2' },
-  { color: '#d93450', light: '#eeab79', dark: '#74321c', tint: '#fff2e9' },
-  { color: '#7846ce', light: '#c1a0e7', dark: '#58356f', tint: '#f6efff' },
+  { color: '#145beb', light: '#9dacf1', dark: '#303982', tint: '#eef0ff' },
+  { color: '#00866b', light: '#60cbb1', dark: '#095044', tint: '#eaf7f2' },
+  { color: '#e3264f', light: '#eeab79', dark: '#74321c', tint: '#fff2e9' },
+  { color: '#7c3aed', light: '#c1a0e7', dark: '#58356f', tint: '#f6efff' },
   { color: '#176eaa', light: '#84bce8', dark: '#174973', tint: '#edf6ff' },
 ] as const;
 export const DEFAULT_VISUAL_THEME: VisualTheme = { motif: 'square', ...PALETTES[0] };
