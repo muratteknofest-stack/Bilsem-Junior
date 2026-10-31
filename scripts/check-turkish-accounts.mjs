@@ -265,9 +265,11 @@ try{
    const navigation=page.getByRole('navigation',{name:'Öğrenci paneli bölümleri',exact:true});
    assert.equal(await page.locator('.ww-library').count(),0,'The test library must stay closed until selected from the menu');
    for(const name of ['Kişisel planım','Yeteneklerim','Görevlerim','İlerlemem','Çalışma alanım']){
-    await navigation.getByRole('button',{name,exact:true}).click();
+    const destination=name==='Çalışma alanım'?navigation:page.getByRole('navigation',{name:'Diğer öğrenci alanları',exact:true});
+    if(name!=='Çalışma alanım'&&!await destination.isVisible())await page.locator('.bj-more-navigation>summary').click();
+    await destination.getByRole('button',{name,exact:true}).click();
     await page.getByRole('region',{name,exact:true}).waitFor();
-    assert.equal(await navigation.getByRole('button',{name,exact:true}).getAttribute('aria-pressed'),'true');
+    assert.equal(await destination.getByRole('button',{name,exact:true}).getAttribute('aria-pressed'),'true');
    }
    await page.getByRole('heading',{name:'Bugün nasıl çalışmak istersin?',exact:true}).waitFor();
    // The tactile artwork must resolve in the real bundled app, including on narrow screens.

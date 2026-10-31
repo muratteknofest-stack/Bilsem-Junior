@@ -140,3 +140,6 @@
  .bj-lessons .bj-lesson-voice-line>span{font-size:12px}
  .bj-lessons .bj-lesson-player-controls{padding:12px}
 }
+
+.bj-lesson-show-more{display:flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:12px 18px;margin:24px auto}
+@media(max-width:680px){.bj-lessons .bj-lesson-card h3{min-height:0;margin:8px 0}.bj-lessons .bj-lesson-card p{min-height:0;font-size:12px;line-height:1.5;margin:4px 0 8px}.bj-lessons .bj-lesson-card-badge{font-size:9px;padding:4px 6px}.bj-lessons .bj-lesson-card-top{flex-wrap:nowrap}.bj-lessons .bj-lesson-card-footer{padding:10px 0 0}.bj-lessons .bj-lesson-hero-tags{flex-direction:row;flex-wrap:wrap;gap:6px}}

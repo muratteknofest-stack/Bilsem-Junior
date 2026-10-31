@@ -44,3 +44,12 @@
  .bj-profile-world .bj-profile-key{width:42px;height:42px}
  .bj-parent-overview[data-empty=true] .bj-target-sculpture{display:none}
 }
+
+@media(max-width:680px){
+ .zp-student-pro.bj-student-game .zp-pro-hero-content{grid-template-columns:minmax(0,1fr);gap:10px}
+ .zp-student-pro.bj-student-game .zp-student-profile{grid-column:1;grid-row:1}
+ .zp-student-pro.bj-student-game .zp-profile-progress{grid-column:1;grid-row:2}
+ .zp-student-pro.bj-student-game .zp-student-hero-stats{grid-column:1;grid-row:3;flex-direction:row;align-items:center;gap:10px}
+ .zp-student-pro .bj-player-label{display:none}
+ .zp-student-pro .zp-dashboard-kicker{font-size:9px}
+}
