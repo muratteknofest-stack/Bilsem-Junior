@@ -111,7 +111,7 @@ if(process.env.BILSEM_DB_PROBE_FAIL&&process.argv.includes('--roles-only')){
 if(process.argv.includes('--tuples-only'))console.log(JSON.stringify([{table:'users',column:'id',type:'uuid'},{table:'identities',column:'id',type:'uuid'}]));
 else if(process.argv.includes('--roles-only'))console.log('CREATE ROLE "fixture_custom";');
 else if(process.argv.includes('--schema-only'))console.log('CREATE TABLE public.fixture(id text);');
-else if(process.argv.includes('auth'))console.log('COPY "auth"."users" (id) FROM stdin;\\n\\\\.\\nCOPY "auth"."identities" (id) FROM stdin;\\n\\\\.');
+else if(process.argv.includes('auth'))console.log('COPY "auth"."users" ("id") FROM stdin;\\n\\\\.\\nCOPY "auth"."identities" ("id") FROM stdin;\\n\\\\.');
 else if(process.argv.includes('--data-only'))console.log('COPY "public"."fixture" (id) FROM stdin;\\n\\\\.');
 `,{mode:0o700});
   const archive=join(dir,'fixture.enc');
