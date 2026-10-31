@@ -247,8 +247,8 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
         <div className="zp-puzzle-card">
         <h2 ref={heading} tabIndex={-1} className="zp-prompt text-lg font-bold focus:outline-none">{q.prompt}</h2>{q.secondaryPrompt && <p>{q.secondaryPrompt}</p>}
         {!submitted && <p className="text-sm text-slate-600">Şıkkı seçince cevabın kaydedilir ve sonraki soru açılır. Önceki soruları yukarıdan inceleyebilirsin.{mode === 'exam' ? ' Doğru cevaplar ve çözümler deneme bitince gösterilir.' : ''}</p>}
-        <MemoryStudy key={`${session.id}-${index}`} question={renderQuestion} review={submitted}><QuestionRenderer question={renderQuestion} />
-        <fieldset disabled={busy}><legend className="sr-only">Cevabın</legend><AnswerWorkspace preferredMode="choice" key={`${session.id}-${index}`} question={renderQuestion} response={response} onChange={changeResponse} submitted={submitted} /></fieldset></MemoryStudy>
+        <MemoryStudy key={`${session.id}-${index}`} question={renderQuestion} review={submitted}><div className="bj-solving-workspace"><div className="bj-solving-board"><QuestionRenderer question={renderQuestion} /></div>
+        <fieldset disabled={busy}><legend className="sr-only">Cevabın</legend><AnswerWorkspace preferredMode="choice" key={`${session.id}-${index}`} question={renderQuestion} response={response} onChange={changeResponse} submitted={submitted} /></fieldset></div></MemoryStudy>
         </div>
         {busy && <p role="status" className="text-sm text-indigo-800">Cevabın kaydediliyor…</p>}
         {!submitted && response && response.mode !== 'choice' && <button type="button" onClick={() => void submit()} disabled={busy || remaining === 0 || !isResponseComplete(q as BaseQuestion, response)} className={button}>Cevabımı kaydet ve ilerle</button>}

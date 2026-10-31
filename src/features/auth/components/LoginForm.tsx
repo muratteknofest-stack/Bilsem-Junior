@@ -58,7 +58,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [identifier, setIdentifier] = useState(initialIdentifier);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(!adminOnly);
+  const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [needsConfirmation, setNeedsConfirmation] = useState(false);
@@ -369,7 +369,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               onChange={(e) => setRememberMe(e.target.checked)}
               className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
             />
-            <span>Beni bu cihazda hatırla</span>
+            <span>Beni bu cihazda hatırla<small className="block text-xs text-slate-600 dark:text-slate-300">Paylaşılan cihazlarda işaretlemeyin.</small></span>
           </label>
         </div>
 
@@ -390,7 +390,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                 {compact ? 'Giriş yap' : selectedRole === 'student'
                   ? 'Öğrenci Paneline Giriş Yap'
                   : selectedRole === 'parent'
-                  ? 'Veli Portalı Raporlarına Gir'
+                  ? 'Veli olarak giriş yap'
                   : 'Yönetim Stüdyosuna Giriş'}
               </span>
               <ArrowRight className="w-4 h-4" />

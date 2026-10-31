@@ -136,3 +136,23 @@ test('search handles Turkish spelling, category links, empty results, clear and 
   await nodes['[data-share]'].click();
   assert.match(nodes['#share-status'].textContent, /kopyalandı/);
 });
+
+test('progressive blog list reveals nine more articles and resets correctly after filtering', () => {
+  let focused = -1;
+  const node = (extra: Record<string, unknown> = {}): any => ({ dataset: {}, hidden: false, textContent: '', classList: { toggle() {}, add() {} }, setAttribute() {}, addEventListener(event: string, handler: Function) { this[event] = handler; }, ...extra });
+  const form = node(), input = node({ value: '', closest: () => form, focus() {} });
+  const cards = Array.from({length: 30}, (_, i) => node({ dataset: { category: i < 12 ? 'Dikkat' : 'Mantık', search: `Oyun ${i}` }, querySelector: () => ({focus() { focused = i; }}) }));
+  const filters = ['', 'Dikkat', 'Mantık'].map(category => node({dataset: {filter: category}}));
+  const nodes: Record<string, any> = Object.fromEntries(['#result-count', '#result-context', '#empty-state', '#clear-search', '#blog-load-more'].map(key => [key,node()]));
+  nodes['#blog-search'] = input;
+  const location = { href: origin+'/blog', search: '', pathname:'/blog', origin };
+  vm.runInNewContext(fs.readFileSync('public/blog-assets/blog.js','utf8'), {URL,URLSearchParams,location,history:{replaceState(){}},window:{addEventListener(){}},document:{documentElement:node(),querySelector:(key:string)=>nodes[key],querySelectorAll:(key:string)=>key==='[data-article]'?cards:filters}});
+  const visible = () => cards.filter(card => !card.hidden).length;
+  assert.equal(visible(),9);assert.equal(nodes['#result-count'].textContent,'30');
+  nodes['#blog-load-more'].click();assert.equal(visible(),18);assert.equal(focused,9);
+  nodes['#blog-load-more'].click();nodes['#blog-load-more'].click();assert.equal(visible(),30);assert.equal(nodes['#blog-load-more'].hidden,true);
+  filters[1].click();assert.equal(visible(),9);assert.equal(nodes['#result-count'].textContent,'12');
+  nodes['#blog-load-more'].click();assert.equal(visible(),12);assert.equal(nodes['#blog-load-more'].hidden,true);
+  input.value='Oyun 29';input.input();assert.equal(visible(),0);assert.equal(nodes['#empty-state'].hidden,false);
+  nodes['#clear-search'].click();assert.equal(visible(),9);assert.equal(nodes['#blog-load-more'].hidden,false);
+});

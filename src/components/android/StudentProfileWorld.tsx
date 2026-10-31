@@ -1,3 +1,4 @@
+import '../student/compact-interface.css';
 import { LegalLinks } from '../LegalLinks';
 import { Bell, BookOpen, ChevronRight, Globe2, LogOut, ShieldCheck, Sparkles, UserRound, type LucideIcon } from 'lucide-react';
 import type { UserProfile } from '../../types';
@@ -61,7 +62,7 @@ export function StudentProfileWorld({ user, progress, onNavigate, onUserUpdate, 
           <ProfileActionFace icon={Globe2} title="English" detail="Thinking games" />
         </a>
       </div>
-      <LegalLinks/>
+      <details className="bj-profile-help"><summary>Yardım ve yasal bilgiler</summary><LegalLinks/></details>
       <button type="button" className="bj-profile-action bj-profile-logout" data-tone="rose" aria-label="Çıkış yap" onClick={onLogout}>
         <ProfileActionFace icon={LogOut} title="Çıkış yap" detail="Bir sonraki keşifte görüşürüz" />
       </button>

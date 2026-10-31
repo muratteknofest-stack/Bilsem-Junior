@@ -21,13 +21,14 @@ function readCompleted(owner:string):string[]{try{const value=JSON.parse(localSt
 interface Props {studentId:string;grade:number;onBack:()=>void;onPractice:(id:QuestionType)=>void;onMembership:()=>void;}
 export function LessonLibrary({studentId,grade,onBack,onPractice,onMembership}:Props){
  const reduced=useStudentReducedMotion();
+ const [completionFilter,setCompletionFilter]=useState('all');
  const [selected,setSelected]=useState<LessonCard|null>(null),[search,setSearch]=useState(''),[group,setGroup]=useState('Tümü'),[completed,setCompleted]=useState(()=>readCompleted(studentId)),[fullAccess,setFullAccess]=useState<boolean|null>(null);
  const titleRef=useRef<HTMLHeadingElement>(null);
  useEffect(()=>{setCompleted(readCompleted(studentId));setSelected(null);setFullAccess(null);const controller=new AbortController();
   authenticatedFetch('/api/student/lessons/access',{signal:controller.signal}).then(async r=>{if(r.ok){const value=await r.json();if(typeof value.fullAccess==='boolean'&&!controller.signal.aborted)setFullAccess(value.fullAccess);}}).catch(()=>{});return()=>controller.abort();},[studentId]);
  useEffect(()=>{if(!selected)titleRef.current?.focus({preventScroll:true});},[selected]);
  const complete=(id:string)=>{const next=[...new Set([...completed,id])];setCompleted(next);try{localStorage.setItem(`bilsem-lessons-v1:${studentId}`,JSON.stringify(next));}catch{}};
- const visible=LESSON_CATALOG.filter(item=>(group==='Tümü'||item.group===group)&&`${item.title} ${item.description}`.toLocaleLowerCase('tr-TR').includes(search.trim().toLocaleLowerCase('tr-TR')));
+ const visible=LESSON_CATALOG.filter(item=>(completionFilter==='all'||(completionFilter==='done'?completed.includes(item.id):!completed.includes(item.id)))&&(group==='Tümü'||item.group===group)&&`${item.title} ${item.description}`.toLocaleLowerCase('tr-TR').includes(search.trim().toLocaleLowerCase('tr-TR')));
  if(selected)return <LessonPlayer key={`${studentId}-${selected.id}`} card={selected} onBack={()=>setSelected(null)} onComplete={()=>complete(selected.id)} onPractice={()=>onPractice(selected.id)} onMembership={onMembership}/>;
  return <main className="bj-lessons" data-reduced-motion={reduced}><div className="bj-lessons-width">
   <button type="button" className="bj-lesson-back" onClick={onBack}><ArrowLeft size={18}/>Çalışma alanıma dön</button>
@@ -35,6 +36,7 @@ export function LessonLibrary({studentId,grade,onBack,onPractice,onMembership}:P
   <div className="bj-lesson-library-heading"><div><span className="bj-lesson-eyebrow">KEŞİF KÜTÜPHANEN</span><h2>Bugün ne öğrenelim?</h2></div><span>{completed.length} / {LESSON_CATALOG.length} tamamlandı <small>Bu cihazda</small></span></div>
   <label className="bj-lesson-search"><Search size={19}/><input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Örüntü, küp, hafıza…" aria-label="Konu anlatımı ara"/></label>
   <nav className="bj-lesson-filters" aria-label="Anlatım alanları">{['Tümü',...LESSON_GROUPS].map(label=><button type="button" key={label} aria-pressed={group===label} onClick={()=>setGroup(label)}>{label}</button>)}</nav>
+  <label className="bj-lesson-completion-filter">Çalışma durumu<select aria-label="Konu tamamlama durumu" value={completionFilter} onChange={event=>setCompletionFilter(event.target.value)}><option value="all">Bütün konular</option><option value="todo">Henüz tamamlamadıklarım</option><option value="done">Tamamladıklarım</option></select><span role="status">{visible.length} konu</span></label>
   <section className="bj-lesson-cards" aria-label="Konu anlatımları">{visible.map(card=><button type="button" key={card.id} className="bj-lesson-card" data-tone={card.tone} data-lesson={card.id} onClick={()=>setSelected(card)}><div className="bj-lesson-card-top"><span className="bj-lesson-card-symbol" aria-hidden="true">{card.symbol}</span><span className="bj-lesson-card-badge">{completed.includes(card.id)?<><Check size={12}/>Tamamlandı</>:card.preview?'Ücretsiz keşif':fullAccess===false?<><LockKeyhole size={12}/>Tam üyelik</>:'4 adımda keşfet'}</span></div><h3>{card.title}</h3><p>{card.description}</p><span className="bj-lesson-card-footer">Anlatımı keşfet<ChevronRight size={17}/></span></button>)}</section>
   {!visible.length&&<p role="status" className="bj-lesson-empty">Bu aramada konu bulunamadı. Başka bir sözcük deneyebilirsin.</p>}
  </div></main>;

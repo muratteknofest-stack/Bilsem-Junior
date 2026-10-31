@@ -98,7 +98,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
             <div className="zp-auth-intro">
               <p className="zp-auth-kicker">BİLSEM JUNIOR / HAZIRLIK HESABI</p>
-              <h1 id="zp-auth-heading">{isAndroidApp ? (activeTab === 'login' ? 'Tekrar hoş geldin!' : 'Birlikte başlayalım') : activeTab === 'login' ? 'Hazırlığına kaldığın yerden devam et.' : 'Bilsem Junior yolculuğun başlasın.'}</h1>
+              <h1 id="zp-auth-heading">{isAndroidApp ? (activeTab === 'login' ? 'Tekrar hoş geldin!' : 'Birlikte başlayalım') : activeTab === 'login' ? 'Tekrar hoş geldin!' : 'Birlikte başlayalım'}</h1>
               <p>{activeTab === 'login' ? 'Hesabına gir, yeni sorular ve küçük zaferler seni bekliyor.' : 'Veli bilgilerini gir, öğrenci hesabını ekle ve e-postanı doğrula.'}</p>
             </div>
 

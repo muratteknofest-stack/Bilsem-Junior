@@ -8,12 +8,14 @@ if (input && filters.length) {
   let category = params.get('category') || '';
   if (!filters.some(button => button.dataset.filter === category)) category = '';
   input.value = params.get('q') || '';
+  let limit = 9;
+  const more = document.querySelector('#blog-load-more');
   const apply = (updateUrl = true) => {
     const query = normalize(input.value.trim());
     let count = 0;
     for (const card of cards) {
       const matches = (!category || card.dataset.category === category) && (!query || normalize(card.dataset.search || '').includes(query));
-      card.hidden = !matches;
+      card.hidden = !matches || count >= limit;
       if (matches) count++;
     }
     for (const filter of filters) {
@@ -21,6 +23,7 @@ if (input && filters.length) {
       filter.classList.toggle('active', active);
       filter.setAttribute('aria-pressed', String(active));
     }
+    if (more) { more.hidden = count <= limit; more.textContent = `Daha fazla göster (${Math.min(limit, count)} / ${count})`; }
     document.querySelector('#result-count').textContent = String(count);
     document.querySelector('#result-context').textContent = `${category || 'Tüm keşif alanları'}${input.value.trim() ? ` · “${input.value.trim()}”` : ''}`;
     document.querySelector('#empty-state').hidden = count !== 0;
@@ -32,16 +35,17 @@ if (input && filters.length) {
       history.replaceState(null, '', url);
     }
   };
-  input.addEventListener('input', () => apply());
-  input.closest('form').addEventListener('submit', event => { event.preventDefault(); apply(); });
-  filters.forEach(filter => filter.addEventListener('click', () => { category = filter.dataset.filter || ''; apply(); }));
-  document.querySelector('#clear-search').addEventListener('click', () => { category = ''; input.value = ''; apply(); input.focus(); });
+  if (more) more.addEventListener('click', () => { const previousLimit = limit; limit += 9; apply(false); const visible = cards.filter(card => !card.hidden); visible[previousLimit]?.querySelector('h3 a')?.focus(); });
+  input.addEventListener('input', () => { limit = 9; apply(); });
+  input.closest('form').addEventListener('submit', event => { event.preventDefault(); limit = 9; apply(); });
+  filters.forEach(filter => filter.addEventListener('click', () => { category = filter.dataset.filter || ''; limit = 9; apply(); }));
+  document.querySelector('#clear-search').addEventListener('click', () => { category = ''; input.value = ''; limit = 9; apply(); input.focus(); });
   window.addEventListener('popstate', () => {
     const params = new URLSearchParams(location.search);
     input.value = params.get('q') || '';
     category = params.get('category') || '';
     if (!filters.some(f => f.dataset.filter === category)) category = '';
-    apply(false);
+    limit = 9; apply(false);
   });
   apply(false);
 }

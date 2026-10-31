@@ -21,12 +21,12 @@ export function ParentProgressOverview({ student, weeklyData, masteries }: Paren
     { label: 'Çalışılan beceri', value: practiced.length, unit: 'alan', icon: Target, tone: 'violet' },
     { label: 'Mevcut seri', value: student.streak || 0, unit: 'gün', icon: Flame, tone: 'amber' },
   ];
-  return <section className="bj-parent-overview" aria-labelledby="bj-parent-overview-title">
+  return <section className="bj-parent-overview" data-empty={total === 0} aria-labelledby="bj-parent-overview-title">
     <div className="bj-overview-heading"><div><p>ÖĞRENME ANALİTİĞİ</p><h2 id="bj-parent-overview-title">Gelişime bütüncül bir bakış.</h2></div><span><CheckCircle2 size={15} aria-hidden="true" /> Öğrenci çalışma kayıtları</span></div>
     <div className="bj-executive-grid">
       <article className="bj-parent-brief"><span className="bj-brief-label"><TrendingUp size={17} aria-hidden="true" /> HAFTANIN GÖRÜNÜMÜ</span>
         <h3>{total > 0 ? 'Her çalışma, yeni bir adım.' : 'İlk keşif için hazır.'}</h3>
-        <p>{total > 0 ? `${student.name || 'Öğrenciniz'} bu hafta ${activeDays} günde ${total} soru çözdü. Günlük dağılımı ve beceri gelişimini aşağıda inceleyebilirsiniz.` : 'Öğrenciniz çalışmaya başladığında gelişim göstergeleri ve grafikler burada oluşacak.'}</p>
+        <p>{total > 0 ? `${student.name || 'Öğrenciniz'} bu hafta ${activeDays} günde ${total} soru çözdü. Günlük dağılımı ve beceri gelişimini aşağıda inceleyebilirsiniz.` : 'Öğrenci Paneline Geç düğmesiyle bir çalışma başlatabilirsiniz. İlk çalışma tamamlandığında grafikler burada oluşacak; bu haftaki sıfır değerler bir değerlendirme sonucu değildir.'}</p>
         <span className="bj-brief-footnote">BİLSEM hazırlık pratiği · Resmî sınav puanı değildir</span>
         <div className="bj-target-sculpture" role="img" aria-label={`Bugünkü soru hedefi yüzde ${questionGoal.progress}: ${questionGoal.current} / ${questionGoal.target} soru`}>
           <div className="bj-target-orbit" aria-hidden="true"><span /><span /><span /></div>

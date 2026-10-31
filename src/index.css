@@ -247,3 +247,18 @@ svg {
 .animate-pulse-glow {
   animation: pulseGlow 3.5s ease-in-out infinite;
 }
+
+/* Compact family entry and learning setup, without clipping enlarged text. */
+@media(max-width:680px){
+ .zp-auth .zp-auth-intro{margin-block:16px}
+ .zp-auth .zp-auth-intro h1{font-size:28px;line-height:1.2}
+ .zp-auth .zp-auth-intro>p{font-size:14px;line-height:1.6;margin-top:8px}
+ .zp-auth .zp-auth-kicker{display:none}
+ .zp-auth .zp-auth-mode{margin-block:16px}
+ .zp-auth .bj-registration>div:first-child{padding:12px;font-size:13px;line-height:1.6}
+ .zp-launchpad{padding:14px}.zp-launchpad .zp-launch-intro{padding-block:0;margin-bottom:14px;gap:12px}
+ .zp-launchpad .zp-launch-group{padding:8px}
+ .zp-launchpad .zp-launch-options{gap:12px}
+ .zp-launchpad .zp-launch-footer{padding:0;margin-top:14px}
+ .zp-launchpad .zp-launch-bottom{flex-wrap:wrap;gap:8px}
+}

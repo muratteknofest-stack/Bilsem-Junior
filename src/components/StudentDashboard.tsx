@@ -10,7 +10,7 @@ import { sound } from '../lib/sound';
 import { dataService } from '../services/data-service';
 import { isAvailableCategory } from '../features/student/available-categories';
 import { useStudentReducedMotion } from '../features/student/experience-preferences';
-import { levelProgress } from '../features/student/study-hub-model';
+import { resumableExam, levelProgress } from '../features/student/study-hub-model';
 import { dailyMissions } from '../features/student/gamification-model';
 import { getStudyFavorites, saveStudyFavorites } from '../services/student-preferences-service';
 import { StudentGameArt, StudentGameBanner } from './student/StudentGameArt';
@@ -35,6 +35,7 @@ import './dashboard-design-system.css';
 import './student/student-professional.css';
 import './student/student-adventure.css';
 import './student/student-quest-world.css';
+import './student/compact-interface.css';
 import { StudentMotionToggle, useStudentMotionSurface } from './student/StudentMotion';
 export type StudentSection = typeof SECTIONS[number]['id'];
 interface StudentDashboardProps {
@@ -143,6 +144,7 @@ export function StudentDashboard({ storyProgress, storySaveError, onStartStory, 
   const weekly = useMemo(() => dataService.getWeeklyQuestionProgressData(activeUser).summary, [activeUser]);
   const xpProgress = levelProgress(activeUser.xp);
   const dailyGoal = dailyMissions(activeUser)[0];
+  const savedExam = resumableExam(dataService.getActiveExam());
   const hour = new Date().getHours();
   const greeting = hour >= 5 && hour < 12 ? { text: 'Günaydın', emoji: '☀️' }
     : hour < 18 ? { text: 'Merhaba', emoji: '✦' } : { text: 'İyi akşamlar', emoji: '🌙' };
@@ -154,10 +156,10 @@ export function StudentDashboard({ storyProgress, storySaveError, onStartStory, 
         <div className="zp-student-topline"><span><span className="zp-brand-dot" /> Bilsem Junior <span className="zp-topline-divider">/</span> Çalışma masam</span><StudentExperienceControls /></div>
         {activeTab!=='adventure'&&<StudentMotionToggle />}
         {activeTab !== 'tests' && activeTab !== 'adventure' && <StudentHeroBanner user={activeUser} greeting={greeting} xpProgress={xpProgress} onUserUpdate={onUserUpdate} onNavigate={onNavigate} prefersReducedMotion={reduced} />}
-        <nav className="zp-study-navigation" aria-label="Öğrenci paneli bölümleri">{SECTIONS.filter(section=>section.id!=='adventure'||!!onStartStory).map(({ id, label, art }) =>
-          <button type="button" key={id} aria-pressed={activeTab === id} aria-controls="zp-student-section" onClick={() => switchSection(id)}>
-            <span className="bj-inventory-art" aria-hidden="true"><StudentGameArt kind={art}/></span><span>{label}</span>{activeTab === id && <span className="zp-nav-indicator" aria-hidden="true" />}
-          </button>)}</nav>
+        {activeTab === 'modes' && <section className="bj-next-action" aria-label="Sıradaki çalışmam"><div><span>BUGÜNKÜ İLK ADIMIN</span><h2>{savedExam ? 'Denemene devam et' : 'Kısa bir keşifle başla'}</h2><p>{savedExam ? `${savedExam.total} sorudan ${savedExam.answered} tanesi yanıtlandı.` : `${activeUser.grade || 1}. sınıf · Konuyu, zorluğu ve soru sayısını sen seç.`}</p></div><button type="button" onClick={savedExam ? onStartExam : onStartAdaptive}>{savedExam ? 'Devam et' : 'Çalışmaya başla'}<ArrowUpRight size={20}/></button></section>}
+        <nav className="zp-study-navigation bj-primary-navigation" aria-label="Öğrenci paneli bölümleri">{SECTIONS.filter(section=>['adventure','modes','tests'].includes(section.id)&&(section.id!=='adventure'||!!onStartStory)).map(({ id, label, art }) =>
+          <button type="button" key={id} aria-pressed={activeTab === id} aria-controls="zp-student-section" onClick={() => switchSection(id)}><span className="bj-inventory-art" aria-hidden="true"><StudentGameArt kind={art}/></span><span>{label}</span>{activeTab === id && <span className="zp-nav-indicator" aria-hidden="true" />}</button>)}</nav>
+        <details className="bj-more-navigation" open={['plan','skills','challenges','progress'].includes(activeTab) ? true : undefined}><summary>Planım, görevlerim ve gelişimim</summary><nav aria-label="Diğer öğrenci alanları">{SECTIONS.filter(section=>!['adventure','modes','tests'].includes(section.id)).map(({id,label})=><button type="button" key={id} aria-pressed={activeTab===id} aria-controls="zp-student-section" onClick={()=>switchSection(id)}>{label}</button>)}</nav></details>
         <div className="zp-student-workspace" data-study-section={activeTab}>
           <section id="zp-student-section" className="zp-student-section" aria-label={SECTIONS.find(section => section.id === activeTab)!.label}>
             <AnimatePresence mode="wait" initial={false}>

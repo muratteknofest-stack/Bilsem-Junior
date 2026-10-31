@@ -19,6 +19,8 @@ try {
   browser = await chromium.launch({ headless: true, ...(browserExecutable ? { executablePath: browserExecutable, args: ['--no-sandbox', '--disable-dev-shm-usage'] } : {}) });
   const context = await browser.newContext({ reducedMotion: 'reduce' });
   await context.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+  let registrationStatus = false;
+  await context.route('**/api/public/platform',route=>route.fulfill({json:{registrationOpen:registrationStatus,policyVersion:'2026-10-28.1'}}));
   page = await context.newPage();
   page.on('pageerror', error => errors.push(error.message));
   let checks = 0;
@@ -43,16 +45,25 @@ try {
       await page.getByRole('dialog').getByRole('link', { name: /BİLSEM hazırlık rehberi/ }).waitFor();
       await page.getByRole('button', { name: 'Menüyü kapat', exact: true }).click();
     }
-    await page.getByRole('button', { name: 'Kayıt ol', exact: true }).click();
-    await page.getByRole('heading', { name: 'Bilsem Junior yolculuğun başlasın.', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Kayıt bilgisi', exact: true }).click();
+    await page.getByRole('heading', { name: 'Birlikte başlayalım', exact: true }).waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'Register overflow at ' + width);
     await page.screenshot({ path: output + '/register-' + width + '.png', animations: 'disabled' });
     await page.goto(origin + '/tests/browser/bilsem-branding.html?view=login');
-    await page.getByRole('heading', { name: 'Hazırlığına kaldığın yerden devam et.', exact: true }).waitFor();
+    await page.getByRole('heading', { name: 'Tekrar hoş geldin!', exact: true }).waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'Login overflow at ' + width);
     await page.screenshot({ path: output + '/login-' + width + '.png', animations: 'disabled' });
     checks += 3;
   }
+  registrationStatus = true;
+  await page.goto(origin + '/tests/browser/bilsem-branding.html');
+  await page.getByRole('button',{name:'Kayıt ol',exact:true}).waitFor();
+  assert.match(await page.locator('.bj-registration-notice').first().innerText(),/Kaydı veli tamamlar/);
+  await context.unroute('**/api/public/platform');
+  await context.route('**/api/public/platform',route=>route.fulfill({status:503,json:{error:'Fixture unavailable'}}));
+  await page.reload();
+  await page.getByRole('button',{name:'Kayıt durumu',exact:true}).waitFor();
+  await page.getByText('Kayıt durumu şu anda doğrulanamadı.',{exact:false}).first().waitFor();
   assert.deepEqual(errors, []);
   console.log('Bilsem Junior: ' + checks + ' homepage/register/login viewport checks; logo, preparation guide and mobile navigation passed.');
 } catch (error) {
