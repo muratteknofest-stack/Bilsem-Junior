@@ -10,6 +10,7 @@ import {backupManifest,verifyBackupManifest} from './backup-manifest.mjs';
 import {backupConfiguration} from './backup-config.mjs';
 import {postgresChildEnvironment} from './postgres-child-environment.mjs';
 import {temporaryBackupAccess,backupConnectionEnvironment} from './backup-access.mjs';
+import {buildAuthRestoreCompatibility} from './auth-restore-compat.mjs';
 
 // Reviewed Supabase migration filters, vendored with license and hashes. Run
 // PostgreSQL 17 directly so libpq receives the verified Supabase CA bundle.
@@ -46,10 +47,25 @@ async function dump(script,file,env){
   throw Error(`Veritabanı dökümü doğrulanamadı (${path.basename(file)} ${category}); bağlantı ve kimlik bilgileri günlükte gösterilmedi.`);
  }
 }
+// The local Supabase Auth image can have fewer managed columns than the live
+// provider. Export source types, never rows, using a read-only catalog query.
+async function sourceAuthColumns(env){
+ const sql="SELECT COALESCE(json_agg(json_build_object('table',c.relname,'column',a.attname,'type',pg_catalog.format_type(a.atttypid,a.atttypmod)) ORDER BY c.relname,a.attnum),'[]'::json)::text FROM pg_catalog.pg_attribute a JOIN pg_catalog.pg_class c ON c.oid=a.attrelid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='auth' AND c.relkind IN ('r','p') AND a.attnum>0 AND NOT a.attisdropped";
+ return await new Promise((resolve,reject)=>{
+  const child=spawn('psql',['--no-psqlrc','--set','ON_ERROR_STOP=on','--tuples-only','--no-align','--command',sql],{env:postgresChildEnvironment(env),stdio:['ignore','pipe','ignore'],timeout:30_000});
+  let output='';
+  child.stdout.on('data',chunk=>{if(output.length<500_000)output+=chunk.toString();});
+  child.once('error',()=>reject(Error('Auth kaynak şeması sorgusu başlatılamadı.')));
+  child.once('close',code=>{
+   if(code!==0||output.length>500_000){reject(Error('Auth kaynak şeması doğrulanamadı.'));return;}
+   try{resolve(JSON.parse(output.trim()));}catch{reject(Error('Auth kaynak şeması biçimi doğrulanamadı.'));}
+  });
+ });
+}
 process.umask(0o077);
 const config=backupConfiguration();
 const access=config.accessToken?temporaryBackupAccess(config.accessToken):async()=>config.dbUrl;
-await verifyTool('pg_dump');await verifyTool('pg_dumpall');
+await verifyTool('pg_dump');await verifyTool('pg_dumpall');await verifyTool('psql');
 const dir=await mkdtemp(path.join(tmpdir(),'bilsem-backup-'));
 try{
  const files={};
@@ -64,6 +80,9 @@ try{
   files[name]=await readFile(file,'utf8');
   if(!files[name].trim())throw Error('Boş yedek kabul edilmedi.');
  }
+ // Every copied Auth column is re-created with its original PostgreSQL type
+ // only when absent in a fresh isolated restore target; metadata stays encrypted.
+ files['auth-data.sql']=buildAuthRestoreCompatibility(files['auth-data.sql'],await sourceAuthColumns(backupConnectionEnvironment(await access())));
  for(const table of ['users','identities'])if(!new RegExp(`COPY\\s+(?:"auth"|auth)\\.(?:"${table}"|${table})\\s*\\(`,'i').test(files['auth-data.sql']))throw Error('Auth kullanıcı ve kimlik tablolarının yedeği doğrulanamadı.');
  const manifest=backupManifest(files);verifyBackupManifest(manifest);
  const archive=Buffer.from(JSON.stringify(manifest)),encrypted=encryptBackup(archive,config.key);
