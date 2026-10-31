@@ -90,7 +90,7 @@ function databaseToolProbe(kind:'backup'|'restore',failProbe=false){
  const dir=mkdtempSync(join(tmpdir(),'bilsem-db-environment-'));
  try{
   const log=join(dir,'child-environment.jsonl'),key=randomBytes(32);
-  const tools=kind==='backup'?['pg_dump','pg_dumpall']:['psql'];
+  const tools=kind==='backup'?['pg_dump','pg_dumpall','psql']:['psql'];
   for(const tool of tools)writeFileSync(join(dir,tool),`#!/usr/bin/env node
 const fs=require('node:fs');
 if(process.argv.includes('--version')){console.log('PostgreSQL 17.6');process.exit(0);}
@@ -108,7 +108,8 @@ if(process.env.BILSEM_DB_PROBE_FAIL&&process.argv.includes('--single-transaction
 if(process.env.BILSEM_DB_PROBE_FAIL&&process.argv.includes('--roles-only')){
  console.error('pg_dumpall: private-host private-password SSL error: certificate verify failed\\nDETAIL: private-record-do-not-log');process.exit(1);
 }
-if(process.argv.includes('--roles-only'))console.log('CREATE ROLE "fixture_custom";');
+if(process.argv.includes('--tuples-only'))console.log(JSON.stringify([{table:'users',column:'id',type:'uuid'},{table:'identities',column:'id',type:'uuid'}]));
+else if(process.argv.includes('--roles-only'))console.log('CREATE ROLE "fixture_custom";');
 else if(process.argv.includes('--schema-only'))console.log('CREATE TABLE public.fixture(id text);');
 else if(process.argv.includes('auth'))console.log('COPY "auth"."users" (id) FROM stdin;\\n\\\\.\\nCOPY "auth"."identities" (id) FROM stdin;\\n\\\\.');
 else if(process.argv.includes('--data-only'))console.log('COPY "public"."fixture" (id) FROM stdin;\\n\\\\.');
@@ -135,7 +136,7 @@ else if(process.argv.includes('--data-only'))console.log('COPY "public"."fixture
    assert.doesNotMatch(result.stderr,/private-record-do-not-log|private-path|local-only|private-host|private-password/);
   }
   const records=readFileSync(log,'utf8').trim().split('\n').map(line=>JSON.parse(line));
-  assert.equal(records.length,kind==='backup'?(failProbe?1:4):2);
+  assert.equal(records.length,kind==='backup'?(failProbe?1:5):2);
   for(const record of records){
    assert.deepEqual(record.pg,kind==='backup'?{PGHOST:'db.vtcsoqohkiagbwatlabk.supabase.co',PGPORT:'5432',PGUSER:'postgres',PGPASSWORD:'fixture',PGDATABASE:'postgres',PGSSLMODE:'verify-full',PGSSLROOTCERT:BACKUP_CA_PATH,PGCONNECT_TIMEOUT:'15',PGOPTIONS:'-c default_transaction_read_only=on'}:{PGHOST:'127.0.0.1',PGPORT:'54322',PGUSER:'fixture',PGPASSWORD:'local-only',PGDATABASE:'postgres',PGSSLMODE:'disable'});
    assert.equal(record.hasBackupKey,false,'Encryption key must stay in the parent process');
@@ -147,6 +148,8 @@ else if(process.argv.includes('--data-only'))console.log('COPY "public"."fixture
    const restored=JSON.parse(decryptBackup(readFileSync(join(dir,'zekapark-database.enc')),key).toString());verifyBackupManifest(restored);
    assert.match(restored.files['auth-data.sql'],/COPY "auth"\."users"/);
    assert.ok(records[2].args.some((value:string)=>value.includes('auth')&&value.includes('storage')),'General data dump excludes managed schemas');
+   assert.ok(records[4].args.includes('--tuples-only'));
+   assert.match(restored.files['auth-data.sql'],/ADD COLUMN IF NOT EXISTS/);
    assert.ok(records[3].args.includes('--exclude-table="auth"."sessions"'));
   }
  }finally{rmSync(dir,{recursive:true,force:true});}
