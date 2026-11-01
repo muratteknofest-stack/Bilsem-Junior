@@ -80,6 +80,15 @@ jobs:
           --doctor backup-doctor.json
           --verification backup-restore-verification.json
           --output backup-status.json
+      # Commercial obligations may still be pending after a valid restore.
+      # Record the closure result without masking any failing backup step.
+      - name: Evaluate release closure with this run restore receipt
+        if: always()
+        continue-on-error: true
+        run: >-
+          node scripts/release-closure.mjs
+          --backup-receipt backup-restore-verification.json
+          --output backup-release-closure.json
       - name: Retain encrypted archive
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -91,8 +100,9 @@ jobs:
             backup-restore-verification.json
             backup-doctor.json
             backup-status.json
+            backup-release-closure.json
           if-no-files-found: ignore
           retention-days: 30
       - name: Remove working archive
         if: always()
-        run: rm -f zekapark-database.enc backup-restore-verification.json backup-doctor.json backup-status.json
+        run: rm -f zekapark-database.enc backup-restore-verification.json backup-doctor.json backup-status.json backup-release-closure.json

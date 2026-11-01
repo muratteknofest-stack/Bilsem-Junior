@@ -19,7 +19,10 @@ yetkili bir operasyon olarak yürütülmeli. İçerik bildirimleri ve yedeklerde
 ## Yedek ve geri yükleme
 `npm run backup:doctor` yedek hattını aşamalara ayırır ve sır göstermeden yalnız engelleyen aşamayı
 bildirir; iş akışı bu tanıyı dökümden önce çalıştırır ve her çalışmada sanitize `backup-status.json`
-üretir. Tanı `TOKEN_PERMISSION` derse yönetim anahtarının `database` yazma kapsamı yoktur; döküm
+üretir. Aynı koşunun `backup-restore-verification.json` makbuzu yayın kapanış kapısına da
+verilir; `backup-release-closure.json` artefaktı ve iş özeti yalnız kanıtı geçen kayıtları kapatır.
+Diğer ticari eksikler yedek geri yükleme başarısını değiştirmez ve hazır sayılmaz.
+Tanı `TOKEN_PERMISSION` derse yönetim anahtarının `database` yazma kapsamı yoktur; döküm
 başlatılmadan anahtar veya `SUPABASE_DB_URL` yolu düzeltilir.
 Sağlayıcı planında yedek sıklığı/saklama süresi doğrulanır. Ayrı test projesine geri yükleme tatbikatı yapılır.
 Auth/profil bağları, soru sürümleri, ilerleme ve talepler için satır sayısı ve örnek kayıtlar karşılaştırılır.
