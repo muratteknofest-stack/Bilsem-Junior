@@ -8,12 +8,19 @@ function healthy(sales=false,registration=false):typeof fetch {return async inpu
  return new Response(body,{status:['/api/account/export','/api/admin/platform-settings'].includes(path)?401:200,headers:{'x-content-type-options':'nosniff','cache-control':'no-store'}});
 };}
 test('monitor checks public/legal/sales and private boundaries without exposing response bodies',async()=>{
- const good=await monitorSite(healthy(),{expectedPaidSales:false,expectedRegistrationOpen:false});assert.equal(good.ok,true);assert.equal(good.checks.length,14);
+ const good=await monitorSite(healthy(),{expectedPaidSales:false,expectedRegistrationOpen:false});assert.equal(good.ok,true);assert.equal(good.checks.length,15);
  const broken:typeof fetch=async(input,init)=>new URL(String(input)).pathname==='/api/health'?new Response('{"status":"unavailable","customer":"must-not-log"}',{status:503}):healthy()(input,init);
- const bad=await monitorSite(broken);assert.equal(bad.ok,false);assert.equal(bad.checks.length,14);assert.match(monitorSummary(bad),/FAILURE/);assert.ok(!JSON.stringify(bad).includes('must-not-log'));
+ const bad=await monitorSite(broken);assert.equal(bad.ok,false);assert.equal(bad.checks.length,15);assert.match(monitorSummary(bad),/FAILURE/);assert.ok(!JSON.stringify(bad).includes('must-not-log'));
  const missingLesson:typeof fetch=async(input,init)=>new URL(String(input)).pathname==='/konu-anlatimlari'?new Response('Not found',{status:404}):healthy()(input,init);
  assert.equal((await monitorSite(missingLesson)).ok,false);
 });
+test('a broken password-recovery entry point fails the monitor even when the rest of the site is up',async()=>{
+ const missingReset:typeof fetch=async(input,init)=>new URL(String(input)).pathname==='/reset-password'?new Response('Not found',{status:404}):healthy()(input,init);
+ const report=await monitorSite(missingReset);
+ assert.equal(report.ok,false);
+ assert.equal(report.checks.find(row=>row.path==='/reset-password')?.ok,false);
+});
+
 test('monitor detects unexpected sales reopening and anonymous account exposure',async()=>{
  assert.equal((await monitorSite(healthy(true),{expectedPaidSales:false})).ok,false);
  assert.equal((await monitorSite(healthy(false,true),{expectedRegistrationOpen:false})).ok,false);

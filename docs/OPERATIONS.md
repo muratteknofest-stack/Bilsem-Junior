@@ -17,6 +17,10 @@ yetkili bir operasyon olarak yürütülmeli. İçerik bildirimleri ve yedeklerde
 İşlem gerçekten tamamlanmadan talebi tamamlandı olarak bildirme. Otomatik silme uygulanmış değildir.
 
 ## Yedek ve geri yükleme
+`npm run backup:doctor` yedek hattını aşamalara ayırır ve sır göstermeden yalnız engelleyen aşamayı
+bildirir; iş akışı bu tanıyı dökümden önce çalıştırır ve her çalışmada sanitize `backup-status.json`
+üretir. Tanı `TOKEN_PERMISSION` derse yönetim anahtarının `database` yazma kapsamı yoktur; döküm
+başlatılmadan anahtar veya `SUPABASE_DB_URL` yolu düzeltilir.
 Sağlayıcı planında yedek sıklığı/saklama süresi doğrulanır. Ayrı test projesine geri yükleme tatbikatı yapılır.
 Auth/profil bağları, soru sürümleri, ilerleme ve talepler için satır sayısı ve örnek kayıtlar karşılaştırılır.
 Tatbikat zamanı, son kurtarılabilen veri zamanı ve geri yükleme süresi kayıt altına alınır.
@@ -28,6 +32,9 @@ Sağlık kontrolü, kayıt hataları, SMTP teslim/ret ve maliyet eşiği için a
 Alarm servisi henüz bağlı değildir. Platform derleme başarısı canlı akış doğrulaması sayılmaz.
 
 ## Ticari yayın kapısı
+`npm run release:closure` yedekleme, işletim, gerçek kullanım ve içerik kayıtlarını tek kapıda
+doğrular; makine kanıtı olmayan "test edildi" beyanını reddeder. Ayrıntı:
+[release closure](release-closure-20261101.md).
 npm run release:commercial bilinçli olarak başarısız olur: gerçek tahsilat ve sunucu kullanım hakları henüz yoktur.
 Önizleme ücretsiz pilot olarak kalır. Ticari işletmeci, veri işleme sebepleri, yurt dışı aktarım/saklama düzeni,
 iptal/iade ve faturalama mali müşavir/hukuk uzmanıyla tamamlanır. Bu alanlarda örnek bilgiler gerçekmiş gibi doldurulmaz.

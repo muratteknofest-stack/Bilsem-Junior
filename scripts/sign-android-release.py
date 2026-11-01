@@ -5,6 +5,7 @@ PRIVATE_KEY_DIR contains zekapark-upload.p12 and upload-key.json
 (alias/password/certificateSha256; PKCS12). Pin the existing Play upload certificate.
 """
 from pathlib import Path
+import datetime
 import hashlib
 import json
 import os
@@ -92,7 +93,9 @@ def sign_release(candidate, private_dir, output):
     apk_verified = run(apk_signer + ['verify', '--verbose', '--print-certs', str(apk)])
     if f'Signer #1 certificate SHA-256 digest: {expected}' not in apk_verified:
         raise RuntimeError('Unexpected APK signer')
-    result = {**checks, 'uploadCertificateSha256': expected,
+    result = {'format': 'bilsem-android-signing-v1',
+              'signedAt': datetime.datetime.now(datetime.timezone.utc).isoformat().replace('+00:00', 'Z'),
+              **checks, 'uploadCertificateSha256': expected,
               'aabSignatureVerified': True, 'apkSignatureVerified': True,
               'nativeDependencyPairs': dependency_audit['count'],
               'files': {path.name: {'bytes': path.stat().st_size, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()} for path in (aab, apk)}}
