@@ -1,6 +1,7 @@
 import {readFileSync} from 'node:fs';
 import {spawn} from 'node:child_process';
 import {connect as tlsConnect} from 'node:tls';
+import {connect as netConnect} from 'node:net';
 import {writeFile,appendFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 import {BACKUP_PROJECT_REF,backupConfiguration} from './backup-config.mjs';
@@ -39,21 +40,47 @@ export function classifyProbeError(error){
 }
 
 /**
- * Smallest safe probe: TCP + pinned-CA TLS handshake, no credentials.
+ * PostgreSQL SSLRequest, then pinned-CA TLS: no startup, login or SQL data.
+ * Direct TLS is not equivalent to libpq's default PostgreSQL negotiation.
  * @param {any} [options]
  * @returns {Promise<{ok:boolean,code:string}>}
  */
 export function probeTls(options={}){
- const {host,port=5432,ca,timeoutMs=10_000,connect=tlsConnect}=options;
+ const {host,port=5432,ca,timeoutMs=10_000,connect=tlsConnect,tcpConnect=netConnect}=options;
  return new Promise(resolve=>{
-  let settled=false,socket,timer;
-  const done=result=>{if(settled)return;settled=true;clearTimeout(timer);socket?.destroy();resolve(result);};
-  try{socket=connect({host,port,servername:host,ca,rejectUnauthorized:true,timeout:timeoutMs});}
-  catch(error){resolve({ok:false,code:classifyProbeError(error)});return;}
-  timer=setTimeout(()=>done({ok:false,code:'TIMEOUT'}),timeoutMs+1_000);
-  socket.once('secureConnect',()=>done({ok:true,code:'OK'}));
-  socket.once('timeout',()=>done({ok:false,code:'TIMEOUT'}));
-  socket.once('error',error=>done({ok:false,code:classifyProbeError(error)}));
+  let settled=false,socket,secured,timer;
+  const done=result=>{
+   if(settled)return;settled=true;clearTimeout(timer);
+   secured?.destroy();socket?.destroy();resolve(result);
+  };
+  const failed=error=>done({ok:false,code:classifyProbeError(error)});
+  timer=setTimeout(()=>done({ok:false,code:'TIMEOUT'}),timeoutMs);
+  try{
+   socket=tcpConnect({host,port});
+   socket.once('error',failed);
+   socket.once('close',()=>done({ok:false,code:'CONNECTION'}));
+   socket.once('end',()=>done({ok:false,code:'CONNECTION'}));
+   socket.once('connect',()=>{
+    if(settled)return;
+    socket.once('data',response=>{
+     // The server must return exactly one byte. Never accept stuffed data or
+     // fall back to plaintext when encryption is refused.
+     if(!Buffer.isBuffer(response)||response.length!==1){done({ok:false,code:'TLS_PROTOCOL'});return;}
+     if(response[0]===0x4e){done({ok:false,code:'TLS_UNSUPPORTED'});return;}
+     if(response[0]!==0x53){done({ok:false,code:'TLS_PROTOCOL'});return;}
+     socket.pause();
+     try{
+      secured=connect({socket,servername:host,ca,rejectUnauthorized:true});
+      secured.once('secureConnect',()=>done({ok:true,code:'OK'}));
+      secured.once('error',failed);
+      secured.once('close',()=>done({ok:false,code:'CONNECTION'}));
+      secured.resume();
+     }catch(error){failed(error);}
+    });
+    // Int32 length=8, Int32 PostgreSQL SSLRequest code=80877103.
+    socket.write(Buffer.from([0,0,0,8,4,210,22,47]));
+   });
+  }catch(error){failed(error);}
  });
 }
 
@@ -81,6 +108,8 @@ const NEXT_ACTIONS={
  TLS_CERTIFICATE:'Sertifika zinciri sabitlenmiş Supabase CA paketiyle uyuşmuyor; paket güncellemesi incelenmeden TLS doğrulaması gevşetilmemeli.',
  TLS_HOSTNAME:'Sunucu sertifikası bağlanılan adla eşleşmiyor; bağlantı hedefi değiştirilmemeli, yapılandırma düzeltilmeli.',
  TLS_HANDSHAKE:'TLS el sıkışması tamamlanamadı; sağlayıcı veya ağ aracısı TLS’i kesiyor olabilir.',
+ TLS_UNSUPPORTED:'PostgreSQL sunucusu SSL isteğini reddetti; şifresiz bağlantı denenmedi. Hedefin TLS desteğini doğrulayın.',
+ TLS_PROTOCOL:'PostgreSQL SSL ön yanıtı geçersiz; bağlantı hedefini ve ağ aracılarını doğrulayın. Şifresiz bağlantı denenmedi.',
  DNS:'Veritabanı sunucusu adı çözümlenemedi; sağlayıcı adresini ve ağ ayarlarını kontrol edin.',
  TIMEOUT:'Bağlantı zaman aşımına uğradı; sağlayıcı ağ erişimini ve güvenlik duvarını kontrol edin.',
  CONNECTION_REFUSED:'Bağlantı reddedildi; session pooler 5432 kapalıysa sağlayıcı yapılandırması doğrulanmalı.',

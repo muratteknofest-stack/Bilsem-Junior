@@ -4,6 +4,11 @@ import {randomBytes} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {EventEmitter} from 'node:events';
 import {resolve} from 'node:path';
+import {mkdtemp,readFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {spawnSync} from 'node:child_process';
+import {connect as netConnect,createServer,type Socket} from 'node:net';
+import {createSecureContext,TLSSocket,type SecureContext} from 'node:tls';
 import {parse} from 'yaml';
 import {
   DOCTOR_FORMAT,classifyProbeError,doctorSummary,nextActionFor,postgresToolVersions,
@@ -53,19 +58,89 @@ test('provider and probe failures map to fixed operator codes, never to raw mess
  assert.equal(nextActionFor('UNLISTED'),nextActionFor('UNKNOWN'));
 });
 
-test('TLS probe reports success, certificate, DNS and timeout without values',async()=>{
- const success=await probeTls({host:'fixture.invalid',ca:'ca',connect:()=>{
-  const socket:any=new EventEmitter();
-  socket.destroy=()=>{};setImmediate(()=>socket.emit('secureConnect'));return socket;
- }});
- assert.deepEqual(success,{ok:true,code:'OK'});
- const rejected=await probeTls({host:'fixture.invalid',ca:'ca',connect:()=>{
-  const socket:any=new EventEmitter();
-  socket.destroy=()=>{};setImmediate(()=>socket.emit('error',Object.assign(Error('private'),{code:'CERT_HAS_EXPIRED'})));return socket;
- }});
- assert.deepEqual(rejected,{ok:false,code:'TLS_CERTIFICATE'});
- const unsupported=await probeTls({host:'fixture.invalid',ca:'ca',connect:()=>{throw Object.assign(Error('private'),{code:'ENOTFOUND'});}});
- assert.deepEqual(unsupported,{ok:false,code:'DNS'});
+const sslRequest=Buffer.from([0,0,0,8,4,210,22,47]);
+type ProbeServerMode='upgrade'|'refuse'|'stuffed'|'invalid'|'silent'|'close';
+
+async function postgresProbeServer(mode:ProbeServerMode,context:SecureContext){
+ const sockets=new Set<Socket>();
+ const requests:Buffer[]=[];
+ let applicationBytes=0;
+ const server=createServer(socket=>{
+  sockets.add(socket);socket.on('error',()=>{});
+  socket.once('close',()=>sockets.delete(socket));
+  if(mode==='close'){socket.end();return;}
+  if(mode==='silent')return;
+  let request=Buffer.alloc(0);
+  const initial=(chunk:Buffer)=>{
+   request=Buffer.concat([request,chunk]);
+   if(request.length<8)return;
+   requests.push(request);socket.removeListener('data',initial);
+   if(!request.equals(sslRequest)){socket.destroy();return;}
+   if(mode==='refuse'){socket.end('N');return;}
+   if(mode==='stuffed'){socket.end('Sunexpected-bytes');return;}
+   if(mode==='invalid'){socket.end('E');return;}
+   socket.write('S');
+   const secured=new TLSSocket(socket,{isServer:true,secureContext:context});
+   sockets.add(secured);secured.on('error',()=>{});
+   secured.once('close',()=>sockets.delete(secured));
+   secured.on('data',(chunk:Buffer)=>{applicationBytes+=chunk.length;});
+  };
+  socket.on('data',initial);
+ });
+ await new Promise<void>((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
+ const address=server.address();assert.ok(address&&typeof address!=='string');
+ return {
+  port:address.port,requests,get applicationBytes(){return applicationBytes;},
+  // Route the loopback fixture without changing the hostname checked by TLS.
+  tcpConnect:((options:{port:number})=>netConnect({host:'127.0.0.1',port:options.port})) as typeof netConnect,
+  close:async()=>{for(const socket of sockets)socket.destroy();await new Promise<void>(resolve=>server.close(()=>resolve()));},
+ };
+}
+
+test('PostgreSQL TLS probe negotiates SSLRequest and rejects unsafe or incomplete connections',async t=>{
+ const dir=await mkdtemp(resolve(tmpdir(),'bilsem-pg-tls-test-'));
+ try{
+  const keyPath=resolve(dir,'key.pem'),certPath=resolve(dir,'cert.pem');
+  const generated=spawnSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-days','1',
+   '-subj','/CN=localhost','-addext','subjectAltName=DNS:localhost',
+   '-keyout',keyPath,'-out',certPath],{stdio:'ignore'});
+  assert.equal(generated.status,0,'OpenSSL must create an ephemeral local TLS fixture');
+  const cert=await readFile(certPath),key=await readFile(keyPath);
+  const context=createSecureContext({cert,key});
+  await t.test('trusted TLS starts only after the exact PostgreSQL SSLRequest and sends no credentials',async()=>{
+   const fixture=await postgresProbeServer('upgrade',context);
+   try{
+    const result=await probeTls({host:'localhost',port:fixture.port,ca:cert,tcpConnect:fixture.tcpConnect,timeoutMs:3000});
+    assert.deepEqual(result,{ok:true,code:'OK'});
+    assert.deepEqual(fixture.requests,[sslRequest]);
+    assert.equal(fixture.applicationBytes,0);
+   }finally{await fixture.close();}
+  });
+  await t.test('untrusted certificates and incorrect hostnames remain rejected',async()=>{
+   for(const [host,ca,code] of [['localhost',undefined,'TLS_CERTIFICATE'],['mismatch.invalid',cert,'TLS_HOSTNAME']] as const){
+    const fixture=await postgresProbeServer('upgrade',context);
+    try{assert.deepEqual(await probeTls({host,port:fixture.port,ca,tcpConnect:fixture.tcpConnect,timeoutMs:3000}),{ok:false,code});}
+    finally{await fixture.close();}
+   }
+  });
+  await t.test('SSL refusal, injected bytes and invalid responses never fall back to plaintext',async()=>{
+   for(const [mode,code] of [['refuse','TLS_UNSUPPORTED'],['stuffed','TLS_PROTOCOL'],['invalid','TLS_PROTOCOL']] as const){
+    const fixture=await postgresProbeServer(mode,context);
+    try{
+     assert.deepEqual(await probeTls({host:'localhost',port:fixture.port,ca:cert,tcpConnect:fixture.tcpConnect,timeoutMs:1000}),{ok:false,code});
+     assert.deepEqual(fixture.requests,[sslRequest]);
+    }finally{await fixture.close();}
+   }
+  });
+  await t.test('silent peers time out and closed peers fail without waiting for the deadline',async()=>{
+   for(const [mode,code] of [['silent','TIMEOUT'],['close','CONNECTION']] as const){
+    const fixture=await postgresProbeServer(mode,context);
+    try{assert.deepEqual(await probeTls({host:'localhost',port:fixture.port,ca:cert,tcpConnect:fixture.tcpConnect,timeoutMs:100}),{ok:false,code});}
+    finally{await fixture.close();}
+   }
+   assert.deepEqual(await probeTls({host:'fixture.invalid',tcpConnect:()=>{throw Object.assign(Error('private'),{code:'ENOTFOUND'});}}),{ok:false,code:'DNS'});
+  });
+ }finally{await rm(dir,{recursive:true,force:true});}
 });
 
 test('a fully configured token pipeline is reported ready, with no secret or host in the report',async()=>{
