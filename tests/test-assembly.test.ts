@@ -229,7 +229,8 @@ test('engine changes and superficial transform changes cannot create a new style
       assert.equal(questionStyleKey(direct),questionStyleKey(complete));
     } else if(type==='number_pattern') {
       const easy=generateQuestion({type,profile:'professional',targetGrade:4,difficulty:1,seed:7919});
-      assert.equal(questionStyleKey(easy),questionStyleKey(complete));
+      const sameRule=generateQuestion({type,profile:'complete',targetGrade:4,difficulty:1,seed:7919});
+      assert.equal(questionStyleKey(easy),questionStyleKey(sameRule));
     } else assert.equal(questionStyleKey(normal),questionStyleKey(complete),type);
   }
   const left=question('dice_unfold','professional'),right=question('spatial_origami','professional',19937);

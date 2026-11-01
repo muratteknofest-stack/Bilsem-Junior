@@ -5,6 +5,9 @@ import { TOPIC_CATEGORY } from './topic-catalog';
 import { generateVisualFingerprint as key } from './fingerprint';
 import { EDUCATION_PROFILES, type SchoolGrade } from './quality-policy';
 
+import { nextPatternNumber, matchesPatternNumber, nextAttributeToken, matchesAttributeToken, type NumberPatternRule } from './curriculum-rules';
+import { isRelationObject, type RelationObject } from './relation-objects';
+
 export const COMPLETE_ENGINE = 'curriculum-1';
 export const COMPLETE_TYPES: QuestionType[] = ['odd_one_out','classification','logical_sequence','balance_scale','gear_rotation','paper_folding','punch_folding','verbal_analogy','tangram_puzzle','detail_detection','symmetry_completion','shadow_matching','maze_path','word_scramble_logic','number_pattern','number_pyramid','shape_equation','matrix_3x3','raven_matrix','operation_machine','figure_completion','visual_sequence','figure_rotation'];
 export type Token = { shape: number; color: number };
@@ -17,6 +20,8 @@ export type CompleteBoard = {
   words?: string[]; relation?: number; letters?: string[]; order?: number[];
   walls?: number[]; start?: number; goals?: number[]; gears?: number[]; direction?: number; target?: number;
   pieces?: number[][][]; missing?: number;
+  numberRule?: NumberPatternRule; sequenceRule?: 'two-attributes'; shapePeriod?: number; colorPeriod?: number;
+  machineQuery?: 'input'; outputTarget?: number; objects?: [RelationObject, RelationObject];
 };
 const labels=['A','B','C','D'];
 export const ANALOGY_FAMILIES: [string,string][][] = [
@@ -55,6 +60,8 @@ function linear(b:CompleteBoard):number[]{
 }
 export function solveComplete(b:CompleteBoard,choices:CompleteValue[]=[]):CompleteValue{
   if(b.displayMode!=='curriculum_board'||!COMPLETE_TYPES.includes(b.kind)||![1,2,3,4].includes(b.grade)||![3,4].includes(b.size))throw Error('Müfredat çizimi geçersiz.');
+  if(b.objects && (b.objects.length!==2||new Set(b.objects).size!==2||b.objects.some(id=>!isRelationObject(id))))throw Error('Nesne kimliği geçersiz.');
+  if(b.sequenceRule && b.sequenceRule!=='two-attributes')throw Error('Dizi kuralı tanınmıyor.');
   switch(b.kind){
     case 'symmetry_completion': case 'paper_folding': case 'punch_folding': {
       const a=[...b.source!];
@@ -63,16 +70,16 @@ export function solveComplete(b:CompleteBoard,choices:CompleteValue[]=[]):Comple
         for(const rr of rows)for(const cc of cols)a[rr*b.size+cc]=b.source![r*b.size+c];
       }return grid(b,a);
     }
-    case 'visual_sequence':{const v=b.sequence!,group=(v.length-1)%b.period!;const samples=v.flatMap((t,i)=>t&&i % (b.period!) === group?[t]:[]);if(!samples.length||!samples.every(t=>same(t,samples[0])))throw Error('Örüntü kuralı belirsiz.');return token(samples[0]);}
+    case 'visual_sequence':{if(b.sequenceRule==='two-attributes')return token(nextAttributeToken(b.sequence!,b.shapePeriod!,b.colorPeriod!));const v=b.sequence!,group=(v.length-1)%b.period!;const samples=v.flatMap((t,i)=>t&&i % (b.period!) === group?[t]:[]);if(!samples.length||!samples.every(t=>same(t,samples[0])))throw Error('Örüntü kuralı belirsiz.');return token(samples[0]);}
     case 'figure_rotation':{let cells=[...b.source!];for(let t=0;t<b.turns!;t++){const next=Array(cells.length).fill(0);for(let r=0;r<b.size;r++)for(let c=0;c<b.size;c++)next[c*b.size+b.size-1-r]=cells[r*b.size+c];cells=next;}return grid(b,cells);}
     case 'shadow_matching':return grid(b,b.source!.map(n=>Number(n>0)));
     case 'detail_detection':{const changed=b.source!.flatMap((v,i)=>v!==b.copy![i]?[i]:[]);if(changed.length!==1)throw Error('Tek değişiklik gerekli.');const i=changed[0];return {textNumber:`${Math.floor(i/b.size)+1}. satır, ${i%b.size+1}. sütun`};}
     case 'odd_one_out':{const counts=b.grids!.map(count);const i=counts.findIndex(n=>counts.filter(v=>v===n).length===1);if(i<0||counts.filter(v=>v!==counts[i]).length!==3)throw Error('Tek farklı kart gerekli.');return {textNumber:labels[i]};}
     case 'classification':{if(count(b.grids![0])!==count(b.grids![1]))throw Error('Örnekler aynı grupta değil.');const n=b.grids![0].reduce((sum,v)=>sum+Number(v>0),0);const valid=choices.filter(v=>'curriculum' in v&&v.curriculum==='grid'&&v.cells.reduce((sum,x)=>sum+Number(x>0),0)===n);if(valid.length!==1)throw Error('Sınıflandırma tek aday vermiyor.');return valid[0];}
-    case 'number_pattern':{const d=b.values![1]-b.values![0];if(!b.values!.slice(1).every((v,i)=>v-b.values![i]===d)||!d)throw Error('Ortak fark geçersiz.');return {textNumber:b.values!.at(-1)!+d};}
+    case 'number_pattern':{if(b.numberRule)return {textNumber:nextPatternNumber(b.values!,b.numberRule)};const d=b.values![1]-b.values![0];if(!b.values!.slice(1).every((v,i)=>v-b.values![i]===d)||!d)throw Error('Ortak fark geçersiz.');return {textNumber:b.values!.at(-1)!+d};}
     case 'number_pyramid':{let row=[...b.base!];while(row.length>1)row=row.slice(1).map((v,i)=>v+row[i]);return {textNumber:row[0]};}
     case 'shape_equation': case 'balance_scale':{const v=linear(b);return {textNumber:b.expression!.reduce((n,c,i)=>n+c*v[i],0)};}
-    case 'operation_machine':{const [[x,y],[xx,yy]]=b.examples!;const a=(yy-y)/(xx-x),c=y-a*x;if(!Number.isFinite(a)||!b.examples!.every(([i,o])=>a*i+c===o))throw Error('Makine kuralı belirsiz.');return {textNumber:a*b.input!+c};}
+    case 'operation_machine':{const [[x,y],[xx,yy]]=b.examples!;const a=(yy-y)/(xx-x),c=y-a*x;if(!Number.isFinite(a)||!b.examples!.every(([i,o])=>a*i+c===o))throw Error('Makine kuralı belirsiz.');if(b.machineQuery==='input'){const value=(b.outputTarget!-c)/a;if(!a||!Number.isSafeInteger(value)||value<0||value>1000)throw Error('Ters makine tek tam sayı yanıt vermiyor.');return {textNumber:value};}return {textNumber:a*b.input!+c};}
     case 'gear_rotation':return {textNumber:(b.direction!*(b.target!%2?-1:1))>0?'Saat yönü':'Saat yönünün tersi'};
     case 'logical_sequence':return {textNumber:ordering(b)[b.position!]};
     case 'word_scramble_logic':return {textNumber:b.order!.map(i=>b.letters![i]).join('')};
@@ -101,7 +108,7 @@ export function independentlyMatchesComplete(b:CompleteBoard,v:CompleteValue):bo
     });return false;
   }
   if('curriculum' in v&&v.curriculum==='token'){
-    if(b.kind==='visual_sequence'){const sequence=[...b.sequence!];sequence[sequence.length-1]={shape:v.shape,color:v.color};return sequence.every((t,i)=>same(t,sequence[i%b.period!]));}
+    if(b.kind==='visual_sequence'){if(b.sequenceRule==='two-attributes')return matchesAttributeToken(b.sequence!,b.shapePeriod!,b.colorPeriod!,v);const sequence=[...b.sequence!];sequence[sequence.length-1]={shape:v.shape,color:v.color};return sequence.every((t,i)=>same(t,sequence[i%b.period!]));}
     if(!['matrix_3x3','raven_matrix','figure_completion'].includes(b.kind))return false;
     const m=[...b.matrix!];m[b.kind==='figure_completion'?b.missing!:8]={shape:v.shape,color:v.color};
     if(b.kind==='matrix_3x3'||b.kind==='figure_completion'){const groups=new Map<number,Token>();for(let i=0;i<9;i++){const g=(Math.floor(i/3)+i%3)%3;if(groups.has(g)&&!same(groups.get(g),m[i]))return false;groups.set(g,m[i]!);}return groups.size===3;}
@@ -111,10 +118,10 @@ export function independentlyMatchesComplete(b:CompleteBoard,v:CompleteValue):bo
   if(!('textNumber' in v))return false;
   const answer=v.textNumber;
   switch(b.kind){
-    case 'number_pattern':return typeof answer==='number'&&[...b.values!,answer].slice(1).every((n,i)=>n-[...b.values!,answer][i]===b.values![1]-b.values![0]);
+    case 'number_pattern':if(b.numberRule)return typeof answer==='number'&&matchesPatternNumber(b.values!,b.numberRule,answer);return typeof answer==='number'&&[...b.values!,answer].slice(1).every((n,i)=>n-[...b.values!,answer][i]===b.values![1]-b.values![0]);
     case 'number_pyramid':{const n=b.base!.length-1;const binomial=(k:number)=>{let x=1;for(let j=1;j<=k;j++)x=x*(n-j+1)/j;return x;};return answer===b.base!.reduce((s,x,i)=>s+x*binomial(i),0);}
     case 'shape_equation':case 'balance_scale':{const [[a,c,t],[d,e,u]]=b.equations!;const det=a*e-c*d;if(!det)return false;const x=(t*e-c*u)/det,y=(a*u-t*d)/det;return Number.isInteger(x)&&Number.isInteger(y)&&x>0&&y>0&&answer===b.expression![0]*x+b.expression![1]*y;}
-    case 'operation_machine':{const [[x,y],[xx,yy]]=b.examples!;return typeof answer==='number'&&(answer-y)*(xx-x)===(yy-y)*(b.input!-x);}
+    case 'operation_machine':{const [[x,y],[xx,yy]]=b.examples!;if(b.machineQuery==='input')return typeof answer==='number'&&Number.isSafeInteger(answer)&&xx!==x&&yy!==y&&b.examples!.every(([i,o])=>(o-b.outputTarget!)*(xx-x)===(yy-y)*(i-answer));return typeof answer==='number'&&(answer-y)*(xx-x)===(yy-y)*(b.input!-x);}
     case 'gear_rotation':{let dir=b.direction!;for(let i=0;i<b.target!;i++)dir=-dir;return answer===(dir>0?'Saat yönü':'Saat yönünün tersi');}
     case 'detail_detection':{const positions=b.source!.flatMap((n,i)=>n!==b.copy![i]?[`${Math.floor(i/b.size)+1}. satır, ${i%b.size+1}. sütun`]:[]);return positions.length===1&&answer===positions[0];}
     case 'odd_one_out':{const i=labels.indexOf(String(answer));return i>=0&&b.grids!.filter((_,j)=>j!==i).every(g=>count(g)===count(b.grids![(i+1)%4]))&&count(b.grids![i])!==count(b.grids![(i+1)%4]);}

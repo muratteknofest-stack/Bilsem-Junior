@@ -27,7 +27,7 @@ export function questionReasoningKey(q: Pick<BaseQuestion,'type'|'visualConfig'>
     else if(v.kind==='order')rule={kind:v.kind,people:v.names!.length,clues:v.constraints?.map(c=>c.kind).sort()||['chain'],query:v.position===1||v.position===v.names!.length?'end':'middle'};
     else rule={kind:v.kind,scope:v.countScope};
   } else if(b.displayMode==='colorful_board')rule={kind:b.kind,mosaicRule:b.mosaicRule};
-  else if(b.displayMode==='curriculum_board')rule={kind:b.kind,axis:b.axis,relation:b.relation,period:b.period};
+  else if(b.displayMode==='curriculum_board')rule={kind:b.kind,axis:b.axis,relation:b.relation,period:b.period,numberRule:b.numberRule,sequenceRule:b.sequenceRule,machineQuery:b.machineQuery};
   else rule={mode:b.displayMode,kind:b.kind,figureTask:b.figureTask,folds:(b.folds as string[]|undefined)?.slice().sort(),equations:(b.equations as number[][])?.length,cipher:!!b.cipherRows};
   // Aliases, grid sizes, names and coefficients must not manufacture novelty.
   let type = ['dice_unfold','spatial_origami'].includes(q.type) ? 'cube-opposite-face' :
@@ -76,14 +76,14 @@ export function questionStyleKey(q: Pick<BaseQuestion,'type'|'visualConfig'>): s
       {kind:q.type,task:'layer-order'};
   } else if (b.displayMode==='curriculum_board') {
     style=q.type==='figure_rotation' ? {kind:'tile-transform',sequence:false,operation:'rotate'} :
-      q.type==='number_pattern' ? {kind:'number-sequence',rule:'add'} :
-      q.type==='operation_machine' ? {kind:'machine',query:'output'} :
+      q.type==='number_pattern' ? {kind:'number-sequence',rule:b.numberRule||'add'} :
+      q.type==='operation_machine' ? {kind:'machine',query:b.machineQuery||'output'} :
       q.type==='figure_completion'||q.type==='matrix_3x3' ? {kind:'mosaic-rule',rule:'shift'} :
       q.type==='raven_matrix' ? 'two-attribute-matrix' :
       q.type==='logical_sequence' ? {kind:'order',deduction:false} :
       q.type==='shape_equation'||q.type==='balance_scale' ? 'symbol-equations' :
       q.type==='verbal_analogy' ? {kind:q.type,relation:b.relation} :
-      q.type==='visual_sequence' ? 'repeating-token-sequence' : {kind:q.type,task:'count-property'};
+      q.type==='visual_sequence' ? b.sequenceRule==='two-attributes'?'two-attribute-sequence':'repeating-token-sequence' : {kind:q.type,task:'count-property'};
   } else if (q.type==='visual_analogy') style=b.figureTask==='half_completion'?'reflection-completion':{kind:q.type,task:b.figureTask||'legacy'};
   else if (q.type==='shape_equation') style='symbol-equations';
   else if (q.type==='cryptogram') style={kind:q.type,deduction:!!b.cipherRows};

@@ -26,3 +26,12 @@
 .qb-number-card strong,.qb-clues strong{color:#173b5e}
 .qb-people>span{border-bottom:3px solid #a9bfd9;background:linear-gradient(#fff,#eaf2fd);color:#173b5e}
 @media(max-width:400px){.zp-colorful-stage{padding:8px;border-radius:16px;gap:8px!important}.zp-colorful-source{padding:3px}}
+
+/* Photographic identities remain separate from the arithmetic model. */
+.bj-real-object-token{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:54px;min-width:0;vertical-align:middle;color:#17334f}
+.bj-real-object-token img{display:block;width:52px;height:52px;object-fit:contain;filter:drop-shadow(0 2px 1px #18344d18)}
+.bj-real-object-token small{font-size:10px;font-weight:750;line-height:1.2;max-width:100%;overflow-wrap:anywhere}
+.bj-equation-object{display:inline-flex;flex-shrink:0;align-items:center;justify-content:center}
+.zp-question-visual .zp-curriculum-number{border-color:#7896c4;color:#102b50;background:linear-gradient(150deg,#fff,#e4efff)}
+.zp-question-visual .qb-studio{border-color:#a9c2e4;background:linear-gradient(150deg,#fff,#edf5ff)}
+@media(max-width:480px){.bj-real-object-token{width:42px}.bj-real-object-token img{width:40px;height:44px}.bj-real-object-token small{font-size:9px}}

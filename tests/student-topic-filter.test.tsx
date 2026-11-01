@@ -18,6 +18,17 @@ import type { BaseQuestion, DifficultyLevel } from '../src/types';
 import { needsReasoningFormat, LEARNING_QUESTION_FORMAT, PREVIOUS_PROFESSIONAL_QUESTION_FORMAT, LEGACY_REASONING_QUESTION_FORMAT } from '../src/features/student/learning-question-format';
 import { reasoningDifficultyPlan } from '../src/features/questions/reasoning-profile';
 import { generateProfessionalQuestion as generateV7 } from '../src/features/questions/professional-engine-v7';
+import { COMPLETE_TYPES, generateCompleteCurriculum } from '../src/features/questions/complete-curriculum';
+
+// Historical published records must remain usable by installed older clients.
+const legacyComplete = (options: Parameters<typeof generateQuestion>[0]) => {
+  if (!COMPLETE_TYPES.includes(options.type!)) return generateQuestion(options);
+  for (let attempt=0;attempt<16;attempt++) {
+    const q=generateCompleteCurriculum(options.type!, (options.seed!+attempt*10007)%2147483647||1, options.difficulty!, options.targetGrade!);
+    if (isQuestionReadyForStudents(q)) return q;
+  }
+  throw Error('Legacy fixture could not satisfy its original publication gate');
+};
 
 test('all 44 studio topics are visible for every student grade and every allowed level filters precisely', () => {
   assert.deepEqual(LEARNING_TOPICS, ALL_QUESTION_TYPES);
@@ -146,10 +157,10 @@ test('real authenticated learning API preserves mixed choices, permits practice 
       grade = g;
       for (const [i, topic] of LEARNING_TOPICS.entries()) {
         rows = [];
-        const q = generateQuestion({ profile: 'complete', targetGrade: grade, type: topic, difficulty: 1, seed: 91000 + i * 997 + grade });
+        const q = legacyComplete({ profile: 'complete', targetGrade: grade, type: topic, difficulty: 1, seed: 91000 + i * 997 + grade });
         q.status = 'published';
         // Same-category distractor and draft rows must never enter the topic session.
-        const other = generateQuestion({ profile: 'complete', targetGrade: grade, type: topic === 'paper_folding' ? 'mirror_reflection' : 'paper_folding', difficulty: 1, seed: 7181 });
+        const other = legacyComplete({ profile: 'complete', targetGrade: grade, type: topic === 'paper_folding' ? 'mirror_reflection' : 'paper_folding', difficulty: 1, seed: 7181 });
         bank = [q, { ...q, id: 'draft-only', status: 'draft' }, { ...other, status: 'published' }];
         const beforeReads=reads;
         const result = await start({ mode: 'practice', questionCount: 1, topic, category: 'mixed', difficulty: 1, expectedGrade: grade });
@@ -165,8 +176,8 @@ test('real authenticated learning API preserves mixed choices, permits practice 
       }
     }
     grade = 1; rows = [];
-    const first = { ...generateQuestion({ profile: 'complete', targetGrade: 1, type: 'paper_folding', difficulty: 1, seed: 5551 }), status: 'published' as const };
-    const second = { ...generateQuestion({ profile: 'complete', targetGrade: 1, type: 'mirror_reflection', difficulty: 1, seed: 5552 }), status: 'published' as const };
+    const first = { ...legacyComplete({ profile: 'complete', targetGrade: 1, type: 'paper_folding', difficulty: 1, seed: 5551 }), status: 'published' as const };
+    const second = { ...legacyComplete({ profile: 'complete', targetGrade: 1, type: 'mirror_reflection', difficulty: 1, seed: 5552 }), status: 'published' as const };
     bank = [first, second];
     const a = await start({ mode: 'adaptive', questionCount: 1, topic: first.type });
     const b = await start({ mode: 'adaptive', questionCount: 1, topic: second.type });
@@ -185,7 +196,7 @@ test('real authenticated learning API preserves mixed choices, permits practice 
     // Failures preserve active answers; a successful restart still prefers a fresh puzzle.
     for (const g of [1, 2, 3, 4] as const) {
       grade = g;
-      const originals = [51000, 51997].map(seed => generateQuestion({ profile: 'complete', targetGrade: grade, type: 'matrix_3x3', difficulty: 1, seed }));
+      const originals = [51000, 51997].map(seed => legacyComplete({ profile: 'complete', targetGrade: grade, type: 'matrix_3x3', difficulty: 1, seed }));
       assert.equal(new Set(originals.map(questionStimulusKey)).size, 2);
       bank = Array.from({ length: 80 }, (_, i) => ({ ...originals[i % 2], id: `duplicate-${i}`, status: 'published' as const }));
       for (const mode of ['practice', 'adaptive', 'exam'] as const) {
@@ -226,6 +237,30 @@ test('real authenticated learning API preserves mixed choices, permits practice 
     assert.equal((await start({ mode: 'adaptive', requireDistinctStyles: false })).status, 400, 'Clients cannot turn off the server diversity policy');
     for (const questionCount of [0, 51, 2.5, '5']) assert.equal((await start({ mode: 'adaptive', questionCount })).status, 400);
     assert.ok(reads >= 176);
+    // Both banks coexist: new clients get the refreshed rule and installed
+    // clients keep their compatible questions and immutable saved sessions.
+    grade=3; rows=[];
+    const oldMachine={...legacyComplete({profile:'complete',targetGrade:3,type:'operation_machine',difficulty:3,seed:22881}),status:'published' as const};
+    const newMachine={...generateQuestion({profile:'complete',targetGrade:3,type:'operation_machine',difficulty:3,seed:22882}),status:'published' as const};
+    bank=[oldMachine,newMachine];
+    const machineRequest={mode:'practice',topic:'operation_machine',difficulty:3,questionCount:1,expectedGrade:3};
+    const refreshed=await start(machineRequest,true,true);
+    assert.equal(refreshed.status,201,JSON.stringify(refreshed.body));
+    assert.equal(rows[0].questions[0].authoring.engine,'curriculum-2');
+    assert.equal(refreshed.body.questions[0].visualConfig.machineQuery,'input');
+    assert.equal('input' in refreshed.body.questions[0].visualConfig,false,'The missing input is an answer, not public stimulus');
+    const headersV2={Authorization:`Bearer ${token()}`};
+    const stateBefore=JSON.stringify(rows);
+    const incompatible=await originalFetch(`${origin}/api/learning/${refreshed.body.id}?questionFormat=reasoning-lab-1`,{headers:headersV2});
+    assert.equal(incompatible.status,426); assert.equal(JSON.stringify(rows),stateBefore);
+    for(const format of [false,'reasoning-lab-1'] as const){
+      rows=[];
+      const oldClient=await start(machineRequest,true,format);
+      assert.equal(oldClient.status,201,JSON.stringify(oldClient.body));
+      assert.equal(rows[0].questions[0].authoring.engine,'curriculum-1');
+      const resumed=await originalFetch(`${origin}/api/learning/${oldClient.body.id}?questionFormat=${LEARNING_QUESTION_FORMAT}`,{headers:headersV2});
+      assert.equal(resumed.status,200); assert.deepEqual((await resumed.json() as any).questions,oldClient.body.questions);
+    }
     // Reproduce the first-grade UI: a mixed adaptive request without the story-only flag.
     // An empty published bank must still produce the full requested verified session.
     grade=1;bank=[];

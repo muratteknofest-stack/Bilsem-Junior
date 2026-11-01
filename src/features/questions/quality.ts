@@ -21,6 +21,7 @@ import { generateWorkshopQuestion as generateWorkshopV1 } from './workshop-engin
 import { WORKSHOP_ENGINE_VERSION } from './workshop-mechanics';
 import { WORKSHOP_TYPES } from './topic-catalog';
 import { analyzeQuestionMechanics, visibleOptionKey, type MechanicalReport } from './mechanical-quality';
+import { CURRICULUM_V2, generateCurriculumV2 } from './curriculum-v2';
 import { COMPLETE_ENGINE, generateCompleteCurriculum } from './complete-curriculum';
 
 export interface QualityReport {
@@ -89,9 +90,9 @@ export function auditQuestion(value: unknown, existing: QuestionVisualReference[
       else {const reference=generateSymbolicQuestion(q.seed,q.difficulty,q.targetGrade);for(const field of ['prompt','explanation','visualConfig','options','authoring','category'] as const)if(fingerprint(q[field])!==fingerprint(reference[field]))result.reviewRequired.push('Sembolik kanıt şablonu değişmiş: '+field);}
     }
     if(cfg?.displayMode==='curriculum_board') {
-      if(q.authoring?.engine!==COMPLETE_ENGINE||!isSchoolGrade(q.targetGrade))result.errors.push('Müfredat sürümü veya hedef sınıf tanınmıyor.');
+      if(![COMPLETE_ENGINE,CURRICULUM_V2].includes(q.authoring?.engine||'')||!isSchoolGrade(q.targetGrade))result.errors.push('Müfredat sürümü veya hedef sınıf tanınmıyor.');
       else {
-        const reference=generateCompleteCurriculum(q.type,q.seed,q.difficulty,q.targetGrade);
+        const reference=(q.authoring?.engine===CURRICULUM_V2?generateCurriculumV2:generateCompleteCurriculum)(q.type,q.seed,q.difficulty,q.targetGrade);
         for(const field of ['prompt','secondaryPrompt','explanation','visualConfig','category','authoring'] as const)if(fingerprint(q[field])!==fingerprint(reference[field]))result.reviewRequired.push('Müfredat şablonu değişmiş: '+field);
         const options=(x:BaseQuestion)=>x.options.map(({id,label,visualData})=>({id,label,visualData})).sort((a,b)=>a.id.localeCompare(b.id));
         if(fingerprint(options(q))!==fingerprint(options(reference)))result.reviewRequired.push('Müfredat seçenekleri değiştirilmiş.');

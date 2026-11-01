@@ -74,8 +74,8 @@ export function inspectEducation(q: BaseQuestion, grade: SchoolGrade, age?: numb
     const c=q.visualConfig as import('./complete-curriculum').CompleteBoard;
     metrics.gridSize=c.size;
     metrics.itemCount=c.sequence?.filter(Boolean).length||c.matrix?.filter(Boolean).length||c.grids?.reduce((sum,g)=>sum+g.filter(Boolean).length,0)||c.source?.filter(Boolean).length||c.pieces?.length||0;
-    metrics.symbolCount=c.letters?.length||0;metrics.peopleCount=c.names?.length||0;
-    const nums=[...(c.values||[]),...(c.base||[]),...(c.examples||[]).flat(),...(c.equations||[]).map(r=>r[2]),c.input,...q.options.map(o=>(o.visualData as {textNumber?:unknown}).textNumber)].filter((n):n is number=>typeof n==='number');
+    metrics.symbolCount=c.letters?.length||c.objects?.length||0;metrics.peopleCount=c.names?.length||0;
+    const nums=[...(c.values||[]),...(c.base||[]),...(c.examples||[]).flat(),...(c.equations||[]).map(r=>r[2]),c.input,c.outputTarget,...q.options.map(o=>(o.visualData as {textNumber?:unknown}).textNumber)].filter((n):n is number=>typeof n==='number');
     metrics.maxNumber=Math.max(0,...nums);
     if(nums.some(n=>!Number.isSafeInteger(n)||n<0)||metrics.maxNumber>p.maxNumber)difficulty.push('NUMBER_LOAD: Müfredat sayıları sınıf sınırını aşıyor.');
     if(c.letters&&c.letters.length>p.maxSymbols)difficulty.push('WORKING_MEMORY: Harf sayısı sınıf sınırını aşıyor.');

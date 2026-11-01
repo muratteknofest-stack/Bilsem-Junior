@@ -22,5 +22,14 @@ try{
  }
  await page.evaluate(()=>window.__renderArt({art:'object',shape:0,variant:0,tilt:0},false));
  await page.screenshot({path:output+'/question-workshop.png',fullPage:true,animations:'disabled'});assert.deepEqual(errors,[]);
- console.log(JSON.stringify({distinctUncroppedSilhouettes:count,pageErrors:errors.length}));
+ for(const width of [320,390,768,1440]) {
+  await page.setViewportSize({width,height:width<700?844:1024});await page.goto('http://127.0.0.1:5189/tests/browser/premium-questions.html');await page.locator('[data-premium-question]').first().waitFor();
+  assert.equal(await page.locator('[data-premium-question]').count(),7);
+  await page.locator('[data-real-object] img').evaluateAll(images=>Promise.all(images.map(image=>image.decode())));
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'New question artwork must fit '+width);
+  assert.ok(await page.locator('[data-real-object] img').evaluateAll(images=>images.length>0&&images.every(image=>image.naturalWidth===800&&image.getBoundingClientRect().width>=36)),'Photographic objects must load at a readable size');
+  await page.screenshot({path:output+'/premium-'+width+'.png',fullPage:true,animations:'disabled'});
+ }
+ assert.deepEqual(errors,[]);
+ console.log(JSON.stringify({distinctUncroppedSilhouettes:count,premiumQuestionViewports:4,pageErrors:errors.length}));
 }finally{await browser.close();await server.close();}

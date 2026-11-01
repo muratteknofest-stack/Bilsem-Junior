@@ -2,6 +2,7 @@ import React, { useId } from 'react';
 import type { CompleteBoard as Board, CompleteValue, Token } from '../complete-curriculum';
 import { GlyphBody } from './VisualGlyph';
 import { PUZZLE_COLORS as COLORS, materialFor } from '../question-materials';
+import { RealObjectToken } from './RealObjectToken';
 import { AnswerValue } from './AnswerValue';
 
 
@@ -31,9 +32,9 @@ export function CompleteOption({value}:{value:CompleteValue}){
   return <CompletePiece points={value.points}/>;
 }
 const Badge=({children}:{children:React.ReactNode})=><span className="zp-curriculum-number rounded-xl border-2 border-indigo-200 bg-white px-3 py-2 font-bold text-indigo-950 text-base sm:text-xl">{typeof children==='number'&&!Number.isFinite(children)?'?':children}</span>;
-function Equation({row,scale=false}:{row:number[];scale?:boolean}){
+function Equation({row,scale=false,objects}:{row:number[];scale?:boolean;objects?:Board['objects']}){
   return <div className={`flex flex-wrap justify-center items-center gap-2 ${scale?'border-b-4 border-amber-500 pb-2':''}`}>
-    {[...Array.from({length:row[0]},()=>({shape:2,color:0})),...Array.from({length:row[1]},()=>({shape:0,color:1}))].map((token,i)=><React.Fragment key={i}>{i>0&&<span className="font-bold">+</span>}<CompleteToken {...token}/></React.Fragment>)}
+    {[...Array.from({length:row[0]},()=>({shape:2,color:0,object:objects?.[0]})),...Array.from({length:row[1]},()=>({shape:0,color:1,object:objects?.[1]}))].map((token,i)=><React.Fragment key={i}>{i>0&&<span className="font-bold">+</span>}<span className="bj-equation-object">{token.object?<RealObjectToken object={token.object}/>:<CompleteToken {...token}/>}</span></React.Fragment>)}
     <span className="font-bold">=</span><Badge>{row[2]}</Badge>
   </div>;
 }
@@ -47,8 +48,8 @@ export function CompleteBoard({board:b}:{board:Board}){
   if(b.grids)return <div className="zp-curriculum-comparison">{b.grids.map((cells,i)=><div key={i} className="space-y-1 text-center"><CompleteGrid cells={cells} size={b.size}/>{b.kind==='odd_one_out'&&<strong>{'ABCD'[i]}</strong>}</div>)}</div>;
   if(b.values)return <div className={className}>{b.values.map((v,i)=><Badge key={i}>{v}</Badge>)}<Badge>?</Badge></div>;
   if(b.base){const rows:number[][]=[b.base];while(rows[0].length>1)rows.unshift(rows[0].slice(1).map((v,i)=>v+rows[0][i]));return <div className="space-y-2">{rows.map((row,r)=><div key={r} className={className}>{row.map((v,i)=><Badge key={i}>{r===0?'?':v}</Badge>)}</div>)}</div>;}
-  if(b.equations)return <div className="space-y-3 w-full">{b.equations.map((r,i)=><Equation key={i} row={r} scale={b.kind==='balance_scale'}/>)}<div className="rounded-xl bg-indigo-50 p-2"><Equation row={[...b.expression!,NaN]}/><p className="text-center text-indigo-800 text-sm">Son satırdaki toplam kaçtır?</p></div></div>;
-  if(b.examples)return <div className="space-y-2">{[...b.examples,[b.input!,NaN]].map(([i,o],n)=><div key={n} className={className}><Badge>{i}</Badge><span className="rounded-lg bg-purple-100 p-2">⚙ →</span><Badge>{Number.isFinite(o)?o:'?'}</Badge></div>)}</div>;
+  if(b.equations)return <div className="space-y-3 w-full">{b.equations.map((r,i)=><Equation key={i} row={r} scale={b.kind==='balance_scale'} objects={b.objects}/>)}<div className="rounded-xl bg-indigo-50 p-2"><Equation row={[...b.expression!,NaN]} objects={b.objects}/><p className="text-center text-indigo-800 text-sm">Son satırdaki toplam kaçtır?</p></div></div>;
+  if(b.examples)return <div className="space-y-2">{[...b.examples,b.machineQuery==='input'?[NaN,b.outputTarget!]:[b.input!,NaN]].map(([i,o],n)=><div key={n} className={className}><Badge>{Number.isFinite(i)?i:'?'}</Badge><span className="rounded-lg bg-purple-100 p-2" aria-label="İşlem makinesi">⚙ →</span><Badge>{Number.isFinite(o)?o:'?'}</Badge></div>)}</div>;
   if(b.gears)return <div className={className}>{b.gears.map((teeth,i)=><div key={i} className="text-center"><svg viewBox="0 0 64 64" className="w-14 sm:w-16" aria-label={`${i+1}. çark, ${teeth} diş`}><circle cx="32" cy="32" r="20" fill={i===b.target?'#fde68a':'#c7d2fe'} stroke="#312e81" strokeWidth="3"/>{Array.from({length:teeth},(_,j)=><rect key={j} x="29" y="5" width="6" height="10" rx="1" fill="#4f46e5" transform={`rotate(${j*360/teeth} 32 32)`}/>)}<text x="32" y="38" textAnchor="middle" fontSize="18" fontWeight="bold">{i+1}</text></svg>{i===0&&<strong>{b.direction!>0?'↻':'↺'}</strong>}{i===b.target&&<strong>?</strong>}</div>)}</div>;
   if(b.clues)return <div className="space-y-2 text-center">{b.clues.map(([a,c],i)=><p key={i} className="rounded-xl bg-indigo-50 p-2 text-indigo-950"><strong>{a}</strong> → hemen ardından → <strong>{c}</strong></p>)}</div>;
   if(b.letters)return <div className="space-y-3"><div className={className}>{b.letters.map((l,i)=><div key={i} className="text-center"><Badge>{l}</Badge><p className="text-xs mt-1">{i+1}</p></div>)}</div><p className="text-center font-bold text-indigo-900">Kod: {b.order!.map(i=>i+1).join(' → ')}</p></div>;
