@@ -42,6 +42,10 @@ Kurallar:
 - Kanıt referansı en az 12 karakterdir; e-posta adresi, uzun rakam dizisi, token veya yer tutucu
   metin (`TODO`, `örnek`, `kanıt yok`) reddedilir.
 - Kanıtların tazelik sınırı vardır: yedek 30 gün, diğer kabul kayıtları 90 gün.
+- Bir iş gerçekten kapsam dışıysa kayıt `not_applicable` yapılır; en az 12 karakterlik **gerekçe
+  referansı** ve karar tarihi zorunludur. Rapor bunu `BEYAN (N/A)` olarak ayırır, "yapıldı" gibi
+  göstermez. Makine denetimli on bir kayıt (yedek, e-posta, dört Play akışı, ses, inceleme, imza)
+  hiçbir zaman `not_applicable` yapılamaz; makbuz yoksa kapı kapalı kalır.
 
 ## 1. Yedekleme
 

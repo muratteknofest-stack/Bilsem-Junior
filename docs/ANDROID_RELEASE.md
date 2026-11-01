@@ -1,3 +1,11 @@
+## 1.0.34 — Üretim imzası ve Play kabul kanıtı
+
+- Android sürümü 35 / 1.0.34 (`mobile/android/play-billing.gradle`); uygulama kimliği ve mevcut yükleme anahtarı korunur.
+- `python3 scripts/package-android-candidate.py test-artifacts/android` derlenmiş AAB/APK'dan sürüm kimliğini (35 / 1.0.34), SDK düzeylerini ve debug/test/cleartext/backup bayraklarını doğrular. Kimlik kaynakta sabitlendiği için sürüm artırmak betiği ve bu notu birlikte güncellemeyi gerektirir.
+- `scripts/sign-android-release.py` doğrulanmış CI adayını yerel üretim anahtarıyla imzalar ve `bilsem-android-signing-v1` biçiminde, kişisel veri içermeyen bir doğrulama kaydı üretir.
+- Bu kayıt Play Console yüklemesi, mağaza incelemesi veya ticari yayın kabulü yerine geçmez. Dahili testte doğrulanmış son yapı 1.0.33 / kod 34'tür.
+- Gerçek cihaz kurulumu, dört satın alma akışı ve Play beyanları operatör tarafından ayrıca yürütülür; kapanış kapısı bunları `android.device-tests` ve `android.play-listing` olarak izler.
+
 ## 1.0.32 - Web ve Android yasal açıklama bağlantıları
 
 - Ortak yasal bağlantılar: Gizlilik/KVKK, kullanım koşulları, çerez/yerel depolama, abonelik/iptal/iade, hesap/veri silme ve iletişim/işletmeci. Android açılışı, giriş/kayıt üst alanı, öğrenci profili, veli hesabı ve ödeme açıklamaları bu sayfalara erişim sunar. Web alt bilgisi, oturum içi sayfalar, üyelik sayfası ve İngilizce alt bilgisi de bağlantıları içerir.

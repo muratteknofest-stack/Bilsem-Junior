@@ -161,3 +161,37 @@ test('register shape errors are reported instead of being silently accepted',()=
   duplicated.areas.content.items.push({...duplicated.areas.content.items[0]});
   assert.ok(validateRegister(duplicated).issues.some(issue=>issue.code==='ITEM_DUPLICATE'));
 });
+
+test('a justified not-applicable item closes without pretending it was performed',()=>{
+  const register=verifiedRegister();
+  const storage=register.areas.backup.items.find((item:any)=>item.id==='backup.storage-objects');
+  storage.status='not_applicable';
+  storage.evidence='Depolama nesnesi yedeği kapsam dışı, karar BJ-2026-0042';
+  const report=evaluateClosure(register,receipts());
+  assert.deepEqual(report.issues,[]);
+  assert.equal(report.readyForCommercialRelease,true);
+  const row=report.areas.find((area:any)=>area.area==='backup')!.items.find((item:any)=>item.id==='backup.storage-objects')!;
+  assert.equal(row.verifiedBy,'declaration');
+  assert.equal(row.notApplicable,true);
+  assert.match(closureSummary(report),/BEYAN \(N\/A\)/);
+});
+
+test('not-applicable needs a justification and may never replace a machine check',()=>{
+  const register=verifiedRegister();
+  const storage=register.areas.backup.items.find((item:any)=>item.id==='backup.storage-objects');
+  storage.status='not_applicable';
+  storage.evidence='';
+  assert.ok(validateRegister(register).issues.some(issue=>issue.code==='EVIDENCE_REQUIRED'&&issue.itemId==='backup.storage-objects'));
+  storage.evidence='veli@example.com adresine soruldu';
+  storage.verifiedAt=iso(-86_400_000);
+  assert.ok(validateRegister(register).issues.some(issue=>issue.code==='EVIDENCE_PERSONAL'&&issue.itemId==='backup.storage-objects'));
+  storage.evidence='Kapsam dışı bırakıldı, karar BJ-2026-0042';
+  const signed=register.areas.android.items.find((item:any)=>item.id==='android.signed-release')!;
+  signed.status='not_applicable';
+  signed.evidence='İmza gerekmeyecek, karar BJ-2026-0043';
+  const report=evaluateClosure(register,receipts());
+  assert.equal(report.readyForCommercialRelease,false);
+  assert.ok(report.issues.some(issue=>issue.code==='AUTO_NOT_APPLICABLE'&&issue.itemId==='android.signed-release'));
+  const row=report.areas.find((area:any)=>area.area==='android')!.items.find((item:any)=>item.id==='android.signed-release')!;
+  assert.equal(row.verifiedBy,null);
+});

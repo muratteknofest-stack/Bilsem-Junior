@@ -65,12 +65,14 @@ export function validateRegister(register,{now=Date.now()}={}){
   if(typeof item.owner!=='string'||item.owner.trim().length<3)issues.push(fail(item.id,'ITEM_OWNER','Sorumlu kişi/rol eksik.'));
   if(typeof item.acceptance!=='string'||item.acceptance.trim().length<20)issues.push(fail(item.id,'ITEM_ACCEPTANCE','Kabul ölçütü açıklaması eksik.'));
   const evidence=typeof item.evidence==='string'?item.evidence.trim():'';
-  if(item.status==='verified'){
-   if(evidence.length<12)issues.push(fail(item.id,'EVIDENCE_REQUIRED','Doğrulanmış kayıt en az 12 karakterlik kanıt referansı ister.'));
+  if(item.status==='verified'||item.status==='not_applicable'){
+   if(evidence.length<12)issues.push(fail(item.id,'EVIDENCE_REQUIRED',item.status==='not_applicable'
+    ?'Uygulanamaz kayıt en az 12 karakterlik gerekçe referansı ister.'
+    :'Doğrulanmış kayıt en az 12 karakterlik kanıt referansı ister.'));
    if(PLACEHOLDER.test(evidence))issues.push(fail(item.id,'EVIDENCE_PLACEHOLDER','Kanıt referansı yer tutucu metin içeriyor.'));
    if(evidence&&PERSONAL.test(evidence))issues.push(fail(item.id,'EVIDENCE_PERSONAL','Kanıt referansı kişisel veri veya sır içerebilir; maskeli kayıt numarası kullanın.'));
-   if(!Number.isFinite(Date.parse(item.verifiedAt||'')))issues.push(fail(item.id,'EVIDENCE_DATE','Doğrulanmış kaydın tarihi geçersiz.'));
-   else if(Date.parse(item.verifiedAt)>now+5*60_000)issues.push(fail(item.id,'EVIDENCE_FUTURE','Doğrulama tarihi gelecekte olamaz.'));
+   if(!Number.isFinite(Date.parse(item.verifiedAt||'')))issues.push(fail(item.id,'EVIDENCE_DATE','Kaydın doğrulama veya karar tarihi geçersiz.'));
+   else if(Date.parse(item.verifiedAt)>now+5*60_000)issues.push(fail(item.id,'EVIDENCE_FUTURE','Doğrulama veya karar tarihi gelecekte olamaz.'));
   }else if(item.status==='pending'&&evidence)issues.push(fail(item.id,'EVIDENCE_PREMATURE','Bekleyen kayıtta kanıt referansı bulunmamalı.'));
   if(item.status==='blocked'&&evidence)issues.push(fail(item.id,'EVIDENCE_BLOCKED','Engelli kayıtta tamamlanmış kanıt bulunmamalı.'));
  }
@@ -182,14 +184,18 @@ export function evaluateClosure(register,receipts={},{now=Date.now()}={}){
   for(const id of result.items)machine.set(id,result);
  }
  const rows=items.map(item=>{
+  const notApplicable=item.status==='not_applicable';
   const auto=item.autoCheck?machine.get(item.id):undefined;
-  const verifiedBy=item.autoCheck?(auto?.ok?'machine':null):(item.status==='verified'?'declaration':null);
+  const verifiedBy=item.autoCheck?(notApplicable?null:(auto?.ok?'machine':null))
+   :(item.status==='verified'||notApplicable?'declaration':null);
   const inconsistent=Boolean(item.autoCheck&&item.status==='verified'&&!auto?.ok);
+  if(item.autoCheck&&notApplicable)issues.push(fail(item.id,'AUTO_NOT_APPLICABLE',
+   'Makine denetimli kayıt uygulanamaz olarak işaretlenemez; makbuz veya kaldırılmış kayıt gerekir.'));
   if(inconsistent)issues.push(fail(item.id,'INCONSISTENT',auto
    ?'Kayıt doğrulanmış görünüyor ancak makine kanıtı geçersiz.': 'Kayıt doğrulanmış görünüyor ancak makine kanıtı hiç sağlanmadı.'));
   return {
    id:item.id,area:item.area,label:item.label,owner:item.owner,status:item.status,
-   verifiedBy,autoCheck:item.autoCheck||null,evidence:item.evidence||'',verifiedAt:item.verifiedAt||null,
+   verifiedBy,autoCheck:item.autoCheck||null,notApplicable,evidence:item.evidence||'',verifiedAt:item.verifiedAt||null,
    machineReady:auto?.ok===true,machineDetail:auto?.detail||null,inconsistent,
   };
  });
@@ -208,7 +214,8 @@ export function evaluateClosure(register,receipts={},{now=Date.now()}={}){
 }
 
 export function closureSummary(report){
- const mark=row=>row.verifiedBy==='machine'?'MAKİNE':row.verifiedBy==='declaration'?'BEYAN':'EKSİK';
+ const mark=row=>row.verifiedBy==='machine'?'MAKİNE'
+  :row.verifiedBy==='declaration'?(row.notApplicable?'BEYAN (N/A)':'BEYAN'):'EKSİK';
  return `### Bilsem Junior yayın kapanışı\n\n`+
   `Sonuç: **${report.readyForCommercialRelease?'HAZIR':'HAZIR DEĞİL'}** · ${report.totals.verified}/${report.totals.items} kayıt kanıtlı · ${report.generatedAt}\n\n`+
   report.areas.map(area=>`**${area.label}**\n| Kayıt | Durum |\n|---|---|\n${area.items.map(row=>`| ${row.label} | ${mark(row)} |`).join('\n')}`).join('\n\n')+
