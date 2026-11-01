@@ -9,25 +9,39 @@ async function managementRequest(path,token,body,fetcher){
    method:body?'POST':'GET',headers:{Authorization:`Bearer ${token}`,Accept:'application/json',...(body?{'Content-Type':'application/json'}:{})},
    ...(body?{body:JSON.stringify(body)}:{}),redirect:'error',signal:AbortSignal.timeout(15_000),
   });
-  if(!response.ok||!/^application\/json\b/i.test(response.headers.get('content-type')||''))throw Error();
+  if(!response.ok||!/^application\/json\b/i.test(response.headers.get('content-type')||''))throw Object.assign(Error(),{status:response.status});
   return await response.json();
- }catch{throw Error('Supabase geçici yedek erişimi doğrulanamadı; gizli değerler gösterilmedi.');}
+ }catch(error){
+  if(Number.isInteger(error?.status))throw Object.assign(Error('Supabase geçici yedek erişimi doğrulanamadı; gizli değerler gösterilmedi.'),{code:'PROVIDER_HTTP',status:error.status});
+  throw Object.assign(Error('Supabase geçici yedek erişimi doğrulanamadı; gizli değerler gösterilmedi.'),{code:'PROVIDER_UNREACHABLE'});
+ }
 }
+
+/** The only accepted pooler target: this project's primary database. */
+export function primaryPooler(rows){
+ return Array.isArray(rows)&&rows.find(row=>row.identifier===BACKUP_PROJECT_REF&&row.database_type==='PRIMARY'&&row.db_name==='postgres'&&/^[a-z0-9-]+\.pooler\.supabase\.com$/.test(row.db_host))||null;
+}
+
+/** The temporary CLI identity must be a short-lived cli_login_* role. */
+export function temporaryLoginIdentity(login){
+ if(!/^cli_login_[a-z_]+$/.test(login?.role||'')||typeof login.password!=='string'||!login.password||!Number.isFinite(login.ttl_seconds)||login.ttl_seconds<60||login.ttl_seconds>3600)throw Error('Süreli veritabanı kimliği doğrulanamadı.');
+ return login;
+}
+
+export {managementRequest as backupManagementRequest};
 
 export function temporaryBackupAccess(token,fetcher=fetch){
  let pooler;
  return async()=>{
   if(!pooler){
    const rows=await managementRequest('/config/database/pooler',token,undefined,fetcher);
-   pooler=Array.isArray(rows)&&rows.find(row=>row.identifier===BACKUP_PROJECT_REF&&row.database_type==='PRIMARY'&&row.db_name==='postgres'&&/^[a-z0-9-]+\.pooler\.supabase\.com$/.test(row.db_host));
+   pooler=primaryPooler(rows);
    if(!pooler)throw Error('Bu projeye ait birincil session pooler hedefi doğrulanamadı.');
   }
   // Supabase's reviewed dump filters SET ROLE postgres. The read-only CLI
   // identity is not a postgres member; use the short-lived postgres identity
   // and force read-only transactions in the actual libpq connection below.
-  const login=await managementRequest('/cli/login-role',token,{read_only:false},fetcher);
-  if(!/^cli_login_[a-z_]+$/.test(login?.role||'')||typeof login.password!=='string'||!login.password||!Number.isFinite(login.ttl_seconds)||login.ttl_seconds<60||login.ttl_seconds>3600)
-   throw Error('Süreli veritabanı kimliği doğrulanamadı.');
+  const login=temporaryLoginIdentity(await managementRequest('/cli/login-role',token,{read_only:false},fetcher));
   // Shared pooler's documented session port is 5432 even when the project
   // reports its transaction endpoint (6543). Never use that mode for dumps.
   const url=new URL(`postgresql://${pooler.db_host}:5432/postgres`);

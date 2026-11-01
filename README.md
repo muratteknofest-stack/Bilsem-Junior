@@ -11,6 +11,9 @@ React, Vite, Express, Supabase Auth/Postgres and Gemini based learning app.
    environment. Never put the service key in a `VITE_` variable.
 4. Run `npm run dev`. The Express service hosts `/api/*` and the app.
 5. Run `npm run lint`, `npm test`, `npm run test:student` and the build before deployment.
+6. Before any commercial release, run `npm run release:closure`; it fails until every backup,
+   operations, real-usage, content and Android obligation has inspectable evidence. See
+   [release closure](docs/release-closure-20261101.md).
 
 The active Supabase project is `vtcsoqohkiagbwatlabk` (Bilsem Junior).
 Its account-project alignment preserves existing Auth identities and XP and

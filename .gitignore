@@ -64,3 +64,13 @@ dist-android/
 *.p12
 keystore.properties
 upload-key.json
+
+# Local acceptance and coverage receipts; never committed.
+ops/evidence/
+
+# Generated release evidence at the repository root
+android-signed/
+release-closure-report.json
+backup-status.json
+backup-doctor.json
+backup-restore-verification.json

@@ -4,7 +4,9 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
-import {backupKey} from './backup-crypto.mjs';
+import {backupKey,decryptBackup} from './backup-crypto.mjs';
+import {verifyBackupManifest} from './backup-manifest.mjs';
+import {readFile} from 'node:fs/promises';
 import {postgresChildEnvironment} from './postgres-child-environment.mjs';
 import {diagnosticTail,runtimeFailureCategory,runtimeFailureDetails,startRuntimeWithRetry} from './backup-runtime-diagnostics.mjs';
 
@@ -36,8 +38,9 @@ function run(command,args,env=clean,timeout=600_000,label='yerel ortam'){return 
  });
 });}
 const cli=(args,timeout=60_000)=>run('npx',['--yes','supabase@2.81.3',...args],clean,timeout,`Supabase ${args[0]}`);
-let verified=false;
+const startedAt=Date.now();let verified=false,archiveMetadata=null;
 try{
+ if(!runtimeOnly){const manifest=JSON.parse(decryptBackup(await readFile(archive),backupKey(process.env.BACKUP_ENCRYPTION_KEY)).toString());verifyBackupManifest(manifest);archiveMetadata={archiveCreatedAt:manifest.createdAt,archiveExpiresAt:manifest.expiresAt};}
  await mkdir(clean.DOCKER_CONFIG,{mode:0o700});
  await cli(['init']);
  for(const [service,image] of runtimeImages){
@@ -57,6 +60,6 @@ try{
  console.log('Şifreli yedek taze yerel Supabase ortamına geri yüklendi; Auth/profil ve aile bağlantıları doğrulandı.');
  }
 }finally{
- if(!runtimeOnly)await writeFile(path.resolve('backup-restore-verification.json'),JSON.stringify({verified,isolated:true,checkedAt:new Date().toISOString(),storageObjectsIncluded:false,keyFingerprint})+'\n',{mode:0o600});
+ if(!runtimeOnly)await writeFile(path.resolve('backup-restore-verification.json'),JSON.stringify({verified,isolated:true,checkedAt:new Date().toISOString(),startedAt:new Date(startedAt).toISOString(),durationMs:Date.now()-startedAt,storageObjectsIncluded:false,keyFingerprint,...archiveMetadata})+'\n',{mode:0o600});
  try{await cli(['stop','--no-backup']);}finally{await rm(dir,{recursive:true,force:true});}
 }

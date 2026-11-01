@@ -1,0 +1,296 @@
+{
+  "format": "bilsem-release-closure-v1",
+  "updatedAt": "2026-11-01",
+  "projectRef": "vtcsoqohkiagbwatlabk",
+  "notes": "Her kayıt bir yönetici beyanı değil, doğrulanabilir kanıt ister. Boş kanıt alanı bilinçli olarak boştur; doldurulmadan yayın açılmaz. Kişisel veri, parola, satın alma tokenı veya müşteri belgesi bu dosyaya yazılmaz; yalnız tarih, ortam ve güvenli kayıt numarası yazılır.",
+  "areas": {
+    "backup": {
+      "label": "Yedekleme ve geri yükleme",
+      "items": [
+        {
+          "id": "backup.daily-run",
+          "label": "Günlük şifreli yedek çalışması başarıyla tamamlandı",
+          "owner": "Teknik sorumlu",
+          "acceptance": "GitHub Actions çalışması başarılı; şifreli artefakt ve sanitize durum kaydı üretildi, günlükte sır yok.",
+          "autoCheck": "backup-receipt",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "backup.isolated-restore",
+          "label": "Gerçek üretim yedeği izole ortama geri yüklendi",
+          "owner": "Teknik sorumlu",
+          "acceptance": "Taze yerel Supabase ortamında Auth/profil/aile bütünlüğü doğrulandı; üretimin üzerine yazılmadı; süre kaydedildi.",
+          "autoCheck": "backup-receipt",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "backup.storage-objects",
+          "label": "Storage nesneleri ve proje ayarları için ayrı kurtarma kopyası",
+          "owner": "Teknik sorumlu",
+          "acceptance": "Veritabanı arşivi Storage dosyalarını içermez; nesneler ve kritik proje ayarları ayrı şifreli kopyadan geri getirilebildi.",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "backup.key-custody",
+          "label": "Yedek şifreleme anahtarının ayrı kasada kurtarma kopyası",
+          "owner": "İşletmeci ve teknik sorumlu",
+          "acceptance": "Anahtar GitHub ortam sırrında ve ayrı parola kasasında; kayıp/rotasyon prosedürü yazılı; eski arşivlerin açılamayacağı biliniyor.",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "backup.retention-deletion",
+          "label": "Saklama süresi sonunda yerel/indirilmiş yedeklerin kaldırılması",
+          "owner": "Teknik sorumlu",
+          "acceptance": "30 günlük arşiv saklaması, başkalarınca indirilen kopyalar ve silme talepleriyle mutabakat prosedürü uygulandı.",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        }
+      ]
+    },
+    "operations": {
+      "label": "İşletim ve hukuki hazırlık",
+      "items": [
+        {
+          "id": "ops.operator-identity",
+          "label": "İşletmeci kimliği, tam adres, iş telefonu ve veri iletişim e-postası",
+          "owner": "İşletmeci",
+          "acceptance": "Gerçek kişi/tüzel kişi bilgileri Sistem ayarlarına girildi ve yayınlanan gizlilik/iletişim sayfalarında görünüyor.",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "ops.data-protection-register",
+          "label": "Veli/çocuk veri envanteri, amaç ve hukuki dayanak incelemesi",
+          "owner": "İşletmeci ve hukuk uzmanı",
+          "acceptance": "Veri kategorileri, amaçlar, dayanaklar, aydınlatma/rıza ayrımı ve silme yöntemi yazılı uzman incelemesinden geçti.",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "ops.retention-schedule",
+          "label": "Kategori bazlı saklama takvimi ve uygulanan silme süreci",
+          "owner": "İşletmeci ve teknik sorumlu",
+          "acceptance": "Her kategori için süre, başlangıç olayı, silme/anonimleştirme yöntemi ve istisna tanımlı; kod ve yedeklerle uyumlu.",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "ops.transfer-mechanism",
+          "label": "Yurt dışı aktarım mekanizması ve sağlayıcı sözleşmeleri",
+          "owner": "İşletmeci, sağlayıcılar ve hukuk uzmanı",
+          "acceptance": "Vercel, Supabase, SMTP, GitHub ve diğer gerçek alıcılar için uygun mekanizma; gerekiyorsa imzalı standart sözleşme ve bildirim kaydı.",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "ops.consumer-terms",
+          "label": "Tüketici ön bilgilendirmesi, abonelik, yenileme, iptal ve iade metinleri",
+          "owner": "İşletmeci ve hukuk uzmanı",
+          "acceptance": "Gerçek fiyat/dönem/otomatik yenileme bilgisi satın alma akışıyla aynı; cayma istisnası somut olarak değerlendirildi.",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "ops.tax-employment",
+          "label": "Vergi/belge düzeni ve kamu görevi uygunluğu değerlendirmesi",
+          "owner": "SMMM ve yetkili kurum",
+          "acceptance": "Faaliyete uygulanabilir vergi düzeni ve 657/28 benzeri kısıtlar yazılı olarak değerlendirildi.",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "ops.hosting-suitability",
+          "label": "Ticari barındırma planı ve kapasite uygunluğu",
+          "owner": "Teknik sorumlu ve işletmeci",
+          "acceptance": "Vercel ve Supabase planları ticari kullanıma, yedek saklamaya, trafiğe ve veri konumuna uygun; limitler yazılı.",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "ops.incident-and-alarm",
+          "label": "Olay müdahale kişileri ve alarm teslimi",
+          "owner": "İşletmeci",
+          "acceptance": "Sağlık, kayıt hatası, SMTP ret ve maliyet alarmı gerçek bir alıcıya teslim edildi; nöbetçi ve eskalasyon kişisi atandı.",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        }
+      ]
+    },
+    "acceptance": {
+      "label": "Gerçek kullanım kabul testleri",
+      "items": [
+        {
+          "id": "accept.email-delivery",
+          "label": "Altı Türkçe e-posta şablonunun gerçek gelen kutusuna teslimi",
+          "owner": "Teknik sorumlu ve izinli test ailesi",
+          "acceptance": "Kayıt, doğrulama, yeniden gönderim, şifre sıfırlama, şifre değişti ve haftalık rapor e-postaları gerçek adrese ulaştı; SPF/DKIM/DMARC doğrulandı; link izleme kapalı.",
+          "autoCheck": "email-receipt",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "accept.password-reset",
+          "label": "Şifre sıfırlama: geçerli, süresi dolmuş ve tekrar kullanılan bağlantı",
+          "owner": "Teknik sorumlu",
+          "acceptance": "Geçerli bağlantı şifreyi değiştirdi; eski bağlantı reddedildi; eski oturum düştü; öğrenci şifresi veli tarafından değiştirildi.",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "accept.play-purchase",
+          "label": "Gerçek cihazda Google Play satın alma ve sunucu doğrulaması",
+          "owner": "Play hesap sahibi ve teknik sorumlu",
+          "acceptance": "Test ödeme yöntemiyle satın alma; sunucu doğrulaması; kalıcı kayıt; acknowledge; yalnız seçili öğrencide tam erişim.",
+          "autoCheck": "play-receipt",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "accept.play-restore",
+          "label": "Satın alımları geri yükleme ve mükerrer hak kontrolü",
+          "owner": "İzinli test ailesi",
+          "acceptance": "Çıkış/giriş veya yeniden kurulum sonrası aynı öğrenciye erişim döndü; ikinci hak oluşmadı.",
+          "autoCheck": "play-receipt",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "accept.play-renewal",
+          "label": "Yenileme ve erişim bitiş tarihinin güncellenmesi",
+          "owner": "Play hesap sahibi",
+          "acceptance": "Hızlandırılmış lisans testinde yeni bitiş tarihi ve bildirim/yeniden doğrulama görüldü.",
+          "autoCheck": "play-receipt",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "accept.play-cancellation",
+          "label": "İptal, iade ve erişim sonlandırma",
+          "owner": "Play hesap sahibi ve teknik sorumlu",
+          "acceptance": "Otomatik yenileme kapandı; ödenmiş dönem sonuna kadar erişim doğru; iade sonrası yeniden doğrulama tam erişimi kapattı.",
+          "autoCheck": "play-receipt",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "accept.family-pilot",
+          "label": "1–4. sınıf aile pilotu ve aileler arası yetki kontrolü",
+          "owner": "İzinli test aileleri",
+          "acceptance": "Kayıt, doğrulama, öğrenci etkinleştirme, panel geçişleri, ilerleme senkronu ve aileler arası erişim reddi geçti.",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "accept.mobile-load",
+          "label": "Gerçek mobil cihaz, eşzamanlı yük ve hata alarmı",
+          "owner": "Teknik sorumlu",
+          "acceptance": "Android Chrome ve iPhone Safari'de küçük ekran/klavye/odak; eşzamanlı sınav yükü; alarm teslimi doğrulandı.",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        }
+      ]
+    },
+    "content": {
+      "label": "İçerik: insan sesi ve eğitmen incelemesi",
+      "items": [
+        {
+          "id": "content.voice-scripts",
+          "label": "Ders anlatımlarının kayıt metinleri ve dosya adlandırması",
+          "owner": "İçerik editörü",
+          "acceptance": "18 dersin 4 adımı için metin, dosya adı ve haklar kaydı üretildi; metinler güncel ders sürümüyle eşleşiyor.",
+          "autoCheck": "voice-kit",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "content.voice-recordings",
+          "label": "Gerçek insan sesi kayıtlarının yüklenmesi ve haklar kaydı",
+          "owner": "Seslendirme sanatçısı ve içerik editörü",
+          "acceptance": "72 adımın tamamı MP3/WAV olarak yüklendi; anlatıcı ve haklar referansı kayıtlı; insan kaydı olmayan adım kalmadı.",
+          "autoCheck": "voice-coverage",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "content.educator-review",
+          "label": "Yayımlanmış her soru için bireysel eğitmen incelemesi",
+          "owner": "Eğitimciler",
+          "acceptance": "Yayımlanmış tüm sorularda gerçek reviewedBy ve individualHumanReview kaydı var; otomatik denetim bunun yerine geçmiyor.",
+          "autoCheck": "educator-review",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "content.editorial-signoff",
+          "label": "Metin, cevap anahtarı ve görsel editör onayı",
+          "owner": "Editör",
+          "acceptance": "Her yayımlanan soruda yönerge, cevap ve görsel için editör onayı kayıtlı; çelişkili veya eski onay yok.",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        }
+      ]
+    },
+    "android": {
+      "label": "Android üretim imzası ve Google Play yayını",
+      "items": [
+        {
+          "id": "android.signed-release",
+          "label": "Üretim imzası doğrulanmış AAB/APK ve sabitlenmiş yükleme sertifikası",
+          "owner": "Teknik sorumlu",
+          "acceptance": "Yerel imzalama makbuzu paket/version, hata ayıklama kapalılığı, AAB ve APK imzası ile Play Console yükleme sertifikasını doğruluyor.",
+          "autoCheck": "android-signing",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "android.device-tests",
+          "label": "Gerçek cihazlarda kurulum, aile akışları ve satın alma testi",
+          "owner": "İzinli test ailesi ve teknik sorumlu",
+          "acceptance": "İmzalı sürüm minSdk 24 ve targetSdk 36 cihazlarda kuruldu; giriş, öğrenme, çevrimdışı yeniden gönderim ve lisans testi satın alımı çalıştı.",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        },
+        {
+          "id": "android.play-listing",
+          "label": "Play Console beyanları ve yayın incelemesi",
+          "owner": "Play hesap sahibi",
+          "acceptance": "Hedef kitle, Veri Güvenliği, hesap silme bağlantısı, abonelik açıklamaları ve mağaza görselleri tamamlandı; inceleme gönderildi.",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null
+        }
+      ]
+    }
+  }
+}

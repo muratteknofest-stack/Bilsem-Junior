@@ -1,0 +1,741 @@
+{
+  "format": "bilsem-voice-recording-kit-v1",
+  "generatedAt": "2026-11-01T17:46:46.658Z",
+  "language": "tr-TR",
+  "direction": "Yetişkin, sıcak ve sakin bir öğretmen tonu. Acele etmeden, cümle sonlarında kısa duraklama. Abartılı çocuk sesi kullanılmaz.",
+  "technical": {
+    "format": "WAV (44.1 kHz, 16-bit, mono) veya MP3 (128 kbps ve üzeri)",
+    "maxBytes": 3145728,
+    "naming": "<ders-kimliği>-v<dersSürümü>-<adım>.wav",
+    "upload": "/admin → Ses kayıtları → ders ve adım seç → dosya + anlatıcı + haklar referansı"
+  },
+  "lessons": [
+    {
+      "id": "visual_sequence",
+      "title": "Örüntü Dedektifi",
+      "group": "Görsel düşünme",
+      "version": 1,
+      "steps": [
+        {
+          "step": 0,
+          "title": "Önce sadece bak",
+          "file": "visual_sequence-v1-0.wav",
+          "text": "Mavi bir daire, sarı bir üçgen. Sonra yine mavi daire ve sarı üçgen geliyor. Şekillerin sırasını birlikte izleyelim.",
+          "characters": 116,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 1,
+          "title": "Küçük grubu yakala",
+          "file": "visual_sequence-v1-1.wav",
+          "text": "Daire ve üçgen, tekrar eden iki parçalık grubumuz. Bütün sırayı ezberlemek yerine bu küçük grubu bulabilirsin.",
+          "characters": 110,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 2,
+          "title": "Kuralı devam ettir",
+          "file": "visual_sequence-v1-2.wav",
+          "text": "Son gördüğümüz şekil üçgen. Grubun başına dönünce yeniden daire gelir. Sıramız daire, üçgen, daire diye devam eder.",
+          "characters": 115,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 3,
+          "title": "Şimdi sıra sende",
+          "file": "visual_sequence-v1-3.wav",
+          "text": "Önce tekrar eden grubu söyle. Sonra sıranın kaldığı yerden aynı grubu devam ettir. Renge ve şekle birlikte dikkat et.",
+          "characters": 117,
+          "estimatedSeconds": 9
+        }
+      ]
+    },
+    {
+      "id": "visual_analogy",
+      "title": "Şekillerin İlişkisi",
+      "group": "Görsel düşünme",
+      "version": 1,
+      "steps": [
+        {
+          "step": 0,
+          "title": "İlk çifti incele",
+          "file": "visual_analogy-v1-0.wav",
+          "text": "İlk ok yukarı bakıyor. İkinci ok sağa bakıyor. Şeklin rengi ve büyüklüğü değişmemiş, yalnızca yönü değişmiş.",
+          "characters": 108,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 1,
+          "title": "Değişime bir isim ver",
+          "file": "visual_analogy-v1-1.wav",
+          "text": "Yukarı bakan ok, saat yönünde çeyrek tur dönünce sağa bakar. Bu çiftin kuralı çeyrek tur dönmektir.",
+          "characters": 99,
+          "estimatedSeconds": 8
+        },
+        {
+          "step": 2,
+          "title": "Aynı kuralı taşı",
+          "file": "visual_analogy-v1-2.wav",
+          "text": "Şimdi sağa bakan yeni oka aynı dönüşü uygulayalım. Saat yönünde çeyrek tur dönünce aşağıyı gösterir.",
+          "characters": 100,
+          "estimatedSeconds": 8
+        },
+        {
+          "step": 3,
+          "title": "Kuralı kontrol et",
+          "file": "visual_analogy-v1-3.wav",
+          "text": "İlk çifti açıklayan değişim, ikinci çiftte de aynı olmalı. Her çift için farklı bir kural uydurmayalım.",
+          "characters": 103,
+          "estimatedSeconds": 8
+        }
+      ]
+    },
+    {
+      "id": "dice_unfold",
+      "title": "Küpü Keşfet",
+      "group": "Görsel düşünme",
+      "version": 1,
+      "steps": [
+        {
+          "step": 0,
+          "title": "Bir küpün çevresinde",
+          "file": "dice_unfold-v1-0.wav",
+          "text": "Küpü birlikte inceleyelim. Her yüzü bir karedir. Küpün altı yüzü, on iki ayrıtı ve sekiz köşesi vardır.",
+          "characters": 103,
+          "estimatedSeconds": 8
+        },
+        {
+          "step": 1,
+          "title": "Görünen ve gizlenen",
+          "file": "dice_unfold-v1-1.wav",
+          "text": "Bir köşeden baktığımızda üç yüzü birlikte görebiliriz. Görmediğimiz yüzler de küpün arkasında ve altında durmaya devam eder.",
+          "characters": 124,
+          "estimatedSeconds": 10
+        },
+        {
+          "step": 2,
+          "title": "Dönünce ne değişir?",
+          "file": "dice_unfold-v1-2.wav",
+          "text": "Küp dönünce karşımıza başka yüzler çıkar. Fakat yüzlerin toplam sayısı değişmez. Görünmeyen bir yüz yok olmuş değildir.",
+          "characters": 119,
+          "estimatedSeconds": 10
+        },
+        {
+          "step": 3,
+          "title": "Karşılıklı yüzler",
+          "file": "dice_unfold-v1-3.wav",
+          "text": "Birbirine komşu yüzler ortak bir ayrıt paylaşır. Karşılıklı yüzler ise birbirine değmez. Küpü zihninde çevirirken bu komşuluğu koru.",
+          "characters": 132,
+          "estimatedSeconds": 11
+        }
+      ]
+    },
+    {
+      "id": "matrix_2x2",
+      "title": "Görsel Matris",
+      "group": "Görsel düşünme",
+      "version": 1,
+      "steps": [
+        {
+          "step": 0,
+          "title": "Kutuları sırayla oku",
+          "file": "matrix_2x2-v1-0.wav",
+          "text": "Bu tabloda iki satır var. Üst satırda bir daire ve iki daire görüyoruz. Alt satırda bir üçgen var, son kutu boş.",
+          "characters": 112,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 1,
+          "title": "Satır kuralını bul",
+          "file": "matrix_2x2-v1-1.wav",
+          "text": "Her satırda soldaki şekilden sağdaki kutuda iki tane var. Üst satır bu kuralın örneğini gösteriyor.",
+          "characters": 99,
+          "estimatedSeconds": 8
+        },
+        {
+          "step": 2,
+          "title": "Boş kutuya uygula",
+          "file": "matrix_2x2-v1-2.wav",
+          "text": "Alt satırın başında üçgen bulunduğu için son kutuda iki üçgen olmalı. Şeklin türünü değil, sayısını değiştiriyoruz.",
+          "characters": 115,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 3,
+          "title": "İki satırda da dene",
+          "file": "matrix_2x2-v1-3.wav",
+          "text": "Bulduğun kural bütün ilgili satırlarda çalışmalı. Bir örneğe uyan ama diğerini bozan seçeneği ele.",
+          "characters": 98,
+          "estimatedSeconds": 8
+        }
+      ]
+    },
+    {
+      "id": "symmetry_completion",
+      "title": "Aynanın Öteki Yanı",
+      "group": "Görsel düşünme",
+      "version": 1,
+      "steps": [
+        {
+          "step": 0,
+          "title": "Ayna çizgisini bul",
+          "file": "symmetry_completion-v1-0.wav",
+          "text": "Ortadaki kesikli çizgi aynanın yeri. Şeklin bir parçası çizginin solunda duruyor. Sağ tarafta onun eşini arıyoruz.",
+          "characters": 114,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 1,
+          "title": "Uzaklıkları eşleştir",
+          "file": "symmetry_completion-v1-1.wav",
+          "text": "Aynadaki görüntü çizgiye aynı uzaklıkta olmalı. Solda çizgiden bir kare uzaktaki parça, sağda da bir kare uzakta durur.",
+          "characters": 119,
+          "estimatedSeconds": 10
+        },
+        {
+          "step": 2,
+          "title": "Yönü de yansıt",
+          "file": "symmetry_completion-v1-2.wav",
+          "text": "Aynalama, şekli yalnızca kaydırmak değildir. Sağa ve sola bakan ayrıntıların yönü de ayna görüntüsünde ters olur.",
+          "characters": 113,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 3,
+          "title": "Katlayarak hayal et",
+          "file": "symmetry_completion-v1-3.wav",
+          "text": "Kâğıdı ayna çizgisinden katlasaydık karşılıklı parçalar üst üste gelirdi. Eşleşmeyen uzaklıkları bu yolla fark edebilirsin.",
+          "characters": 123,
+          "estimatedSeconds": 10
+        }
+      ]
+    },
+    {
+      "id": "visual_attention",
+      "title": "Dikkatli Gözler",
+      "group": "Dikkat ve hafıza",
+      "version": 1,
+      "steps": [
+        {
+          "step": 0,
+          "title": "Hedefi tanı",
+          "file": "visual_attention-v1-0.wav",
+          "text": "Hedefimiz, içinde küçük bir nokta olan daire. Yalnız dış çizgiye değil, küçük ayrıntının yerine de bakalım.",
+          "characters": 107,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 1,
+          "title": "Bir özellik seç",
+          "file": "visual_attention-v1-1.wav",
+          "text": "Önce dış şekli karşılaştır. Sonra içindeki noktayı ve noktanın konumunu kontrol et. Aynı görünen iki şekil küçük bir ayrıntıda farklı olabilir.",
+          "characters": 143,
+          "estimatedSeconds": 11
+        },
+        {
+          "step": 2,
+          "title": "Sırayla tara",
+          "file": "visual_attention-v1-2.wav",
+          "text": "Soldan sağa ve yukarıdan aşağıya bakmak, aynı yere tekrar tekrar dönmeni azaltır. Hızlanmadan önce düzenli bir tarama yolu seç.",
+          "characters": 127,
+          "estimatedSeconds": 10
+        },
+        {
+          "step": 3,
+          "title": "Son kez karşılaştır",
+          "file": "visual_attention-v1-3.wav",
+          "text": "Seçtiğin şekli hedefle yan yana düşün. Şekil, yön, iç ayrıntı ve konum aynı mı? Son kontrolünü yap.",
+          "characters": 99,
+          "estimatedSeconds": 8
+        }
+      ]
+    },
+    {
+      "id": "direction_path",
+      "title": "Haritada Adım Adım",
+      "group": "Görsel düşünme",
+      "version": 1,
+      "steps": [
+        {
+          "step": 0,
+          "title": "Başlangıcı bul",
+          "file": "direction_path-v1-0.wav",
+          "text": "Küçük kaşif haritanın sol alt köşesinde. Bir ok, komşu kareye bir adım atmamızı söylüyor. Önce başlangıç karesini işaretleyelim.",
+          "characters": 128,
+          "estimatedSeconds": 10
+        },
+        {
+          "step": 1,
+          "title": "Bir oku, bir adımı izle",
+          "file": "direction_path-v1-1.wav",
+          "text": "İlk ok sağa bakıyor. Bir kare sağa ilerle. Sonraki oku okumadan önce geldiğin kareyi bul.",
+          "characters": 89,
+          "estimatedSeconds": 7
+        },
+        {
+          "step": 2,
+          "title": "Sıra çok önemli",
+          "file": "direction_path-v1-2.wav",
+          "text": "Örneğimizde iki sağ ve iki yukarı adım var. Her oku sırayla uygularız. Izgaradan dışarı çıkmamak için her adımı kontrol ederiz.",
+          "characters": 127,
+          "estimatedSeconds": 10
+        },
+        {
+          "step": 3,
+          "title": "Hedefi kontrol et",
+          "file": "direction_path-v1-3.wav",
+          "text": "Son okun bittiği kare hedeftir. Başlangıcı adım olarak sayma; yalnız geçtiğin kare değişimlerini say.",
+          "characters": 101,
+          "estimatedSeconds": 8
+        }
+      ]
+    },
+    {
+      "id": "symbol_coding",
+      "title": "Şifre Atölyesi",
+      "group": "Mantık ve sayılar",
+      "version": 1,
+      "steps": [
+        {
+          "step": 0,
+          "title": "Anahtarımızı açalım",
+          "file": "symbol_coding-v1-0.wav",
+          "text": "Bu şifrede daire A harfini, üçgen B harfini, kare C harfini gösteriyor. Her simgenin karşılığını anahtardan okuyacağız.",
+          "characters": 119,
+          "estimatedSeconds": 10
+        },
+        {
+          "step": 1,
+          "title": "Bir simgeyi çöz",
+          "file": "symbol_coding-v1-1.wav",
+          "text": "Önce daireyi bulalım. Anahtarda karşısında A var. Öyleyse mesajdaki her daire yerine A yazabiliriz.",
+          "characters": 99,
+          "estimatedSeconds": 8
+        },
+        {
+          "step": 2,
+          "title": "Sırayı koru",
+          "file": "symbol_coding-v1-2.wav",
+          "text": "Daire, üçgen, daire dizisi A, B, A olur. Aynı simgeye her seferinde aynı karşılığı vermeyi unutma.",
+          "characters": 98,
+          "estimatedSeconds": 8
+        },
+        {
+          "step": 3,
+          "title": "Geriye doğru kontrol et",
+          "file": "symbol_coding-v1-3.wav",
+          "text": "Çözdüğün harfleri yeniden simgelere çevir. İlk mesajla aynı sıra oluşuyorsa anahtarı tutarlı kullanmışsın demektir.",
+          "characters": 115,
+          "estimatedSeconds": 9
+        }
+      ]
+    },
+    {
+      "id": "shadow_matching",
+      "title": "Gölge Avcısı",
+      "group": "Görsel düşünme",
+      "version": 1,
+      "steps": [
+        {
+          "step": 0,
+          "title": "Rengi bir süre unut",
+          "file": "shadow_matching-v1-0.wav",
+          "text": "Renkli şekil bir yıldıza benziyor. Gölge eşleştirmesinde renk ve iç süsler yerine dış sınırı karşılaştıracağız.",
+          "characters": 111,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 1,
+          "title": "Dış çizgiyi izle",
+          "file": "shadow_matching-v1-1.wav",
+          "text": "Şeklin sivri uçlarına ve girintilerine bak. Örneğimizde yıldızın beş dış ucu var. Gölgede de aynı sınır olmalı.",
+          "characters": 111,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 2,
+          "title": "Yönü karşılaştır",
+          "file": "shadow_matching-v1-2.wav",
+          "text": "Buradaki eşleştirmede şeklin yönünü de koruyoruz. Bir ucu yukarı bakan yıldızın gölgesi aynı yönde durmalı.",
+          "characters": 107,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 3,
+          "title": "Eşini bul",
+          "file": "shadow_matching-v1-3.wav",
+          "text": "Sadece koyu renge bakarak seçme. Dış çizginin her köşesini ve yönünü renkli örnekle karşılaştır.",
+          "characters": 96,
+          "estimatedSeconds": 8
+        }
+      ]
+    },
+    {
+      "id": "spatial_relationship",
+      "title": "Katmanların Sırrı",
+      "group": "Görsel düşünme",
+      "version": 1,
+      "steps": [
+        {
+          "step": 0,
+          "title": "Örtüşen parçalar",
+          "file": "spatial_relationship-v1-0.wav",
+          "text": "Üç renkli parça üst üste duruyor. Bir parçanın kenarı kesintisiz görünürken diğerinin kenarı onun altında kayboluyor.",
+          "characters": 117,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 1,
+          "title": "Kesilen kenar ipucu",
+          "file": "spatial_relationship-v1-1.wav",
+          "text": "Bir parça diğerini örtüyorsa, öndeki parçanın kenarı kesintisiz görünür. Arkadaki parçanın bir bölümü saklanır.",
+          "characters": 111,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 2,
+          "title": "Sırayı kur",
+          "file": "spatial_relationship-v1-2.wav",
+          "text": "Örneğimizde sarı parça mavi parçayı örtüyor; mavi parça da pembe parçanın bir bölümünü örtüyor. Sıra sarı, mavi, pembe.",
+          "characters": 119,
+          "estimatedSeconds": 10
+        },
+        {
+          "step": 3,
+          "title": "Her ikiliyi kontrol et",
+          "file": "spatial_relationship-v1-3.wav",
+          "text": "Bir tek köşeye bakıp karar verme. Görünen her kesişimde hangi parçanın diğerini örttüğünü ayrı kontrol et.",
+          "characters": 106,
+          "estimatedSeconds": 9
+        }
+      ]
+    },
+    {
+      "id": "verbal_analogy",
+      "title": "Sözcük Köprüleri",
+      "group": "Mantık ve sayılar",
+      "version": 1,
+      "steps": [
+        {
+          "step": 0,
+          "title": "Sözcükleri tanı",
+          "file": "verbal_analogy-v1-0.wav",
+          "text": "Kuş ve yuva sözcüklerine bakalım. Bu iki sözcük arasında bir bağ kurabiliriz: Kuş, yuvasında barınır.",
+          "characters": 101,
+          "estimatedSeconds": 8
+        },
+        {
+          "step": 1,
+          "title": "Bağı cümleyle söyle",
+          "file": "verbal_analogy-v1-1.wav",
+          "text": "Yalnızca kuşla birlikte aklına gelen bir sözcük seçmek yerine ilişkiyi tam bir cümleyle kur. Hayvan ve barınağı ilişkisini arıyoruz.",
+          "characters": 132,
+          "estimatedSeconds": 11
+        },
+        {
+          "step": 2,
+          "title": "İkinci çifte taşı",
+          "file": "verbal_analogy-v1-2.wav",
+          "text": "Şimdi arı için aynı bağı düşün. Arının barınağı kovandır. Kuş ve yuva gibi, arı ve kovan da aynı ilişkiyi taşır.",
+          "characters": 112,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 3,
+          "title": "İlişkiyi karıştırma",
+          "file": "verbal_analogy-v1-3.wav",
+          "text": "Bal arıyla ilgilidir ama barınak değildir. İlgili bir sözcük bulmak yetmez; iki çiftteki ilişki aynı olmalı.",
+          "characters": 108,
+          "estimatedSeconds": 9
+        }
+      ]
+    },
+    {
+      "id": "top_view",
+      "title": "Yukarıdan Bak",
+      "group": "Görsel düşünme",
+      "version": 1,
+      "steps": [
+        {
+          "step": 0,
+          "title": "Bakış yerini değiştir",
+          "file": "top_view-v1-0.wav",
+          "text": "Renkli blokları yandan görüyoruz. Şimdi gözümüzü yapının tam üstüne taşıdığımızı hayal edelim.",
+          "characters": 94,
+          "estimatedSeconds": 8
+        },
+        {
+          "step": 1,
+          "title": "Tabanda kaplanan yerler",
+          "file": "top_view-v1-1.wav",
+          "text": "Üstten görünüşte her sütunun tepesi görünür. Üst üste duran bloklar, aynı taban karesini paylaştıkları için üstten tek yer kaplar.",
+          "characters": 130,
+          "estimatedSeconds": 10
+        },
+        {
+          "step": 2,
+          "title": "Yükseklik ve yer farklıdır",
+          "file": "top_view-v1-2.wav",
+          "text": "Bir sütun bir blok, diğeri üç blok yüksek olabilir. İkisinin taban alanı birer kareyse üstten görünüşte birer kare gösterilir.",
+          "characters": 126,
+          "estimatedSeconds": 10
+        },
+        {
+          "step": 3,
+          "title": "İzini çiz",
+          "file": "top_view-v1-3.wav",
+          "text": "Her dolu taban karesini işaretle. Yükseklik yerine yapının zeminde nereleri kapladığına dikkat et.",
+          "characters": 98,
+          "estimatedSeconds": 8
+        }
+      ]
+    },
+    {
+      "id": "shape_combination",
+      "title": "Parçadan Bütüne",
+      "group": "Görsel düşünme",
+      "version": 1,
+      "steps": [
+        {
+          "step": 0,
+          "title": "İki parçayı tanı",
+          "file": "shape_combination-v1-0.wav",
+          "text": "Bir karenin köşegeni boyunca kesilmiş iki eş üçgen düşün. İkisi de bütün karenin bir yarısıdır.",
+          "characters": 95,
+          "estimatedSeconds": 8
+        },
+        {
+          "step": 1,
+          "title": "Kenarları eşleştir",
+          "file": "shape_combination-v1-1.wav",
+          "text": "Bu iki üçgeni kesilen uzun kenarları boyunca bir araya getirelim. Kenarlar boşluk bırakmadan birbirine uyar.",
+          "characters": 108,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 2,
+          "title": "Bütünü gör",
+          "file": "shape_combination-v1-2.wav",
+          "text": "İki parça birleşince dış sınır dört eş kenarlı bir kare olur. Birleşen iç kenarı bütünün dış sınırı sanmayalım.",
+          "characters": 111,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 3,
+          "title": "Parçaları kontrol et",
+          "file": "shape_combination-v1-3.wav",
+          "text": "Bütün oluşurken parçaları değiştirmiyoruz. Döndürebilir ve taşıyabiliriz; bu örnekte hiçbir parçayı uzatmıyor veya kesmiyoruz.",
+          "characters": 126,
+          "estimatedSeconds": 10
+        }
+      ]
+    },
+    {
+      "id": "figure_completion",
+      "title": "Eksik Parçayı Bul",
+      "group": "Görsel düşünme",
+      "version": 1,
+      "steps": [
+        {
+          "step": 0,
+          "title": "Boşluğun sınırını izle",
+          "file": "figure_completion-v1-0.wav",
+          "text": "Dört küçük kareden oluşan desenin sağ alt köşesi eksik. Önce boşluğun hangi biçimde olduğunu inceleyelim.",
+          "characters": 105,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 1,
+          "title": "Şekil tek başına yetmez",
+          "file": "figure_completion-v1-1.wav",
+          "text": "Boşluğa kare bir parça sığar. Fakat desenin çizgileri ve rengi de komşu parçalarla devam etmeli.",
+          "characters": 96,
+          "estimatedSeconds": 8
+        },
+        {
+          "step": 2,
+          "title": "Devam eden ayrıntıyı bul",
+          "file": "figure_completion-v1-2.wav",
+          "text": "Örneğimizde satırlarda mavi ve sarı dönüşümlü duruyor. Alt solda sarı bulunduğu için boş sağ alt parçada mavi gerekiyor.",
+          "characters": 120,
+          "estimatedSeconds": 10
+        },
+        {
+          "step": 3,
+          "title": "Bütünle kontrol et",
+          "file": "figure_completion-v1-3.wav",
+          "text": "Parçayı yerleştirdiğinde hem dış sınır hem de içerideki desen tamamlanmalı. Yalnızca boyutu uygun diye seçim yapma.",
+          "characters": 115,
+          "estimatedSeconds": 9
+        }
+      ]
+    },
+    {
+      "id": "weight_comparison",
+      "title": "Hangisi Daha Ağır?",
+      "group": "Mantık ve sayılar",
+      "version": 1,
+      "steps": [
+        {
+          "step": 0,
+          "title": "Teraziyi okuyalım",
+          "file": "weight_comparison-v1-0.wav",
+          "text": "Terazinin sol kefesi aşağıda, sağ kefesi yukarıda. Bu örnekte her kefede bir nesne var.",
+          "characters": 87,
+          "estimatedSeconds": 7
+        },
+        {
+          "step": 1,
+          "title": "Ağır taraf alçalır",
+          "file": "weight_comparison-v1-1.wav",
+          "text": "Dengede olmayan terazide daha ağır nesnenin bulunduğu kefe aşağı iner. Yüksekte kalan nesne daha hafiftir.",
+          "characters": 106,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 2,
+          "title": "Boyuta aldanma",
+          "file": "weight_comparison-v1-2.wav",
+          "text": "Büyük görünen bir nesne mutlaka daha ağır değildir. Bu soruda ağırlığı anlamak için nesnenin boyunu değil, terazinin eğimini kullanıyoruz.",
+          "characters": 138,
+          "estimatedSeconds": 11
+        },
+        {
+          "step": 3,
+          "title": "İlişkiyi söyle",
+          "file": "weight_comparison-v1-3.wav",
+          "text": "Sol kefedeki pembe top aşağıdaysa pembe top daha ağırdır. Terazi yatay olsaydı iki taraftaki toplam ağırlık eşit olurdu.",
+          "characters": 120,
+          "estimatedSeconds": 10
+        }
+      ]
+    },
+    {
+      "id": "shape_equation",
+      "title": "Terazide Eşitlik",
+      "group": "Mantık ve sayılar",
+      "version": 1,
+      "steps": [
+        {
+          "step": 0,
+          "title": "Eşitliği fark et",
+          "file": "shape_equation-v1-0.wav",
+          "text": "Yatay duran bir terazi görüyoruz. Bir tarafta iki aynı yıldız, diğer tarafta toplam değeri altı olan sayı bloğu var.",
+          "characters": 116,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 1,
+          "title": "Toplamdan parçaya",
+          "file": "shape_equation-v1-1.wav",
+          "text": "İki yıldızın toplam değeri altı. Yıldızlar aynı değerde olduğuna göre altıyı iki eşit gruba ayırabiliriz.",
+          "characters": 105,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 2,
+          "title": "Bilinmeyeni bul",
+          "file": "shape_equation-v1-2.wav",
+          "text": "Üç ve üç birleşince altı eder. Öyleyse bir yıldızın değeri üçtür. Şeklin rengi, bu eşitliği değiştirmez.",
+          "characters": 104,
+          "estimatedSeconds": 8
+        },
+        {
+          "step": 3,
+          "title": "Yerine koy ve kontrol et",
+          "file": "shape_equation-v1-3.wav",
+          "text": "Bulduğun üçü her yıldızın yerine yaz. Üç artı üç altı ediyor mu? Eşitliği kontrol etmeden bitirme.",
+          "characters": 98,
+          "estimatedSeconds": 8
+        }
+      ]
+    },
+    {
+      "id": "visual_memory",
+      "title": "Hafıza Bahçesi",
+      "group": "Dikkat ve hafıza",
+      "version": 1,
+      "steps": [
+        {
+          "step": 0,
+          "title": "Önce dikkatle bak",
+          "file": "visual_memory-v1-0.wav",
+          "text": "Üç yerde üç şekil var: solda mavi daire, ortada sarı üçgen, sağda pembe kare. Her şeklin yerine de dikkat edelim.",
+          "characters": 113,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 1,
+          "title": "Küçük gruplar kur",
+          "file": "visual_memory-v1-1.wav",
+          "text": "Şekilleri bir öyküye bağlayabilirsin: Soldaki daire, ortadaki üçgeni ziyaret ediyor; kare de sağda bekliyor. Kendi kısa bağlantını kur.",
+          "characters": 135,
+          "estimatedSeconds": 11
+        },
+        {
+          "step": 2,
+          "title": "Gizlenince hatırla",
+          "file": "visual_memory-v1-2.wav",
+          "text": "Şekiller kapandığında önce soldan sağa sırayı zihninde canlandır. Sonra renkleri ve konumları tek tek hatırla.",
+          "characters": 110,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 3,
+          "title": "Yeniden bak ve öğren",
+          "file": "visual_memory-v1-3.wav",
+          "text": "Yanıldıysan şekilleri yeniden açıp farklı olan yeri incele. Amaç yalnız hızlı hatırlamak değil, işe yarayan bir hatırlama yolu bulmak.",
+          "characters": 134,
+          "estimatedSeconds": 11
+        }
+      ]
+    },
+    {
+      "id": "number_pattern",
+      "title": "Sayıların Ritmi",
+      "group": "Mantık ve sayılar",
+      "version": 1,
+      "steps": [
+        {
+          "step": 0,
+          "title": "Sayıları sırayla oku",
+          "file": "number_pattern-v1-0.wav",
+          "text": "İki, dört, altı, sekiz. Sayılar büyüyor. Her adımda ne kadar büyüdüklerini inceleyelim.",
+          "characters": 87,
+          "estimatedSeconds": 7
+        },
+        {
+          "step": 1,
+          "title": "Aradaki farkı bul",
+          "file": "number_pattern-v1-1.wav",
+          "text": "Dörtten ikiyi çıkarınca iki kalır. Altı ile dört arasında da iki var. Sekiz ile altı arasında da fark iki.",
+          "characters": 106,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 2,
+          "title": "Aynı adımı sürdür",
+          "file": "number_pattern-v1-2.wav",
+          "text": "Bu dizide her adımda iki ekliyoruz. Sekize iki eklersek on olur. Böylece belirlediğimiz kural devam eder.",
+          "characters": 105,
+          "estimatedSeconds": 9
+        },
+        {
+          "step": 3,
+          "title": "Bütün adımlarda kontrol et",
+          "file": "number_pattern-v1-3.wav",
+          "text": "Bir sayı dizisinin birden fazla kuralı olabilir. Burada açıkça her seferinde iki ekleme kuralını kullanıyoruz. Kuralın bütün verilen adımlarda çalıştığını kontrol et.",
+          "characters": 166,
+          "estimatedSeconds": 13
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "lessons": 18,
+    "steps": 72,
+    "characters": 8076,
+    "estimatedMinutes": 11
+  },
+  "contentHash": "5b1c27b5c035cca25d84f1ee7deece377e6b222496061b017592f3bd79f46adf"
+}

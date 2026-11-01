@@ -1,6 +1,7 @@
 import hashlib
 import importlib.util
 import json
+import re
 from pathlib import Path
 import tempfile
 import unittest
@@ -17,6 +18,7 @@ def module(name):
 
 signer = module('sign-android-release.py')
 packager = module('package-android-candidate.py')
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class AndroidReleaseTests(unittest.TestCase):
@@ -75,6 +77,21 @@ class AndroidReleaseTests(unittest.TestCase):
                 z.writestr('assets/public/unexpected.js', 'stale asset')
             with self.assertRaises(ValueError):
                 packager.verify_assets(archive, assets, 'assets/public/', bridge)
+
+
+class AndroidReleaseDocumentationTests(unittest.TestCase):
+    def test_release_notes_cover_the_current_candidate(self):
+        gradle = (ROOT / 'mobile/android/play-billing.gradle').read_text()
+        code = re.search(r'versionCode\s+(\d+)', gradle).group(1)
+        name = re.search(r'versionName\s+"([^"]+)"', gradle).group(1)
+        notes = (ROOT / 'docs/ANDROID_RELEASE.md').read_text()
+        headings = re.findall(r'^## (\d+\.\d+\.\d+)', notes, re.MULTILINE)
+        self.assertTrue(headings, 'Sürüm notu başlığı bulunmalı')
+        self.assertEqual(headings[0], name, 'En yeni sürüm notu güncel sürüm adıyla eşleşmeli')
+        first = notes.split('## ', 2)[1]
+        self.assertIn(code, first, 'En yeni sürüm notu sürüm kodunu yazmalı')
+        self.assertIn('package-android-candidate.py', first, 'Sürüm notu gerçek doğrulama komutunu yazmalı')
+        self.assertIn('ticari yayın kabulü', first, 'Sürüm notu ticari yayın kabulü iddiası taşımamalı')
 
 
 if __name__ == '__main__':
