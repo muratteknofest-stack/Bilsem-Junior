@@ -50,6 +50,12 @@ puanlama durur; hata gizlenmez. Test/staging ortamında `scripts/verify-commerci
 kimlik ayrımını ve tekrar gönderimleri doğrular. Test için o gün görevi olmayan öğrenci ve bir veli profili gerekir.
 
 ## Dağıtım sırası ve geri alma
+İzole yedek kabulünde kaynak Auth sütunları mevcut `supabase_auth_admin` sahibiyle hazırlanır;
+veri aktarımı normal geri yükleme kullanıcısıyla ayrı tek işlemde yapılır. CLI'nin kurduğu yerel
+hedefte `RESTORE_AUTH_OWNER_DATABASE_URL` aynı host/port/veritabanına ve yalnız bu Auth sahibine
+bağlanmalıdır. Üretim hedefi, rol üyeliği veya yeni yetki verilmesi bu yolun parçası değildir.
+Arşivin özgün hash doğrulaması ve diğer SQL hatalarında durma korunur. Şema hazırlığından sonra
+veri aktarımı başarısız olursa bu geçici hedef atılır; başarılı geri yükleme makbuzu oluşturulmaz.
 Önce eklemeli Supabase migrations, sonra uyumlu API+istemci dağıtımı. Bu tur iki sunucu tablosu/RPC seti eklendi;
 eski içerik veya kullanıcı kayıtları silinmedi. Uygulama geri alındığında yeni tabloları koruyun, talepleri kaybetmeyin.
 Vercel erişimi olan yetkili önceki sağlıklı dağıtıma geri dönebilir; mevcut bağlantıyla işlem yapılmış değildir.

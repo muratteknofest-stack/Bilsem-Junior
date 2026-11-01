@@ -31,7 +31,7 @@ function run(command,args,env=clean,timeout=600_000,label='yerel ortam'){return 
  child.once('close',code=>{
   if(code===0){resolve();return;}
   const state=diagnostic.match(/SQLSTATE=((?:[0-9][0-9A-Z]{4}|P0001|XX000))\b/)?.[1];
-  const location=diagnostic.match(/\b(roles|schema|auth-data|data|defaults|verify)\.sql:(\d+)\b/);
+  const location=diagnostic.match(/\b(roles|schema|auth-schema|auth-data|data|defaults|verify)\.sql:(\d+)\b/);
   const safe=[label,runtimeFailureCategory(diagnostic),runtimeFailureDetails(diagnostic),state&&`SQLSTATE=${state}`,location&&`${location[1]}.sql:${location[2]}`].filter(Boolean).join(' ');
   const error=Error(`İzole geri yükleme kabulü başarısız (${safe}); gizli değerler gösterilmedi.`);
   error.code=runtimeFailureCategory(diagnostic);error.details=runtimeFailureDetails(diagnostic);reject(error);
@@ -50,11 +50,15 @@ try{
  await startRuntimeWithRetry(()=>cli(['start','--exclude','realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor'],240_000),()=>cli(['stop','--no-backup']));
  if(runtimeOnly){
   await run('psql',['--no-psqlrc','--set','ON_ERROR_STOP=on','--command',"do $$ begin if to_regclass('auth.users') is null or to_regclass('auth.identities') is null then raise exception 'Managed Auth schema missing'; end if; end $$;"],{...clean,PGHOST:'127.0.0.1',PGPORT:'54322',PGUSER:'postgres',PGPASSWORD:'postgres',PGDATABASE:'postgres',PGSSLMODE:'disable'},120_000,'yerel şema kontrolü');
+  // CLI v2.81.3 provisions the local Auth owner with dbConfig.Password.
+  // Roll back a harmless DDL probe; do not change roles or managed grants.
+  await run('psql',['--no-psqlrc','--set','ON_ERROR_STOP=on','--command','BEGIN; ALTER TABLE auth.users ADD COLUMN bilsem_isolated_restore_probe boolean; ROLLBACK;'],{...clean,PGHOST:'127.0.0.1',PGPORT:'54322',PGUSER:'supabase_auth_admin',PGPASSWORD:'postgres',PGDATABASE:'postgres',PGSSLMODE:'disable'},120_000,'yerel Auth sahibi kontrolü');
   console.log('İzole Supabase çalışma ortamı ve Auth şeması doğrulandı; üretim verisi kullanılmadı.');
  }else{
  await run(process.execPath,[fileURLToPath(new URL('./restore-backup.mjs',import.meta.url)),archive],{
   ...clean,BACKUP_ENCRYPTION_KEY:process.env.BACKUP_ENCRYPTION_KEY,
   RESTORE_DATABASE_URL:'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
+  RESTORE_AUTH_OWNER_DATABASE_URL:'postgresql://supabase_auth_admin:postgres@127.0.0.1:54322/postgres',
  },600_000,'SQL içe aktarma');
  verified=true;
  console.log('Şifreli yedek taze yerel Supabase ortamına geri yüklendi; Auth/profil ve aile bağlantıları doğrulandı.');

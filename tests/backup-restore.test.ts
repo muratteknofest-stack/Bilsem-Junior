@@ -12,6 +12,7 @@ import {encryptBackup,decryptBackup} from '../scripts/backup-crypto.mjs';
 import {isolatedRestoreTarget,localRestoreRoles} from '../scripts/restore-backup.mjs';
 import {temporaryBackupAccess,backupConnectionEnvironment} from '../scripts/backup-access.mjs';
 import {backupConfiguration} from '../scripts/backup-config.mjs';
+import {buildAuthRestoreCompatibility} from '../scripts/auth-restore-compat.mjs';
 import {BACKUP_CA_PATH,verifyBackupCaBundle} from '../scripts/backup-tls.mjs';
 import {diagnosticTail,runtimeFailureCategory,runtimeFailureDetails,startRuntimeWithRetry} from '../scripts/backup-runtime-diagnostics.mjs';
 
@@ -63,13 +64,13 @@ test('runtime-only acceptance uses no backup credentials and never writes a rest
   const log=join(dir,'commands.jsonl');
   const probe=`#!/usr/bin/env node
 const fs=require('node:fs');
-fs.appendFileSync(process.env.BILSEM_RUNTIME_PROBE_LOG,JSON.stringify({args:process.argv.slice(2),registry:process.env.SUPABASE_INTERNAL_IMAGE_REGISTRY,dockerConfig:process.env.DOCKER_CONFIG,privateInput:['SUPABASE_ACCESS_TOKEN','BACKUP_ENCRYPTION_KEY','SUPABASE_DB_URL','RESTORE_DATABASE_URL'].some(k=>k in process.env)})+'\\n');
+fs.appendFileSync(process.env.BILSEM_RUNTIME_PROBE_LOG,JSON.stringify({args:process.argv.slice(2),registry:process.env.SUPABASE_INTERNAL_IMAGE_REGISTRY,dockerConfig:process.env.DOCKER_CONFIG,privateInput:['SUPABASE_ACCESS_TOKEN','BACKUP_ENCRYPTION_KEY','SUPABASE_DB_URL','RESTORE_DATABASE_URL','RESTORE_AUTH_OWNER_DATABASE_URL'].some(k=>k in process.env)})+'\\n');
 if(process.env.BILSEM_RUNTIME_PROBE_FAIL&&process.argv.includes(process.env.BILSEM_RUNTIME_PROBE_FAIL)){process.stderr.end('progress\\n'.repeat(20000)+(process.env.BILSEM_RUNTIME_PROBE_FAIL==='pull'?'failed to pull registry-1.docker.io/private: 429 Too Many Requests private-runtime-detail':'supabase_auth_fixture is not ready: private-runtime-detail'),()=>{process.exitCode=1;});}
 `;
   for(const tool of ['npx','psql','docker'])writeFileSync(join(dir,tool),probe,{mode:0o700});
   for(const fail of ['', 'start', 'pull']){
    writeFileSync(log,'');
-   const run=spawnSync(process.execPath,[resolve('scripts/verify-backup-restore.mjs'),'--runtime-check'],{cwd:dir,encoding:'utf8',timeout:20000,env:{...process.env,PATH:`${dir}:${process.env.PATH}`,BILSEM_RUNTIME_PROBE_LOG:log,BILSEM_RUNTIME_PROBE_FAIL:fail,BACKUP_ENCRYPTION_KEY:'not-a-valid-key',SUPABASE_ACCESS_TOKEN:'private-test-token',SUPABASE_DB_URL:'private-db-url',RESTORE_DATABASE_URL:'private-restore-url'}});
+   const run=spawnSync(process.execPath,[resolve('scripts/verify-backup-restore.mjs'),'--runtime-check'],{cwd:dir,encoding:'utf8',timeout:20000,env:{...process.env,PATH:`${dir}:${process.env.PATH}`,BILSEM_RUNTIME_PROBE_LOG:log,BILSEM_RUNTIME_PROBE_FAIL:fail,BACKUP_ENCRYPTION_KEY:'not-a-valid-key',SUPABASE_ACCESS_TOKEN:'private-test-token',SUPABASE_DB_URL:'private-db-url',RESTORE_DATABASE_URL:'private-restore-url',RESTORE_AUTH_OWNER_DATABASE_URL:'private-auth-owner-url'}});
    assert.equal(run.status,fail?1:0,run.stderr);
    const calls=readFileSync(log,'utf8').trim().split('\n').map(line=>JSON.parse(line));
    assert.ok(calls.every(call=>!call.privateInput&&call.registry==='docker.io'));
@@ -86,7 +87,7 @@ if(process.env.BILSEM_RUNTIME_PROBE_FAIL&&process.argv.includes(process.env.BILS
 
 // Substitute only the command-line tools. Exercise the real backup/restore
 // entrypoints without a network connection, database or production archive.
-function databaseToolProbe(kind:'backup'|'restore',failProbe=false){
+function databaseToolProbe(kind:'backup'|'restore',failProbe=false,authOwner=false){
  const dir=mkdtempSync(join(tmpdir(),'bilsem-db-environment-'));
  try{
   const log=join(dir,'child-environment.jsonl'),key=randomBytes(32);
@@ -99,11 +100,15 @@ fs.appendFileSync(process.env.BILSEM_DB_PROBE_LOG,JSON.stringify({
  hasBackupKey:!!process.env.BACKUP_ENCRYPTION_KEY,
  hasBackupUrl:!!process.env.SUPABASE_DB_URL,
  hasRestoreUrl:!!process.env.RESTORE_DATABASE_URL,
+hasAuthOwnerUrl:!!process.env.RESTORE_AUTH_OWNER_DATABASE_URL,
  hasManagementToken:!!process.env.SUPABASE_ACCESS_TOKEN,
+ownerDdlOnly:process.argv.some(value=>value.endsWith('/auth-schema.sql'))?process.argv.filter((value,index,args)=>args[index-1]==='--file').every(file=>!/(COPY|GRANT|ALTER ROLE)/.test(fs.readFileSync(file,'utf8'))):null,
+dataHasCompatibility:process.argv.filter((value,index,args)=>args[index-1]==='--file'&&value.endsWith('/auth-data.sql')).some(file=>/Source-typed Auth additions/.test(fs.readFileSync(file,'utf8'))),
  args:process.argv.slice(2)
 })+'\\n');
 if(process.env.BILSEM_DB_PROBE_FAIL&&process.argv.includes('--single-transaction')){
- console.error('psql:/private-path/schema.sql:42: ERROR: 23503\\nDETAIL: private-record-do-not-log');process.exit(1);
+ const preparation=process.argv.some(value=>value.endsWith('/auth-schema.sql'));
+ console.error('psql:/private-path/'+(preparation?'auth-schema.sql:2: ERROR: 42501':'schema.sql:42: ERROR: 23503')+'\\nDETAIL: private-record-do-not-log');process.exit(1);
 }
 if(process.env.BILSEM_DB_PROBE_FAIL&&process.argv.includes('--roles-only')){
  console.error('pg_dumpall: private-host private-password SSL error: certificate verify failed\\nDETAIL: private-record-do-not-log');process.exit(1);
@@ -116,6 +121,7 @@ else if(process.argv.includes('--data-only'))console.log('COPY "public"."fixture
 `,{mode:0o700});
   const archive=join(dir,'fixture.enc');
   const files={'roles.sql':'roles','schema.sql':'schema','auth-data.sql':'auth','data.sql':'data'};
+  if(authOwner)files['auth-data.sql']=buildAuthRestoreCompatibility('COPY "auth"."users" ("id") FROM stdin;\n\\.\nCOPY "auth"."identities" ("id") FROM stdin;\n\\.\n',[{table:'users',column:'id',type:'uuid'},{table:'identities',column:'id',type:'uuid'}]);
   writeFileSync(archive,encryptBackup(Buffer.from(JSON.stringify(backupManifest(files))),key));
   const result=spawnSync(process.execPath,[resolve(`scripts/${kind==='backup'?'backup-database':'restore-backup'}.mjs`),...(kind==='restore'?[archive]:[])],{
    cwd:dir,encoding:'utf8',timeout:20_000,env:{...process.env,
@@ -124,6 +130,7 @@ else if(process.argv.includes('--data-only'))console.log('COPY "public"."fixture
     SUPABASE_ACCESS_TOKEN:kind==='restore'?'sbp_'+ 'a'.repeat(40):'',
     SUPABASE_DB_URL:'postgresql://postgres:fixture@db.vtcsoqohkiagbwatlabk.supabase.co:5432/postgres',
     RESTORE_DATABASE_URL:'postgresql://fixture:local-only@127.0.0.1:54322/postgres',
+    RESTORE_AUTH_OWNER_DATABASE_URL:'postgresql://supabase_auth_admin:owner-only@127.0.0.1:54322/postgres',
     PGHOST:'external.invalid',PGHOSTADDR:'203.0.113.55',PGPORT:'6543',PGDATABASE:'wrong',
     PGUSER:'wrong',PGPASSWORD:'wrong',PGSERVICE:'redirect',PGSERVICEFILE:'/fixture/service',
     PGSYSCONFDIR:'/fixture',PGPASSFILE:'/fixture/passwords',PGOPTIONS:'-c search_path=wrong',
@@ -132,17 +139,21 @@ else if(process.argv.includes('--data-only'))console.log('COPY "public"."fixture
   });
   assert.equal(result.status,failProbe?1:0,result.stderr);
   if(failProbe){
-   assert.match(result.stderr,kind==='restore'?/SQLSTATE=23503 schema\.sql:42/:/roles\.sql TLS_CERTIFICATE/);
+   assert.match(result.stderr,kind==='restore'?(authOwner?/SQLSTATE=42501 auth-schema\.sql:2/:/SQLSTATE=23503 schema\.sql:42/):/roles\.sql TLS_CERTIFICATE/);
    assert.doesNotMatch(result.stderr,/private-record-do-not-log|private-path|local-only|private-host|private-password/);
   }
   const records=readFileSync(log,'utf8').trim().split('\n').map(line=>JSON.parse(line));
-  assert.equal(records.length,kind==='backup'?(failProbe?1:5):2);
+  assert.equal(records.length,kind==='backup'?(failProbe?1:5):(authOwner&&!failProbe?3:2));
   for(const record of records){
-   assert.deepEqual(record.pg,kind==='backup'?{PGHOST:'db.vtcsoqohkiagbwatlabk.supabase.co',PGPORT:'5432',PGUSER:'postgres',PGPASSWORD:'fixture',PGDATABASE:'postgres',PGSSLMODE:'verify-full',PGSSLROOTCERT:BACKUP_CA_PATH,PGCONNECT_TIMEOUT:'15',PGOPTIONS:'-c default_transaction_read_only=on'}:{PGHOST:'127.0.0.1',PGPORT:'54322',PGUSER:'fixture',PGPASSWORD:'local-only',PGDATABASE:'postgres',PGSSLMODE:'disable'});
+   const ownerCall=authOwner&&record.args.some((value:string)=>value.endsWith('/auth-schema.sql'));
+   assert.deepEqual(record.pg,kind==='backup'?{PGHOST:'db.vtcsoqohkiagbwatlabk.supabase.co',PGPORT:'5432',PGUSER:'postgres',PGPASSWORD:'fixture',PGDATABASE:'postgres',PGSSLMODE:'verify-full',PGSSLROOTCERT:BACKUP_CA_PATH,PGCONNECT_TIMEOUT:'15',PGOPTIONS:'-c default_transaction_read_only=on'}:{PGHOST:'127.0.0.1',PGPORT:'54322',PGUSER:ownerCall?'supabase_auth_admin':'fixture',PGPASSWORD:ownerCall?'owner-only':'local-only',PGDATABASE:'postgres',PGSSLMODE:'disable'});
    assert.equal(record.hasBackupKey,false,'Encryption key must stay in the parent process');
    assert.equal(record.hasBackupUrl,false);
    assert.equal(record.hasRestoreUrl,false);
+   assert.equal(record.hasAuthOwnerUrl,false);
    assert.equal(record.hasManagementToken,false);
+   if(ownerCall)assert.equal(record.ownerDdlOnly,true);
+   if(authOwner)assert.equal(record.dataHasCompatibility,false);
   }
   if(kind==='backup'&&!failProbe){
    const restored=JSON.parse(decryptBackup(readFileSync(join(dir,'zekapark-database.enc')),key).toString());verifyBackupManifest(restored);
@@ -157,6 +168,8 @@ else if(process.argv.includes('--data-only'))console.log('COPY "public"."fixture
 
 test('backup subprocesses cannot inherit libpq redirection or the archive encryption key',()=>databaseToolProbe('backup'));
 test('restore preflight and execution keep the validated local target despite inherited libpq settings',()=>databaseToolProbe('restore'));
+test('managed owner prepares only Auth column DDL before ordinary atomic data replay',()=>databaseToolProbe('restore',false,true));
+test('failed Auth owner preparation stops before data replay and exposes only SQLSTATE',()=>databaseToolProbe('restore',true,true));
 test('restore failures expose only the SQLSTATE and archive location, never server records or paths',()=>databaseToolProbe('restore',true));
 test('backup TLS failures expose only a fixed category, never server messages or credentials',()=>databaseToolProbe('backup',true));
 

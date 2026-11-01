@@ -6,6 +6,7 @@ import {pathToFileURL} from 'node:url';
 import {backupKey,decryptBackup} from './backup-crypto.mjs';
 import {verifyBackupManifest} from './backup-manifest.mjs';
 import {postgresChildEnvironment} from './postgres-child-environment.mjs';
+import {splitAuthRestoreCompatibility} from './auth-restore-compat.mjs';
 // The fresh runtime owns its managed superuser. An ordinary local postgres
 // restore cannot ALTER that superuser, even for an otherwise safe GUC. Keep
 // only this exact pg_dump form out of the local replay; all other statements
@@ -18,6 +19,13 @@ export function isolatedRestoreTarget(value){
  if(!['postgres:','postgresql:'].includes(url.protocol)||!['127.0.0.1','localhost','[::1]'].includes(url.hostname)||!url.username||!url.password||url.search||url.hash||!/^\/[a-zA-Z0-9_]+$/.test(url.pathname))throw Error('Geri yükleme yalnızca boş, yerel ve izole Supabase veritabanına yapılabilir.');
  return {PGHOST:url.hostname==='[::1]'?'::1':url.hostname,PGPORT:url.port||'5432',PGUSER:decodeURIComponent(url.username),PGPASSWORD:decodeURIComponent(url.password),PGDATABASE:url.pathname.slice(1),PGSSLMODE:'disable'};
 }
+/** Auth DDL must use its existing owner on precisely the same local target.
+ * No memberships, grants or ownership of the restore account are changed. */
+export function isolatedAuthOwnerTarget(value,target){
+ const owner=isolatedRestoreTarget(value);
+ if(owner.PGUSER!=='supabase_auth_admin'||['PGHOST','PGPORT','PGDATABASE'].some(key=>owner[key]!==target[key]))throw Error('Auth şema hazırlığı aynı izole hedefin mevcut Auth sahibiyle yapılmalıdır.');
+ return owner;
+}
 function psql(env,args,input){return new Promise((resolve,reject)=>{
  const child=spawn('psql',['--no-psqlrc','--set','ON_ERROR_STOP=on','--set','VERBOSITY=sqlstate',...args],{env:postgresChildEnvironment(env),stdio:['pipe','pipe','pipe'],timeout:120_000});let output='',diagnostic='';
  child.stdout.on('data',chunk=>{if(output.length<10000)output+=chunk.toString();});
@@ -28,7 +36,7 @@ function psql(env,args,input){return new Promise((resolve,reject)=>{
   // Emit only a SQLSTATE and a known archive filename/line. Never print the
   // server message, statement, record, connection details or arbitrary path.
   const state=diagnostic.match(/\b(?:ERROR|FATAL):\s*((?:[0-9][0-9A-Z]{4}|P0001|XX000))\b/)?.[1];
-  const location=diagnostic.match(/\/(roles|schema|auth-data|data|defaults|verify)\.sql:(\d+):/);
+  const location=diagnostic.match(/\/(roles|schema|auth-schema|auth-data|data|defaults|verify)\.sql:(\d+):/);
   const safe=[state&&`SQLSTATE=${state}`,location&&`${location[1]}.sql:${location[2]}`].filter(Boolean).join(' ');
   reject(Error(`Geri yükleme veya ön koşul kontrolü başarısız${safe?` (${safe})`:''}. Başarı kaydı oluşturulmadı.`));
  });child.stdin.end(input||'');
@@ -38,13 +46,19 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   const [input]=process.argv.slice(2),env=isolatedRestoreTarget(process.env.RESTORE_DATABASE_URL);
   if(!input)throw Error('Şifreli yedek dosyası gerekli.');
   const archive=JSON.parse(decryptBackup(await readFile(input),backupKey(process.env.BACKUP_ENCRYPTION_KEY)).toString());verifyBackupManifest(archive);
+  for(const name of ['roles.sql','schema.sql','auth-data.sql','data.sql'])if(/(?:^|\n)\s*\\(?:connect|c\s|!)/i.test(archive.files[name])||/\bCOPY\b[^;]*\bPROGRAM\b/i.test(archive.files[name]))throw Error('Yedekte hedef değiştiren veya dış program çalıştıran komut kabul edilmedi.');
+  const auth=splitAuthRestoreCompatibility(archive.files['auth-data.sql']);
+  const authOwner=auth.schemaSql?isolatedAuthOwnerTarget(process.env.RESTORE_AUTH_OWNER_DATABASE_URL,env):null;
   // Local Supabase must already own its managed schemas; application schema must be empty.
   await psql(env,['-c',"do $$ begin if to_regclass('auth.users') is null or to_regclass('public.profiles') is not null or exists(select 1 from auth.users) then raise exception 'Target must be a fresh local Supabase'; end if; end $$;"]);
   process.umask(0o077);dir=await mkdtemp(path.join(tmpdir(),'zekapark-restore-'));const args=['--single-transaction'];
+  if(authOwner){
+   const file=path.join(dir,'auth-schema.sql');await writeFile(file,auth.schemaSql,{mode:0o600});
+   await psql(authOwner,['--single-transaction','--file',file]);
+  }
   const defaultsFile=path.join(dir,'defaults.sql');await writeFile(defaultsFile,'ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated;',{mode:0o600});args.push('--file',defaultsFile);
   for(const name of ['roles.sql','schema.sql','auth-data.sql','data.sql']){
-   if(/(?:^|\n)\s*\\(?:connect|c\s|!)/i.test(archive.files[name])||/\bCOPY\b[^;]*\bPROGRAM\b/i.test(archive.files[name]))throw Error('Yedekte hedef değiştiren veya dış program çalıştıran komut kabul edilmedi.');
-   const file=path.join(dir,name),sql=name==='roles.sql'?localRestoreRoles(archive.files[name]):archive.files[name];
+   const file=path.join(dir,name),sql=name==='roles.sql'?localRestoreRoles(archive.files[name]):name==='auth-data.sql'?auth.dataSql:archive.files[name];
    await writeFile(file,sql,{mode:0o600});args.push('--file',file);
   }
   const verify="do $$ begin if exists(select 1 from public.profiles p left join auth.users u on u.id=p.id where u.id is null) or exists(select 1 from auth.sessions) or exists(select 1 from public.profiles c where c.linked_parent_id is not null and not exists(select 1 from public.profiles p where p.id::text=c.linked_parent_id and c.id::text=any(p.linked_student_ids))) then raise exception 'Restore integrity failed'; end if; end $$;";
