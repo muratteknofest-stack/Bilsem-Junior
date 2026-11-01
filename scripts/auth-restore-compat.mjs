@@ -3,6 +3,7 @@
 // Column types come from read-only pg_catalog metadata in the source database;
 // the original data and compatibility DDL are encrypted together in the archive.
 const safeIdentifier=/^[a-z_][a-z0-9_]*$/;
+const compatibilityHeader='-- Source-typed Auth additions for a fresh isolated recovery target only.\n';
 const safeType=/^(?:uuid|text|boolean|integer|bigint|smallint|real|double precision|bytea|json|jsonb|date|time(?:\([0-6]\))?(?: with(?:out)? time zone)?|timestamp(?:\([0-6]\))?(?: with(?:out)? time zone)?|interval|inet|cidr|name|oid|numeric(?:\(\d{1,3}(?:,\d{1,3})?\))?|character(?: varying)?(?:\(\d{1,5}\))?|(?:auth|extensions)\.[a-z_][a-z0-9_]*)(?:\[\])?$/;
 function identifier(name){
  if(typeof name!=='string'||name.length>63||!safeIdentifier.test(name))throw Error('Auth şeması sütun adı doğrulanamadı.');
@@ -36,5 +37,23 @@ export function buildAuthRestoreCompatibility(sql,columns){
   }
  }
  if(!tables.has('users')||!tables.has('identities')||!statements.length)throw Error('Auth kullanıcı/kimlik veri dökümü doğrulanamadı.');
- return '-- Source-typed Auth additions for a fresh isolated recovery target only.\n'+statements.join('\n')+'\n'+sql;
+ return compatibilityHeader+statements.join('\n')+'\n'+sql;
+}
+
+/** Split only the exact, source-typed header produced above. The immutable
+ * archive is verified first; only the isolated replay separates owner DDL
+ * from data import. Unknown statements can never run as the managed owner. */
+export function splitAuthRestoreCompatibility(sql){
+ if(typeof sql!=='string')throw Error('Auth geri yükleme girdisi doğrulanamadı.');
+ if(!sql.startsWith(compatibilityHeader))return {schemaSql:'',dataSql:sql};
+ const lines=sql.slice(compatibilityHeader.length).split('\n'),columns=[],statements=[];
+ let position=0;
+ for(;position<lines.length&&lines[position].startsWith('ALTER TABLE ');position++){
+  const match=/^ALTER TABLE "auth"\."([a-z_][a-z0-9_]*)" ADD COLUMN IF NOT EXISTS "([a-z_][a-z0-9_]*)" (.+);$/.exec(lines[position]);
+  if(!match)throw Error('Auth uyumluluk DDL biçimi doğrulanamadı.');
+  columns.push({table:match[1],column:match[2],type:match[3]});statements.push(lines[position]);
+ }
+ const dataSql=lines.slice(position).join('\n');
+ if(!statements.length||buildAuthRestoreCompatibility(dataSql,columns)!==sql)throw Error('Auth uyumluluk başlığı kaynak COPY sütunlarıyla eşleşmiyor.');
+ return {schemaSql:statements.join('\n')+'\n',dataSql};
 }
