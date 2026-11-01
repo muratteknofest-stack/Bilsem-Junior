@@ -15,6 +15,7 @@ import {backupConfiguration} from '../scripts/backup-config.mjs';
 import {buildAuthRestoreCompatibility} from '../scripts/auth-restore-compat.mjs';
 import {BACKUP_CA_PATH,verifyBackupCaBundle} from '../scripts/backup-tls.mjs';
 import {diagnosticTail,runtimeFailureCategory,runtimeFailureDetails,startRuntimeWithRetry} from '../scripts/backup-runtime-diagnostics.mjs';
+import {AUTH_RUNTIME_SCHEMA_SQL} from '../scripts/backup-runtime-schema.mjs';
 
 test('runtime checks need no production or registry identity and production stays on main',()=>{
  for(const file of ['backup-runtime.yml','backup.yml']){
@@ -74,7 +75,7 @@ if(process.env.BILSEM_RUNTIME_PROBE_FAIL&&process.argv.includes(process.env.BILS
    assert.equal(run.status,fail?1:0,run.stderr);
    const calls=readFileSync(log,'utf8').trim().split('\n').map(line=>JSON.parse(line));
    assert.ok(calls.every(call=>!call.privateInput&&call.registry==='docker.io'));
-   assert.deepEqual(calls.filter(call=>call.args[0]==='pull').map(call=>call.args),[['pull','supabase/postgres:17.6.1.095'],...(fail==='pull'?[]:[['pull','supabase/gotrue:v2.187.0']])]);
+   assert.deepEqual(calls.filter(call=>call.args[0]==='pull').map(call=>call.args),[['pull','supabase/postgres:17.11.0.006'],...(fail==='pull'?[]:[['pull','supabase/gotrue:v2.197.0']])]);
    assert.throws(()=>readFileSync(calls[0].dockerConfig),{code:'ENOENT'},'Private Docker config is removed on success and failure');
    if(fail==='pull')assert.ok(!calls.some(call=>call.args.includes('start')),'Image failure must stop before startup or import');
    else assert.ok(calls.findIndex(call=>call.args.includes('start'))>calls.map(call=>call.args[0]).lastIndexOf('pull'));
@@ -83,6 +84,22 @@ if(process.env.BILSEM_RUNTIME_PROBE_FAIL&&process.argv.includes(process.env.BILS
    if(fail){assert.match(run.stderr,fail==='pull'?/Postgres image pull IMAGE_PULL REGISTRY_DOCKER RATE_LIMIT HTTP_429/:/AUTH_UNHEALTHY/);assert.doesNotMatch(run.stderr,/private-runtime-detail|private-test-token|private-db-url/);}
   }
  }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+test('the runtime rejects the older Auth schema and requires migrations plus newer managed tables',async()=>{
+ const db=new PGlite();
+ try{
+  await db.exec("CREATE SCHEMA auth; CREATE TABLE auth.users(id uuid); CREATE TABLE auth.identities(id uuid); CREATE TABLE auth.schema_migrations(version varchar(14)); INSERT INTO auth.schema_migrations VALUES ('20250716120000');");
+  await assert.rejects(db.exec(AUTH_RUNTIME_SCHEMA_SQL),/Managed Auth schema is older/);
+  // Tables independently transcribed from the production catalog metadata.
+  // An upgraded table layout alone must not substitute for completed migrations.
+  await db.exec("CREATE TABLE auth.audit_log_entries(id uuid); CREATE TABLE auth.custom_oauth_providers(id uuid); CREATE TABLE auth.flow_state(id uuid); CREATE TABLE auth.instances(id uuid); CREATE TABLE auth.mfa_amr_claims(id uuid); CREATE TABLE auth.mfa_challenges(id uuid); CREATE TABLE auth.mfa_factors(id uuid); CREATE TABLE auth.mfa_recovery_code_sets(id uuid); CREATE TABLE auth.mfa_recovery_codes(id uuid); CREATE TABLE auth.oauth_authorizations(id uuid); CREATE TABLE auth.oauth_client_states(id uuid); CREATE TABLE auth.oauth_clients(id uuid); CREATE TABLE auth.oauth_consents(id uuid); CREATE TABLE auth.one_time_tokens(id uuid); CREATE TABLE auth.refresh_tokens(id uuid); CREATE TABLE auth.saml_providers(id uuid); CREATE TABLE auth.saml_relay_states(id uuid); CREATE TABLE auth.scim_tokens(id uuid); CREATE TABLE auth.scim_users(id uuid); CREATE TABLE auth.sessions(id uuid); CREATE TABLE auth.sso_domains(id uuid); CREATE TABLE auth.sso_providers(id uuid); CREATE TABLE auth.webauthn_challenges(id uuid); CREATE TABLE auth.webauthn_credentials(id uuid);");
+  await assert.rejects(db.exec(AUTH_RUNTIME_SCHEMA_SQL),/Managed Auth migrations are older/);
+  await db.exec("INSERT INTO auth.schema_migrations VALUES ('20260831180000');");
+  await db.exec(AUTH_RUNTIME_SCHEMA_SQL);
+  await db.exec('DROP TABLE auth.scim_users;');
+  await assert.rejects(db.exec(AUTH_RUNTIME_SCHEMA_SQL),/Managed Auth schema is older/);
+ }finally{await db.close();}
 });
 
 // Substitute only the command-line tools. Exercise the real backup/restore

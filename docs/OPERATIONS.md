@@ -19,7 +19,10 @@ yetkili bir operasyon olarak yürütülmeli. İçerik bildirimleri ve yedeklerde
 ## Yedek ve geri yükleme
 `npm run backup:doctor` yedek hattını aşamalara ayırır ve sır göstermeden yalnız engelleyen aşamayı
 bildirir; iş akışı bu tanıyı dökümden önce çalıştırır ve her çalışmada sanitize `backup-status.json`
-üretir. Tanı `TOKEN_PERMISSION` derse yönetim anahtarının `database` yazma kapsamı yoktur; döküm
+üretir. Aynı koşunun `backup-restore-verification.json` makbuzu yayın kapanış kapısına da
+verilir; `backup-release-closure.json` artefaktı ve iş özeti yalnız kanıtı geçen kayıtları kapatır.
+Diğer ticari eksikler yedek geri yükleme başarısını değiştirmez ve hazır sayılmaz.
+Tanı `TOKEN_PERMISSION` derse yönetim anahtarının `database` yazma kapsamı yoktur; döküm
 başlatılmadan anahtar veya `SUPABASE_DB_URL` yolu düzeltilir.
 Sağlayıcı planında yedek sıklığı/saklama süresi doğrulanır. Ayrı test projesine geri yükleme tatbikatı yapılır.
 Auth/profil bağları, soru sürümleri, ilerleme ve talepler için satır sayısı ve örnek kayıtlar karşılaştırılır.
@@ -50,6 +53,10 @@ puanlama durur; hata gizlenmez. Test/staging ortamında `scripts/verify-commerci
 kimlik ayrımını ve tekrar gönderimleri doğrular. Test için o gün görevi olmayan öğrenci ve bir veli profili gerekir.
 
 ## Dağıtım sırası ve geri alma
+İzole geri yükleme CLI `2.122.0`, Postgres `17.11.0.006` ve Auth `v2.197.0` resmî
+imajlarına sabitlenir. Başlangıçta kaynak katalogla karşılaştırılmış Auth tablo kümesi ve en az
+`20260831180000` geçişi doğrulanır; eski çalışma ortamı veri aktarımından önce reddedilir.
+İmaj sürümleri değiştiğinde sır veya üretim kaydı kullanmayan `backup-runtime` CI kontrolü geçmelidir.
 İzole yedek kabulünde kaynak Auth sütunları mevcut `supabase_auth_admin` sahibiyle hazırlanır;
 veri aktarımı normal geri yükleme kullanıcısıyla ayrı tek işlemde yapılır. CLI'nin kurduğu yerel
 hedefte `RESTORE_AUTH_OWNER_DATABASE_URL` aynı host/port/veritabanına ve yalnız bu Auth sahibine
