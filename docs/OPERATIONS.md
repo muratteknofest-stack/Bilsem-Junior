@@ -50,6 +50,10 @@ puanlama durur; hata gizlenmez. Test/staging ortamında `scripts/verify-commerci
 kimlik ayrımını ve tekrar gönderimleri doğrular. Test için o gün görevi olmayan öğrenci ve bir veli profili gerekir.
 
 ## Dağıtım sırası ve geri alma
+İzole geri yükleme CLI `2.122.0`, Postgres `17.11.0.006` ve Auth `v2.197.0` resmî
+imajlarına sabitlenir. Başlangıçta kaynak katalogla karşılaştırılmış Auth tablo kümesi ve en az
+`20260831180000` geçişi doğrulanır; eski çalışma ortamı veri aktarımından önce reddedilir.
+İmaj sürümleri değiştiğinde sır veya üretim kaydı kullanmayan `backup-runtime` CI kontrolü geçmelidir.
 İzole yedek kabulünde kaynak Auth sütunları mevcut `supabase_auth_admin` sahibiyle hazırlanır;
 veri aktarımı normal geri yükleme kullanıcısıyla ayrı tek işlemde yapılır. CLI'nin kurduğu yerel
 hedefte `RESTORE_AUTH_OWNER_DATABASE_URL` aynı host/port/veritabanına ve yalnız bu Auth sahibine

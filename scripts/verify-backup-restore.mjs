@@ -9,20 +9,21 @@ import {verifyBackupManifest} from './backup-manifest.mjs';
 import {readFile} from 'node:fs/promises';
 import {postgresChildEnvironment} from './postgres-child-environment.mjs';
 import {diagnosticTail,runtimeFailureCategory,runtimeFailureDetails,startRuntimeWithRetry} from './backup-runtime-diagnostics.mjs';
+import {AUTH_RUNTIME_SCHEMA_SQL} from './backup-runtime-schema.mjs';
 
 const input=process.argv[2];
 if(!input)throw Error('Şifreli yedek dosyası gerekli.');
 const runtimeOnly=input==='--runtime-check';
 const keyFingerprint=runtimeOnly?null:createHash('sha256').update(backupKey(process.env.BACKUP_ENCRYPTION_KEY)).digest('hex');
 const archive=path.resolve(input),dir=await mkdtemp(path.join(tmpdir(),'bilsem-restore-check-'));
-// CLI 2.81.3 explicitly supports docker.io and pins these two Supabase
-// images in pkg/config/templates/Dockerfile. Prefetch sequentially, using an
-// empty private Docker config. ECR and GHCR were both throttled in CI.
-// Source: https://github.com/supabase/cli/blob/v2.81.3/internal/utils/docker.go
-const clean={...postgresChildEnvironment(),SUPABASE_INTERNAL_IMAGE_REGISTRY:'docker.io',DOCKER_CONFIG:path.join(dir,'docker-config')};
+// CLI 2.122.0 pins these official images; Auth 2.197.0 includes the source
+// managed schema baseline. Prefetch sequentially with an empty private Docker
+// config. Keep slim images disabled so the prefetched and started images match.
+// Source: https://github.com/supabase/cli/blob/v2.122.0/apps/cli/src/shared/services/Dockerfile
+const clean={...postgresChildEnvironment(),SUPABASE_INTERNAL_IMAGE_REGISTRY:'docker.io',SUPABASE_USE_SLIM_IMAGES:'false',DOCKER_CONFIG:path.join(dir,'docker-config')};
 const runtimeImages=Object.freeze([
- ['Postgres','supabase/postgres:17.6.1.095'],
- ['Auth','supabase/gotrue:v2.187.0'],
+ ['Postgres','supabase/postgres:17.11.0.006'],
+ ['Auth','supabase/gotrue:v2.197.0'],
 ]);
 function run(command,args,env=clean,timeout=600_000,label='yerel ortam'){return new Promise((resolve,reject)=>{
  const child=spawn(command,args,{cwd:dir,env,stdio:['ignore','ignore','pipe'],timeout});let diagnostic='';
@@ -37,7 +38,7 @@ function run(command,args,env=clean,timeout=600_000,label='yerel ortam'){return 
   error.code=runtimeFailureCategory(diagnostic);error.details=runtimeFailureDetails(diagnostic);reject(error);
  });
 });}
-const cli=(args,timeout=60_000)=>run('npx',['--yes','supabase@2.81.3',...args],clean,timeout,`Supabase ${args[0]}`);
+const cli=(args,timeout=60_000)=>run('npx',['--yes','supabase@2.122.0',...args],clean,timeout,`Supabase ${args[0]}`);
 const startedAt=Date.now();let verified=false,archiveMetadata=null;
 try{
  if(!runtimeOnly){const manifest=JSON.parse(decryptBackup(await readFile(archive),backupKey(process.env.BACKUP_ENCRYPTION_KEY)).toString());verifyBackupManifest(manifest);archiveMetadata={archiveCreatedAt:manifest.createdAt,archiveExpiresAt:manifest.expiresAt};}
@@ -48,9 +49,9 @@ try{
   console.log(`${service} resmî imajı hazır.`);
  }
  await startRuntimeWithRetry(()=>cli(['start','--exclude','realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor'],240_000),()=>cli(['stop','--no-backup']));
+ await run('psql',['--no-psqlrc','--set','ON_ERROR_STOP=on','--command',AUTH_RUNTIME_SCHEMA_SQL],{...clean,PGHOST:'127.0.0.1',PGPORT:'54322',PGUSER:'postgres',PGPASSWORD:'postgres',PGDATABASE:'postgres',PGSSLMODE:'disable'},120_000,'yerel şema kontrolü');
  if(runtimeOnly){
-  await run('psql',['--no-psqlrc','--set','ON_ERROR_STOP=on','--command',"do $$ begin if to_regclass('auth.users') is null or to_regclass('auth.identities') is null then raise exception 'Managed Auth schema missing'; end if; end $$;"],{...clean,PGHOST:'127.0.0.1',PGPORT:'54322',PGUSER:'postgres',PGPASSWORD:'postgres',PGDATABASE:'postgres',PGSSLMODE:'disable'},120_000,'yerel şema kontrolü');
-  // CLI v2.81.3 provisions the local Auth owner with dbConfig.Password.
+  // CLI v2.122.0 provisions the local Auth owner with dbConfig.Password.
   // Roll back a harmless DDL probe; do not change roles or managed grants.
   await run('psql',['--no-psqlrc','--set','ON_ERROR_STOP=on','--command','BEGIN; ALTER TABLE auth.users ADD COLUMN bilsem_isolated_restore_probe boolean; ROLLBACK;'],{...clean,PGHOST:'127.0.0.1',PGPORT:'54322',PGUSER:'supabase_auth_admin',PGPASSWORD:'postgres',PGDATABASE:'postgres',PGSSLMODE:'disable'},120_000,'yerel Auth sahibi kontrolü');
   console.log('İzole Supabase çalışma ortamı ve Auth şeması doğrulandı; üretim verisi kullanılmadı.');
