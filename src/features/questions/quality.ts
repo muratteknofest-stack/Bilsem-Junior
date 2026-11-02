@@ -1,4 +1,5 @@
 import { LAB_ENGINE, LAB_TOPICS, generateLabQuestion, validateLabBoard } from './reasoning-lab';
+import { PERCEPTUAL_ENGINE, PERCEPTUAL_TOPICS, generatePerceptualQuestion, validatePerceptualBoard } from './perceptual-engine';
 import {generateSymbolicQuestion} from './symbolic-v2';
 import { COLORFUL_TYPES, generateColorfulQuestion } from './colorful-engine';
 import { generateWorkshopQuestion as generateWorkshopV2 } from './workshop-engine-v2';
@@ -76,6 +77,14 @@ export function auditQuestion(value: unknown, existing: QuestionVisualReference[
     if (!Number.isFinite(q.estimatedSeconds) || q.estimatedSeconds < 10 || q.estimatedSeconds > 600) result.errors.push('Tahmini süre 10–600 saniye arasında olmalı.');
     if (!q.visualConfig || typeof cfg?.displayMode !== 'string') result.errors.push('Görsel gösterim yapılandırması eksik.');
     if (!Array.isArray(q.skills) || q.skills.length === 0) result.warnings.push('Ölçülen beceriyi belirtin.');
+    if(cfg?.displayMode==='perceptual_board') {
+      const board=validatePerceptualBoard(cfg);
+      if(q.authoring?.engine!==PERCEPTUAL_ENGINE||!isSchoolGrade(q.targetGrade)||board.grade!==q.targetGrade||PERCEPTUAL_TOPICS[board.mechanic]!==q.type)result.errors.push('Görsel ilişki konusu, sürümü veya sınıfı uyuşmuyor.');
+      else {
+        const reference=generatePerceptualQuestion(board.mechanic,q.seed,q.difficulty,q.targetGrade);
+        for(const field of ['prompt','secondaryPrompt','explanation','visualConfig','category','options','authoring'] as const)if(fingerprint(q[field])!==fingerprint(reference[field]))result.reviewRequired.push('Görsel ilişki şablonu değişmiş: '+field);
+      }
+    }
     if(cfg?.displayMode==='reasoning_lab') {
       const board=validateLabBoard(cfg);
       if(q.authoring?.engine!==LAB_ENGINE||!isSchoolGrade(q.targetGrade)||board.grade!==q.targetGrade||LAB_TOPICS[board.mechanic]!==q.type) result.errors.push('Akıl yürütme konusu, sürümü veya sınıfı uyuşmuyor.');

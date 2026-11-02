@@ -70,6 +70,14 @@ export function inspectEducation(q: BaseQuestion, grade: SchoolGrade, age?: numb
   }
   if((q.visualConfig as Record<string,unknown>).displayMode==='colorful_board'){const c=q.visualConfig as unknown as ColorfulBoard;metrics.gridSize=c.source?.art==='mosaic'?c.source.size:0;metrics.itemCount=metrics.gridSize**2||c.layers?.length||1;}
   const audience: string[] = [], difficulty: string[] = [], visual: string[] = [];
+  if((q.visualConfig as Record<string,unknown>).displayMode==='perceptual_board'){
+    const board=q.visualConfig as import('./perceptual-engine').PerceptualBoard;
+    const cards=board.cards.filter((c):c is import('./perceptual-engine').PerceptualValue=>c!==null);
+    metrics.gridSize=board.mechanic==='matrix-attributes'?3:board.mechanic==='analogy-grid'?2:0;
+    metrics.itemCount=cards.length;metrics.symbolCount=0;metrics.peopleCount=0;
+    metrics.maxNumber=Math.max(0,...cards.map(c=>c?.count??0));
+    if(grade===1&&(board.mechanic==='matrix-attributes'||board.mechanic==='interleaved-sequence'))audience.push('PREREQUISITE: Bu görsel ilişki 1. sınıf profilinde desteklenmiyor.');
+  }
   if((q.visualConfig as Record<string,unknown>).displayMode==='curriculum_board'){
     const c=q.visualConfig as import('./complete-curriculum').CompleteBoard;
     metrics.gridSize=c.size;
