@@ -26,7 +26,11 @@ export function storageOwnerEnvironment(ownerUrl,databaseUrl){
 /** Only fixed queries and the authenticated archive's metadata reach stdin.
  * stdout is bounded and never printed; database errors are reduced to a code. */
 export function storagePsql(env,sql){return new Promise((resolve,reject)=>{
- const child=spawn('psql',['--no-psqlrc','--quiet','--tuples-only','--no-align','--set','ON_ERROR_STOP=on','--set','VERBOSITY=sqlstate'],{env:postgresChildEnvironment(env),stdio:['pipe','pipe','pipe'],timeout:120_000});
+ // pg_get_expr (used by pg_policies) omits schemas on the session search_path.
+ // Render source and target policy expressions with the same catalog-only
+ // path, while preserving the source's read-only transaction option.
+ const connection={...env,PGOPTIONS:[env.PGOPTIONS,'-c search_path=pg_catalog'].filter(Boolean).join(' ')};
+ const child=spawn('psql',['--no-psqlrc','--quiet','--tuples-only','--no-align','--set','ON_ERROR_STOP=on','--set','VERBOSITY=sqlstate'],{env:postgresChildEnvironment(connection),stdio:['pipe','pipe','pipe'],timeout:120_000});
  const chunks=[];let length=0,overLimit=false,diagnostic='';
  child.stdout.on('data',chunk=>{length+=chunk.length;if(length>16*1024*1024){overLimit=true;child.kill();}else chunks.push(chunk);});
  child.stderr.on('data',chunk=>{if(diagnostic.length<8192)diagnostic+=chunk.toString();});

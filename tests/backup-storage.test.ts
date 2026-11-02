@@ -8,7 +8,7 @@ import {join,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {PGlite} from '@electric-sql/pglite';
 import {backupKey,decryptBackup,encryptBackup} from '../scripts/backup-crypto.mjs';
-import {STORAGE_CATALOG_SQL,storageMetadataSql,storageOwnerEnvironment} from '../scripts/backup-storage-catalog.mjs';
+import {STORAGE_CATALOG_SQL,storageMetadataSql,storageOwnerEnvironment,storagePsql} from '../scripts/backup-storage-catalog.mjs';
 import {canonical,captureStorageFiles,normalizedStorageCatalog,restorableStorageCatalog,sha256,storageApi,storageCatalogDigest,storageManifest,storagePath,verifyStorageManifest,STORAGE_LIMITS} from '../scripts/backup-storage-core.mjs';
 import {createStorageBackup,nonSecretAuthConfig,storageServiceKey} from '../scripts/backup-storage.mjs';
 import {restoreStorageManifest} from '../scripts/restore-backup-storage.mjs';
@@ -156,7 +156,7 @@ async function isolatedFixture(){
  });
  await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
  const address=server.address();assert.ok(address&&typeof address!=='string');
- const readCatalog=async()=>{const r=await db.query<{jsonb_build_object:ReturnType<typeof normalizedStorageCatalog>}>(STORAGE_CATALOG_SQL);return r.rows[0].jsonb_build_object;};
+ const readCatalog=async()=>{await db.exec('SET search_path=pg_catalog;');const r=await db.query<{jsonb_build_object:ReturnType<typeof normalizedStorageCatalog>}>(STORAGE_CATALOG_SQL);return r.rows[0].jsonb_build_object;};
  return {db,apiUrl:`http://127.0.0.1:${address.port}`,readCatalog,executeSql:async(_env:unknown,sql:string)=>{await db.exec('SET ROLE supabase_admin;'+sql+'RESET ROLE;');},get uploads(){return uploads;},close:async()=>{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await db.close();}};
 }
 
@@ -167,6 +167,9 @@ test('real HTTP transfer plus PostgreSQL metadata restore preserves bytes, Turki
   const receipt=await restoreStorageManifest(m,{apiUrl:f.apiUrl,serviceKey:localKey,anonKey,ownerEnv:{},readCatalog:f.readCatalog,executeSql:f.executeSql});
   assert.equal(receipt.verified,true);assert.equal(receipt.productionSource,true);assert.equal(receipt.projectConfigRestoreVerified,false);
   assert.equal(f.uploads,2);
+  await f.db.exec('SET search_path=public,auth;');
+  const contextDependent=await f.db.query<{jsonb_build_object:ReturnType<typeof normalizedStorageCatalog>}>(STORAGE_CATALOG_SQL);
+  assert.notEqual(canonical(contextDependent.rows[0].jsonb_build_object.policies),canonical(m.catalog.policies),'An Auth-visible search_path changes the textual view of the same policy');
   assert.equal(canonical(restorableStorageCatalog(await f.readCatalog())),canonical(restorableStorageCatalog(m.catalog)));
   await f.db.exec(`SET ROLE authenticated;SELECT set_config('request.jwt.claim.sub','${ownerId}',false);`);
   assert.equal((await f.db.query('SELECT name FROM storage.objects')).rows.length,1,'Matching owner can see the private row');
@@ -176,6 +179,15 @@ test('real HTTP transfer plus PostgreSQL metadata restore preserves bytes, Turki
   await assert.rejects(restoreStorageManifest(m,{apiUrl:f.apiUrl,serviceKey:localKey,anonKey,ownerEnv:{},readCatalog:f.readCatalog,executeSql:f.executeSql}),{code:'STORAGE_TARGET_NOT_EMPTY'});
   assert.equal(f.uploads,2,'A nonempty target is rejected before any overwrite');
  }finally{await f.close();}
+});
+
+test('the actual catalog subprocess pins policy rendering without dropping source read-only transactions',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'bilsem-storage-options-'));
+ try{
+  writeFileSync(join(dir,'psql'),`#!${process.execPath}\nprocess.stdin.resume();process.stdin.on('end',()=>console.log(JSON.stringify({options:process.env.PGOPTIONS})));\n`,{mode:0o700});
+  const output=await storagePsql({PATH:`${dir}:${process.env.PATH}`,PGOPTIONS:'-c default_transaction_read_only=on'},'SELECT 1;');
+  assert.deepEqual(JSON.parse(output),{options:'-c default_transaction_read_only=on -c search_path=pg_catalog'});
+ }finally{rmSync(dir,{recursive:true,force:true});}
 });
 
 test('Storage acceptance requires actual-production evidence and does not claim provider settings were restored',()=>{
