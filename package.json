@@ -32,6 +32,7 @@
     "test:question-art": "node scripts/check-question-art.mjs",
     "test:smtp": "node --import tsx scripts/test-smtp.ts",
     "sync:email-templates": "node --import tsx scripts/sync-supabase-templates.ts",
+    "registration:open": "node --import tsx scripts/open-registration.ts",
     "pilot:e2e": "node --import tsx scripts/pilot-family-e2e.ts",
     "test:english": "node --import tsx --test tests/english-version.test.tsx",
     "test:english-browser": "node scripts/check-english-version.mjs",

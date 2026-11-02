@@ -82,3 +82,36 @@ Uygulama istemcisinde (`src/features/auth/auth-error-messages.ts`), Supabase GoT
 - "User already registered" &rarr; "Bu e-posta adresiyle kayıtlı bir hesap zaten var..."
 - "Token has expired or is invalid" &rarr; "Bağlantının veya doğrulama kodunun süresi dolmuş..."
 - "For security purposes, you can only request this after X seconds" &rarr; "Güvenlik nedeniyle çok sık e-posta talebinde bulunamazsınız..."
+
+---
+
+## 6. Aile Kayıtlarını Açma (registrationEnabled)
+
+Eğer kayıt ekranında *"Hesap oluşturma şu anda kapalıdır"* veya *"Kayıtlar şu anda kapalı"* uyarısı alıyorsanız, platform veritabanındaki `platform_settings` tablosunda kayıtlar henüz açılmamış demektir.
+
+Açmak için 3 pratik yöntem:
+
+### A. Supabase SQL Editor (En Kolay ve Anında)
+[Supabase Dashboard > SQL Editor](https://supabase.com/dashboard/project/vehhvsdkifwstbjhnhao/sql) sayfasına gidin ve aşağıdaki sorguyu çalıştırın:
+```sql
+UPDATE public.platform_settings
+SET settings = jsonb_set(
+  coalesce(settings, '{}'::jsonb),
+  '{release}',
+  coalesce(settings->'release', '{}'::jsonb) || '{"registrationEnabled": true}'::jsonb
+),
+revision = revision + 1,
+updated_at = now()
+WHERE id = true;
+```
+
+### B. Yönetici Paneli Arayüzünden
+1. `/yonetici` sayfasına yönetici hesabınızla giriş yapın.
+2. **Sistem Ayarları** sekmesine geçin.
+3. **"Yeni aile kayıtlarını aç"** kutusunu işaretleyin.
+4. **"Ayarları Supabase'e kaydet"** butonuna tıklayın.
+
+### C. Terminal Komutu ile
+```bash
+SUPABASE_SERVICE_ROLE_KEY="ey..." npm run registration:open
+```
