@@ -1,4 +1,4 @@
-import{REFERENCE_ENGINE,REFERENCE_TOPICS,validateReferenceBoard,generateReferenceQuestion}from'./reference-lab';
+import{REFERENCE_ENGINE,REFERENCE_TOPICS,validateReferenceBoard,generateReferenceQuestion,generateReferenceQuestionV1,isReferenceEngine}from'./reference-lab';
 import {CUBE_ENGINE,CUBE_TOPICS,validateCubeBoard,generateCubeQuestion} from './cube-lab';
 import { LAB_ENGINE, LAB_TOPICS, generateLabQuestion, validateLabBoard } from './reasoning-lab';
 import { PERCEPTUAL_ENGINE, PERCEPTUAL_TOPICS, generatePerceptualQuestion, validatePerceptualBoard } from './perceptual-engine';
@@ -81,8 +81,8 @@ export function auditQuestion(value: unknown, existing: QuestionVisualReference[
     if (!Array.isArray(q.skills) || q.skills.length === 0) result.warnings.push('Ölçülen beceriyi belirtin.');
     if(cfg?.displayMode==='reference_lab'){
       const board=validateReferenceBoard(cfg);
-      if(q.authoring?.engine!==REFERENCE_ENGINE||!isSchoolGrade(q.targetGrade)||board.grade!==q.targetGrade||REFERENCE_TOPICS[board.mechanic]!==q.type)result.errors.push('Görsel çalışma motoru/sınıf/konu uyuşmazlığı.');
-      else{const reference=generateReferenceQuestion(board.mechanic,q.seed,q.difficulty,q.targetGrade);for(const field of ['prompt','secondaryPrompt','explanation','visualConfig','category','options','authoring']as const)if(fingerprint(q[field])!==fingerprint(reference[field]))result.reviewRequired.push('Görsel çalışma şablonu değişmiş: '+field);}
+      if(!isReferenceEngine(q.authoring?.engine)||!isSchoolGrade(q.targetGrade)||board.grade!==q.targetGrade||REFERENCE_TOPICS[board.mechanic]!==q.type)result.errors.push('Görsel çalışma motoru/sınıf/konu uyuşmazlığı.');
+      else{const reference=(q.authoring?.engine===REFERENCE_ENGINE?generateReferenceQuestion:generateReferenceQuestionV1)(board.mechanic,q.seed,q.difficulty,q.targetGrade);for(const field of ['prompt','secondaryPrompt','explanation','visualConfig','category','options','authoring']as const)if(fingerprint(q[field])!==fingerprint(reference[field]))result.reviewRequired.push('Görsel çalışma şablonu değişmiş: '+field);}
     }
     if(cfg?.displayMode==='cube_lab'){
       const board=validateCubeBoard(cfg);

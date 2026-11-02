@@ -1,4 +1,8 @@
 import test from'node:test';import assert from'node:assert/strict';import React from'react';import{renderToStaticMarkup}from'react-dom/server';
+import {createHash}from'node:crypto';
+import {PGlite}from'@electric-sql/pglite';
+import {buildReferenceUpgradeSql,type UpgradeRow}from'../scripts/prepare-reference-choice-upgrade';
+import{generateReferenceQuestionV1,TOOL_PAIRS}from'../src/features/questions/reference-lab';
 import{REFERENCE_MECHANICS,REFERENCE_TOPICS,referenceAllowed,generateReferenceQuestion,solveReference,independentlyMatchesReference,validateReferenceBoard,visibleReferenceKey,type ReferenceBoard}from'../src/features/questions/reference-lab';
 import{auditQuestion,isQuestionReadyForStudents,questionStimulusKey}from'../src/features/questions/quality';
 import{QuestionRenderer}from'../src/features/questions/renderers/QuestionRenderer';import{OptionRenderer}from'../src/features/questions/renderers/OptionRenderer';import{AnswerWorkspace}from'../src/features/questions/renderers/AnswerWorkspace';import{MemoryStudy}from'../src/features/questions/renderers/MemoryStudy';
@@ -61,6 +65,72 @@ test('new questions are gated from old clients, while current clients retain cub
  for(const format of[undefined,'reasoning-lab-2',PREVIOUS_PERCEPTUAL_QUESTION_FORMAT,PREVIOUS_CUBE_QUESTION_FORMAT])assert.throws(()=>assertLearningQuestionFormat([q],format));
  assert.doesNotThrow(()=>assertLearningQuestionFormat([q],LEARNING_QUESTION_FORMAT));assert.equal(currentReasoningCandidate(q,2,true,true,true,true,true),true);assert.equal(currentReasoningCandidate(q,2,true,true,true,true,false),false);
  const cube=generateCubeQuestion('total',104729,2,2);assert.doesNotThrow(()=>assertLearningQuestionFormat([cube],PREVIOUS_CUBE_QUESTION_FORMAT));assert.doesNotThrow(()=>assertLearningQuestionFormat([cube],LEARNING_QUESTION_FORMAT));
- const generated=generateVariedLearningQuestion({grade:2,category:'coding',difficulty:2,seed:104729,typeCounts:new Map(),curriculumV2:true,perceptual:true,cube:true,reference:true,acceptCandidate:q=>q.authoring?.engine==='reference-lab-1',randomIndex:()=>0});assert.equal(generated.authoring?.engine,'reference-lab-1');assert.ok(isQuestionReadyForStudents(generated));
+ const generated=generateVariedLearningQuestion({grade:2,category:'coding',difficulty:2,seed:104729,typeCounts:new Map(),curriculumV2:true,perceptual:true,cube:true,reference:true,acceptCandidate:q=>q.authoring?.engine==='reference-lab-2',randomIndex:()=>0});assert.equal(generated.authoring?.engine,'reference-lab-2');assert.ok(isQuestionReadyForStudents(generated));
  const other=generateReferenceQuestion('texture-patch',81719,2,2);assert.notEqual(questionStimulusKey(q),questionStimulusKey(other));
+});
+test('published version-one canonical questions remain byte-identical and pass the current auditor',()=>{
+ const fixtures=[
+ ['semantic-analogy',20365831,1,1,'7161ecb88e03be4c26213d7a02a37b338f0e3f4f0d738bb38faa76712c2febe0'],
+ ['broken-pattern',21413121,1,1,'2ceaafac9486eebab0bf8d469957d4a44149400e48e349be22f6bf2454c4d300'],
+ ['paired-memory',22460411,1,1,'d766a5ddf35bac69b712a303448843ad5129e2ee188e3ef14d83adeeaf4ff501'],
+ ['number-memory',23507701,1,1,'3bc2caaf3d949d539a60c3dfc8f02fc306ae63ec930df7c52bb43d8ae821d638'],
+ ['symbol-code',24554991,1,1,'cf61c4769a9c080e993a03c45476906bf6c3888ee96aaea11ba432a81cfd98d6'],
+ ['texture-patch',25602281,1,1,'8e77d76b5a4aebfca574cd1811f66f904459b7ff67758f8363b423e73fa5672d'],
+ ['parts-union',26649571,1,1,'72a60023b82c9c033f7b0c97e645a4c8c49d380903b6f5b31fd1dacea15e3c95'],
+ ['layered-top',27696861,1,1,'bab3b433f97da02d7b3a3d9caea37f6fc342d86bf3499d94665d5018278c0d53'],
+ ['word-code',52517634,2,2,'96c83b4d47e6ce367ec8f6102dd1fc2b3a306b90f1fa2dd6e220ab9c961bf71a'],
+ ]as const;
+ for(const[m,seed,d,g,hash]of fixtures){const q=generateReferenceQuestionV1(m,seed,d,g),fields=['prompt','secondaryPrompt','explanation','visualConfig','category','options','authoring']as const;
+  assert.equal(createHash('sha256').update(JSON.stringify(Object.fromEntries(fields.filter(k=>q[k]!==undefined).map(k=>[k,q[k]])))).digest('hex'),hash);
+  const proof=auditQuestion(q);assert.deepEqual([...proof.errors,...proof.reviewRequired],[]);assert.ok(proof.solverVerified);
+ }
+});
+test('codes and patches cannot be solved by any single option position; familiar distractors retain the memory and relation task',()=>{
+ for(const g of[1,2,3,4]as const)for(let d=1;d<=4;d++)for(const m of REFERENCE_MECHANICS)if(referenceAllowed(m,g,d))for(let i=1;i<=8;i++){
+  const q=generateReferenceQuestion(m,104729*i,d as 1,g),old=generateReferenceQuestionV1(m,104729*i,d as 1,g),b=q.visualConfig as ReferenceBoard,answer=solveReference(b);
+  assert.equal(questionStimulusKey(q),questionStimulusKey(old),'Better options do not create a new task');
+  assert.deepEqual(b,old.visualConfig);assert.equal(q.authoring?.engine,'reference-lab-2');
+  const values=q.options.map(o=>o.visualData as ReturnType<typeof solveReference>);
+  if('textNumber'in answer&&typeof answer.textNumber==='string')for(let j=0;j<answer.textNumber.length;j++)assert.ok(values.filter(v=>'textNumber'in v&&String(v.textNumber)[j]===String(answer.textNumber)[j]).length>=2,`${m}: position ${j} is a shortcut`);
+  if('reference'in answer&&answer.reference==='patch')for(let j=0;j<answer.cells.length;j++)assert.ok(values.filter(v=>'reference'in v&&v.reference==='patch'&&v.cells[j]===answer.cells[j]).length>=2);
+  if(b.mechanic==='paired-memory')for(const v of values)assert.ok('reference'in v&&v.reference==='object'&&b.pairs.flat().includes(v.id));
+  if(b.mechanic==='number-memory')assert.ok(values.filter(v=>'textNumber'in v&&b.digits.includes(Number(v.textNumber))).length>=Math.min(4,b.digits.length));
+  if(b.mechanic==='semantic-analogy')for(const v of values)assert.ok('reference'in v&&v.reference==='object'&&TOOL_PAIRS.some(p=>p[b.reverse?0:1]===v.id));
+  if(b.mechanic==='layered-top')for(let j=0;j<b.layers.length;j++)assert.ok(values.some(v=>'reference'in v&&v.reference==='layers'&&JSON.stringify(v.layers[j])!==JSON.stringify(b.layers[j])),'No layer is irrelevant to all four choices');
+  assert.equal(Object.keys(q.authoring!.distractorNotes!).length,3);
+  assert.doesNotMatch(Object.values(q.authoring!.distractorNotes!).join(' '),/undefined|NaN|en az biri sağlanmıyor/);
+ }
+});
+test('part distractors are the closest wrong complete unions, and changing engine identity cannot bypass canonical review',()=>{
+ const q=generateReferenceQuestion('parts-union',81719,4,4),b=q.visualConfig as Extract<ReferenceBoard,{mechanic:'parts-union'}>;
+ const score=(ids:number[])=>b.target.filter((v,i)=>v!==Number(ids.some(j=>b.pieces[j].cells[i]))).length;
+ const scores:number[]=[];for(let a=0;a<b.pieces.length;a++)for(let d=a+1;d<b.pieces.length;d++)for(let e=d+1;e<b.pieces.length;e++){const n=score([a,d,e]);if(n)scores.push(n);}
+ const actual=q.options.filter(o=>o.id!==q.correctOptionId).map(o=>{const v=o.visualData as Extract<ReturnType<typeof solveReference>,{reference:'parts'}>;return score(v.pieces.map(p=>p.index-1));});
+ assert.deepEqual(actual.sort((a,b)=>a-b),scores.sort((a,b)=>a-b).slice(0,3));
+ const report=auditQuestion({...q,authoring:{...q.authoring!,engine:'reference-lab-7'}});assert.ok(report.errors.length+report.reviewRequired.length>0);
+});
+test('guarded bank upgrades reject an entire stale or malformed batch, preserve givens, and cannot replay a revision',async()=>{
+ const db=new PGlite(),commit='ac67ec5f199a55e88e0fa70d2b02df838f477687';
+ try{
+  await db.exec(`create table public.questions(id text primary key,data jsonb not null,revision int,status text,reviewed_by text);
+   create function sync_question_test() returns trigger language plpgsql as $$begin new.revision:=(new.data->>'revision')::int;new.status:=new.data->>'status';return new;end$$;
+   create trigger sync_test before insert or update on public.questions for each row execute function sync_question_test();`);
+  const rows:UpgradeRow[]=[];
+  for(const [i,seed]of[104729,81719].entries()){
+   const id=`reference-20261102-${String(i+1).padStart(5,'0')}`,old={...generateReferenceQuestionV1('symbol-code',seed,3,3),id,status:'published',revision:2,sourceBatch:'reference-20261102'};
+   const next={...generateReferenceQuestion('symbol-code',seed,3,3),id,status:'published',revision:3,sourceBatch:old.sourceBatch,batchValidation:{automaticChecks:'passed',individualHumanReview:false,editorReview:'pending'},releaseAuthorization:{sourceCommit:commit,individualHumanReview:false}};
+   await db.query('insert into public.questions(id,data) values($1,$2::jsonb)',[id,JSON.stringify(old)]);
+   const hashes=await db.query<{before:string;after:string}>("select encode(sha256(convert_to($1::jsonb::text,'UTF8')),'hex') before,encode(sha256(convert_to($2::jsonb::text,'UTF8')),'hex') after",[JSON.stringify(old),JSON.stringify(next)]);
+   rows.push({id,expectedSha256:hashes.rows[0].before,nextSha256:hashes.rows[0].after,data:next});
+  }
+  const stale=structuredClone(rows);stale[1].expectedSha256='0'.repeat(64);
+  assert.equal((await db.query<{updated:number}>(buildReferenceUpgradeSql(stale,commit))).rows[0].updated,0);
+  const missing=structuredClone(rows);delete (missing[0].data.batchValidation as Record<string,unknown>).individualHumanReview;
+  missing[0].nextSha256=(await db.query<{h:string}>("select encode(sha256(convert_to($1::jsonb::text,'UTF8')),'hex') h",[JSON.stringify(missing[0].data)])).rows[0].h;
+  assert.equal((await db.query<{updated:number}>(buildReferenceUpgradeSql(missing,commit))).rows[0].updated,0);
+  assert.equal((await db.query<{n:number}>('select count(*)::int n from public.questions where revision=2')).rows[0].n,2);
+  assert.equal((await db.query<{updated:number}>(buildReferenceUpgradeSql(rows,commit))).rows[0].updated,2);
+  assert.equal((await db.query<{updated:number}>(buildReferenceUpgradeSql(rows,commit))).rows[0].updated,0);
+  assert.equal((await db.query<{n:number}>("select count(*)::int n from public.questions where revision=3 and status='published' and reviewed_by is null")).rows[0].n,2);
+ }finally{await db.close();}
 });

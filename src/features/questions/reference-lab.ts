@@ -4,7 +4,10 @@ import type{BaseQuestion,DifficultyLevel,QuestionType}from'../../types';
 import{EDUCATION_PROFILES,type SchoolGrade}from'./quality-policy';
 import{TOPIC_CATEGORY}from'./topic-catalog';
 import{generateVisualFingerprint as fp}from'./fingerprint';
-export const REFERENCE_ENGINE='reference-lab-1';
+import { referenceChoiceSet } from './reference-choice-quality';
+export const REFERENCE_ENGINE='reference-lab-2';
+export const PREVIOUS_REFERENCE_ENGINE='reference-lab-1';
+export const isReferenceEngine=(engine:unknown)=>engine===REFERENCE_ENGINE||engine===PREVIOUS_REFERENCE_ENGINE;
 export const OBJECT_NAMES={key:'anahtar',lock:'kilit',brush:'fırça',palette:'boya paleti',scissors:'makas',paper:'kâğıt',hammer:'çekiç',nail:'çivi',watering:'sulama kabı',plant:'bitki',spoon:'kaşık',bowl:'kâse'} as const;
 export type ObjectId=keyof typeof OBJECT_NAMES;
 export const OBJECT_IDS=Object.keys(OBJECT_NAMES) as ObjectId[];
@@ -96,7 +99,8 @@ export function independentlyMatchesReference(value:unknown,candidate:unknown):c
  }catch{return false;}
 }
 const WORD_SETS=[['KAR','KARA','ARKA','KARAR'],['ELMA','KALEM','KALE','LALE'],['KİLİT','İLK','İKİ','TİLKİ']];
-export function generateReferenceQuestion(m:ReferenceMechanic,seed:number,d:DifficultyLevel,g:SchoolGrade):BaseQuestion{
+/** Frozen regeneration path for published questions and saved session snapshots. */
+export function generateReferenceQuestionV1(m:ReferenceMechanic,seed:number,d:DifficultyLevel,g:SchoolGrade):BaseQuestion{
  if(!referenceAllowed(m,g,d)||!Number.isSafeInteger(seed)||seed<1)throw Error('INVALID_REFERENCE_INPUT');
  const rng=new SeededRNG(seed),base={displayMode:'reference_lab' as const,grade:g},n=g===1?3:Math.min(EDUCATION_PROFILES[g].maxSymbols,2+d);let b:ReferenceBoard;
  if(m==='semantic-analogy'){const pairs=rng.pickUnique(TOOL_PAIRS,g===1?2:3),reverse=g>=2&&d===2&&rng.nextBool(),rows=reverse?pairs.map(([a,c])=>[c,a] as [ObjectId,ObjectId]):pairs;b={...base,mechanic:m,examples:rows.slice(0,-1),query:rows.at(-1)![0],reverse};}
@@ -122,6 +126,14 @@ export function generateReferenceQuestion(m:ReferenceMechanic,seed:number,d:Diff
  const options=rng.shuffle(choices.slice(0,4)).map((visualData,i)=>({id:'ABCD'[i],label:'ABCD'[i],visualData,fingerprint:fp(visualData)})),correct=options.filter(o=>independentlyMatchesReference(b,o.visualData));if(correct.length!==1)throw Error('REFERENCE_PROOF');
  const prompts:Record<ReferenceMechanic,string>={'semantic-analogy':'Örneklerde araç ile kullanıldığı nesne eşleştirilmiş. Aynı ilişkiyi yeni çiftte tamamla.','broken-pattern':'Örnek tekrar birimine göre dizide yalnız bir kart yanlış. Hangi numaralı kart değişmeli?','paired-memory':'Eşleri aklında tut. Deseni gizlediğinde sorulan nesnenin eşini seç.','number-memory':'Sayıların sırasını aklında tut. Diziyi gizledikten sonra sorulan sıradaki sayıyı bul.','symbol-code':'Her nesnenin bir rakamı var. Nesnelerin sırasını koruyarak şifreyi bul.','word-code':'Aynı harf her örnekte aynı rakamdır. Verilen örneklerden istenen sözcüğün şifresini bul.','texture-patch':'Örnek desen yatayda ve dikeyde tekrar ediyor. Boşluğa tam uyan desen parçasını seç.','parts-union':`Verilen parçaları döndürmeden ve yerlerini değiştirmeden üst üste koy. Hedefi oluşturan ${b.mechanic==='parts-union'?b.use:2} parçayı seç.`,'layered-top':'Renkli katmanlar aynı merkezde üst üste duruyor. Tam tepeden bakıldığında hangi görünüş oluşur?'};
  const steps:Record<ReferenceMechanic,string[]>={'semantic-analogy':['Örnekteki araç–nesne ilişkisini ve ok yönünü izle.','Yeni nesnenin aynı ilişkideki eşini seç.'],'broken-pattern':['Tekrar birimini soldan sağa sırayla uygula.','Beklenen nesneden farklı olan tek kartın numarasını bul.'],'paired-memory':['Önce her nesnenin yanındaki eşini birlikte belleğine al.','Gizledikten sonra sorulan nesnenin önceki eşini hatırla.'],'number-memory':['Sayıları soldan sağa konumlarıyla birlikte belleğine al.','Gizledikten sonra sorulan konumdaki sayıyı hatırla.'],'symbol-code':['Anahtarda her nesnenin karşısındaki rakamı bul.','Rakamları sorudaki nesne sırası bozulmadan yan yana yaz.'],'word-code':['Örneklerde harfleri aynı sıradaki rakamlarla eşleştir.','İstenen sözcüğün her harfini bu tek anlamlı anahtarla kodla.'],'texture-patch':['Boşluğun satır ve sütun konumunu örnek desene göre izle.','Parçadaki bütün işaretler aynı tekrar düzenini sürdürmeli.'],'parts-union':['Her aday grubun dolu hücrelerini üst üste birleştir.','Hedefteki bütün hücreler dolmalı ve dışarıda ek hücre oluşmamalı.'],'layered-top':['Katmanları alttan üste sırayla düşün.','Üstteki malzeme ortayı örter; dışta kalan renkli sınırları koru.']};
- const prompt=prompts[m],type=REFERENCE_TOPICS[m];return{id:`ref-${m}-g${g}-d${d}-s${seed}`,version:1,type,category:TOPIC_CATEGORY[type],seed,difficulty:d,targetGrade:g,targetGrades:[g],ageGroup:g<=2?'1-2':'3-4',prompt,visualConfig:b,options,correctOptionId:correct[0].id,explanation:{ruleTitle:REFERENCE_TITLES[m],summary:steps[m].join(' '),steps:steps[m]},skills:[m],estimatedSeconds:30+d*10,status:'draft',authoring:{engine:REFERENCE_ENGINE,objective:prompt,distractorNotes:Object.fromEntries(options.filter(o=>o.id!==correct[0].id).map(o=>[o.id,'Görünür eşleme, konum, sıra veya bütünlük koşullarından en az biri sağlanmıyor.']))}};
+ const prompt=prompts[m],type=REFERENCE_TOPICS[m];return{id:`ref-${m}-g${g}-d${d}-s${seed}`,version:1,type,category:TOPIC_CATEGORY[type],seed,difficulty:d,targetGrade:g,targetGrades:[g],ageGroup:g<=2?'1-2':'3-4',prompt,visualConfig:b,options,correctOptionId:correct[0].id,explanation:{ruleTitle:REFERENCE_TITLES[m],summary:steps[m].join(' '),steps:steps[m]},skills:[m],estimatedSeconds:30+d*10,status:'draft',authoring:{engine:PREVIOUS_REFERENCE_ENGINE,objective:prompt,distractorNotes:Object.fromEntries(options.filter(o=>o.id!==correct[0].id).map(o=>[o.id,'Görünür eşleme, konum, sıra veya bütünlük koşullarından en az biri sağlanmıyor.']))}};
+}
+export function generateReferenceQuestion(m:ReferenceMechanic,seed:number,d:DifficultyLevel,g:SchoolGrade):BaseQuestion{
+ const prior=generateReferenceQuestionV1(m,seed,d,g),board=prior.visualConfig as ReferenceBoard,answer=solveReference(board);
+ const choices=referenceChoiceSet(board,answer,seed,{objects:OBJECT_IDS,names:OBJECT_NAMES,toolPairs:TOOL_PAIRS,key:visibleReferenceKey,matches:independentlyMatchesReference});
+ const options=new SeededRNG(seed+7919).shuffle([{value:answer,note:''},...choices]).map(({value,note},i)=>({id:'ABCD'[i],label:'ABCD'[i],visualData:value,fingerprint:fp(value),note}));
+ const correct=options.filter(o=>independentlyMatchesReference(board,o.visualData));
+ if(correct.length!==1||options.some(o=>!validReferenceValue(o.visualData)))throw Error('REFERENCE_CHOICE_PROOF');
+ return {...prior,id:`ref2-${m}-g${g}-d${d}-s${seed}`,options:options.map(({note,...o})=>o),correctOptionId:correct[0].id,authoring:{...prior.authoring!,engine:REFERENCE_ENGINE,distractorNotes:Object.fromEntries(options.filter(o=>o.id!==correct[0].id).map(o=>[o.id,o.note]))}};
 }
 export function visibleReferenceKey(v:ReferenceValue):string{return'reference'in v&&v.reference==='layers'?layerSignature(v.layers):'reference'in v&&v.reference==='parts'?fp({...v,pieces:[...v.pieces].sort((a,b)=>a.index-b.index)}):fp(v);}
