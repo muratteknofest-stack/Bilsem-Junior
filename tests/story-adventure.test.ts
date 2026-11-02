@@ -6,7 +6,8 @@ import { generateQuestion } from '../src/features/questions/generators';
 import { selectSessionCategory, learningStartSchema, sameLearningSelection, type LearningSelection } from '../src/features/student/learning-selection';
 import { AVAILABLE_CATEGORIES } from '../src/features/student/available-categories';
 import { selectLearningQuestions, generateVariedLearningQuestion } from '../server/learning-question-selection';
-import { isQuestionReadyForStudents } from '../src/features/questions/quality';
+import { isQuestionReadyForStudents,questionVisualKey } from '../src/features/questions/quality';
+import { SeededRNG } from '../src/lib/rng';
 import { answerLearningSession, finishLearningSession, learningView, prepareLearningQuestions, type LearningSession } from '../server/learning-model';
 const questions=['visual_sequence','number_pattern','mirror_reflection'].map((type,i)=>generateQuestion({type:type as 'visual_sequence'|'number_pattern'|'mirror_reflection',targetGrade:2,difficulty:1,seed:1234+i*997}));
 const session:LearningSessionView={id:'acknowledged-session',mode:'adaptive',title:'Story',expiresAt:'2030-01-01',questions,answers:Object.fromEntries(questions.map((q,i)=>[String(i),{response:{mode:'choice',optionId:q.correctOptionId}}])),result:{totalQuestions:3,correctAnswers:3,wrongAnswers:0,blankAnswers:0,scorePercentage:100,xp:42,totalTimeSeconds:60}};
@@ -176,9 +177,15 @@ test('stars are proportional, replay improves only the best rating, and neither 
 test('chosen story lengths retain exact scoring, proportional best stars and persisted progress', async () => {
  const {campaignStageAt,storyStars,storyCollection,campaignCompleted}=await import('../src/features/student/story-adventure');
  const stage=campaignStageAt('g2-map',0);let seed=77123;
+ const rng=new SeededRNG(77123),randomIndex=(max:number)=>rng.nextInt(0,max-1);
  const make=(count:number,correct:number,id:string):LearningSessionView=>{
-  const qs=selectLearningQuestions({count,category:'mixed',candidates:[],exposure:new Map(),canUse:isQuestionReadyForStudents,
-   generate:(category,typeCounts)=>generateVariedLearningQuestion({category,grade:2,difficulty:2,seed:++seed,typeCounts})});
+  // Exercise the production generator contract rather than a shortened adapter
+  // that discards its candidate predicate and can randomly exhaust a late slot.
+  const qs=selectLearningQuestions({count,category:'mixed',candidates:[],exposure:new Map(),randomIndex,redistributeRepeatedCategories:true,
+   canUse:q=>q.targetGrade===2&&q.difficulty===2&&isQuestionReadyForStudents(q),
+   generate:(category,typeCounts,plannedDifficulty,reasoningCounts,acceptCandidate)=>generateVariedLearningQuestion({category,grade:2,difficulty:plannedDifficulty??2,seed:++seed,typeCounts,reasoningCounts,acceptCandidate,randomIndex})});
+  assert.equal(qs.length,count);
+  assert.equal(new Set(qs.map(questionVisualKey)).size,count);
   return {...session,id,questions:prepareLearningQuestions(qs),answers:Object.fromEntries(qs.map((q,i)=>[String(i),{response:{mode:'choice',optionId:q.correctOptionId}}])),result:{...session.result!,totalQuestions:count,correctAnswers:correct,wrongAnswers:count-correct,blankAnswers:0}};
  };
  let progress=emptyStoryProgress();
