@@ -63,19 +63,22 @@ test('runtime-only acceptance uses no backup credentials and never writes a rest
  const dir=mkdtempSync(join(tmpdir(),'bilsem-runtime-probe-'));
  try{
   const log=join(dir,'commands.jsonl');
-  const probe=`#!/usr/bin/env node
+  const probe=`#!${process.execPath}
 const fs=require('node:fs');
-fs.appendFileSync(process.env.BILSEM_RUNTIME_PROBE_LOG,JSON.stringify({args:process.argv.slice(2),registry:process.env.SUPABASE_INTERNAL_IMAGE_REGISTRY,dockerConfig:process.env.DOCKER_CONFIG,privateInput:['SUPABASE_ACCESS_TOKEN','BACKUP_ENCRYPTION_KEY','SUPABASE_DB_URL','RESTORE_DATABASE_URL','RESTORE_AUTH_OWNER_DATABASE_URL'].some(k=>k in process.env)})+'\\n');
+fs.appendFileSync(process.env.BILSEM_RUNTIME_PROBE_LOG,JSON.stringify({args:process.argv.slice(2),registry:process.env.SUPABASE_INTERNAL_IMAGE_REGISTRY,dockerConfig:process.env.DOCKER_CONFIG,privateInput:['SUPABASE_ACCESS_TOKEN','BACKUP_ENCRYPTION_KEY','SUPABASE_DB_URL','RESTORE_AUTH_OWNER_DATABASE_URL'].some(k=>k in process.env)||Object.entries(process.env).some(([k,v])=>k.startsWith('RESTORE_')&&String(v).startsWith('private-'))})+'\\n');
+if(process.argv.includes('init')){fs.mkdirSync('supabase',{recursive:true});fs.writeFileSync('supabase/config.toml','[storage]\\nfile_size_limit = "50MiB"\\n');}
+if(process.argv.includes('status'))console.log(JSON.stringify({API_URL:'http://127.0.0.1:54321',SERVICE_ROLE_KEY:'local-fixture-service',ANON_KEY:'local-fixture-anon'}));
 if(process.env.BILSEM_RUNTIME_PROBE_FAIL&&process.argv.includes(process.env.BILSEM_RUNTIME_PROBE_FAIL)){process.stderr.end('progress\\n'.repeat(20000)+(process.env.BILSEM_RUNTIME_PROBE_FAIL==='pull'?'failed to pull registry-1.docker.io/private: 429 Too Many Requests private-runtime-detail':'supabase_auth_fixture is not ready: private-runtime-detail'),()=>{process.exitCode=1;});}
 `;
-  for(const tool of ['npx','psql','docker'])writeFileSync(join(dir,tool),probe,{mode:0o700});
+  for(const tool of ['npx','psql','docker','node'])writeFileSync(join(dir,tool),probe,{mode:0o700});
   for(const fail of ['', 'start', 'pull']){
    writeFileSync(log,'');
-   const run=spawnSync(process.execPath,[resolve('scripts/verify-backup-restore.mjs'),'--runtime-check'],{cwd:dir,encoding:'utf8',timeout:20000,env:{...process.env,PATH:`${dir}:${process.env.PATH}`,BILSEM_RUNTIME_PROBE_LOG:log,BILSEM_RUNTIME_PROBE_FAIL:fail,BACKUP_ENCRYPTION_KEY:'not-a-valid-key',SUPABASE_ACCESS_TOKEN:'private-test-token',SUPABASE_DB_URL:'private-db-url',RESTORE_DATABASE_URL:'private-restore-url',RESTORE_AUTH_OWNER_DATABASE_URL:'private-auth-owner-url'}});
+   const run=spawnSync(process.execPath,[resolve('scripts/verify-backup-restore.mjs'),'--runtime-check'],{cwd:dir,encoding:'utf8',timeout:20000,env:{...process.env,PATH:`${dir}:${process.env.PATH}`,BILSEM_RUNTIME_PROBE_LOG:log,BILSEM_RUNTIME_PROBE_FAIL:fail,BACKUP_ENCRYPTION_KEY:'not-a-valid-key',SUPABASE_ACCESS_TOKEN:'private-test-token',SUPABASE_DB_URL:'private-db-url',RESTORE_DATABASE_URL:'private-restore-url',RESTORE_AUTH_OWNER_DATABASE_URL:'private-auth-owner-url',RESTORE_STORAGE_API_URL:'private-storage-url',RESTORE_STORAGE_SERVICE_KEY:'private-storage-key',RESTORE_STORAGE_ANON_KEY:'private-storage-anon',RESTORE_STORAGE_OWNER_DATABASE_URL:'private-storage-owner-url'}});
    assert.equal(run.status,fail?1:0,run.stderr);
    const calls=readFileSync(log,'utf8').trim().split('\n').map(line=>JSON.parse(line));
    assert.ok(calls.every(call=>!call.privateInput&&call.registry==='docker.io'));
-   assert.deepEqual(calls.filter(call=>call.args[0]==='pull').map(call=>call.args),[['pull','supabase/postgres:17.11.0.006'],...(fail==='pull'?[]:[['pull','supabase/gotrue:v2.197.0']])]);
+   assert.deepEqual(calls.filter(call=>call.args[0]==='pull').map(call=>call.args),[['pull','supabase/postgres:17.11.0.006'],...(fail==='pull'?[]:[['pull','supabase/gotrue:v2.197.0'],['pull','supabase/storage-api:v1.84.19'],['pull','library/kong:2.8.1']])]);
+   if(!fail)assert.ok(calls.some(call=>call.args[0]?.endsWith('check-backup-storage-runtime.mjs')),'The synthetic Storage API recovery is a required runtime check');
    assert.throws(()=>readFileSync(calls[0].dockerConfig),{code:'ENOENT'},'Private Docker config is removed on success and failure');
    if(fail==='pull')assert.ok(!calls.some(call=>call.args.includes('start')),'Image failure must stop before startup or import');
    else assert.ok(calls.findIndex(call=>call.args.includes('start'))>calls.map(call=>call.args[0]).lastIndexOf('pull'));

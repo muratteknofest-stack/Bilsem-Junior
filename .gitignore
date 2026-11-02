@@ -50,6 +50,7 @@ server/generated-api.mjs
 
 # Never commit database archives or decrypted backups
 *.enc
+*.enc.pending
 backup-private/
 
 
@@ -74,3 +75,5 @@ release-closure-report.json
 backup-status.json
 backup-doctor.json
 backup-restore-verification.json
+backup-storage-verification.json
+backup-release-closure.json

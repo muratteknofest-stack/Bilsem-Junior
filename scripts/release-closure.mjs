@@ -17,6 +17,7 @@ export const REGISTER_FORMAT='bilsem-release-closure-v1';
 export const REPORT_FORMAT='bilsem-release-closure-report-v1';
 export const RECEIPTS={
  'backup-receipt':['bilsem-backup-verification-v1','legacy-backup-verification'],
+ 'storage-receipt':['bilsem-storage-verification-v1'],
  'email-receipt':['bilsem-email-acceptance-v1'],
  'play-receipt':['bilsem-play-acceptance-v1'],
  'voice-kit':['bilsem-voice-recording-kit-v1'],
@@ -26,6 +27,7 @@ export const RECEIPTS={
 };
 export const AUTO_CHECK_ITEMS={
  'backup-receipt':['backup.daily-run','backup.isolated-restore'],
+ 'storage-receipt':['backup.storage-objects'],
  'email-receipt':['accept.email-delivery'],
  'play-receipt':['accept.play-purchase','accept.play-restore','accept.play-renewal','accept.play-cancellation'],
  'voice-kit':['content.voice-scripts'],
@@ -90,6 +92,18 @@ export function checkBackupReceipt(receipt,{now=Date.now()}={}){
  return {ok,items:AUTO_CHECK_ITEMS['backup-receipt'],detail:ok
   ?'İzole geri yükleme doğrulaması geçerli ve 30 günden yeni.'
   :'İzole geri yükleme doğrulaması yok, geçersiz veya 30 günden eski.'};
+}
+
+export function checkStorageReceipt(receipt,{now=Date.now()}={}){
+ const ok=receipt?.format==='bilsem-storage-verification-v1'&&receipt?.projectRef==='vtcsoqohkiagbwatlabk'
+  &&receipt?.verified===true&&receipt?.isolated===true&&receipt?.productionSource===true
+  &&['filesVerified','bucketConfigVerified','ownershipVerified','clientAccessVerified'].every(k=>receipt?.[k]===true)
+  &&['buckets','objects','bytes','privateBuckets'].every(k=>Number.isSafeInteger(receipt?.[k])&&receipt[k]>=0)
+  &&receipt.privateBuckets<=receipt.buckets&&/^[a-f0-9]{64}$/.test(receipt?.archiveSha256||'')
+  &&/^[a-f0-9]{64}$/.test(receipt?.sourceCatalogSha256||'')&&fresh(receipt?.checkedAt,{now,maxDays:30});
+ return {ok,items:AUTO_CHECK_ITEMS['storage-receipt'],detail:ok
+  ?`${receipt.objects} Storage dosyası ve ${receipt.buckets} alan izole API ile geri yüklendi; hash, sahiplik ve erişim ayarları doğrulandı.`
+  :'Storage kurtarma kanıtı eksik veya geçersiz; çalışma ortamı provası gerçek dosya geri yüklemesinin yerine geçmez.'};
 }
 
 export function checkEmailReceipt(receipt,{now=Date.now()}={}){
@@ -164,6 +178,7 @@ export function checkAndroidSigning(receipt,{now=Date.now()}={}){
 
 export const RECEIPT_CHECKS={
  'backup-receipt':checkBackupReceipt,'email-receipt':checkEmailReceipt,'play-receipt':checkPlayReceipt,
+ 'storage-receipt':checkStorageReceipt,
  'voice-kit':checkVoiceKit,'voice-coverage':checkVoiceCoverage,'educator-review':checkEducatorReview,
  'android-signing':checkAndroidSigning,
 };
@@ -233,6 +248,7 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  }else{
   const receipts={
    'backup-receipt':await read(value('--backup-receipt')),
+   'storage-receipt':await read(value('--storage-receipt')),
    'email-receipt':await read(value('--email-receipt')),
    'play-receipt':await read(value('--play-receipt')),
    'voice-kit':await read(value('--voice-kit')||'content/voice/recording-kit.json'),

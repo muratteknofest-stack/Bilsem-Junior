@@ -3,7 +3,7 @@
 Bu dosya, canlı web ve Android test adayının ticari yayına açılmasından önce kalan açıkların
 nasıl kapatılacağını ve hangi kanıtın kabul edileceğini tek yerde tanımlar:
 
-1. Yedekleme (günlük çalışma başarısız, geri yükleme tatbikatı yok)
+1. Yedekleme (veritabanı kurtarması doğrulandı; dosya, proje ayarları ve saklama kanıtları ayrıca izlenir)
 2. İşletim hazırlığı (işletmeci, sözleşme/saklama kayıtları, ticari barındırma)
 3. Gerçek kullanım testleri (e-posta, şifre sıfırlama, satın alma/geri yükleme/iptal)
 4. İçerik (gerçek insan sesi, tek tek eğitmen incelemesi)
@@ -27,6 +27,7 @@ Kanıt dosyalarını vererek çalıştırma:
 ```bash
 npm run release:closure -- \
   --backup-receipt backup-restore-verification.json \
+  --storage-receipt backup-storage-verification.json \
   --email-receipt ops/evidence/email-acceptance.json \
   --play-receipt ops/evidence/play-acceptance.json \
   --voice-coverage ops/evidence/voice-coverage.json \
@@ -44,17 +45,21 @@ Kurallar:
 - Kanıtların tazelik sınırı vardır: yedek 30 gün, diğer kabul kayıtları 90 gün.
 - Bir iş gerçekten kapsam dışıysa kayıt `not_applicable` yapılır; en az 12 karakterlik **gerekçe
   referansı** ve karar tarihi zorunludur. Rapor bunu `BEYAN (N/A)` olarak ayırır, "yapıldı" gibi
-  göstermez. Makine denetimli on bir kayıt (yedek, e-posta, dört Play akışı, ses, inceleme, imza)
+  göstermez. Makine denetimli kayıtlar (veritabanı/dosya yedeği, e-posta, dört Play akışı, ses, inceleme, imza)
   hiçbir zaman `not_applicable` yapılamaz; makbuz yoksa kapı kapalı kalır.
 
 ## 1. Yedekleme
 
 ### Bugüne kadarki durum
 
-`.github/workflows/backup.yml` her zamanlanmış çalışmada başarısız oldu. Son çalışma (1 Kasım 2026,
+İlk incelemede `.github/workflows/backup.yml` zamanlanmış çalışmalarda başarısızdı. O günkü çalışma (1 Kasım 2026,
 02:00 UTC) "Create and encrypt backup" adımında durdu ve ardından "Retain encrypted archive" adımı
 dosya bulamadığı için ikinci bir hata üretti. Günlüklerde yalnız hangi adımın düştüğü görünüyordu;
 hangi aşamanın (anahtar kapsamı, sağlayıcı erişimi, TLS, döküm) engellediği okunamıyordu.
+
+Bu tarihli durum sonradan düzeltildi: [41345872247](https://github.com/muratteknofest-stack/Bilsem-Junior/actions/runs/41345872247)
+koşusunda `8b68701` ana dalından şifreli veritabanı arşivi taze Supabase ortamına geri yüklendi;
+Auth/profil/aile bütünlüğü doğrulandı. Storage dosyaları bu veritabanı arşivine dahil değildir.
 
 ### Bu turda tamamlananlar
 
@@ -75,18 +80,58 @@ hangi aşamanın (anahtar kapsamı, sağlayıcı erişimi, TLS, döküm) engelle
 1. GitHub → Settings → Environments → `production-backup` sırlarını kontrol edin.
    `SUPABASE_ACCESS_TOKEN` yolu için anahtarın bu projeye ve **`database` yazma** kapsamına sahip
    olması gerekir; süreli oturum kimliği oluşturmak `database:write` ister. Kapsam eksikse tanı
-   `TOKEN_PERMISSION` verir. Alternatif olarak `SUPABASE_DB_URL` (session pooler, 5432) kullanın.
+   `TOKEN_PERMISSION` verir. Veritabanı yedeği için alternatif olarak `SUPABASE_DB_URL`
+   (session pooler, 5432) kullanılabilir; ayrı Storage dosya yedeği yönetim tokenı gerektirir.
 2. Tanıyı yerelde veya iş akışında çalıştırın: `npm run backup:doctor` (çıktı yalnız kod ve mesaj).
 3. İş akışını elle başlatın. Beklenen: tanı `ready`, yedek şifreli, izole geri yükleme
    `verified: true`, artefakt `database-backup-<run_id>`.
 4. Tatbikat kaydı: `checkedAt`, `durationMs`, `archiveCreatedAt` alanlarını özel işletim kaydına
    yazın; yedeğin gerçekten alındığı ve ayrı ortama döndüğü ancak bu çalıştırmayla kanıtlanır.
 5. Kanıtı kapanış kapısına verin:
-   `npm run release:closure -- --backup-receipt backup-restore-verification.json`.
+   `npm run release:closure -- --backup-receipt backup-restore-verification.json --storage-receipt backup-storage-verification.json`.
 
-> Storage nesneleri, proje ayarları, silme talepleriyle mutabakat ve 30 gün sonrası kopya temizliği
-> veritabanı arşivinin dışındadır; bunlar `backup.storage-objects`, `backup.retention-deletion`
-> kayıtlarında insan kanıtı ister.
+### Ayrı Storage dosya kurtarması
+
+`npm run backup:storage`, aynı yedek anahtarıyla ayrı AES-256-GCM `zekapark-storage.enc` üretir.
+Kaynak yalnız bu projeye sabittir; veritabanı katalog okumaları salt okunur bağlantıyla, dosya
+okumaları Storage API ile yapılır. Mevcut yönetim tokenının proje API anahtarlarını okuma yetkisi
+gerekir; hizmet anahtarı yalnız süreç belleğinde kullanılır, arşive veya günlüğe yazılmaz.
+Token eksik/yetkisizse `STORAGE_ACCESS_TOKEN_REQUIRED` veya `STORAGE_KEY_ACCESS` koduyla durur.
+
+Katalog başta ve sonda karşılaştırılır. Dosya kaybolursa, sürümü/sahipliği değişirse veya
+boyut/hash uyuşmazsa başarılı arşiv üretilmez. Her dosya için SHA-256, alan/yol, oluşturulma
+zamanı, sahiplik ve kullanıcı metaverisi; alan gizliliği, boyut/MIME sınırları, RLS durumları,
+politikalar ve `anon`/`authenticated`/`service_role` tablo yetkileri şifrelenir. Sınırlar:
+dosya başına 32 MiB, toplam 128 MiB, 10.000 dosya, 128 alan. Analytics/vector veya sürüm
+geçmişi etkin alanlar bu biçimde sessizce atlanmaz; desteklenmeyen kapsam olarak reddedilir.
+
+Geri yükleme yalnız literal loopback Storage API'si ve aynı yerel veritabanıyla yapılır.
+Yeni dosyalar API üzerinden yüklenir; özel alanlar başlangıçta özel oluşturulur, son ayarlar
+uygulanır. Mevcut yerel `supabase_admin` başlangıç kimliği, Auth yardımcılarına başvuran
+Storage politikalarını ve kaynak istemci yetkilerini yeniden kurar. Normal veri kullanıcısına
+rol üyeliği veya Auth şema yetkisi eklenmez. Dolu hedefe yazılmaz ve upsert kullanılmaz.
+Tüm dosyalar yeniden indirilip hash'leri karşılaştırılır; sahiplik, oluşturulma zamanı ve
+erişim ayarları katalogdan doğrulanır. Backend nesne kimliği, fiziksel sürüm ve güncelleme
+zamanı yeni depolama sistemine aittir; bunların özgün değerleri değiştirilmiş gibi sunulmaz.
+
+`backup-storage-verification.json` yalnız gerçek arşiv için makine kanıtıdır. CI'nın sentetik
+özel/açık alan, boşluklu/iç içe yol, boş dosya, sahiplik ve RLS provası makbuz üretmez ve gerçek
+dosya kanıtı sayılmaz. Storage işi başarısız olsa da oluşmuş veritabanı arşivi ayrıca geri
+yüklenir; genel durum, gereken Storage kanıtı yoksa `verified` olmaz.
+
+Önceki birleşik "dosyalar ve proje ayarları" kaydı iki açık kapsam olarak ayrıldı:
+`backup.storage-objects` gerçek dosya/alan/erişim makbuzuyla, `backup.project-config` ise Auth,
+API, Realtime ve diğer sağlayıcı ayarlarının ayrı hedefte yeniden kurulum kanıtıyla kapanır.
+Arşivdeki sınırlı, sır içermeyen Auth ayarı kopyası ikinci kaydı kapatmaz. SMTP/OAuth sırları,
+JWT/API anahtarları, Edge Functions ve diğer sağlayıcı ayarları bu kopyada tam değildir.
+
+Yollar URL parçası olarak kodlanır; dizin aşımı ve hedef değiştiren yollar reddedilir. Sabit
+Storage sürümünün kabul etmediği adlarla karşılaşılırsa dosya sessizce yeniden adlandırılmaz
+veya atlanmaz; geri yükleme durur. Taşıma katmanının UTF-8 kodlaması yerel HTTP testinde ayrıca
+sınanır; bu, sağlayıcının desteklemediği adları kabul ettiği anlamına gelmez.
+
+30 günlük süre sınırı ve silme talepleriyle mutabakat veritabanı/dosya arşivlerinin ikisi için
+geçerlidir; indirilmiş kopyaların temizliği ve anahtarın ayrı kasası insan/işletim kanıtı ister.
 
 ## 2. İşletim hazırlığı
 
@@ -218,7 +263,7 @@ tarafından yürütülür.
 | `scripts/backup-status.mjs` | Başarı/başarısızlık için tek durum kaydı |
 | `scripts/backup-access.mjs` | Pooler ve süreli kimlik doğrulaması tek kaynaktan |
 | `scripts/verify-backup-restore.mjs` | Makbuza süre ve arşiv tarihleri |
-| `ops/release-closure.json` | 28 kayıtlı yayın kapanış kaydı |
+| `ops/release-closure.json` | Dosya ve proje ayarı kurtarması ayrı olmak üzere 29 kayıtlı yayın kapanış kaydı |
 | `scripts/release-closure.mjs` | Kayıt + makine kanıtı kapısı |
 | `scripts/voice-recording-kit.mjs` | 72 adımlık kayıt kiti üretimi ve eşitleme kontrolü |
 | `scripts/content-coverage.mjs` | Ses ve eğitmen incelemesi kapsamı |

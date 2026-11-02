@@ -29,9 +29,19 @@
         },
         {
           "id": "backup.storage-objects",
-          "label": "Storage nesneleri ve proje ayarları için ayrı kurtarma kopyası",
+          "label": "Storage dosyaları, alan ayarları, sahiplik ve erişim politikalarının geri yüklenmesi",
           "owner": "Teknik sorumlu",
-          "acceptance": "Veritabanı arşivi Storage dosyalarını içermez; nesneler ve kritik proje ayarları ayrı şifreli kopyadan geri getirilebildi.",
+          "acceptance": "Ayrı şifreli arşivden tüm dosyalar taze yerel Storage API ile geri yüklendi; yollar, byte/hash, alan gizliliği, sahiplik, RLS politikaları ve istemci yetkileri doğrulandı.",
+          "status": "pending",
+          "evidence": "",
+          "verifiedAt": null,
+          "autoCheck": "storage-receipt"
+        },
+        {
+          "id": "backup.project-config",
+          "label": "Supabase Auth, API, Realtime ve proje ayarlarının ayrı kurtarma kaydı",
+          "owner": "Teknik sorumlu ve işletmeci",
+          "acceptance": "Veritabanı ve dosyalar dışındaki kritik sağlayıcı ayarları ile gerekli sırların kasadaki referansları kaydedildi; ayrı hedefte yeniden kurulum doğrulandı. Dosya yedeğindeki sınırlı ve sır içermeyen Auth ayarı kopyası tek başına kabul değildir.",
           "status": "pending",
           "evidence": "",
           "verifiedAt": null

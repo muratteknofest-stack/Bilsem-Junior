@@ -22,6 +22,12 @@ bildirir; iş akışı bu tanıyı dökümden önce çalıştırır ve her çal�
 üretir. Aynı koşunun `backup-restore-verification.json` makbuzu yayın kapanış kapısına da
 verilir; `backup-release-closure.json` artefaktı ve iş özeti yalnız kanıtı geçen kayıtları kapatır.
 Diğer ticari eksikler yedek geri yükleme başarısını değiştirmez ve hazır sayılmaz.
+Storage için ayrı `zekapark-storage.enc` oluşturulur; aynı izole çalışma ortamında gerçek
+Storage API'ye geri yüklenip tüm dosyalar yeniden indirilir. `backup-storage-verification.json`
+dosya/alan/sahiplik/erişim kanıtıdır; sağlayıcı Auth/API/Realtime ayarlarının tamamının
+kurulduğunu göstermez. Hedef boş ve loopback olmalıdır; üretim Storage'ına yazılmaz.
+Dosya arşivi veya kabulü başarısız olursa mevcut veritabanı arşivinin kabulü yine denenir,
+ancak gereken dosya kanıtı olmadan genel yedek durumu başarılı sayılmaz.
 Tanı `TOKEN_PERMISSION` derse yönetim anahtarının `database` yazma kapsamı yoktur; döküm
 başlatılmadan anahtar veya `SUPABASE_DB_URL` yolu düzeltilir.
 Sağlayıcı planında yedek sıklığı/saklama süresi doğrulanır. Ayrı test projesine geri yükleme tatbikatı yapılır.

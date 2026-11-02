@@ -14,13 +14,16 @@ async function readJson(path){
  try{return JSON.parse(await readFile(path,'utf8'));}catch{return null;}
 }
 
-export function statusFrom({doctor,verification,runId,workflow,now=new Date()}){
+/** @param {{doctor:Record<string,unknown>|null,verification:Record<string,unknown>|null,storageVerification?:Record<string,unknown>|null,storageRequired?:boolean,runId?:string|null,workflow?:string|null,now?:Date}} input */
+export function statusFrom({doctor,verification,storageVerification=null,storageRequired=false,runId=null,workflow=null,now=new Date()}){
  const stages=Array.isArray(doctor?.stages)?doctor.stages:[];
  const failed=stages.filter(row=>row.status==='fail');
  const verified=verification?.verified===true&&verification?.isolated===true&&Number.isFinite(Date.parse(verification?.checkedAt||''));
- const outcome=verified?'verified':failed.length||doctor?.conclusion==='blocked'?'blocked':'incomplete';
+ const storageVerified=storageVerification?.verified===true&&storageVerification?.isolated===true&&storageVerification?.productionSource===true;
+ const outcome=verified&&(!storageRequired||storageVerified)?'verified':failed.length||doctor?.conclusion==='blocked'?'blocked':'incomplete';
  const gaps=[];
  if(!verified)gaps.push('İzole geri yükleme doğrulaması bu çalışmada başarıyla tamamlanmadı.');
+ if(storageRequired&&!storageVerified)gaps.push('Ayrı Storage dosya arşivinin izole geri yükleme kanıtı bu çalışmada tamamlanmadı.');
  for(const row of failed)gaps.push(`${row.stage}: ${row.code}`);
  if(!doctor&&!verified)gaps.push('Yedek tanı raporu üretilemedi.');
  return {
@@ -29,6 +32,9 @@ export function statusFrom({doctor,verification,runId,workflow,now=new Date()}){
   workflow:workflow||null,
   recordedAt:now.toISOString(),
   outcome,
+  databaseVerified:verified,
+  storageRequired,
+  storageVerified,
   projectRef:doctor?.projectRef||null,
   mode:doctor?.mode||null,
   doctorConclusion:doctor?.conclusion||null,
@@ -41,6 +47,7 @@ export function statusFrom({doctor,verification,runId,workflow,now=new Date()}){
    durationMs:Number.isFinite(verification.durationMs)?verification.durationMs:null,
    keyFingerprint:typeof verification.keyFingerprint==='string'?verification.keyFingerprint.slice(0,16):null,
   }:null,
+  storageVerification:storageVerified?{checkedAt:storageVerification.checkedAt,buckets:storageVerification.buckets,objects:storageVerification.objects,bytes:storageVerification.bytes,projectConfigRestoreVerified:storageVerification.projectConfigRestoreVerified===true}:null,
   nextActions:[...new Set(stages.filter(row=>row.status==='fail').map(row=>row.code))],
   gaps,
   secretsIncluded:false,
@@ -60,6 +67,8 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  const status=statusFrom({
   doctor:await readJson(value('--doctor')),
   verification:await readJson(value('--verification')),
+  storageVerification:await readJson(value('--storage-verification')),
+  storageRequired:args.includes('--storage-required'),
   runId:value('--run-id')||process.env.GITHUB_RUN_ID,
   workflow:process.env.GITHUB_WORKFLOW||null,
  });
