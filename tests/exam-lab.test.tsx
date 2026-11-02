@@ -24,12 +24,15 @@ test('all supported grades, levels and six mechanics have one independently prov
   const q=generateExamQuestion(m,i*104729,d as 1,g),r=auditQuestion(q);total++;
   assert.deepEqual([...r.errors,...r.reviewRequired],[],`${g}/${d}/${m}/${i}`);assert.equal(r.solverVerified,true);assert.ok(isQuestionReadyForStudents(q));
   assert.equal(q.options.filter(o=>independentlyMatchesExam(q.visualConfig,o.visualData)).length,1);assert.deepEqual(generateExamQuestion(m,i*104729,d as 1,g),q);
+  if(m==='detail-mirror'||m==='transform-pairs'){
+   const expected=solveExam(q.visualConfig).cells.slice().sort();for(const o of q.options)assert.deepEqual((o.visualData as ExamTile).cells.slice().sort(),expected,'Geometric distractors preserve the exact palette and area of each color.');
+  }
   if(i===1){assert.equal(auditQuestion({...q,correctOptionId:q.options.find(o=>o.id!==q.correctOptionId)!.id}).solverVerified,false);assert.ok(auditQuestion({...q,explanation:{...q.explanation,summary:'Yanlış açıklama'}}).reviewRequired.length);}
  }
  assert.ok(total>900);console.log('Exam seeded cases:',total);
 });
 test('contradictory examples, hidden answer metadata and age-inappropriate geometry are rejected',()=>{
- const firstGradePatchColors=new Set(Array.from({length:60},(_,i)=>solveExam(generateExamQuestion('context-patch',(i+1)*104729,1,1).visualConfig).cells[0]));assert.deepEqual([...firstGradePatchColors].sort(),[0,1],'White is a legitimate patch answer; a color must not always be correct.');
+ const firstGradePatchColors=new Set(Array.from({length:60},(_,i)=>solveExam(generateExamQuestion('context-patch',(i+1)*104729,1,1).visualConfig).cells[0]));assert.deepEqual([...firstGradePatchColors].sort(),[0,1,2,3],'All four visible colors, including white, can be correct.');
  const patchWithNoVisibleThirdPeriodPeer={displayMode:'exam_lab',grade:1,mechanic:'context-patch',width:4,height:4,hole:{x:1,y:1,width:1,height:1},cells:Array.from({length:16},(_,i)=>i===5?null:(i%4+Math.floor(i/4))%2)};
  assert.ok(independentlyMatchesExam(patchWithNoVisibleThirdPeriodPeer,{exam:'tile',width:1,height:1,cells:[0]}));
  assert.equal(independentlyMatchesExam(patchWithNoVisibleThirdPeriodPeer,{exam:'tile',width:1,height:1,cells:[1]}),false);

@@ -121,7 +121,7 @@ export function generateExamQuestion(m:ExamMechanic,seed:number,d:DifficultyLeve
   let b:ExamBoard;
   if(m==='detail-mirror')b={...base,mechanic:m,source:random(false,g===1?2:g===2?3:Math.min(4,2+Math.ceil(d/2))),axis:g===1||d===1?'vertical':rng.pick(['vertical','horizontal'] as const)};
   else if(m==='context-patch'){
-   const size=g===4&&d>=4?6:4,period=size===6?3:2,motif=Array.from({length:period**2},()=>rng.nextInt(0,Math.min(3,g))),w=g===1?1:2,h=g<=2?1:2,x=rng.nextInt(0,size-w),y=rng.nextInt(0,size-h);
+   const size=g===4&&d>=4?6:4,period=size===6?3:2,motif=g===1?rng.shuffle([0,1,2,3]):Array.from({length:period**2},()=>rng.nextInt(0,Math.min(3,g))),w=g===1?1:2,h=g<=2?1:2,x=rng.nextInt(0,size-w),y=rng.nextInt(0,size-h);
    b={...base,mechanic:m,width:size,height:size,hole:{x,y,width:w,height:h},cells:Array.from({length:size**2},(_,i)=>i%size>=x&&i%size<x+w&&Math.floor(i/size)>=y&&Math.floor(i/size)<y+h?null:motif[Math.floor(i/size)%period*period+i%size%period])};
   }else if(m==='transform-pairs'){
    const t=g===1?rng.pick(['mirror-x','half'] as const):rng.pick(transforms),a=random(),b1=random(),q=random();b={...base,mechanic:m,cards:[a,transformExamTile(a,t),b1,transformExamTile(b1,t),q,null]};
@@ -133,14 +133,21 @@ export function generateExamQuestion(m:ExamMechanic,seed:number,d:DifficultyLeve
    b=m==='overlap-rule'?{...base,mechanic:m,cards:[a,b1,combineExamTiles(a,b1,op),c,e,combineExamTiles(c,e,op),random(true),random(true),null]}:
     {...base,mechanic:m,cards:[a,b1,combineExamTiles(a,b1,op),c,e,combineExamTiles(c,e,op),combineExamTiles(a,c,op),combineExamTiles(b1,e,op),null]};
   }
-  try{const solved=solveExam(b);if(m!=='context-patch'&&!solved.cells.some(Boolean)||!independentlyMatchesExam(b,solved))continue;if(m==='detail-mirror'&&same(solved,(b as Extract<ExamBoard,{mechanic:'detail-mirror'}>).source))continue;board=b;answer=solved;break;}catch{/* Reject ambiguous visible examples. */}
+  try{const solved=solveExam(b);if(m!=='context-patch'&&!solved.cells.some(Boolean)||!independentlyMatchesExam(b,solved))continue;if((m==='detail-mirror'||m==='transform-pairs')&&new Set(solved.cells).size<2)continue;if(m==='context-patch'&&b.mechanic==='context-patch'&&new Set(b.cells.filter(v=>v!==null)).size<2)continue;if(m==='detail-mirror'&&same(solved,(b as Extract<ExamBoard,{mechanic:'detail-mirror'}>).source))continue;board=b;answer=solved;break;}catch{/* Reject ambiguous visible examples. */}
  }
  if(!board||!answer)throw Error('NO_UNIQUE_EXAM');const b=board,a=answer;
  const choices:ExamTile[]=[a],add=(v:ExamTile)=>{if(!choices.some(c=>same(c,v))&&!independentlyMatchesExam(b,v))choices.push(v);};
  const positions=rng.shuffle(Array.from({length:a.cells.length},(_,i)=>i));
- for(const pos of positions.slice(0,2))add({...a,cells:a.cells.map((v,i)=>i===pos?(v+1)%(['overlap-rule','composition-matrix'].includes(m)?2:4):v)});
- if(a.cells.length>1)add({...a,cells:a.cells.map((v,i)=>positions.slice(0,2).includes(i)?(v+1)%(['overlap-rule','composition-matrix'].includes(m)?2:4):v)});
- for(let i=0;choices.length<4&&i<40;i++)add({...a,cells:a.cells.map((v,j)=>j===i%a.cells.length?(v+1+Math.floor(i/a.cells.length))%4:v)});
+ if(m==='detail-mirror'||m==='transform-pairs'){
+  for(const t of transforms)add(transformExamTile(a,t));
+  for(let i=0;choices.length<4&&i<200;i++)add({...a,cells:rng.shuffle(a.cells)});
+ }else{
+  const palette=['overlap-rule','composition-matrix'].includes(m)?[0,1]:b.mechanic==='context-patch'?[...new Set(b.cells.filter((v):v is number=>v!==null))].sort():[...new Set((b as Extract<ExamBoard,{cards:unknown}>).cards.filter((v):v is ExamTile=>v!==null).flatMap(v=>v.cells))].sort();
+  const change=(v:number,delta=1)=>palette[(palette.indexOf(v)+delta)%palette.length];
+  for(const pos of positions.slice(0,2))add({...a,cells:a.cells.map((v,i)=>i===pos?change(v):v)});
+  if(a.cells.length>1)add({...a,cells:a.cells.map((v,i)=>positions.slice(0,2).includes(i)?change(v):v)});
+  for(let i=0;choices.length<4&&i<100;i++)add({...a,cells:a.cells.map((v,j)=>j===i%a.cells.length?change(v,1+Math.floor(i/a.cells.length)):v)});
+ }
  if(choices.length<4)throw Error('EXAM_CHOICES');
  const options=rng.shuffle(choices.slice(0,4)).map((visualData,i)=>({id:'ABCD'[i],label:'ABCD'[i],visualData,fingerprint:fp(visualData)})),correctOptionId=options.find(o=>same(o.visualData,a))!.id;
  const prompt=m==='detail-mirror'?'Aynanın yönüne göre şeklin yansımasını bul. Renklerin ve parçaların yerlerini birlikte kontrol et.':m==='context-patch'?'Desendeki boşluğa hangi parça uyar? Kenarlardaki renk ve şekil düzenini devam ettir.':m==='transform-pairs'?'İlk iki örnekteki aynı dönüşümü bul. Son şekle de uygulayınca hangi seçenek oluşur?':m==='overlap-rule'?'İlk iki satırda şekillerin nasıl birleştiğini bul. Aynı kuralı son satıra uygula.':'Her satır ve sütundaki düzeni incele. İki yöndeki koşulları da sağlayan eksik kartı bul.';

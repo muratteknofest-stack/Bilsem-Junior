@@ -19,6 +19,8 @@ Birinci sınıf: 2×2 desenli yansıma ve dönüşüm, dikey ayna, 1 hücrelik b
 
 ## Doğruluk ve uyumluluk
 
+Yansıma ve dönüşüm seçenekleri kaynakla aynı renk paletini ve her rengin kapladığı alanı korur; yalnız konum değişir. Kaynakta olmayan renkle eleme yapılamaz. Birinci sınıfın tek hücrelik eksik parça sorularında dört renk de görünür desende bulunur ve beyaz dahil hepsi doğru cevap olabilir.
+
 Yalnız görünür verilenler gönderilir; işlemin adı veya gizli tamamlanmış desen öğrenci çizim verisinde bulunmaz. Birincil çözüm kuralı örneklerden çıkarır; ikinci çözüm her seçeneği hücre koordinatları, doğruluk tabloları veya tüm satır/sütun gruplarıyla denetler. Çelişkili/belirsiz örnekler ve dört farklı seçeneği olmayan sorular reddedilir. Yayınlanan adayların insan incelemesi bekliyor olarak kalır.
 
 Yeni aktarım `exam-lab-1`; önceki `reference-lab-1` ve diğer biçimler desteklenmeye devam eder. Eski APK yeni çizim alamaz. Kaydedilmiş çalışmalar değiştirilmez. Karma çalışmalarda yeni motor seçenekleri değerlendirilir; konu pratiğinde yayımlanmış yeni havuz kullanılır. Yeni motor mantık hatası olmayan tüm içerikler için mutlak garanti veya resmî sınav eşdeğerliği olarak sunulmaz.
