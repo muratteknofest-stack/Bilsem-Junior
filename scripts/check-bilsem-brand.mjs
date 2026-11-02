@@ -36,6 +36,7 @@ try {
       assert.ok(rect && rect.x >= -1 && rect.x + rect.width <= width + 1, 'Header action must stay on screen at ' + width);
     }
     assert.equal(await page.locator('.bj-guide-card').count(), 4);
+    await page.waitForFunction(() => { const img=document.querySelector('.bj-logo-symbol'); return img instanceof HTMLImageElement && img.complete && img.naturalWidth>0; }, undefined, {timeout:10000});
     assert.equal(await page.locator('.bj-logo-symbol').first().evaluate(img => img.complete && img.naturalWidth > 0), true);
     await page.screenshot({ path: output + '/home-' + width + '.png', animations: 'disabled' });
     await page.locator('.bj-guide').screenshot({ path: output + '/guide-' + width + '.png', animations: 'disabled' });

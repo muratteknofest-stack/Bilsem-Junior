@@ -1,3 +1,4 @@
+import {CubeLabBoard} from './CubeLabBoard';
 import { ReasoningLabBoard } from './ReasoningLabBoard';
 import { PerceptualBoard } from './PerceptualBoard';
 import {SymbolicBoard} from './SymbolicBoard';
@@ -36,6 +37,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({ question,pre
   const mode = typeof visualConfig.displayMode === 'string' ? visualConfig.displayMode : 'default';
   
   const renderEngine = () => {
+    if(mode==='cube_lab')return <CubeLabBoard board={visualConfig as unknown as import('../cube-lab').CubeBoard}/>;
     if(mode==='perceptual_board')return <PerceptualBoard board={visualConfig as unknown as import('../perceptual-engine').PerceptualBoard}/>;
     if(mode==='reasoning_lab')return <ReasoningLabBoard board={visualConfig as unknown as import('../reasoning-lab').LabBoard}/>;
     if(mode==='symbolic_v2')return <SymbolicBoard board={visualConfig as unknown as import('../symbolic-v2').SymbolicBoard}/>;

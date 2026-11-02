@@ -1,3 +1,5 @@
+import {solveCube,validateCubeBoard,CUBE_TOPICS} from './cube-lab';
+import {independentlySolveCube} from './cube-solver';
 import { solveLab, validateLabBoard, LAB_TOPICS } from './reasoning-lab';
 import { solvePerceptual, validatePerceptualBoard, PERCEPTUAL_TOPICS, type PerceptualValue } from './perceptual-engine';
 import { independentlyMatchesPerceptual } from './perceptual-solver';
@@ -32,6 +34,14 @@ export function solveQuestion(q: BaseQuestion): UniversalSolverResult {
   });
   try {
     if (!q || !Array.isArray(q.options) || q.options.length !== 4 || q.options.some(o => !o)) return failure('Dört geçerli seçenek gerekli.');
+    if((q.visualConfig as Record<string,unknown>)?.displayMode==='cube_lab') {
+      const b=validateCubeBoard(q.visualConfig);if(CUBE_TOPICS[b.mechanic]!==q.type||b.grade!==q.targetGrade)return failure('Küp konusu veya sınıfı uyuşmuyor.');
+      const answer=solveCube(b),independent=independentlySolveCube(b);
+      if(fingerprint(answer)!==fingerprint(independent))return failure('Küp sütunu ve birim küp çözümleri uyuşmuyor.',true);
+      const matching=q.options.filter(o=>fingerprint(o.visualData)===fingerprint(answer));
+      if(matching.length!==1)return failure('Tek küp seçeneği gerekli.',true);
+      return {canSolve:true,isMatch:matching[0].id===q.correctOptionId,expectedAnswerId:matching[0].id,expectedFingerprint:fingerprint(answer),solverMethod:'CubeHeight-and-VoxelProof-v1',confidence:1,ambiguityDetected:false,proofSteps:['Görünür yükseklik planı veya açılım çözüldü.','Birim küp doluluğu / bağımsız vektör dönüşleri aynı sonucu verdi.','Tek uygun seçenek: '+matching[0].id]};
+    }
     if((q.visualConfig as Record<string,unknown>)?.displayMode==='perceptual_board') {
       const b=validatePerceptualBoard(q.visualConfig);
       if(PERCEPTUAL_TOPICS[b.mechanic]!==q.type||b.grade!==q.targetGrade)return failure('Görsel ilişki konusu veya sınıfı uyuşmuyor.');
