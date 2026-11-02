@@ -22,7 +22,7 @@ try {
     const active=await root.evaluate(el=>[el,...el.querySelectorAll('*')].flatMap(node=>[null,'::before','::after'].map(p=>getComputedStyle(node,p).animationName)).filter(name=>name!=='none'));
     assert.deepEqual(active,[],'Pausing must stop decorations, cards and pseudo-element beacons');
   };
-  await page.goto(base);await page.getByRole('heading',{name:'Fısıldayan Orman',exact:true}).waitFor();
+  await page.goto(base);await page.getByRole('button',{name:'Macera haritası',exact:true}).click();await page.getByRole('heading',{name:'Fısıldayan Orman',exact:true}).waitFor();
   assert.equal((await style('.bj-story-dialogue img')).name,'bj-guide-float');
   assert.equal((await style('.bj-expedition-scenery')).name,'bj-world-drift');
   assert.equal((await style('.bj-story-node','::after')).name,'bj-beacon');
@@ -31,7 +31,7 @@ try {
   await page.waitForFunction(previous=>getComputedStyle(document.querySelector('.bj-story-dialogue img')).transform!==previous,firstTransform);
   const pause=page.getByRole('button',{name:'Animasyonları duraklat',exact:true});
   await pause.click();await assertStill();
-  await page.reload();await page.getByRole('button',{name:'Animasyonları başlat',exact:true}).waitFor();await assertStill();
+  await page.reload();await page.getByRole('button',{name:'Macera haritası',exact:true}).click();await page.getByRole('button',{name:'Animasyonları başlat',exact:true}).waitFor();await assertStill();
   await page.getByRole('button',{name:'Animasyonları başlat',exact:true}).click();
   assert.equal((await style('.bj-story-dialogue img')).name,'bj-guide-float');
   // App backgrounding pauses rather than resetting the scene.
@@ -130,9 +130,9 @@ try {
   await page.screenshot({path:'test-artifacts/student-motion/profile-dark.png',fullPage:true,animations:'disabled'});
   await page.evaluate(()=>document.documentElement.classList.remove('dark'));
   await pause.click();await assertStill();
-  await nav.getByRole('button',{name:'Macera',exact:true}).click();await assertStill();
+  await nav.getByRole('button',{name:'Macera',exact:true}).click();await page.getByRole('button',{name:'Macera haritası',exact:true}).click();await assertStill();
   await page.getByRole('button',{name:'Animasyonları başlat',exact:true}).click();
-  await page.emulateMedia({reducedMotion:'reduce'});await page.reload();await root.waitFor();await assertStill();
+  await page.emulateMedia({reducedMotion:'reduce'});await page.reload();await page.getByRole('button',{name:'Macera haritası',exact:true}).click();await root.waitFor();await assertStill();
   // Device preference wins even when the stored in-app preference is enabled.
   assert.equal(await pause.getAttribute('aria-pressed'),'true');
   await page.emulateMedia({reducedMotion:'no-preference'});

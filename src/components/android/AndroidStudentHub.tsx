@@ -1,4 +1,4 @@
-import { StoryAdventure } from '../student/StoryAdventure';
+import { AndroidStudentHome } from './AndroidStudentHome';
 import { STUDY_GROUPS } from '../../features/student/adventure-art';
 import { StudentGameArt, GAME_ROUTE_ART } from '../student/StudentGameArt';
 import { StudentExplorerPortal } from '../student/StudentExplorerWorld';
@@ -53,5 +53,5 @@ export function AndroidStudentHub({route,user,progress,saveError,onNavigate,onSt
     {route==='student-study'&&<><StudentExplorerPortal onLessons={()=>go('student-lessons')}/><nav className="bj-study-groups" aria-label="Çalışma alanı grupları">{STUDY_GROUPS.map(group=><button key={group.id} aria-pressed={studyGroup===group.id} onClick={()=>{sound.playClick();setStudyGroup(group.id);}}>{group.label}</button>)}</nav></>}
     <div key={studyGroup} className="bj-native-feature-grid" data-motion-zone>{links.map(({route,title,detail,icon:Icon,tone})=><button key={route} onClick={()=>go(route)} data-tone={tone}>{isRewards?<span className="bj-reward-object" aria-hidden="true"><StudentGameArt kind={GAME_ROUTE_ART[route] || "medal"}/><i>✦</i></span>:<span className="bj-game-feature-art"><StudentGameArt kind={GAME_ROUTE_ART[route] || "cubes"}/><span className="bj-feature-key"><Icon aria-hidden="true"/></span></span>}<div><h2>{title}</h2><p>{detail}</p></div><ChevronRight aria-hidden="true"/></button>)}</div>
   </main>;
-  return <main className="bj-native-hub bj-student-game"><StoryAdventure user={user} progress={progress} saveError={saveError} onStartStory={onStartStory} onSelectStory={onSelectStory} onStudy={()=>go('student-study')}/></main>;
+  return <AndroidStudentHome user={user} progress={progress} saveError={saveError} onNavigate={go} onStartStory={onStartStory} onSelectStory={onSelectStory}/>;
 }

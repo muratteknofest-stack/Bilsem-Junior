@@ -20,7 +20,8 @@ try {
   const screens=['modes','plan','skills','challenges','progress','tests','native-story','native-study','native-rewards','native-profile','achievements','mistakes','glossary','growth','native-story-progress','native-story-complete','native-story-library','native-story-collection','story-result'];
   const openScreen=async screen=>{
     await page.goto(`${origin}/tests/browser/student-game.html?screen=${screen}`);
-    await page.locator('.bj-student-game,.bj-game-page').first().waitFor();
+    await page.locator('.bj-student-game,.bj-game-page,.bj-android-home').first().waitFor();
+    if(screen.startsWith('native-story-'))await page.getByRole('button',{name:'Macera haritası',exact:true}).click();
     if(screen==='native-story-library')await page.getByRole('button',{name:'Hikâyeler',exact:true}).click();
     if(screen==='native-story-collection')await page.getByRole('button',{name:'Koleksiyonum',exact:true}).click();
     if(screen==='native-story-complete')await page.getByRole('button',{name:'Önceki hikâye bölümü',exact:true}).click();
@@ -52,6 +53,14 @@ try {
         assert.deepEqual(fonts,[true,true],'Local Turkish fonts must load without an external provider');
       }
       if(screen==='plan')await page.locator('#today-personalized-study-plan-card').waitFor();
+      if(screen==='native-story') {
+        assert.equal(await page.locator('.bj-story-stages').count(),0,'Full map must be outside the short home');
+        assert.ok(await page.getByRole('button',{name:'Keşfe devam et',exact:true}).isVisible());
+        await page.getByRole('button',{name:'Test çöz',exact:true}).click();
+        assert.equal(await page.getByLabel('İşlem kaydı').textContent(),'student-study');
+        await page.getByRole('button',{name:'Konu öğren',exact:true}).click();
+        assert.equal(await page.getByLabel('İşlem kaydı').textContent(),'student-lessons');
+      }
       if(screen==='native-story-progress')await checkStoryContrast();
       if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1)) {
         const offenders=await page.evaluate(()=>Array.from(document.querySelectorAll('body *')).map(el=>({tag:el.tagName,cls:el.className?.baseVal??el.className,box:el.getBoundingClientRect(),text:(el.textContent||'').slice(0,70)})).filter(el=>el.box.width>0&&(el.box.right>innerWidth+1||el.box.left< -1)).slice(-16).map(el=>({tag:el.tag,cls:el.cls,left:el.box.left,right:el.box.right,text:el.text})));
