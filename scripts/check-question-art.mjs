@@ -30,6 +30,33 @@ try{
   assert.ok(await page.locator('[data-real-object] img').evaluateAll(images=>images.length>0&&images.every(image=>image.naturalWidth===800&&image.getBoundingClientRect().width>=36)),'Photographic objects must load at a readable size');
   await page.screenshot({path:output+'/premium-'+width+'.png',fullPage:true,animations:'disabled'});
  }
+ await page.goto('http://127.0.0.1:5189/tests/browser/perceptual-questions.html');await page.locator('[data-perceptual-sample]').first().waitFor();
+ const perceptualHashes=new Set();
+ for(const shape of ['arrow','flag','key','leaf'])for(const filled of [false,true])for(let rotation=0;rotation<4;rotation++){
+  await page.evaluate(value=>window.__renderPerceptualCard(value),{perceptual:'card',shape,count:1,rotation,filled});
+  const raster=await page.locator('[data-card-proof] svg').evaluate(async svg=>{
+   const clone=svg.cloneNode(true);clone.setAttribute('width','256');clone.setAttribute('height','256');clone.style.width='256px';clone.style.maxWidth='none';
+   const img=new Image();img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(clone));await img.decode();
+   const canvas=document.createElement('canvas');canvas.width=canvas.height=256;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,256,256);const pixels=ctx.getImageData(0,0,256,256).data;
+   let ink=0,cropped=false;for(let i=0;i<pixels.length;i+=4)if(pixels[i+3]>100){ink++;const n=i/4,x=n%256,y=Math.floor(n/256);if(x===0||x===255||y===0||y===255)cropped=true;}
+   return {ink,cropped,hash:[...new Uint8Array(await crypto.subtle.digest('SHA-256',pixels))].map(n=>n.toString(16).padStart(2,'0')).join('')};
+  });
+  assert.ok(raster.ink>300);assert.equal(raster.cropped,false);assert.ok(!perceptualHashes.has(raster.hash),'Shape/fill/direction must be visibly distinct');perceptualHashes.add(raster.hash);
+ }
+ await page.evaluate(()=>window.__renderPerceptualSamples());
+ for(const width of [320,390,768,1440]){
+  await page.setViewportSize({width,height:width<700?844:1024});
+  assert.equal(await page.locator('[data-perceptual-sample]').count(),6);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'Perceptual questions must fit '+width);
+  assert.ok(await page.locator('.bj-perceptual-cell').evaluateAll(cells=>cells.every(c=>c.getBoundingClientRect().width>=66)),'Given cards must remain readable');
+  for(const sample of await page.locator('[data-perceptual-sample]').all()){
+   const option=sample.locator('.zp-answer-option').first();await option.click();assert.equal(await option.getAttribute('aria-pressed'),'true');
+   await sample.getByRole('button',{name:'Sürükle bırak',exact:true}).click();
+   assert.ok(await sample.locator('[data-perceptual-card]').count()>4);assert.equal(await sample.getByText('[object Object]',{exact:false}).count(),0);
+   await sample.getByRole('button',{name:'Şık seç',exact:true}).click();
+  }
+  await page.screenshot({path:output+'/perceptual-'+width+'.png',fullPage:true,animations:'disabled'});
+ }
  assert.deepEqual(errors,[]);
- console.log(JSON.stringify({distinctUncroppedSilhouettes:count,premiumQuestionViewports:4,pageErrors:errors.length}));
+ console.log(JSON.stringify({distinctUncroppedSilhouettes:count,premiumQuestionViewports:4,perceptualGlyphStates:perceptualHashes.size,perceptualQuestionViewports:4,pageErrors:errors.length}));
 }finally{await browser.close();await server.close();}

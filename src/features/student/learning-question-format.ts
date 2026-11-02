@@ -4,8 +4,12 @@ import type { Board } from '../questions/professional-engine';
 export const LEGACY_REASONING_QUESTION_FORMAT='reasoning-8';
 export const PREVIOUS_PROFESSIONAL_QUESTION_FORMAT='professional-v2';
 export const PREVIOUS_LAB_QUESTION_FORMAT = 'reasoning-lab-1';
-export const LEARNING_QUESTION_FORMAT = 'reasoning-lab-2';
-export function supportsLabQuestionFormat(format:unknown){return format===LEARNING_QUESTION_FORMAT||format===PREVIOUS_LAB_QUESTION_FORMAT;}
+export const PREVIOUS_CURRICULUM_QUESTION_FORMAT = 'reasoning-lab-2';
+export const LEARNING_QUESTION_FORMAT = 'perceptual-1';
+export function supportsPerceptualFormat(format:unknown){return format===LEARNING_QUESTION_FORMAT;}
+export function needsPerceptualFormat(q:Pick<BaseQuestion,'visualConfig'>){return (q.visualConfig as Record<string,unknown>)?.displayMode==='perceptual_board';}
+export function supportsCurriculumV2Format(format:unknown){return supportsPerceptualFormat(format)||format===PREVIOUS_CURRICULUM_QUESTION_FORMAT;}
+export function supportsLabQuestionFormat(format:unknown){return supportsCurriculumV2Format(format)||format===PREVIOUS_LAB_QUESTION_FORMAT;}
 export function needsCurriculumV2Format(q:Pick<BaseQuestion,'visualConfig'|'authoring'>){return (q.visualConfig as Record<string,unknown>)?.displayMode==='curriculum_board'&&q.authoring?.engine==='curriculum-2';}
 export function supportsProfessionalV2Format(format:unknown){return supportsLabQuestionFormat(format)||format===PREVIOUS_PROFESSIONAL_QUESTION_FORMAT;}
 export function needsCurrentQuestionFormat(q:Pick<BaseQuestion,'visualConfig'>){return (q.visualConfig as Record<string,unknown>)?.displayMode==='reasoning_lab';}
@@ -17,5 +21,5 @@ export function learningFormatPath(path: string): string {
 /** Older installed apps must not receive a board whose givens they draw differently. */
 export function needsReasoningFormat(q: Pick<BaseQuestion,'visualConfig'|'authoring'>): boolean {
   const b=q.visualConfig as Board;
-  return needsCurriculumV2Format(q)||needsCurrentQuestionFormat(q)||needsProfessionalV2Format(q)||b.displayMode==='verified_board' && !!(b.transformSteps || b.matrixMode || b.machineQuery || b.countScope || b.rule==='multiply-add' || b.rule==='interleaved-growing' || b.constraints?.some(c=>c.kind==='notAdjacent'));
+  return needsPerceptualFormat(q)||needsCurriculumV2Format(q)||needsCurrentQuestionFormat(q)||needsProfessionalV2Format(q)||b.displayMode==='verified_board' && !!(b.transformSteps || b.matrixMode || b.machineQuery || b.countScope || b.rule==='multiply-add' || b.rule==='interleaved-growing' || b.constraints?.some(c=>c.kind==='notAdjacent'));
 }

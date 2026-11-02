@@ -9,11 +9,14 @@ import { SymbolDiagram } from './VisualGlyph';
 import { WorkshopShape } from './WorkshopBoard';
 import type { WorkshopValue } from '../workshop-mechanics';
 import { useMemoryStudy } from './MemoryStudy';
+import { validPerceptualValue } from '../perceptual-engine';
+import { PerceptualCard } from './PerceptualBoard';
 
 const labels: Record<AnswerMode, string> = { choice: 'Şık seç', place: 'Sürükle bırak', order: 'Sırayı kur', match: 'Eşleştir', number: 'Cevabı yaz' };
 type Props = { compact?: boolean; question: BaseQuestion; response: QuestionResponse | null; onChange: (r: QuestionResponse) => void; submitted?: boolean; allowedModes?: AnswerMode[]; preferredMode?: AnswerMode };
 
 function CardValue({ value, theme }: { value: unknown; theme: VisualTheme }) {
+  if(validPerceptualValue(value))return <PerceptualCard value={value}/>;
   if(value&&typeof value==='object'&&('figure' in value||'symbol' in value||'polygon' in value))return <WorkshopShape value={value as WorkshopValue}/>;
   const data = value as Partial<Tile> & { textNumber?: string | number };
   return data?.cells && data.size ? <span className="block w-24 max-w-full mx-auto"><TileDiagram tile={data as Tile} theme={theme} /></span> :

@@ -6,6 +6,7 @@ import { solveQuestion } from './universal-solver';
 import { isVisualSymbol } from './visual-vocabulary';
 import { TANGRAM_POLYGONS } from './workshop-mechanics';
 import { validCompleteValue } from './complete-curriculum';
+import { validPerceptualValue } from './perceptual-engine';
 
 /** Identity follows renderer precedence: invisible metadata never makes a new choice. */
 export function visibleOptionKey(value:unknown):string {
@@ -39,6 +40,7 @@ export function analyzeQuestionMechanics(q:BaseQuestion):MechanicalReport {
   }
   if(mode==='colorful_board'&&q.options.some(o=>!validColorfulValue(o.visualData)))errors.push('Çizilmeyen veya geçersiz renkli seçenek alanı.');
   if(mode==='curriculum_board'&&q.options.some(o=>!validCompleteValue(o.visualData)))errors.push('Müfredat seçeneğinde çizilmeyen veya geçersiz alan.');
+  if(mode==='perceptual_board'&&q.options.some(o=>!validPerceptualValue(o.visualData)))errors.push('Görsel ilişki seçeneğinde çizilmeyen veya geçersiz alan.');
   const solve=solveQuestion(q), matches=q.options.filter(o=>fingerprint(o.visualData)===solve.expectedFingerprint);
   if(solve.canSolve&&(!solve.isMatch||solve.ambiguityDetected))errors.push('ANSWER_MECHANICS: Mekanik çözüm tek bir doğru şık ve cevap anahtarıyla uyuşmuyor.');
   const choices=q.options.map((option,i)=>{const ruleMatch=solve.canSolve&&!solve.ambiguityDetected&&option.id===solve.expectedAnswerId;return {id:option.id,visibleKey:keys[i],ruleMatch,reason:ruleMatch?'Verilenlerden hesaplanan tek doğru şık.':solve.canSolve&&!solve.ambiguityDetected?'Verilen kurala uymayan çeldirici.':'Bağımsız kanıt tamamlanamadığı için bu şık onaylanamaz.'};});

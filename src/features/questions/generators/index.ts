@@ -15,6 +15,7 @@ import { ALL_TOPIC_TYPES, TOPIC_CATEGORY_TYPES, WORKSHOP_TYPES, topicAllowedForG
 import { generateWorkshopQuestion } from '../workshop-engine';
 import { generateCurriculumV2 } from '../curriculum-v2';
 import { COMPLETE_TYPES } from '../complete-curriculum';
+import { generatePerceptualQuestion, PERCEPTUAL_MECHANICS, PERCEPTUAL_TOPICS, perceptualAllowed } from '../perceptual-engine';
 
 export const ALL_QUESTION_TYPES = ALL_TOPIC_TYPES;
 export const STUDENT_CATEGORY_TYPES = TOPIC_CATEGORY_TYPES;
@@ -65,6 +66,8 @@ export function generateQuestion(options: {
     const pool=options.category&&options.category!=='mixed'?STUDENT_CATEGORY_TYPES[options.category]:ALL_TOPIC_TYPES;
     const type=options.type||rng.pick(pool.filter(type=>topicAllowedForGrade(type,options.targetGrade)));
     if(!pool.includes(type))throw Error('CATEGORY_MISMATCH');
+    const visualMechanics=PERCEPTUAL_MECHANICS.filter(m=>PERCEPTUAL_TOPICS[m]===type&&perceptualAllowed(m,options.targetGrade!,difficulty));
+    if(visualMechanics.length){const q=generatePerceptualQuestion(rng.pick(visualMechanics),seed,difficulty,options.targetGrade);assertQuestionReadyForStudents(q);return q;}
     if(type==='shape_equation'){const q=generateSymbolicQuestion(seed,difficulty,options.targetGrade);const report=assessCandidate(q,{grade:options.targetGrade,difficulty});if(report.stages.some(stage=>stage.status==='failed'))throw Error('Symbolic static quality failed: '+report.stages.flatMap(stage=>stage.reasons).join(' '));q.qualityReport=report;return q;}
     return generateQuestion({...options,type,profile:'complete'});
   }

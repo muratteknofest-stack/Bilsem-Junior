@@ -11,6 +11,8 @@ import { useMemoryStudy } from './MemoryStudy';
 import { CompleteOption } from './CompleteBoard';
 import { AnswerValue } from './AnswerValue';
 import { validCompleteValue } from '../complete-curriculum';
+import { validPerceptualValue } from '../perceptual-engine';
+import { PerceptualCard } from './PerceptualBoard';
 
 interface OptionRendererProps {
   option: Pick<VisualOption, 'id' | 'label' | 'visualData'>;
@@ -63,6 +65,7 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
   }
 
   const renderVisualContent = () => {
+    if(validPerceptualValue(visualData))return <PerceptualCard value={visualData}/>;
     if((visualData as Record<string,unknown>)?.curriculum&&validCompleteValue(visualData))return <CompleteOption value={visualData}/>;
     if(validColorfulValue(visualData))return <ColorfulArt value={visualData} shadow={questionType==='shadow_matching'}/>;
     if (!visualData && !option.label) {

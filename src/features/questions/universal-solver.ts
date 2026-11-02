@@ -1,4 +1,6 @@
 import { solveLab, validateLabBoard, LAB_TOPICS } from './reasoning-lab';
+import { solvePerceptual, validatePerceptualBoard, PERCEPTUAL_TOPICS, type PerceptualValue } from './perceptual-engine';
+import { independentlyMatchesPerceptual } from './perceptual-solver';
 import { independentlySolveLab } from './reasoning-lab-solver';
 import {solveSymbolic,independentlySolveSymbolic,symbolicBoardSchema} from './symbolic-v2';
 import { solveColorful, independentlyMatchesColorful, type ColorfulBoard, type ColorfulValue } from './colorful-engine';
@@ -30,6 +32,14 @@ export function solveQuestion(q: BaseQuestion): UniversalSolverResult {
   });
   try {
     if (!q || !Array.isArray(q.options) || q.options.length !== 4 || q.options.some(o => !o)) return failure('Dört geçerli seçenek gerekli.');
+    if((q.visualConfig as Record<string,unknown>)?.displayMode==='perceptual_board') {
+      const b=validatePerceptualBoard(q.visualConfig);
+      if(PERCEPTUAL_TOPICS[b.mechanic]!==q.type||b.grade!==q.targetGrade)return failure('Görsel ilişki konusu veya sınıfı uyuşmuyor.');
+      const answer=solvePerceptual(b,q.options.map(o=>o.visualData as PerceptualValue));
+      const primary=q.options.filter(o=>fingerprint(o.visualData)===fingerprint(answer)), independent=q.options.filter(o=>independentlyMatchesPerceptual(b,o.visualData));
+      if(primary.length!==1||independent.length!==1||primary[0].id!==independent[0].id)return failure('İki görsel ilişki çözümü tek seçenekte birleşmiyor.',true);
+      return {canSolve:true,isMatch:primary[0].id===q.correctOptionId,expectedAnswerId:primary[0].id,expectedFingerprint:fingerprint(answer),solverMethod:'PerceptualInference-and-CandidateProof-v1',confidence:1,ambiguityDetected:false,proofSteps:['Görünür örneklerden adet, yön ve doluluk ilişkileri çıkarıldı.','Dört aday yerleştirilerek bütün ilişkiler bağımsız olarak denetlendi.','Tek uygun seçenek: '+primary[0].id]};
+    }
     if((q.visualConfig as Record<string,unknown>)?.displayMode==='reasoning_lab') {
       const b=validateLabBoard(q.visualConfig);
       if(LAB_TOPICS[b.mechanic]!==q.type||b.grade!==q.targetGrade)return failure('Akıl yürütme konusu veya sınıfı uyuşmuyor.');

@@ -1,4 +1,5 @@
 import type { BaseQuestion } from '../../types';
+import { perceptualReasoningDescriptor } from './perceptual-engine';
 import { generateVisualFingerprint } from './fingerprint';
 import { transformTile, type Board, type Tile } from './professional-engine';
 
@@ -6,7 +7,8 @@ import { transformTile, type Board, type Tile } from './professional-engine';
 export function questionReasoningKey(q: Pick<BaseQuestion,'type'|'visualConfig'>): string {
   const b=q.visualConfig as Record<string,unknown>;
   let rule: unknown;
-  if(b.displayMode==='reasoning_lab')rule={kind:'reasoning-lab',mechanic:b.mechanic};
+  if(b.displayMode==='perceptual_board')rule=perceptualReasoningDescriptor(b);
+  else if(b.displayMode==='reasoning_lab')rule={kind:'reasoning-lab',mechanic:b.mechanic};
   else if(b.displayMode==='symbolic_v2')rule={kind:'symbolic-relations',mechanic:b.mechanic,variables:(b.symbols as string[]).length,queryMode:b.queryMode};
   else if(b.displayMode==='verified_board') {
     const v=q.visualConfig as Board;
@@ -51,7 +53,8 @@ export function questionReasoningKey(q: Pick<BaseQuestion,'type'|'visualConfig'>
 export function questionStyleKey(q: Pick<BaseQuestion,'type'|'visualConfig'>): string {
   const b=q.visualConfig as Record<string,unknown>;
   let style: unknown = q.type;
-  if (b.displayMode==='reasoning_lab') style={kind:'reasoning-lab',mechanic:b.mechanic};
+  if (b.displayMode==='perceptual_board') style={kind:'attribute-relations',task:['analogy-grid','paired-analogy'].includes(String(b.mechanic))?'analogy':b.mechanic};
+  else if (b.displayMode==='reasoning_lab') style={kind:'reasoning-lab',mechanic:b.mechanic};
   else if (['dice_unfold','spatial_origami'].includes(q.type)) style='cube-opposite-face';
   else if (['paper_folding','punch_folding','symmetry_completion'].includes(q.type)) style='reflection-completion';
   else if (q.type==='visual_memory') style='memory-pattern';
