@@ -4,7 +4,7 @@ import {readFile,writeFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 import {PGlite} from '@electric-sql/pglite';
 import {generateReferenceQuestion,type ReferenceBoard} from '../src/features/questions/reference-lab';
-import {auditQuestion,questionStimulusKey,questionVisualKey} from '../src/features/questions/quality';
+import {auditQuestion,isQuestionReadyForStudents,questionStimulusKey,questionVisualKey} from '../src/features/questions/quality';
 import {runMultiPassQuestionTests,stampQuestionVerification} from '../src/features/questions/verifier';
 import type{BaseQuestion}from'../src/types';
 import {verifyReferenceBank,type ReferenceBankQuestion} from './generate-reference-bank';
@@ -41,6 +41,7 @@ export async function prepareReferenceChoiceUpgrade(source:string,commit:string,
     batchValidation:{...old.batchValidation,policy:'reference-choice-quality-2',stimulusSha256:stimulus,stemKeySha256:stimulus,visualKeySha256:sha(questionVisualKey(q)),individualHumanReview:false,editorReview:'pending'},
     releaseAuthorization:{source:'owner-continue-2026-11-02-reference-choice-quality',releasedAt:at,sourceCommit:commit,automaticChecks:'passed',sourceFileSha256:SOURCE_SHA,individualHumanReview:false},
     qualityUpgrade:{previousEngine:'reference-lab-1',previousRevision:2,previousReleaseAuthorization:previousRelease,preservedGivenSha256:stimulus}};
+   if(!isQuestionReadyForStudents(next))throw Error('FINAL_UPGRADE_NOT_READY:'+old.id);
    await db.query('insert into upgrade_rows values($1,$2::jsonb,$3::jsonb)',[old.id,JSON.stringify(prior),JSON.stringify(next)]);
   }
   const rows=await db.query<{id:string;expectedSha256:string;nextSha256:string;data:Record<string,unknown>}>(`select id,encode(sha256(convert_to(old_data::text,'UTF8')),'hex') "expectedSha256",encode(sha256(convert_to(next_data::text,'UTF8')),'hex') "nextSha256",next_data data from upgrade_rows order by id`);
