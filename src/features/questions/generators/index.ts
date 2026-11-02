@@ -1,3 +1,4 @@
+import{REFERENCE_MECHANICS,REFERENCE_TOPICS,referenceAllowed,generateReferenceQuestion}from'../reference-lab';
 import {CUBE_MECHANICS,CUBE_TOPICS,cubeAllowed,generateCubeQuestion} from '../cube-lab';
 import {assessCandidate} from '../multi-stage-quality';
 import {generateSymbolicQuestion} from '../symbolic-v2';
@@ -67,6 +68,8 @@ export function generateQuestion(options: {
     const pool=options.category&&options.category!=='mixed'?STUDENT_CATEGORY_TYPES[options.category]:ALL_TOPIC_TYPES;
     const type=options.type||rng.pick(pool.filter(type=>topicAllowedForGrade(type,options.targetGrade)));
     if(!pool.includes(type))throw Error('CATEGORY_MISMATCH');
+    const referenceMechanics=REFERENCE_MECHANICS.filter(m=>REFERENCE_TOPICS[m]===type&&referenceAllowed(m,options.targetGrade!,difficulty));
+    if(referenceMechanics.length){const variants=[...referenceMechanics.map(m=>()=>generateReferenceQuestion(m,seed,difficulty,options.targetGrade!)),...CUBE_MECHANICS.filter(m=>CUBE_TOPICS[m]===type&&cubeAllowed(m,options.targetGrade!,difficulty)).map(m=>()=>generateCubeQuestion(m,seed,difficulty,options.targetGrade!)),...PERCEPTUAL_MECHANICS.filter(m=>PERCEPTUAL_TOPICS[m]===type&&perceptualAllowed(m,options.targetGrade!,difficulty)).map(m=>()=>generatePerceptualQuestion(m,seed,difficulty,options.targetGrade!))];const q=rng.pick(variants)();assertQuestionReadyForStudents(q);return q;}
     const cubeMechanics=CUBE_MECHANICS.filter(m=>CUBE_TOPICS[m]===type&&cubeAllowed(m,options.targetGrade!,difficulty));
     if(cubeMechanics.length){const q=generateCubeQuestion(rng.pick(cubeMechanics),seed,difficulty,options.targetGrade);assertQuestionReadyForStudents(q);return q;}
     const visualMechanics=PERCEPTUAL_MECHANICS.filter(m=>PERCEPTUAL_TOPICS[m]===type&&perceptualAllowed(m,options.targetGrade!,difficulty));

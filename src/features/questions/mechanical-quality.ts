@@ -1,3 +1,4 @@
+import{validReferenceValue,visibleReferenceKey}from'./reference-lab';
 import {validCubeValue} from './cube-lab';
 import { validColorfulValue } from './colorful-engine';
 import { validFigure } from './figure-analogy';
@@ -13,6 +14,7 @@ import { validPerceptualValue } from './perceptual-engine';
 export function visibleOptionKey(value:unknown):string {
   const v=value as Record<string,unknown>|null;
   if(!v||typeof v!=='object')return fingerprint(null);
+  if(validReferenceValue(value)&&'reference'in value)return visibleReferenceKey(value);
   if(v.curriculum==='piece'&&Array.isArray(v.points))return fingerprint({curriculum:'piece',points:v.points.map(p=>JSON.stringify(p)).sort()});
   if(v.figure!==undefined){const f=v.figure as any;return fingerprint({figure:{shape:f.shape,half:f.half,lines:f.lines,outerFill:f.outerFill,innerFill:f.innerFill,...(f.outerFill!=='empty'||f.innerFill!=='empty'?{inner:f.inner}:{})}});}
   if(v.symbol!==undefined)return fingerprint({symbol:v.symbol});
@@ -41,6 +43,7 @@ export function analyzeQuestionMechanics(q:BaseQuestion):MechanicalReport {
   }
   if(mode==='colorful_board'&&q.options.some(o=>!validColorfulValue(o.visualData)))errors.push('Çizilmeyen veya geçersiz renkli seçenek alanı.');
   if(mode==='curriculum_board'&&q.options.some(o=>!validCompleteValue(o.visualData)))errors.push('Müfredat seçeneğinde çizilmeyen veya geçersiz alan.');
+  if(mode==='reference_lab'&&q.options.some(o=>!validReferenceValue(o.visualData)))errors.push('Görsel çalışma seçeneğinde çizilmeyen veya geçersiz alan.');
   if(mode==='cube_lab'&&q.options.some(o=>!validCubeValue(o.visualData)))errors.push('Küp seçeneğinde görünmeyen veya geçersiz alan.');
   if(mode==='perceptual_board'&&q.options.some(o=>!validPerceptualValue(o.visualData)))errors.push('Görsel ilişki seçeneğinde çizilmeyen veya geçersiz alan.');
   const solve=solveQuestion(q), matches=q.options.filter(o=>fingerprint(o.visualData)===solve.expectedFingerprint);

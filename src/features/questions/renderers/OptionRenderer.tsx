@@ -1,3 +1,5 @@
+import{ReferenceLabBoard,ReferenceValueArt}from'./ReferenceLabBoard';
+import{validReferenceValue}from'../reference-lab';
 import {CubeView} from './CubeLabBoard';
 import {validCubeValue} from '../cube-lab';
 import { ColorfulArt } from './ColorfulBoard';
@@ -67,6 +69,7 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
   }
 
   const renderVisualContent = () => {
+    if(validReferenceValue(visualData)&&'reference'in visualData)return <ReferenceValueArt value={visualData}/>;
     if(validCubeValue(visualData)&&'cubeView'in visualData)return <CubeView value={visualData}/>;
     if(validPerceptualValue(visualData))return <PerceptualCard value={visualData}/>;
     if((visualData as Record<string,unknown>)?.curriculum&&validCompleteValue(visualData))return <CompleteOption value={visualData}/>;

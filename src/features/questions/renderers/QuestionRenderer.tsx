@@ -1,3 +1,5 @@
+import{ReferenceLabBoard,ReferenceValueArt}from'./ReferenceLabBoard';
+import{validReferenceValue}from'../reference-lab';
 import {CubeLabBoard} from './CubeLabBoard';
 import { ReasoningLabBoard } from './ReasoningLabBoard';
 import { PerceptualBoard } from './PerceptualBoard';
@@ -37,6 +39,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({ question,pre
   const mode = typeof visualConfig.displayMode === 'string' ? visualConfig.displayMode : 'default';
   
   const renderEngine = () => {
+    if(mode==='reference_lab')return <ReferenceLabBoard board={visualConfig as unknown as import('../reference-lab').ReferenceBoard}/>;
     if(mode==='cube_lab')return <CubeLabBoard board={visualConfig as unknown as import('../cube-lab').CubeBoard}/>;
     if(mode==='perceptual_board')return <PerceptualBoard board={visualConfig as unknown as import('../perceptual-engine').PerceptualBoard}/>;
     if(mode==='reasoning_lab')return <ReasoningLabBoard board={visualConfig as unknown as import('../reasoning-lab').LabBoard}/>;
