@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import {createServer} from 'vite';
 import {chromium} from 'playwright';
+import {checkExamArt} from './check-exam-art.mjs';
 const output=process.env.ART_OUTPUT||'/tmp/bilsem-question-art';await fs.mkdir(output,{recursive:true});
 const server=await createServer({server:{host:'127.0.0.1',port:5189,strictPort:true}});await server.listen();
 const browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:1240,height:1100},deviceScaleFactor:2});const errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -101,6 +102,7 @@ try{
   }
   await page.screenshot({path:output+'/reference-'+width+'.png',fullPage:true,animations:'disabled'});
  }
+ await checkExamArt(page,output);
  assert.deepEqual(errors,[]);
- console.log(JSON.stringify({distinctUncroppedSilhouettes:count,premiumQuestionViewports:4,perceptualGlyphStates:perceptualHashes.size,perceptualQuestionViewports:4,cubeQuestionViewports:4,cubeCards:28,referenceQuestionViewports:4,referenceCards:35,pageErrors:errors.length}));
+ console.log(JSON.stringify({distinctUncroppedSilhouettes:count,premiumQuestionViewports:4,perceptualGlyphStates:perceptualHashes.size,perceptualQuestionViewports:4,cubeQuestionViewports:4,cubeCards:28,referenceQuestionViewports:4,referenceCards:35,examCards:23,pageErrors:errors.length}));
 }finally{await browser.close();await server.close();}

@@ -1,4 +1,5 @@
 @import './features/questions/renderers/reference-lab.css';
+@import './features/questions/renderers/exam-lab.css';
 @import './features/questions/renderers/cube-lab.css';
 @import './fonts.css';
 @import './components/legal-links.css';

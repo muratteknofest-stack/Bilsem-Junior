@@ -7,8 +7,11 @@ export const PREVIOUS_LAB_QUESTION_FORMAT = 'reasoning-lab-1';
 export const PREVIOUS_CURRICULUM_QUESTION_FORMAT = 'reasoning-lab-2';
 export const PREVIOUS_PERCEPTUAL_QUESTION_FORMAT='perceptual-1';
 export const PREVIOUS_CUBE_QUESTION_FORMAT='cube-lab-1';
-export const LEARNING_QUESTION_FORMAT = 'reference-lab-1';
-export function supportsReferenceFormat(format:unknown){return format===LEARNING_QUESTION_FORMAT;}
+export const PREVIOUS_REFERENCE_QUESTION_FORMAT='reference-lab-1';
+export const LEARNING_QUESTION_FORMAT = 'exam-lab-1';
+export function supportsExamFormat(format:unknown){return format===LEARNING_QUESTION_FORMAT;}
+export function needsExamFormat(q:Pick<BaseQuestion,'visualConfig'>){return (q.visualConfig as Record<string,unknown>)?.displayMode==='exam_lab';}
+export function supportsReferenceFormat(format:unknown){return supportsExamFormat(format)||format===PREVIOUS_REFERENCE_QUESTION_FORMAT;}
 export function needsReferenceFormat(q:Pick<BaseQuestion,'visualConfig'>){return (q.visualConfig as Record<string,unknown>)?.displayMode==='reference_lab';}
 export function supportsCubeFormat(format:unknown){return supportsReferenceFormat(format)||format===PREVIOUS_CUBE_QUESTION_FORMAT;}
 export function needsCubeFormat(q:Pick<BaseQuestion,'visualConfig'>){return (q.visualConfig as Record<string,unknown>)?.displayMode==='cube_lab';}
@@ -27,5 +30,5 @@ export function learningFormatPath(path: string): string {
 /** Older installed apps must not receive a board whose givens they draw differently. */
 export function needsReasoningFormat(q: Pick<BaseQuestion,'visualConfig'|'authoring'>): boolean {
   const b=q.visualConfig as Board;
-  return needsReferenceFormat(q)||needsCubeFormat(q)||needsPerceptualFormat(q)||needsCurriculumV2Format(q)||needsCurrentQuestionFormat(q)||needsProfessionalV2Format(q)||b.displayMode==='verified_board' && !!(b.transformSteps || b.matrixMode || b.machineQuery || b.countScope || b.rule==='multiply-add' || b.rule==='interleaved-growing' || b.constraints?.some(c=>c.kind==='notAdjacent'));
+  return needsExamFormat(q)||needsReferenceFormat(q)||needsCubeFormat(q)||needsPerceptualFormat(q)||needsCurriculumV2Format(q)||needsCurrentQuestionFormat(q)||needsProfessionalV2Format(q)||b.displayMode==='verified_board' && !!(b.transformSteps || b.matrixMode || b.machineQuery || b.countScope || b.rule==='multiply-add' || b.rule==='interleaved-growing' || b.constraints?.some(c=>c.kind==='notAdjacent'));
 }

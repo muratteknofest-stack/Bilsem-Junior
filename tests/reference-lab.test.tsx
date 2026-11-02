@@ -1,3 +1,4 @@
+import './exam-lab.test';
 import test from'node:test';import assert from'node:assert/strict';import React from'react';import{renderToStaticMarkup}from'react-dom/server';
 import {createHash}from'node:crypto';
 import {PGlite}from'@electric-sql/pglite';

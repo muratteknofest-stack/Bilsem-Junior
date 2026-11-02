@@ -1,4 +1,5 @@
 import{REFERENCE_ENGINE,REFERENCE_TOPICS,validateReferenceBoard,generateReferenceQuestion,generateReferenceQuestionV1,isReferenceEngine}from'./reference-lab';
+import {EXAM_ENGINE,examTopic,validateExamBoard,generateExamQuestion} from './exam-lab';
 import {CUBE_ENGINE,CUBE_TOPICS,validateCubeBoard,generateCubeQuestion} from './cube-lab';
 import { LAB_ENGINE, LAB_TOPICS, generateLabQuestion, validateLabBoard } from './reasoning-lab';
 import { PERCEPTUAL_ENGINE, PERCEPTUAL_TOPICS, generatePerceptualQuestion, validatePerceptualBoard } from './perceptual-engine';
@@ -79,6 +80,11 @@ export function auditQuestion(value: unknown, existing: QuestionVisualReference[
     if (!Number.isFinite(q.estimatedSeconds) || q.estimatedSeconds < 10 || q.estimatedSeconds > 600) result.errors.push('Tahmini süre 10–600 saniye arasında olmalı.');
     if (!q.visualConfig || typeof cfg?.displayMode !== 'string') result.errors.push('Görsel gösterim yapılandırması eksik.');
     if (!Array.isArray(q.skills) || q.skills.length === 0) result.warnings.push('Ölçülen beceriyi belirtin.');
+    if(cfg?.displayMode==='exam_lab'){
+      const board=validateExamBoard(cfg);
+      if(q.authoring?.engine!==EXAM_ENGINE||!isSchoolGrade(q.targetGrade)||board.grade!==q.targetGrade||examTopic(board.mechanic,board.grade)!==q.type)result.errors.push('Deneme motoru/sınıf/konu uyuşmazlığı.');
+      else{const reference=generateExamQuestion(board.mechanic,q.seed,q.difficulty,q.targetGrade);for(const field of ['prompt','secondaryPrompt','explanation','visualConfig','category','options','authoring'] as const)if(fingerprint(q[field])!==fingerprint(reference[field]))result.reviewRequired.push('Deneme şablonu değişmiş: '+field);}
+    }
     if(cfg?.displayMode==='reference_lab'){
       const board=validateReferenceBoard(cfg);
       if(!isReferenceEngine(q.authoring?.engine)||!isSchoolGrade(q.targetGrade)||board.grade!==q.targetGrade||REFERENCE_TOPICS[board.mechanic]!==q.type)result.errors.push('Görsel çalışma motoru/sınıf/konu uyuşmazlığı.');

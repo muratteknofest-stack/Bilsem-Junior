@@ -1,4 +1,6 @@
 import{ReferenceLabBoard,ReferenceValueArt}from'./ReferenceLabBoard';
+import {validExamTile} from '../exam-lab';
+import {ExamTileArt} from './ExamLabBoard';
 import{validReferenceValue}from'../reference-lab';
 import {CubeView} from './CubeLabBoard';
 import {validCubeValue} from '../cube-lab';
@@ -20,6 +22,7 @@ const labels: Record<AnswerMode, string> = { choice: 'Şık seç', place: 'Sür�
 type Props = { compact?: boolean; question: BaseQuestion; response: QuestionResponse | null; onChange: (r: QuestionResponse) => void; submitted?: boolean; allowedModes?: AnswerMode[]; preferredMode?: AnswerMode };
 
 function CardValue({ value, theme }: { value: unknown; theme: VisualTheme }) {
+  if(validExamTile(value))return <ExamTileArt value={value}/>;
   if(validReferenceValue(value)&&'reference'in value)return <ReferenceValueArt value={value}/>;
   if(validCubeValue(value))return <CubeView value={value}/>;
   if(validPerceptualValue(value))return <PerceptualCard value={value}/>;

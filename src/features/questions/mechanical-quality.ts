@@ -1,4 +1,5 @@
 import{validReferenceValue,visibleReferenceKey}from'./reference-lab';
+import {validExamTile} from './exam-lab';
 import {validCubeValue} from './cube-lab';
 import { validColorfulValue } from './colorful-engine';
 import { validFigure } from './figure-analogy';
@@ -28,6 +29,7 @@ export interface MechanicalChoiceReport {id:string;visibleKey:string;ruleMatch:b
 export interface MechanicalReport {passed:boolean;uniqueVisibleOptions:number;matchingOptions:number;errors:string[];proofSteps:string[];choices:MechanicalChoiceReport[];}
 export function analyzeQuestionMechanics(q:BaseQuestion):MechanicalReport {
   const errors:string[]=[], mode=(q.visualConfig as Record<string,unknown>)?.displayMode;
+  if(mode==='exam_lab'&&q.options.some(o=>!validExamTile(o.visualData)))errors.push('Deneme seçeneği geçersiz veya çizilmeyen alan içeriyor.');
   const keys=q.options.map(o=>visibleOptionKey(o.visualData));
   if(new Set(keys).size!==4)errors.push('VISIBLE_DUPLICATE: Öğrencinin gördüğü dört şık birbirinden farklı olmalı.');
   if(mode==='workshop_board'||mode==='verified_board'||mode==='reasoning_lab')for(const option of q.options){

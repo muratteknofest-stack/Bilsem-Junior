@@ -70,6 +70,13 @@ export function inspectEducation(q: BaseQuestion, grade: SchoolGrade, age?: numb
   }
   if((q.visualConfig as Record<string,unknown>).displayMode==='colorful_board'){const c=q.visualConfig as unknown as ColorfulBoard;metrics.gridSize=c.source?.art==='mosaic'?c.source.size:0;metrics.itemCount=metrics.gridSize**2||c.layers?.length||1;}
   const audience: string[] = [], difficulty: string[] = [], visual: string[] = [];
+  if((q.visualConfig as Record<string,unknown>).displayMode==='exam_lab'){
+    const e=q.visualConfig as import('./exam-lab').ExamBoard;
+    metrics.maxNumber=0;metrics.symbolCount=0;metrics.peopleCount=0;
+    metrics.gridSize=e.mechanic==='cyclic-matrix'?e.side:e.mechanic==='composition-matrix'?3:0;
+    metrics.itemCount='cards'in e?e.cards.filter(Boolean).length:e.mechanic==='detail-mirror'?e.source.cells.length:e.cells.filter(v=>v!==null).length;
+    if(e.grade!==grade)audience.push('GRADE_MISMATCH: Deneme sınıfı uyuşmuyor.');
+  }
   if((q.visualConfig as Record<string,unknown>).displayMode==='reference_lab'){
     const r=q.visualConfig as import('./reference-lab').ReferenceBoard;metrics.gridSize=0;metrics.itemCount=0;metrics.symbolCount=0;metrics.peopleCount=0;
     switch(r.mechanic){
