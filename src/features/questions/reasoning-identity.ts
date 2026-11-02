@@ -7,7 +7,8 @@ import { transformTile, type Board, type Tile } from './professional-engine';
 export function questionReasoningKey(q: Pick<BaseQuestion,'type'|'visualConfig'>): string {
   const b=q.visualConfig as Record<string,unknown>;
   let rule: unknown;
-  if(b.displayMode==='reference_lab')rule={kind:'reference-lab',mechanic:b.mechanic};
+  if(b.displayMode==='exam_lab')rule={kind:'exam-lab',mechanic:b.mechanic,axis:b.axis};
+  else if(b.displayMode==='reference_lab')rule={kind:'reference-lab',mechanic:b.mechanic};
   else if(b.displayMode==='cube_lab')rule={kind:'cube-lab',mechanic:b.mechanic};
   else if(b.displayMode==='perceptual_board')rule=perceptualReasoningDescriptor(b);
   else if(b.displayMode==='reasoning_lab')rule={kind:'reasoning-lab',mechanic:b.mechanic};
@@ -55,7 +56,8 @@ export function questionReasoningKey(q: Pick<BaseQuestion,'type'|'visualConfig'>
 export function questionStyleKey(q: Pick<BaseQuestion,'type'|'visualConfig'>): string {
   const b=q.visualConfig as Record<string,unknown>;
   let style: unknown = q.type;
-  if(b.displayMode==='reference_lab')style={kind:'reference-lab',mechanic:b.mechanic};
+  if(b.displayMode==='exam_lab')style={kind:'exam-lab',mechanic:b.mechanic};
+  else if(b.displayMode==='reference_lab')style={kind:'reference-lab',mechanic:b.mechanic};
   else if(b.displayMode==='cube_lab')style=b.mechanic==='net-opposite'?'cube-opposite-face':{kind:'cube-lab',mechanic:b.mechanic};
   else if (b.displayMode==='perceptual_board') style={kind:'attribute-relations',task:['analogy-grid','paired-analogy'].includes(String(b.mechanic))?'analogy':b.mechanic};
   else if (b.displayMode==='reasoning_lab') style={kind:'reasoning-lab',mechanic:b.mechanic};

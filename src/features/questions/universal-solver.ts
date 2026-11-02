@@ -1,4 +1,5 @@
 import{solveReference,validateReferenceBoard,independentlyMatchesReference,REFERENCE_TOPICS}from'./reference-lab';
+import {solveExam,validateExamBoard,independentlyMatchesExam,examTopic} from './exam-lab';
 import {solveCube,validateCubeBoard,CUBE_TOPICS} from './cube-lab';
 import {independentlySolveCube} from './cube-solver';
 import { solveLab, validateLabBoard, LAB_TOPICS } from './reasoning-lab';
@@ -35,6 +36,12 @@ export function solveQuestion(q: BaseQuestion): UniversalSolverResult {
   });
   try {
     if (!q || !Array.isArray(q.options) || q.options.length !== 4 || q.options.some(o => !o)) return failure('Dört geçerli seçenek gerekli.');
+    if((q.visualConfig as Record<string,unknown>)?.displayMode==='exam_lab'){
+      const b=validateExamBoard(q.visualConfig);if(examTopic(b.mechanic,b.grade)!==q.type||b.grade!==q.targetGrade)return failure('Deneme konusu/sınıfı uyuşmuyor.');
+      const answer=solveExam(b),primary=q.options.filter(o=>fingerprint(o.visualData)===fingerprint(answer)),independent=q.options.filter(o=>independentlyMatchesExam(b,o.visualData));
+      if(primary.length!==1||independent.length!==1||primary[0].id!==independent[0].id)return failure('Deneme için tek bağımsız çözüm gerekli.',true);
+      return {canSolve:true,isMatch:primary[0].id===q.correctOptionId,expectedAnswerId:primary[0].id,expectedFingerprint:fingerprint(answer),solverMethod:'ExamInference-and-CellProof-v1',confidence:1,ambiguityDetected:false,proofSteps:['Görünür örnek ve kenar ilişkileri çözüldü.','Adaylar her hücre ve iki yöndeki koşullarla bağımsız denetlendi.','Tek uygun seçenek: '+primary[0].id]};
+    }
     if((q.visualConfig as Record<string,unknown>)?.displayMode==='reference_lab'){
       const b=validateReferenceBoard(q.visualConfig);if(REFERENCE_TOPICS[b.mechanic]!==q.type||b.grade!==q.targetGrade)return failure('Görsel çalışma konusu/sınıfı uyuşmuyor.');
       const answer=solveReference(b),first=q.options.filter(o=>fingerprint(o.visualData)===fingerprint(answer)),second=q.options.filter(o=>independentlyMatchesReference(b,o.visualData));

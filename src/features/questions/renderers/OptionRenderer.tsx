@@ -5,6 +5,8 @@ import {validCubeValue} from '../cube-lab';
 import { ColorfulArt } from './ColorfulBoard';
 import { validColorfulValue } from '../colorful-engine';
 import React from 'react';
+import {validExamTile} from '../exam-lab';
+import {ExamTileArt} from './ExamLabBoard';
 import { motion } from 'motion/react';
 import { VisualOption, QuestionType, type BaseQuestion } from '../../../types';
 import { ShapeSvg, ShapeKind } from '../../../lib/svg-primitives';
@@ -69,6 +71,7 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
   }
 
   const renderVisualContent = () => {
+    if(validExamTile(visualData))return <ExamTileArt value={visualData}/>;
     if(validReferenceValue(visualData)&&'reference'in visualData)return <ReferenceValueArt value={visualData}/>;
     if(validCubeValue(visualData)&&'cubeView'in visualData)return <CubeView value={visualData}/>;
     if(validPerceptualValue(visualData))return <PerceptualCard value={visualData}/>;
