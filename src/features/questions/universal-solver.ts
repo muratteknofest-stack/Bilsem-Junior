@@ -1,3 +1,4 @@
+import{solveReference,validateReferenceBoard,independentlyMatchesReference,REFERENCE_TOPICS}from'./reference-lab';
 import {solveCube,validateCubeBoard,CUBE_TOPICS} from './cube-lab';
 import {independentlySolveCube} from './cube-solver';
 import { solveLab, validateLabBoard, LAB_TOPICS } from './reasoning-lab';
@@ -34,6 +35,12 @@ export function solveQuestion(q: BaseQuestion): UniversalSolverResult {
   });
   try {
     if (!q || !Array.isArray(q.options) || q.options.length !== 4 || q.options.some(o => !o)) return failure('Dört geçerli seçenek gerekli.');
+    if((q.visualConfig as Record<string,unknown>)?.displayMode==='reference_lab'){
+      const b=validateReferenceBoard(q.visualConfig);if(REFERENCE_TOPICS[b.mechanic]!==q.type||b.grade!==q.targetGrade)return failure('Görsel çalışma konusu/sınıfı uyuşmuyor.');
+      const answer=solveReference(b),first=q.options.filter(o=>fingerprint(o.visualData)===fingerprint(answer)),second=q.options.filter(o=>independentlyMatchesReference(b,o.visualData));
+      if(first.length!==1||second.length!==1||first[0].id!==second[0].id)return failure('Görsel çalışma için tek bağımsız çözüm gerekli.',true);
+      return {canSolve:true,isMatch:first[0].id===q.correctOptionId,expectedAnswerId:first[0].id,expectedFingerprint:fingerprint(answer),solverMethod:'ReferenceRule-and-CandidateProof-v1',confidence:1,ambiguityDetected:false,proofSteps:['Görünür ilişki, sıra veya yerleşim kuralı çözüldü.','Dört adayın tüm koşulları ayrı ayrı denetlendi.','Tek uygun seçenek: '+first[0].id]};
+    }
     if((q.visualConfig as Record<string,unknown>)?.displayMode==='cube_lab') {
       const b=validateCubeBoard(q.visualConfig);if(CUBE_TOPICS[b.mechanic]!==q.type||b.grade!==q.targetGrade)return failure('Küp konusu veya sınıfı uyuşmuyor.');
       const answer=solveCube(b),independent=independentlySolveCube(b);

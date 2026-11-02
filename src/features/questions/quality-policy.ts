@@ -70,6 +70,20 @@ export function inspectEducation(q: BaseQuestion, grade: SchoolGrade, age?: numb
   }
   if((q.visualConfig as Record<string,unknown>).displayMode==='colorful_board'){const c=q.visualConfig as unknown as ColorfulBoard;metrics.gridSize=c.source?.art==='mosaic'?c.source.size:0;metrics.itemCount=metrics.gridSize**2||c.layers?.length||1;}
   const audience: string[] = [], difficulty: string[] = [], visual: string[] = [];
+  if((q.visualConfig as Record<string,unknown>).displayMode==='reference_lab'){
+    const r=q.visualConfig as import('./reference-lab').ReferenceBoard;metrics.gridSize=0;metrics.itemCount=0;metrics.symbolCount=0;metrics.peopleCount=0;
+    switch(r.mechanic){
+      case'semantic-analogy':metrics.itemCount=r.examples.length*2+1;break;
+      case'broken-pattern':metrics.itemCount=r.unit.length+r.sequence.length;metrics.symbolCount=r.unit.length;break;
+      case'paired-memory':metrics.itemCount=r.pairs.length*2;metrics.symbolCount=r.pairs.length;break;
+      case'number-memory':metrics.itemCount=r.digits.length;metrics.symbolCount=r.digits.length;break;
+      case'symbol-code':metrics.itemCount=r.key.length+r.query.length;metrics.symbolCount=r.key.length;break;
+      case'word-code':metrics.itemCount=r.examples.reduce((s,p)=>s+p[0].length,0);metrics.symbolCount=new Set(r.examples.map(p=>p[0]).join('')).size;break;
+      case'texture-patch':metrics.gridSize=r.size;metrics.itemCount=r.cells.length+r.motif.length;metrics.symbolCount=new Set(r.motif).size;break;
+      case'parts-union':metrics.gridSize=r.size;metrics.itemCount=r.target.filter(Boolean).length+r.pieces.reduce((s,p)=>s+p.cells.filter(Boolean).length,0);break;
+      case'layered-top':metrics.itemCount=r.layers.length;metrics.symbolCount=r.layers.length;break;
+    }
+  }
   if((q.visualConfig as Record<string,unknown>).displayMode==='cube_lab'){
     const c=q.visualConfig as import('./cube-lab').CubeBoard;
     metrics.gridSize='size'in c?c.size:0;metrics.itemCount='heights'in c?c.heights.reduce((s,h)=>s+h,0):6;metrics.symbolCount=0;metrics.peopleCount=0;

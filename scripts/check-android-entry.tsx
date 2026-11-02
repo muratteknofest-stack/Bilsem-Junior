@@ -40,6 +40,12 @@ try {
     await page.goto(`http://127.0.0.1:${(server.address() as AddressInfo).port}`);
     async function fits(name: string) {
       await page.locator('.bj-welcome, .zp-auth').waitFor();
+      // Registration reports its compact page to the parent in an effect. Allow
+      // that state, viewport effects and web fonts to reach the painted layout.
+      await page.evaluate(async () => {
+        await document.fonts.ready;
+        await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      });
       const box = await page.evaluate(() => {
         const root = document.querySelector('.bj-welcome, .zp-auth') as HTMLElement;
         return { scroll: root.scrollHeight - root.clientHeight, overflowX: document.documentElement.scrollWidth - innerWidth, pageScroll: document.documentElement.scrollHeight - innerHeight };
