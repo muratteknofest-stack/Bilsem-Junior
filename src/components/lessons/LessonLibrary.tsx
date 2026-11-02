@@ -7,6 +7,7 @@ import {claimAndroidBack} from '../../lib/android-navigation';
 import {useStudentReducedMotion} from '../../features/student/experience-preferences';
 import type {QuestionType} from '../../types';
 import {LessonScene} from './LessonScene';
+import {LessonIcon3D} from './LessonIcon3D';
 import {useLessonVoice} from './useLessonVoice';
 import './lessons.css';
 
@@ -40,7 +41,7 @@ export function LessonLibrary({studentId,grade,onBack,onPractice,onMembership}:P
   <label className="bj-lesson-search"><Search size={19}/><input type="search" value={search} onChange={e=>{setSearch(e.target.value);setVisibleLimit(6);}} placeholder="Örüntü, küp, hafıza…" aria-label="Konu anlatımı ara"/></label>
   <nav className="bj-lesson-filters" aria-label="Anlatım alanları">{['Tümü',...LESSON_GROUPS].map(label=><button type="button" key={label} aria-pressed={group===label} onClick={()=>{setGroup(label);setVisibleLimit(6);}}>{label}</button>)}</nav>
   <label className="bj-lesson-completion-filter">Çalışma durumu<select aria-label="Konu tamamlama durumu" value={completionFilter} onChange={event=>{setCompletionFilter(event.target.value);setVisibleLimit(6);}}><option value="all">Bütün konular</option><option value="todo">Henüz tamamlamadıklarım</option><option value="done">Tamamladıklarım</option></select><span role="status">{visible.length} konu</span></label>
-  <section className="bj-lesson-cards" aria-label="Konu anlatımları">{visible.slice(0,visibleLimit).map(card=><button type="button" key={card.id} className="bj-lesson-card" data-tone={card.tone} data-lesson={card.id} onClick={()=>setSelected(card)}><div className="bj-lesson-card-top"><span className="bj-lesson-card-symbol" aria-hidden="true">{card.symbol}</span><span className="bj-lesson-card-badge">{completed.includes(card.id)?<><Check size={12}/>Tamamlandı</>:card.preview?'Ücretsiz keşif':fullAccess===false?<><LockKeyhole size={12}/>Tam üyelik</>:'4 adımda keşfet'}</span></div><h3>{card.title}</h3><p>{card.description}</p><span className="bj-lesson-card-footer">Anlatımı keşfet<ChevronRight size={17}/></span></button>)}</section>
+  <section className="bj-lesson-cards" aria-label="Konu anlatımları">{visible.slice(0,visibleLimit).map(card=><button type="button" key={card.id} className="bj-lesson-card" data-tone={card.tone} data-lesson={card.id} onClick={()=>setSelected(card)}><div className="bj-lesson-card-top"><span className="bj-lesson-card-symbol" aria-hidden="true"><LessonIcon3D id={card.id} fallback={card.symbol}/></span><span className="bj-lesson-card-badge">{completed.includes(card.id)?<><Check size={12}/>Tamamlandı</>:card.preview?'Ücretsiz keşif':fullAccess===false?<><LockKeyhole size={12}/>Tam üyelik</>:'4 adımda keşfet'}</span></div><h3>{card.title}</h3><p>{card.description}</p><span className="bj-lesson-card-footer">Anlatımı keşfet<ChevronRight size={17}/></span></button>)}</section>
   {visible.length>visibleLimit&&<button type="button" className="bj-lesson-primary bj-lesson-show-more" onClick={()=>{revealFrom.current=visibleLimit;setVisibleLimit(value=>value+6);}}>Daha fazla konu göster ({Math.min(visibleLimit,visible.length)} / {visible.length})<ChevronRight size={17}/></button>}
   {!visible.length&&<p role="status" className="bj-lesson-empty">Bu aramada konu bulunamadı. Başka bir sözcük deneyebilirsin.</p>}
  </div></main>;
