@@ -1,1 +1,58 @@
-<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>Bilsem Junior doğrulama kodunuz</title></head><body><h1>İşleminizi doğrulayın</h1><p>Hassas hesap işleminizi doğrulamak için bu tek kullanımlık kodu kullanın.</p><p><strong>{{ .Token }}</strong></p><p>Bu işlemi siz istemediyseniz mesajı yok sayabilirsiniz. Bağlantıyı veya doğrulama kodunu kimseyle paylaşmayın.</p><p>Bilsem Junior</p></body></html>
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilsem Junior doğrulama kodunuz</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 40px 15px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 540px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+          <tr>
+            <td style="padding: 32px 32px 20px 32px; background: linear-gradient(135deg, #4f46e5, #4338ca); text-align: center;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">Bilsem Junior</h1>
+              <p style="margin: 6px 0 0 0; font-size: 13px; color: #e0e7ff;">Güvenlik Doğrulaması</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px;">
+              <h2 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 700; color: #0f172a;">İşleminizi Doğrulayın</h2>
+              <p style="margin: 0 0 20px 0; font-size: 14px; line-height: 1.6; color: #334155;">
+                Merhaba,<br><br>
+                Bilsem Junior hesabınızda hassas bir işlem gerçekleştirmektesiniz. Güvenliğinizi sağlamak amacıyla aşağıdaki tek kullanımlık doğrulama kodunu ilgili ekrana giriniz:
+              </p>
+              
+              <table role="presentation" border="0" cellspacing="0" cellpadding="0" style="margin: 24px auto;">
+                <tr>
+                  <td align="center" style="background-color: #f1f5f9; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 16px 36px;">
+                    <span style="font-family: 'Courier New', Courier, monospace; font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #1e1b4b;">
+                      {{ .Token }}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 20px 0 0 0; font-size: 13px; line-height: 1.5; color: #64748b; text-align: center;">
+                Bu kod kısa bir süre için geçerlidir ve tek kullanımlıktır.
+              </p>
+
+              <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 24px 0;">
+
+              <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #94a3b8;">
+                Bu işlemi siz başlatmadıysanız bu mesajı yok sayabilirsiniz. Güvenliğiniz için bu doğrulama kodunu kimseyle paylaşmayınız.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 20px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
+              <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 600;">Bilsem Junior &bull; Güvenlik Merkezi</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

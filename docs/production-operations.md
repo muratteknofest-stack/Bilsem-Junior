@@ -19,7 +19,7 @@ Kayıt ekranı veli bilgileri, öğrenci bilgileri ve onay olmak üzere üç ad�
 
 `POST /api/auth/resend-confirmation` yalnızca veli e-postası alır; uygulama ve sağlayıcı istek sınırları uygulanır. Hesabın bulunup bulunmadığını açıklamayan bir yanıt verir. E-posta doğrulanmadan öğrenci hesabı etkinleşmez; veli doğrulama sonrası veli paneline giriş yapmalıdır. E-posta gönderim isteğinin kabul edilmesi, gelen kutusuna teslim edildiğinin kanıtı değildir; kabul testi gerçek teslimatı da doğrulamalıdır.
 
-`supabase/templates` altındaki altı şablonun içerik ve konuları `subjects.json` içinde sürümlenir. Hosted Supabase dashboard > Authentication > Emails bölümünde aynı projeye uygulanmalıdır. Yerel config veya dosya değişikliği hosted ayarı kendiliğinden değiştirmez.
+`supabase/templates` altındaki altı şablonun içerik ve konuları `subjects.json` içinde sürümlenir. Hosted Supabase dashboard > Authentication > Emails bölümünde aynı projeye uygulanmalıdır veya `SUPABASE_ACCESS_TOKEN=... npm run sync:email-templates` betiğiyle otomatik senkronize edilmelidir. Ayrıntılı yönergeler için [Supabase Türkçe Yapılandırma Kılavuzu](./supabase-auth-turkce-yapilandirma.md) belgesini inceleyin. Yerel config veya dosya değişikliği hosted ayarı kendiliğinden değiştirmez.
 
 Auth Site URL `https://bilsemjunior.vercel.app` olmalı; Redirect URLs listesinde `https://bilsemjunior.vercel.app/reset-password` bulunmalıdır. Üretim SMTP sağlayıcısında gönderen kimliği, SPF/DKIM/DMARC ve teslimat kontrolü yapılmalıdır. Parola kurtarma e-postalarında link izleme kapatılmalıdır. Varsayılan Supabase SMTP'nin üretim kapasitesi varsayılmamalıdır.
 

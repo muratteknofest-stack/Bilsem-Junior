@@ -19,8 +19,11 @@ if (typeof window !== 'undefined') {
     if (
       reason &&
       (reason.code === 'auth/network-request-failed' ||
+       reason.name === 'AuthRetryableFetchError' ||
        reason.message?.includes('auth/network-request-failed') ||
-       reason.message?.includes('network-request-failed'))
+       reason.message?.includes('network-request-failed') ||
+       reason.message?.includes('Failed to fetch') ||
+       reason.message?.includes('fetch failed'))
     ) {
       console.warn('Handled background auth network notice:', reason.message || reason);
       event.preventDefault();

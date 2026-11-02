@@ -14,7 +14,7 @@ import { sound } from '../../../lib/sound';
 import { useAuth } from '../../../contexts/AuthContext';
 import { isManagedStudentEmail, studentCodeToEmail } from '../../../lib/account-identifiers';
 import { loginSchema, formatZodError } from '../../../lib/validations';
-import { loginAuthError } from '../auth-error-messages';
+import { loginAuthError, isEmailNotConfirmed, translateSupabaseError } from '../auth-error-messages';
 import { cancelAccountSwitch } from '../../../lib/account-switch';
 import { ConfirmationEmailAction } from './ConfirmationEmailAction';
 import { 
@@ -147,7 +147,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       console.warn('Login notice (handled):', error.code || error.message);
       let errMsg = 'Giriş yapılamadı.';
       const authMessage = loginAuthError(error);
-      if (selectedRole === 'parent' && (error.code === 'email_not_confirmed' || /^EMAIL_NOT_VERIFIED_/.test(error.message || ''))) setNeedsConfirmation(true);
+      const emailUnconfirmed = isEmailNotConfirmed(error);
+      if (selectedRole === 'parent' && emailUnconfirmed) setNeedsConfirmation(true);
       if (authMessage) {
          errMsg = authMessage;
       } else if (error.message === 'PROFILE_NOT_FOUND') {
@@ -160,6 +161,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
          errMsg = 'E-posta adresiniz henüz doğrulanmadı. Yeni doğrulama bağlantısı gönderildi.';
       } else if (error.message === 'EMAIL_NOT_VERIFIED_FAILED') {
          errMsg = 'E-posta adresiniz doğrulanmadı; yeni bağlantı gönderilemedi. Bir süre sonra tekrar deneyin.';
+      } else {
+         errMsg = translateSupabaseError(error, 'Giriş yapılamadı. Lütfen giriş bilgilerinizi kontrol edip tekrar deneyin.');
       }
       setErrorMessage(errMsg);
     } finally {
@@ -399,7 +402,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         </button>
       </form>
 
-      {needsConfirmation && selectedRole === 'parent' && <div className="mt-5 border-t border-slate-200 pt-4"><ConfirmationEmailAction key={identifier.trim().toLowerCase()} email={identifier.trim().toLowerCase()} /></div>}
+      {needsConfirmation && selectedRole === 'parent' && (
+        <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50/70 p-4 space-y-3 animate-in fade-in duration-200">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="text-xs text-amber-900 leading-relaxed">
+              <strong className="font-bold">E-posta Doğrulaması Gerekli:</strong> Veli hesabınızı etkinleştirmek ve bağlı öğrencinizin giriş yapabilmesini sağlamak için gelen kutunuzdaki onay bağlantısını açmalısınız.
+            </div>
+          </div>
+          <ConfirmationEmailAction key={identifier.trim().toLowerCase()} email={identifier.trim().toLowerCase()} />
+        </div>
+      )}
 
     </div>
   );
