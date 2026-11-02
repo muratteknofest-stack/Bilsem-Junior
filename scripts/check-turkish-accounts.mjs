@@ -36,6 +36,7 @@ function session(role){const id=role==='student'?studentId:parentId,encode=value
 try{
  browser=await chromium.launch({headless:true});page=await browser.newPage({viewport:{width:390,height:844}});
  await page.addInitScript(()=>{
+  localStorage.setItem('yapyap_reminder_config',JSON.stringify({enabled:false}));
   window.__audioTones=[];
   class FixtureAudioContext{
    state='suspended';currentTime=0;destination={};

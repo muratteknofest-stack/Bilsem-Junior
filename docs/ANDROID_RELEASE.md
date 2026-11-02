@@ -1,3 +1,10 @@
+## 1.0.35 — Kısa Android ana ekranı
+
+- Android sürümü 36 / 1.0.35; mevcut uygulama kimliği korunur. Tek devam kartı, Test çöz ve Konu öğren kısa yolları ana ekranda görünür. Tam parkur, hikâyeler ve koleksiyon Macera haritası ile açılır; Android geri tuşu kısa ana ekrana döner.
+- 320×568, 360×640, 390×844 ve 820×1180 boyutlarında kaydırmadan yerleşim ve alt menü üstünde dokunulabilir düğmeler kontrol edilir. Kaydetme hataları görünür kalır; büyük metin veya uzun adlarda içerik kesilmeden kaydırılabilir.
+- `python3 scripts/package-android-candidate.py test-artifacts/android` derlenen AAB/APK sürümünü, güvenlik bayraklarını ve web varlıklarını doğrular. Paketleyici, doğrulayıcı ve çevrimdışı imzalayıcı 36 / 1.0.35 kimliğini bekler.
+- Test APK'sı debug imzalıdır; Play üretim imzası, gerçek cihaz veya ticari yayın kabulü değildir. Önceki test APK'sıyla imza eşleşmesi ayrıca kontrol edilir.
+
 ## 1.0.34 — Üretim imzası ve Play kabul kanıtı
 
 - Android sürümü 35 / 1.0.34 (`mobile/android/play-billing.gradle`); uygulama kimliği ve mevcut yükleme anahtarı korunur.
