@@ -133,7 +133,7 @@ export function generateExamQuestion(m:ExamMechanic,seed:number,d:DifficultyLeve
    b=m==='overlap-rule'?{...base,mechanic:m,cards:[a,b1,combineExamTiles(a,b1,op),c,e,combineExamTiles(c,e,op),random(true),random(true),null]}:
     {...base,mechanic:m,cards:[a,b1,combineExamTiles(a,b1,op),c,e,combineExamTiles(c,e,op),combineExamTiles(a,c,op),combineExamTiles(b1,e,op),null]};
   }
-  try{const solved=solveExam(b);if(!solved.cells.some(Boolean)||!independentlyMatchesExam(b,solved))continue;if(m==='detail-mirror'&&same(solved,(b as Extract<ExamBoard,{mechanic:'detail-mirror'}>).source))continue;board=b;answer=solved;break;}catch{/* Reject ambiguous visible examples. */}
+  try{const solved=solveExam(b);if(m!=='context-patch'&&!solved.cells.some(Boolean)||!independentlyMatchesExam(b,solved))continue;if(m==='detail-mirror'&&same(solved,(b as Extract<ExamBoard,{mechanic:'detail-mirror'}>).source))continue;board=b;answer=solved;break;}catch{/* Reject ambiguous visible examples. */}
  }
  if(!board||!answer)throw Error('NO_UNIQUE_EXAM');const b=board,a=answer;
  const choices:ExamTile[]=[a],add=(v:ExamTile)=>{if(!choices.some(c=>same(c,v))&&!independentlyMatchesExam(b,v))choices.push(v);};

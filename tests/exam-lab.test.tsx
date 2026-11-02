@@ -29,6 +29,7 @@ test('all supported grades, levels and six mechanics have one independently prov
  assert.ok(total>900);console.log('Exam seeded cases:',total);
 });
 test('contradictory examples, hidden answer metadata and age-inappropriate geometry are rejected',()=>{
+ const firstGradePatchColors=new Set(Array.from({length:60},(_,i)=>solveExam(generateExamQuestion('context-patch',(i+1)*104729,1,1).visualConfig).cells[0]));assert.deepEqual([...firstGradePatchColors].sort(),[0,1],'White is a legitimate patch answer; a color must not always be correct.');
  const patchWithNoVisibleThirdPeriodPeer={displayMode:'exam_lab',grade:1,mechanic:'context-patch',width:4,height:4,hole:{x:1,y:1,width:1,height:1},cells:Array.from({length:16},(_,i)=>i===5?null:(i%4+Math.floor(i/4))%2)};
  assert.ok(independentlyMatchesExam(patchWithNoVisibleThirdPeriodPeer,{exam:'tile',width:1,height:1,cells:[0]}));
  assert.equal(independentlyMatchesExam(patchWithNoVisibleThirdPeriodPeer,{exam:'tile',width:1,height:1,cells:[1]}),false);
