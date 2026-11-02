@@ -52,6 +52,7 @@ test('every supported grade/difficulty/mechanic passes two proofs and rejects fo
 test('memory hides response controls until study ends; other diagrams contain no missing renderer or hidden-key output',()=>{
  for(const m of REFERENCE_MECHANICS){const d=m==='semantic-analogy'?2:3,q=generateReferenceQuestion(m,81719,d,3),html=renderToStaticMarkup(<><QuestionRenderer question={q}/>{q.options.map(o=><OptionRenderer key={o.id} option={o}/>)}</>);assert.match(html,/bj-reference-lab/);assert.doesNotMatch(html,/undefined|NaN|\[object Object\]|Çizim eksik/);
   assert.doesNotMatch(JSON.stringify(q.visualConfig),/answer|correctOptionId|distractorNotes|seed/);
+  for(const o of q.options){const v=o.visualData as {textNumber?:string};if(typeof v.textNumber==='string'&&v.textNumber.length>4){const choice=renderToStaticMarkup(<OptionRenderer option={o}/>);assert.match(choice,/bj-answer-number/);assert.doesNotMatch(choice,/bj-answer-text/);}}
   if(q.type==='visual_memory'){const locked=renderToStaticMarkup(<MemoryStudy question={q}><QuestionRenderer question={q}/><AnswerWorkspace question={q} response={null} onChange={()=>{}}/></MemoryStudy>);assert.match(locked,/data-locked="true"/);assert.doesNotMatch(locked,/zp-answer-option/);assert.match(locked,/Deseni gizle ve cevapla/);}
  }
 });

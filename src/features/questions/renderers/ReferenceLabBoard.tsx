@@ -41,7 +41,7 @@ export function LayerView({layers,three=false}:{layers:Extract<ReferenceValue,{r
  </svg>;
 }
 export function ReferenceValueArt({value}:{value:ReferenceValue}){
- if('textNumber'in value)return String(value.textNumber).length>4?<span className="bj-ref-answer-code">{value.textNumber}</span>:<AnswerValue value={value.textNumber}/>;
+ if('textNumber'in value)return <AnswerValue value={value.textNumber}/>;
  if(value.reference==='object')return <ReferenceObject id={value.id}/>;
  if(value.reference==='patch')return <Texture cells={value.cells} width={value.width} height={value.height}/>;
  if(value.reference==='layers')return <LayerView layers={value.layers}/>;

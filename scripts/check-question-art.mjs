@@ -51,6 +51,11 @@ try{
   assert.ok(await page.locator('.bj-perceptual-cell').evaluateAll(cells=>cells.every(c=>c.getBoundingClientRect().width>=66)),'Given cards must remain readable');
   for(const sample of await page.locator('[data-perceptual-sample]').all()){
    const option=sample.locator('.zp-answer-option').first();await option.click();assert.equal(await option.getAttribute('aria-pressed'),'true');
+   for(const code of await sample.locator('.zp-answer-option [role=img][aria-label]').all()){
+    if(!/^\d{5,6}$/.test(await code.getAttribute('aria-label')||''))continue;
+    const type=await code.evaluate(node=>({font:Number(node.querySelector('text:last-child')?.getAttribute('font-size')),width:node.getBoundingClientRect().width,ink:node.querySelector('text:last-child')?.getBBox().width,view:node.viewBox.baseVal.width}));
+    assert.ok(type.font>=36&&type.width>=60&&type.ink<type.view-8,'Long codes must use large, uncropped answer artwork');
+   }
    await sample.getByRole('button',{name:'Sürükle bırak',exact:true}).click();
    assert.ok(await sample.locator('[data-perceptual-card]').count()>4);assert.equal(await sample.getByText('[object Object]',{exact:false}).count(),0);
    await sample.getByRole('button',{name:'Şık seç',exact:true}).click();

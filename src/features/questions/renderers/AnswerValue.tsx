@@ -11,9 +11,10 @@ export function AnswerValue({value}:{value:string|number}) {
       <circle cx="50" cy="50" r="3" fill="#152d46"/>
     </svg><span>{text}</span></span>;
   }
-  if(/^-?\d{1,4}$/.test(text)||/^[A-D]$/.test(text))return <svg className="bj-answer-number" viewBox="0 0 160 110" role="img" aria-label={text} shapeRendering="geometricPrecision">
-    <text x="80" y="82" textAnchor="middle" fontSize={text.length>3?48:text.length>2?60:76} fontWeight="800" fill="#b8c8d9" aria-hidden="true">{text}</text>
-    <text x="80" y="77" textAnchor="middle" fontSize={text.length>3?48:text.length>2?60:76} fontWeight="800" fill="#19364e" aria-hidden="true">{text}</text>
+  const fontSize=text.length>6?28:text.length>5?36:text.length>4?42:text.length>3?48:text.length>2?60:76;
+  if(/^-?\d{1,6}$/.test(text)||/^[A-D]$/.test(text))return <svg className="bj-answer-number" viewBox="0 0 160 110" role="img" aria-label={text} shapeRendering="geometricPrecision">
+    <text x="80" y="82" textAnchor="middle" fontSize={fontSize} fontWeight="800" fill="#b8c8d9" aria-hidden="true">{text}</text>
+    <text x="80" y="77" textAnchor="middle" fontSize={fontSize} fontWeight="800" fill="#19364e" aria-hidden="true">{text}</text>
   </svg>;
   return <span className="bj-answer-text">{text}</span>;
 }
