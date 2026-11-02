@@ -73,6 +73,10 @@ try{
   await page.screenshot({path:output+'/cubes-'+width+'.png',fullPage:true,animations:'disabled'});
  }
  await page.goto('http://127.0.0.1:5189/tests/browser/reference-questions.html');await page.locator('[data-reference-sample]').first().waitFor();
+ for(const svg of await page.locator('.bj-ref-layers-three').all()){
+  const bounded=await svg.evaluate(async node=>{const clone=node.cloneNode(true);clone.setAttribute('width','256');clone.setAttribute('height','256');const img=new Image();img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(clone));await img.decode();const canvas=document.createElement('canvas');canvas.width=canvas.height=256;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,256,256);const pixels=ctx.getImageData(0,0,256,256).data;let ink=0,cropped=false;for(let i=0;i<pixels.length;i+=4)if(pixels[i+3]>100){ink++;const n=i/4,x=n%256,y=Math.floor(n/256);if(x===0||x===255||y===0||y===255)cropped=true;}return{ink,cropped};});
+  assert.ok(bounded.ink>1000,'Layer stack must be visible');assert.equal(bounded.cropped,false,'The full 3D layer stack, including its underside, must fit');
+ }
  for(const width of [320,390,768,1440]){
   await page.setViewportSize({width,height:width<700?844:1024});
   assert.equal(await page.locator('[data-reference-sample]').count(),35);
