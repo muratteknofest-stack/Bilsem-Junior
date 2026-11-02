@@ -1,4 +1,4 @@
-import{REFERENCE_ENGINE,REFERENCE_MECHANICS,REFERENCE_TOPICS,referenceAllowed,generateReferenceQuestion,type ReferenceMechanic}from'../src/features/questions/reference-lab';
+import{REFERENCE_ENGINE,isReferenceEngine,REFERENCE_MECHANICS,REFERENCE_TOPICS,referenceAllowed,generateReferenceQuestion,type ReferenceMechanic}from'../src/features/questions/reference-lab';
 import{supportsReferenceFormat,needsReferenceFormat}from'../src/features/student/learning-question-format';
 import {CUBE_ENGINE,CUBE_MECHANICS,CUBE_TOPICS,cubeAllowed,generateCubeQuestion,type CubeMechanic} from '../src/features/questions/cube-lab';
 import {supportsCubeFormat,needsCubeFormat} from '../src/features/student/learning-question-format';
@@ -28,7 +28,7 @@ import { supportsPerceptualFormat, needsPerceptualFormat, supportsCurriculumV2Fo
 export const RECENT_SESSION_LIMIT = 30;
 export const RECENT_HISTORY_DAYS = 30;
 // Matches currentReasoningCandidate; push cheap engine filtering into the bank read.
-export const CURRENT_REASONING_ENGINES = ['reference-lab-1','cube-lab-1','perceptual-1','curriculum-2','reasoning-lab-1','symbolic-v2','verified-8','verified-4','colorful-3','workshop-3','workshop-reading-1'] as const;
+export const CURRENT_REASONING_ENGINES = ['reference-lab-2','reference-lab-1','cube-lab-1','perceptual-1','curriculum-2','reasoning-lab-1','symbolic-v2','verified-8','verified-4','colorful-3','workshop-3','workshop-reading-1'] as const;
 type RecentSession = { questions: BaseQuestion[]; answers?: Record<string,{correct?:boolean}>; created_at: string };
 
 /** Renaming an equivalent topic cannot make the same displayed task fresh. */
@@ -44,7 +44,7 @@ export function assertLearningQuestionFormat(questions:BaseQuestion[],format:unk
 }
 
 export function currentReasoningCandidate(q:BaseQuestion,grade:SchoolGrade,modern:boolean,curriculumV2=false,perceptual=false,cube=false,reference=false):boolean {
-  if(needsReferenceFormat(q))return modern&&reference&&q.authoring?.engine===REFERENCE_ENGINE&&q.targetGrade===grade&&topicAllowedForGrade(q.type,grade);
+  if(needsReferenceFormat(q))return modern&&reference&&isReferenceEngine(q.authoring?.engine)&&q.targetGrade===grade&&topicAllowedForGrade(q.type,grade);
   if(needsCubeFormat(q))return modern&&cube&&q.authoring?.engine===CUBE_ENGINE&&q.targetGrade===grade&&topicAllowedForGrade(q.type,grade);
   if(needsPerceptualFormat(q))return modern&&perceptual&&q.authoring?.engine===PERCEPTUAL_ENGINE&&q.targetGrade===grade&&topicAllowedForGrade(q.type,grade);
   if(needsCurriculumV2Format(q))return modern&&curriculumV2&&q.targetGrade===grade&&topicAllowedForGrade(q.type,grade);

@@ -139,7 +139,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const challengeFloor = Math.max(1,gradeChallengeFloor(grade)+Math.min(0,recommendation.adjustment)) as DifficultyLevel;
     // Fetch only candidates that this client can use; all delivered questions still pass proofs.
     const bank = locale === 'en' ? {questions:englishBankForGrade(grade),bankVersion:ENGLISH_BANK_VERSION} : await loadPublishedLearningBank({ grade, difficulty, category, topic }, {
-      ...(modern && topic === 'mixed' ? {types:curriculumV2?ALL_TOPIC_TYPES.filter(type=>topicAllowedForGrade(type,grade)):professionalGradeTypes(grade),engines:CURRENT_REASONING_ENGINES.filter(engine=>(curriculumV2||engine!=='curriculum-2')&&(perceptual||engine!=='perceptual-1')&&(cube||engine!=='cube-lab-1')&&(reference||engine!=='reference-lab-1'))} : {}),
+      ...(modern && topic === 'mixed' ? {types:curriculumV2?ALL_TOPIC_TYPES.filter(type=>topicAllowedForGrade(type,grade)):professionalGradeTypes(grade),engines:CURRENT_REASONING_ENGINES.filter(engine=>(curriculumV2||engine!=='curriculum-2')&&(perceptual||engine!=='perceptual-1')&&(cube||engine!=='cube-lab-1')&&(reference||!engine.startsWith('reference-lab-')))} : {}),
       ...(challengeMode ? {minDifficulty:challengeFloor} : {}),
     });
     timing('bank');
@@ -164,7 +164,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     // Prefer the refreshed bank for focused practice when it can fill the whole
     // request. Keep the complete legacy pool for installed clients and long tests.
     if (curriculumV2 && topic !== 'mixed') {
-      const cubes=candidates.filter(q=>reference&&q.authoring?.engine==='reference-lab-1'||cube&&q.authoring?.engine==='cube-lab-1'||perceptual&&q.authoring?.engine==='perceptual-1');
+      const cubes=candidates.filter(q=>reference&&['reference-lab-1','reference-lab-2'].includes(q.authoring?.engine||'')||cube&&q.authoring?.engine==='cube-lab-1'||perceptual&&q.authoring?.engine==='perceptual-1');
       const visual = cubes.length>=count?cubes:perceptual ? candidates.filter(q=>q.authoring?.engine==='perceptual-1') : [];
       const refreshed = visual.length>=count?visual:candidates.filter(q=>q.authoring?.engine==='curriculum-2');
       if (refreshed.length >= count) candidates = refreshed;
