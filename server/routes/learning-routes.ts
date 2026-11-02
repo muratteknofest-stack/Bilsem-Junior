@@ -229,6 +229,17 @@ routes.get('/learning/history', async (req: AuthenticatedRequest, res) => {
   if (error) throw error;
   return res.json({sessions:data});
 });
+// Return only this verified student's active metadata. Puzzle snapshots and
+// answers are still fetched by the existing owner-scoped GET /learning/:id.
+routes.get('/learning/active', async (req: AuthenticatedRequest, res) => {
+  const mode = z.enum(['practice', 'adaptive', 'exam']).safeParse(req.query.mode);
+  if (!mode.success) return res.status(400).json({ error: 'Çalışma türü geçersiz.' });
+  const { data, error } = await getServiceClient().from('learning_sessions')
+    .select('id,mode,expires_at,finished_at,result,selection')
+    .eq('student_id', req.authUser!.uid).eq('mode', mode.data).is('finished_at', null).maybeSingle();
+  if (error) throw error;
+  return res.json({ session: data });
+});
 routes.get('/learning/:id' , async (req: AuthenticatedRequest, res) => {
   try { const session=await readSession(req.authUser!.uid, String(req.params.id)); requireQuestionFormat(req,session.questions); return res.json(learningView(session)); } catch (error) { return handleError(error, res); }
 });

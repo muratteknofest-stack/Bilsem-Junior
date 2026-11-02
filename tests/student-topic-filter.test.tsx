@@ -94,6 +94,7 @@ test('real authenticated learning API preserves mixed choices, permits practice 
   process.env.SUPABASE_URL = 'https://topic-api-fixture.invalid';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'isolated-fixture-key';
   let grade: 1|2|3|4 = 1, bank: BaseQuestion[] = [], rows: any[] = [], reads = 0;
+  const activeMetadataReads: string[] = [];
   const userId = () => `11111111-1111-4111-8111-11111111111${grade}`;
   const token = () => ['fixture', Buffer.from(JSON.stringify({ session_id: '99999999-9999-4999-8999-999999999999', aal: 'aal1' })).toString('base64url'), 'fixture'].join('.');
   globalThis.fetch = (async (input, init) => {
@@ -135,6 +136,13 @@ test('real authenticated learning API preserves mixed choices, permits practice 
       if (request.method === 'POST') {
         const row = await request.json(); row.revision = 0; row.rewarded_xp = 0; rows.push(row); value = row;
       } else if (u.searchParams.get('select') === 'questions,answers,created_at') value = rows.filter(r => r.student_id === userId()).map(r => ({ questions: r.questions, answers:r.answers, created_at: r.created_at }));
+      else if (u.searchParams.get('select') === 'id,mode,expires_at,finished_at,result,selection') {
+        assert.equal(u.searchParams.get('student_id'),`eq.${userId()}`);
+        assert.equal(u.searchParams.get('finished_at'),'is.null');
+        activeMetadataReads.push(u.searchParams.get('mode')!);
+        value=rows.filter(r=>r.student_id===userId()&&`eq.${r.mode}`===u.searchParams.get('mode')&&!r.finished_at)
+          .map(r=>Object.fromEntries(['id','mode','expires_at','finished_at','result','selection'].map(k=>[k,r[k]])));
+      }
       else if (u.searchParams.has('id')) value = rows.find(r => `eq.${r.id}` === u.searchParams.get('id'));
       else value = rows.filter(r => r.student_id === userId() && r.mode === u.searchParams.get('mode')?.slice(3) && !r.finished_at);
     } else if (u.pathname === '/rest/v1/rpc/commit_learning_session') {
@@ -153,6 +161,19 @@ test('real authenticated learning API preserves mixed choices, permits practice 
   };
   try {
     assert.equal((await start({ mode: 'practice', topic: 'paper_folding' }, false)).status, 401);
+    const ownId=crypto.randomUUID(),otherId=crypto.randomUUID();
+    rows=[{id:otherId,student_id:'22222222-2222-4222-8222-222222222222',mode:'exam',finished_at:null,questions:['private'],answers:{secret:'private'}},
+      {id:ownId,student_id:userId(),mode:'exam',expires_at:new Date(Date.now()+60_000).toISOString(),finished_at:null,result:null,selection:{grade:1,count:15,topic:'mixed',category:'mixed'},questions:['private'],answers:{secret:'private'}}];
+    assert.equal((await originalFetch(`${origin}/api/learning/active?mode=exam`)).status,401);
+    assert.equal((await originalFetch(`${origin}/api/learning/active?mode=unknown`,{headers:{Authorization:`Bearer ${token()}`}})).status,400);
+    assert.equal(activeMetadataReads.length,0,'invalid or anonymous reads never query active snapshots');
+    const activeResponse=await originalFetch(`${origin}/api/learning/active?mode=exam&student_id=${rows[0].student_id}`,{headers:{Authorization:`Bearer ${token()}`}});
+    assert.equal(activeResponse.status,200);const activeBody=await activeResponse.json() as any;
+    assert.equal(activeBody.session.id,ownId);assert.deepEqual(activeMetadataReads,['eq.exam']);
+    for(const key of ['questions','answers','student_id'])assert.equal(key in activeBody.session,false);
+    assert.equal(rows.length,2);assert.equal(rows[1].finished_at,null,'metadata reads never finish or replace active work');
+    const emptyResponse=await originalFetch(`${origin}/api/learning/active?mode=practice`,{headers:{Authorization:`Bearer ${token()}`}});
+    assert.deepEqual(await emptyResponse.json(),{session:null});
     for (const g of [1, 2, 3, 4] as const) {
       grade = g;
       for (const [i, topic] of LEARNING_TOPICS.entries()) {

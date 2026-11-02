@@ -1,0 +1,15 @@
+.bj-resume-card{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 0 18px;padding:20px;border:2px solid #afdfd1;border-radius:24px;background:linear-gradient(125deg,#f0fff7,#e8f8ff);box-shadow:0 5px 0 #c3e7df;color:#184e49}
+.bj-resume-icon{display:grid;place-items:center;width:54px;height:54px;flex:none;border-radius:18px;background:#fff;color:#158579;box-shadow:0 4px 0 #bfddd5}
+.bj-resume-copy{flex:1;min-width:min(220px,100%)}
+.bj-resume-copy>p:first-child{font-size:10px;font-weight:900;letter-spacing:.12em;color:#24746a;margin:0 0 4px}
+.bj-resume-copy h2{font-size:clamp(18px,2vw,23px);font-weight:900;margin:0 0 5px}
+.bj-resume-copy>p{font-size:13px;line-height:1.5;margin:0}
+.bj-resume-copy small{display:flex;align-items:flex-start;gap:5px;font-size:11px;line-height:1.5;margin-top:7px;color:#436b69}
+.bj-resume-copy small svg{flex:none;margin-top:1px}
+.bj-resume-card>button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;max-width:100%;padding:11px 17px;border-radius:15px;border:1px solid #14796e;background:#14796e;color:white;font-size:13px;font-weight:850;box-shadow:0 4px 0 #0c554e}
+.bj-resume-card>button:disabled{opacity:.6;box-shadow:none}
+.bj-resume-card>button:focus-visible{outline:3px solid #42b6a5;outline-offset:4px}
+@media(max-width:480px){.bj-resume-card{gap:12px;padding:16px}.bj-resume-icon{width:42px;height:42px;border-radius:14px}.bj-resume-copy{min-width:calc(100% - 58px)}.bj-resume-card>button{width:100%}}
+.bj-resume-loading{padding:8px 4px;font-size:12px;color:#586b85}
+.bj-resume-read-error{padding:14px;border:1px solid #edce94;border-radius:16px;background:#fff8e7;color:#795627;font-size:13px;line-height:1.6;margin-bottom:14px}
+.bj-resume-read-error button{min-height:44px;margin-top:7px;padding:8px 14px;border:1px solid #b68b3c;border-radius:12px;font-weight:750}

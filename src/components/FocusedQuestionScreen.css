@@ -103,6 +103,16 @@
 .zp-focus-dialog summary { min-height: 44px; cursor: pointer; }
 .zp-zoom-dialog .zp-question-visual { min-width: 500px; }
 .zp-focus-dialog button:disabled { opacity: .45; }
+.zp-focus .bj-leave-dialog{width:min(94vw,440px);padding:25px;text-align:center}
+.bj-leave-icon{display:grid;place-items:center;width:66px;height:66px;margin:0 auto 17px;border-radius:22px;background:#e9dcff;color:#7849b8;box-shadow:0 5px 0 #c9b1e8}
+.bj-leave-dialog h2{font-size:22px;font-weight:900;line-height:1.3;margin-bottom:12px}
+.bj-leave-dialog p{line-height:1.65}
+.bj-leave-dialog .bj-leave-unsent{margin-top:12px;padding:11px;border-radius:13px;background:#fff2d9;color:#775b2d}
+.bj-leave-actions{display:grid;gap:11px;margin-top:22px}
+.bj-leave-actions button{min-height:48px;padding:12px 15px;border:1px solid #cbb6e5;border-radius:15px;font-size:14px;font-weight:800}
+.bj-leave-actions button:first-child{background:#7050b0;border-color:#7050b0;color:white;box-shadow:0 4px 0 #51337f}
+.bj-leave-actions button:focus-visible{outline:3px solid #b59ada;outline-offset:3px}
+@media(max-height:600px){.zp-focus .bj-leave-dialog{padding:18px}.bj-leave-icon{width:44px;height:44px;margin-bottom:10px;border-radius:15px}.bj-leave-dialog h2{font-size:19px}.bj-leave-actions{gap:8px;margin-top:14px}}
 .zp-focus-dialog .zp-sound-toggle { display: inline-flex; align-items: center; gap: 8px; margin-right: 8px; background: #f3edff; color: #5c3eb6; }
 .zp-focus-dialog .zp-sound-toggle[aria-pressed=false] { background: #eef1f6; color: #485369; }
 /* Shared tactile surfaces. Depth stays outside the scored diagram geometry. */
