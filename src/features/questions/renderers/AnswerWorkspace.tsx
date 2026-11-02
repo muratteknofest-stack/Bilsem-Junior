@@ -1,3 +1,5 @@
+import {CubeView} from './CubeLabBoard';
+import {validCubeValue} from '../cube-lab';
 import React, { useId, useRef, useState } from 'react';
 import type { BaseQuestion } from '../../../types';
 import type { Board, Tile } from '../professional-engine';
@@ -16,6 +18,7 @@ const labels: Record<AnswerMode, string> = { choice: 'Şık seç', place: 'Sür�
 type Props = { compact?: boolean; question: BaseQuestion; response: QuestionResponse | null; onChange: (r: QuestionResponse) => void; submitted?: boolean; allowedModes?: AnswerMode[]; preferredMode?: AnswerMode };
 
 function CardValue({ value, theme }: { value: unknown; theme: VisualTheme }) {
+  if(validCubeValue(value))return <CubeView value={value}/>;
   if(validPerceptualValue(value))return <PerceptualCard value={value}/>;
   if(value&&typeof value==='object'&&('figure' in value||'symbol' in value||'polygon' in value))return <WorkshopShape value={value as WorkshopValue}/>;
   const data = value as Partial<Tile> & { textNumber?: string | number };

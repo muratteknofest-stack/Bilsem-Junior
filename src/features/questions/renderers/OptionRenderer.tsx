@@ -1,3 +1,5 @@
+import {CubeView} from './CubeLabBoard';
+import {validCubeValue} from '../cube-lab';
 import { ColorfulArt } from './ColorfulBoard';
 import { validColorfulValue } from '../colorful-engine';
 import React from 'react';
@@ -65,6 +67,7 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
   }
 
   const renderVisualContent = () => {
+    if(validCubeValue(visualData)&&'cubeView'in visualData)return <CubeView value={visualData}/>;
     if(validPerceptualValue(visualData))return <PerceptualCard value={visualData}/>;
     if((visualData as Record<string,unknown>)?.curriculum&&validCompleteValue(visualData))return <CompleteOption value={visualData}/>;
     if(validColorfulValue(visualData))return <ColorfulArt value={visualData} shadow={questionType==='shadow_matching'}/>;

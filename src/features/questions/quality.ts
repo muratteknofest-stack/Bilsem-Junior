@@ -1,3 +1,4 @@
+import {CUBE_ENGINE,CUBE_TOPICS,validateCubeBoard,generateCubeQuestion} from './cube-lab';
 import { LAB_ENGINE, LAB_TOPICS, generateLabQuestion, validateLabBoard } from './reasoning-lab';
 import { PERCEPTUAL_ENGINE, PERCEPTUAL_TOPICS, generatePerceptualQuestion, validatePerceptualBoard } from './perceptual-engine';
 import {generateSymbolicQuestion} from './symbolic-v2';
@@ -77,6 +78,11 @@ export function auditQuestion(value: unknown, existing: QuestionVisualReference[
     if (!Number.isFinite(q.estimatedSeconds) || q.estimatedSeconds < 10 || q.estimatedSeconds > 600) result.errors.push('Tahmini süre 10–600 saniye arasında olmalı.');
     if (!q.visualConfig || typeof cfg?.displayMode !== 'string') result.errors.push('Görsel gösterim yapılandırması eksik.');
     if (!Array.isArray(q.skills) || q.skills.length === 0) result.warnings.push('Ölçülen beceriyi belirtin.');
+    if(cfg?.displayMode==='cube_lab'){
+      const board=validateCubeBoard(cfg);
+      if(q.authoring?.engine!==CUBE_ENGINE||!isSchoolGrade(q.targetGrade)||board.grade!==q.targetGrade||CUBE_TOPICS[board.mechanic]!==q.type)result.errors.push('Küp motoru/sınıf/konu uyuşmazlığı.');
+      else {const reference=generateCubeQuestion(board.mechanic,q.seed,q.difficulty,q.targetGrade);for(const field of ['prompt','secondaryPrompt','explanation','visualConfig','category','options','authoring'] as const)if(fingerprint(q[field])!==fingerprint(reference[field]))result.reviewRequired.push('Küp şablonu değişmiş: '+field);}
+    }
     if(cfg?.displayMode==='perceptual_board') {
       const board=validatePerceptualBoard(cfg);
       if(q.authoring?.engine!==PERCEPTUAL_ENGINE||!isSchoolGrade(q.targetGrade)||board.grade!==q.targetGrade||PERCEPTUAL_TOPICS[board.mechanic]!==q.type)result.errors.push('Görsel ilişki konusu, sürümü veya sınıfı uyuşmuyor.');

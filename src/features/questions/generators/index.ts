@@ -1,3 +1,4 @@
+import {CUBE_MECHANICS,CUBE_TOPICS,cubeAllowed,generateCubeQuestion} from '../cube-lab';
 import {assessCandidate} from '../multi-stage-quality';
 import {generateSymbolicQuestion} from '../symbolic-v2';
 import {chooseDiverseCandidate} from '../novelty';
@@ -66,6 +67,8 @@ export function generateQuestion(options: {
     const pool=options.category&&options.category!=='mixed'?STUDENT_CATEGORY_TYPES[options.category]:ALL_TOPIC_TYPES;
     const type=options.type||rng.pick(pool.filter(type=>topicAllowedForGrade(type,options.targetGrade)));
     if(!pool.includes(type))throw Error('CATEGORY_MISMATCH');
+    const cubeMechanics=CUBE_MECHANICS.filter(m=>CUBE_TOPICS[m]===type&&cubeAllowed(m,options.targetGrade!,difficulty));
+    if(cubeMechanics.length){const q=generateCubeQuestion(rng.pick(cubeMechanics),seed,difficulty,options.targetGrade);assertQuestionReadyForStudents(q);return q;}
     const visualMechanics=PERCEPTUAL_MECHANICS.filter(m=>PERCEPTUAL_TOPICS[m]===type&&perceptualAllowed(m,options.targetGrade!,difficulty));
     if(visualMechanics.length){const q=generatePerceptualQuestion(rng.pick(visualMechanics),seed,difficulty,options.targetGrade);assertQuestionReadyForStudents(q);return q;}
     if(type==='shape_equation'){const q=generateSymbolicQuestion(seed,difficulty,options.targetGrade);const report=assessCandidate(q,{grade:options.targetGrade,difficulty});if(report.stages.some(stage=>stage.status==='failed'))throw Error('Symbolic static quality failed: '+report.stages.flatMap(stage=>stage.reasons).join(' '));q.qualityReport=report;return q;}

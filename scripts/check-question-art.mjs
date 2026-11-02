@@ -57,6 +57,21 @@ try{
   }
   await page.screenshot({path:output+'/perceptual-'+width+'.png',fullPage:true,animations:'disabled'});
  }
+ await page.goto('http://127.0.0.1:5189/tests/browser/cube-questions.html');await page.locator('[data-cube-sample]').first().waitFor();
+ for(const width of [320,390,768,1440]){
+  await page.setViewportSize({width,height:width<700?844:1024});
+  assert.equal(await page.locator('[data-cube-sample]').count(),28);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'Cube cards fit '+width);
+  for(const sample of await page.locator('[data-cube-sample]').all()){
+   assert.equal(await sample.getByText('[object Object]',{exact:false}).count(),0);
+   const option=sample.locator('.zp-answer-option').first();await option.click();assert.equal(await option.getAttribute('aria-pressed'),'true');
+   await sample.getByRole('button',{name:'Sürükle bırak',exact:true}).click();
+   const token=sample.locator('.zp-answer-tokens button').first();await token.click();await sample.locator('[data-answer-target]').first().click();
+   assert.equal(await sample.locator('[data-answer-target]').first().getAttribute('data-filled'),'true');
+   await sample.getByRole('button',{name:'Şık seç',exact:true}).click();
+  }
+  await page.screenshot({path:output+'/cubes-'+width+'.png',fullPage:true,animations:'disabled'});
+ }
  assert.deepEqual(errors,[]);
- console.log(JSON.stringify({distinctUncroppedSilhouettes:count,premiumQuestionViewports:4,perceptualGlyphStates:perceptualHashes.size,perceptualQuestionViewports:4,pageErrors:errors.length}));
+ console.log(JSON.stringify({distinctUncroppedSilhouettes:count,premiumQuestionViewports:4,perceptualGlyphStates:perceptualHashes.size,perceptualQuestionViewports:4,cubeQuestionViewports:4,cubeCards:28,pageErrors:errors.length}));
 }finally{await browser.close();await server.close();}

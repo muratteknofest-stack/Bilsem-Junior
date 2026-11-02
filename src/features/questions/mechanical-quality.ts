@@ -1,3 +1,4 @@
+import {validCubeValue} from './cube-lab';
 import { validColorfulValue } from './colorful-engine';
 import { validFigure } from './figure-analogy';
 import type { BaseQuestion } from '../../types';
@@ -40,6 +41,7 @@ export function analyzeQuestionMechanics(q:BaseQuestion):MechanicalReport {
   }
   if(mode==='colorful_board'&&q.options.some(o=>!validColorfulValue(o.visualData)))errors.push('Çizilmeyen veya geçersiz renkli seçenek alanı.');
   if(mode==='curriculum_board'&&q.options.some(o=>!validCompleteValue(o.visualData)))errors.push('Müfredat seçeneğinde çizilmeyen veya geçersiz alan.');
+  if(mode==='cube_lab'&&q.options.some(o=>!validCubeValue(o.visualData)))errors.push('Küp seçeneğinde görünmeyen veya geçersiz alan.');
   if(mode==='perceptual_board'&&q.options.some(o=>!validPerceptualValue(o.visualData)))errors.push('Görsel ilişki seçeneğinde çizilmeyen veya geçersiz alan.');
   const solve=solveQuestion(q), matches=q.options.filter(o=>fingerprint(o.visualData)===solve.expectedFingerprint);
   if(solve.canSolve&&(!solve.isMatch||solve.ambiguityDetected))errors.push('ANSWER_MECHANICS: Mekanik çözüm tek bir doğru şık ve cevap anahtarıyla uyuşmuyor.');

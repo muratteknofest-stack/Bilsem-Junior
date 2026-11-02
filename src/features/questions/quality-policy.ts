@@ -70,6 +70,12 @@ export function inspectEducation(q: BaseQuestion, grade: SchoolGrade, age?: numb
   }
   if((q.visualConfig as Record<string,unknown>).displayMode==='colorful_board'){const c=q.visualConfig as unknown as ColorfulBoard;metrics.gridSize=c.source?.art==='mosaic'?c.source.size:0;metrics.itemCount=metrics.gridSize**2||c.layers?.length||1;}
   const audience: string[] = [], difficulty: string[] = [], visual: string[] = [];
+  if((q.visualConfig as Record<string,unknown>).displayMode==='cube_lab'){
+    const c=q.visualConfig as import('./cube-lab').CubeBoard;
+    metrics.gridSize='size'in c?c.size:0;metrics.itemCount='heights'in c?c.heights.reduce((s,h)=>s+h,0):6;metrics.symbolCount=0;metrics.peopleCount=0;
+    metrics.maxNumber=Math.max(metrics.maxNumber,...('heights'in c?c.heights: c.faces.map(f=>f.label)));
+    if(c.grade!==grade)audience.push('GRADE_MISMATCH: Küp planının sınıfı uyuşmuyor.');
+  }
   if((q.visualConfig as Record<string,unknown>).displayMode==='perceptual_board'){
     const board=q.visualConfig as import('./perceptual-engine').PerceptualBoard;
     const cards=board.cards.filter((c):c is import('./perceptual-engine').PerceptualValue=>c!==null);
