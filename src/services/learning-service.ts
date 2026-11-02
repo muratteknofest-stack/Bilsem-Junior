@@ -31,7 +31,7 @@ async function learningApi(path: string, init: RequestInit, milliseconds = 20_00
     const payload = await response.json();
     if (!response.ok) throw readQuestionDiversityError(payload) || new Error(payload.error || 'Çalışma kaydedilemedi. Yeniden dene.');
     return payload;
-  }, milliseconds);
+  }, milliseconds, init.signal);
 }
 
 async function request(path: string, body: unknown): Promise<LearningSessionView> {
@@ -53,6 +53,13 @@ async function request(path: string, body: unknown): Promise<LearningSessionView
   return session;
 }
 export const learningService = {
+  async active(mode: LearningMode, signal?: AbortSignal): Promise<unknown> {
+    const userId = auth.currentUser?.uid;
+    if (!userId) throw new Error('Çalışmanı açmak için giriş yapmalısın.');
+    const payload = await learningApi(`active?mode=${mode}`, { method: 'GET', signal });
+    if (auth.currentUser?.uid !== userId) throw new Error('Hesap değişti. Çalışmanı yeniden aç.');
+    return payload.session ?? null;
+  },
   async resume(id: string) {
     const userId = auth.currentUser?.uid;
     if (!userId || !/^[a-f0-9-]{36}$/.test(id)) throw new Error('Sign in to resume this practice.');

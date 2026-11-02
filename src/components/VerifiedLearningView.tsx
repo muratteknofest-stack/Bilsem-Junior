@@ -7,6 +7,9 @@ import { LearningResultPanel } from './student/LearningResultPanel';
 import { learningReviewIndices, type LearningReviewFilter } from '../features/student/learning-review';
 import { apiFetch } from '../lib/api-fetch';
 import { LearningSetupPanel } from './student/LearningSetupPanel';
+import { LearningResumeCard } from './student/LearningResumeCard';
+import './student/learning-resume.css';
+import { learningResumeCandidate, assertResumedLearningSession, type LearningResumeCandidate } from '../features/student/learning-resume';
 import { StoryMissionIntro } from './student/StoryMissionIntro';
 import { DiversityRecoveryNotice } from './student/DiversityRecoveryNotice';
 import { QuestionDiversityError } from '../features/questions/test-diversity';
@@ -52,7 +55,9 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
   const [difficulty, setDifficulty] = useState<LearningDifficulty>('mixed');
   const [questionCount, setQuestionCount] = useState(String(storyStage?STORY_QUESTION_COUNT:mode==='practice'?5:DEFAULT_ADAPTIVE_COUNT));
   const validQuestionCount = /^\d+$/.test(questionCount) && Number(questionCount) >= 1 && Number(questionCount) <= (mode === 'practice' ? 5 : MAX_LEARNING_QUESTIONS);
-  const selectedGrade = dataService.getCurrentUser().grade;
+  const currentStudent = dataService.getCurrentUser();
+  const selectedGrade = currentStudent.grade;
+  const ownerId = currentStudent.id;
   const grade = isSchoolGrade(selectedGrade) ? selectedGrade : 1;
   const [exams, setExams] = useState<Array<{id: string; title: string; count: number; seconds: number}>>([...LEARNING_EXAMS]);
   useEffect(() => {
@@ -61,6 +66,21 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
     return () => controller.abort();
   }, []);
   const [session, setSession] = useState<LearningSessionView | null>(null);
+  const [resumeCandidate, setResumeCandidate] = useState<LearningResumeCandidate | null>(null);
+  const [resumeLoading, setResumeLoading] = useState(false);
+  const [resumeError, setResumeError] = useState('');
+  const [resumeRefresh, setResumeRefresh] = useState(0);
+  useEffect(() => {
+    if (session || storyStage || reviewMistakeId) { setResumeCandidate(null); setResumeLoading(false); setResumeError(''); return; }
+    const controller = new AbortController();
+    setResumeLoading(true); setResumeError(''); setResumeCandidate(null);
+    void learningService.active(mode, controller.signal).then(value => {
+      if (!controller.signal.aborted) setResumeCandidate(learningResumeCandidate(value, { mode, grade, category: initialCategory, topic: initialTopic }));
+    }).catch(() => {
+      if (!controller.signal.aborted) setResumeError('Kayıtlı çalışman kontrol edilemedi. Devam etmek için yeniden kontrol et.');
+    }).finally(() => { if (!controller.signal.aborted) setResumeLoading(false); });
+    return () => controller.abort();
+  }, [ownerId, mode, grade, initialCategory, initialTopic, !!session, storyStage?.id, reviewMistakeId, resumeRefresh]);
   const [index, setIndex] = useState(0);
   const [response, setResponse] = useState<QuestionResponse | null>(null);
   const [busy, setBusy] = useState(false);
@@ -77,6 +97,7 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
   const deadlineGate = useRef(new DeadlineFinishGate());
   const mounted = useRef(true);
   const heading = useRef<HTMLHeadingElement>(null);
+  const focusedBack = useRef<(() => void) | null>(null);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; feedbackWait.current?.(); }; }, []);
   const title = mode === 'exam' ? 'Denemelerim' : mode === 'adaptive' ? 'Adaptif çalışma' : 'Zeka pratiğim';
   const run = async (action: () => Promise<LearningSessionView>) => {
@@ -91,6 +112,23 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
   const start = async () => { if (mode !== 'exam' && !validQuestionCount) return; sound.unlock(); const saved = await run(() => {
     return reviewMistakeId ? learningService.review(reviewMistakeId) : learningService.start(mode, storyStage?.category || topicCategory(topic, category), exam, difficulty, undefined, storyStage?'mixed':topic, Number(questionCount), !!storyStage);
   }); if (saved && mounted.current) { const next = mode === 'exam' ? 0 : nextUnansweredIndex(saved); setIndex(next < 0 ? saved.questions.length - 1 : next); } };
+  const resume = async () => {
+    if (!resumeCandidate) return;
+    sound.unlock();
+    const saved = await run(async () => {
+      const resumed = await learningService.resume(resumeCandidate.id);
+      const current = dataService.getCurrentUser();
+      if (current.id !== ownerId || current.grade !== resumeCandidate.grade) throw new Error('Hesap veya sınıf değişti. Çalışmanı ana sayfadan yeniden aç.');
+      assertResumedLearningSession(resumed, resumeCandidate);
+      return resumed;
+    });
+    if (!saved || !mounted.current) return;
+    const next = nextUnansweredIndex(saved);
+    setIndex(next < 0 ? saved.questions.length - 1 : next);
+    // Keep the recovered snapshot if finishing fails, so the existing retry
+    // controls recover without writing an acknowledged answer twice.
+    if (!saved.result && (next < 0 || Date.now() >= Date.parse(saved.expiresAt))) await run(() => learningService.finish(saved.id));
+  };
   const savePending = async () => {
     if (!session || mode !== 'exam' || session.result || Date.now() >= Date.parse(session.expiresAt)) return true;
     const saved = session.answers[String(index)]?.response ?? null;
@@ -106,7 +144,7 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
   useEffect(() => { latestFinish.current = { finish, busy }; });
   const goTo = async (nextIndex: number) => { if (!busy && await savePending()) setIndex(nextIndex); };
   const leave = async () => { if (!busy && await savePending()) onNavigateHome(); };
-  useAndroidBack(() => { void leave(); });
+  useAndroidBack(() => { if (focusedBack.current) focusedBack.current(); else void leave(); });
   useEffect(() => {
     const saved = session?.answers[String(index)];
     setResponse(saved ? saved.response as QuestionResponse : null); setHint(false); setReportStatus('');
@@ -201,7 +239,7 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
   }, [session?.id, session?.result, mode, reviewMistakeId, storyStage, onStoryComplete]);
   if(session&&!session.result&&q&&renderQuestion) {
     const canVisit=(i:number)=>i>=0&&i<session.questions.length&&(mode==='exam'||!!session.answers[String(i)]||i===nextUnansweredIndex(session));
-    return <FocusedQuestionScreen mode={mode} progress={sessionProgress(session)} onContinueFeedback={continueFeedback} adventureEffect={storyStage?(['burst','orbit','leaves'] as const)[Math.floor(index/5)%3]:undefined} feedback={feedback} question={renderQuestion} sessionKey={`${session.id}-${index}`} index={index} total={session.questions.length} remaining={remaining} busy={busy} submitted={submitted} expired={expired} response={response} error={error} onChange={changeResponse} onLeave={()=>void leave()} onPrevious={canVisit(index-1)?()=>void goTo(index-1):undefined} onNext={canVisit(index+1)?()=>void goTo(index+1):undefined} onRetry={needsFinish?()=>void finish():response?.mode==='choice'&&response.optionId?()=>void submit():undefined} onRetryLabel={needsFinish?'Sonuçları yükle':'Yeniden gönder'} onReloadResults={()=>void finish()} tools={<>
+    return <FocusedQuestionScreen backActionRef={focusedBack} hasUnsentResponse={!submitted && !isResponseEmpty(response) && JSON.stringify(response) !== JSON.stringify(answer?.response ?? null)} mode={mode} progress={sessionProgress(session)} onContinueFeedback={continueFeedback} adventureEffect={storyStage?(['burst','orbit','leaves'] as const)[Math.floor(index/5)%3]:undefined} feedback={feedback} question={renderQuestion} sessionKey={`${session.id}-${index}`} index={index} total={session.questions.length} remaining={remaining} busy={busy} submitted={submitted} expired={expired} response={response} error={error} onChange={changeResponse} onLeave={()=>void leave()} onPrevious={canVisit(index-1)?()=>void goTo(index-1):undefined} onNext={canVisit(index+1)?()=>void goTo(index+1):undefined} onRetry={needsFinish?()=>void finish():response?.mode==='choice'&&response.optionId?()=>void submit():undefined} onRetryLabel={needsFinish?'Sonuçları yükle':'Yeniden gönder'} onReloadResults={()=>void finish()} tools={<>
       <LearningRefreshNotice/>
       <p>Şıkkı seçince cevabın kaydedilir ve sonraki soru açılır. {isExam?'Çözümler deneme bitince gösterilir.':'Önceki soruların çözümlerini buradan inceleyebilirsin.'}</p>
       <nav aria-label="Soru seçimi">{session.questions.map((item,i)=>{const saved=session.answers[String(i)];const label=saved?.correct===undefined?(saved?'Yanıtlandı':'Boş'):(saved.correct?'Doğru':'Yanlış');return <button key={item.id} disabled={busy||!canVisit(i)} aria-current={i===index?'step':undefined} onClick={()=>void goTo(i)} aria-label={`${i+1}. soru, ${label}`}>{i+1} · {label}</button>;})}</nav>
@@ -222,6 +260,9 @@ export function VerifiedLearningView({ storyReward, storyStage, onStoryComplete,
     <div className={isExam ? 'zp-tablet' : 'zp-game-shell'}>
     {isExam && <div className="zp-tablet-camera" aria-hidden="true"><span /></div>}
     <div className="zp-screen">
+    {!session && resumeLoading && <p className="bj-resume-loading" role="status">Kayıtlı çalışman kontrol ediliyor…</p>}
+    {!session && resumeError && <div className="bj-resume-read-error" role="alert"><p>{resumeError}</p><button type="button" disabled={busy || resumeLoading} onClick={() => setResumeRefresh(value => value + 1)}>Kaydı yeniden kontrol et</button></div>}
+    {!session && resumeCandidate && <LearningResumeCard candidate={resumeCandidate} busy={busy} onResume={() => void resume()} />}
     <LearningRefreshNotice/>
     <div className="zp-screen-bar"><span>{isExam ? <Tablet size={17} aria-hidden="true" /> : <Gamepad2 size={19} aria-hidden="true" />} {isExam ? 'BİLSEM JUNIOR / DENEME' : 'KEŞFET · DÜŞÜN · ÇÖZ'}</span><span>{grade}. SINIF</span></div>
     {diversityError&&!session?<DiversityRecoveryNotice error={diversityError} busy={busy}

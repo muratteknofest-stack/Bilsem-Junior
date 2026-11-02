@@ -11,6 +11,37 @@ import { SoundEngine } from '../src/lib/sound';
 import type { LearningSessionView } from '../src/features/student/learning-contract';
 import { learningReviewIndices } from '../src/features/student/learning-review';
 import { LearningResultPanel } from '../src/components/student/LearningResultPanel';
+import { learningResumeCandidate, assertResumedLearningSession } from '../src/features/student/learning-resume';
+import { LearningResumeCard } from '../src/components/student/LearningResumeCard';
+
+test('resume invitations reject other grades, locales, story scopes, invalid metadata and finished work', () => {
+  const now = Date.now(), scope = {mode:'exam' as const,grade:2 as const,category:'mixed' as const,topic:'mixed' as const};
+  const value = {id:crypto.randomUUID(),mode:'exam',expires_at:new Date(now+60_000).toISOString(),finished_at:null,result:null,selection:{grade:2,category:'mixed',topic:'mixed',count:15}};
+  const candidate = learningResumeCandidate(value,scope,now)!;
+  assert.equal(candidate.id,value.id);assert.equal(candidate.expiresAt,value.expires_at);
+  for(const changed of [null,{}, {...value,id:'not-an-id'}, {...value,mode:'practice'}, {...value,finished_at:new Date().toISOString()}, {...value,result:{}}, {...value,expires_at:'bad'}, {...value,expires_at:new Date(now-25*3600_000).toISOString()}]) assert.equal(learningResumeCandidate(changed,scope,now),null);
+  for(const patch of [{grade:1},{locale:'en'},{mixCategories:true},{count:0},{count:51},{count:2.5},{category:'unknown'},{topic:'unknown'}]) assert.equal(learningResumeCandidate({...value,selection:{...value.selection,...patch}},scope,now),null);
+  const topic = {...value,selection:{...value.selection,topic:'paper_folding',category:'spatial'}};
+  assert.ok(learningResumeCandidate(topic,{...scope,topic:'paper_folding'},now));
+  assert.equal(learningResumeCandidate(topic,{...scope,topic:'matrix_3x3'},now),null);
+  assert.equal(learningResumeCandidate(topic,{...scope,category:'pattern'},now),null);
+  assert.ok(learningResumeCandidate({...value,expires_at:new Date(now-1000).toISOString()},scope,now),'expired work remains available for finalization, without a renewed deadline');
+});
+
+test('resumed snapshots must keep the invited ID, mode, grade, length and original deadline', () => {
+  const view=session();view.id=crypto.randomUUID();view.questions=Array.from({length:2},(_,i)=>({id:`q-${i}`,targetGrade:2})) as LearningSessionView['questions'];
+  const candidate={id:view.id,mode:view.mode,grade:2 as const,count:2,expiresAt:view.expiresAt};
+  assert.doesNotThrow(()=>assertResumedLearningSession(view,candidate));
+  for(const change of [{id:crypto.randomUUID()},{mode:'exam' as const},{expiresAt:new Date(Date.parse(view.expiresAt)+60_000).toISOString()},{questions:view.questions.slice(1)},{questions:view.questions.map(q=>({...q,targetGrade:1 as const}))}]) assert.throws(()=>assertResumedLearningSession({...view,...change},candidate),/eşleşmiyor/);
+});
+
+test('resume cards distinguish continuing from loading expired results without claiming a paused clock', () => {
+  const candidate={id:crypto.randomUUID(),mode:'exam' as const,grade:2 as const,count:15,expiresAt:new Date(Date.now()+60_000).toISOString()};
+  const html=renderToStaticMarkup(<LearningResumeCard candidate={candidate} busy={false} onResume={()=>{}}/>);
+  assert.match(html,/Denemeye devam et/);assert.match(html,/Süre işlemeye devam eder/);assert.match(html,/15 soruluk/);
+  const expired=renderToStaticMarkup(<LearningResumeCard candidate={{...candidate,expiresAt:new Date(Date.now()-1000).toISOString()}} busy onResume={()=>{}}/>);
+  assert.match(expired,/Süre tamamlandı/);assert.match(expired,/disabled=""/);assert.match(expired,/Çalışman açılıyor/);
+});
 
 test('result review filters preserve original solution indices and never expose active exam correctness', () => {
   const view=session();

@@ -11,6 +11,15 @@ import { FocusedAnswerChoices } from '../src/components/FocusedAnswerChoices';
 import { LearningExpiryNotice } from '../src/components/LearningExpiryNotice';
 
 const pause = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+test('leaving a screen cancels a stalled metadata read immediately and a pre-aborted read never starts', async () => {
+  const controller=new AbortController();let signal!:AbortSignal;
+  const pending=withRequestDeadline(s=>{signal=s;return new Promise(()=>{});},60_000,controller.signal);
+  controller.abort();await assert.rejects(pending,{name:'AbortError'});assert.equal(signal.aborted,true);
+  await assert.rejects(withRequestDeadline(async()=>assert.fail('Aborted screen must not read'),60_000,controller.signal),{name:'AbortError'});
+  const complete=new AbortController();let completedSignal!:AbortSignal;
+  assert.equal(await withRequestDeadline(async s=>{completedSignal=s;return 'done';},60_000,complete.signal),'done');
+  complete.abort();assert.equal(completedSignal.aborted,false,'completed reads remove their cancellation listener');
+});
 function session(mode: LearningSession['mode'] = 'practice'): LearningSession {
   return { id: crypto.randomUUID(), student_id: crypto.randomUUID(), mode, title: 'Ağ testi',
     questions: [generateQuestion({ targetGrade: 2, type: 'figure_completion', difficulty: 2, seed: 42 })],
