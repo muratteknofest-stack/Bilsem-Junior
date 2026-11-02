@@ -104,7 +104,7 @@ export function generateCubeQuestion(m:CubeMechanic,seed:number,d:DifficultyLeve
    }
    const base={displayMode:'cube_lab' as const,grade:g,size,heights};
    const candidate:CubeBoard=m==='layer-count'?{...base,mechanic:m,layer:rng.nextInt(2,Math.max(2,...heights))}:m==='complete-block'?{...base,mechanic:m,targetHeight:Math.max(2,...heights)}:m==='rotated-top'?{...base,mechanic:m,turns:g===2?1:rng.pick([1,2,3])}:{...base,mechanic:m};
-   try{validateCubeBoard(candidate);const answer=solveCube(candidate);if('cells'in answer&&((m==='top-view'||m==='rotated-top')&&answer.cells.every(Boolean)||answer.cells.every(v=>!v)))continue;
+   try{validateCubeBoard(candidate);const answer=solveCube(candidate);if('cells'in answer&&((m==='top-view'||m==='rotated-top'||d>=2)&&answer.cells.every(Boolean)||answer.cells.every(v=>!v)))continue;
     if(m==='rotated-top'&&fingerprint(solveCube({...base,mechanic:'top-view'}))===fingerprint(answer))continue;
     b=candidate;break;
    }catch{/* Unsupported visual loads and uninformative silhouettes are regenerated. */}

@@ -46,6 +46,7 @@ test('every supported grade/difficulty/mechanic has deterministic proofs and for
   const q=generateCubeQuestion(m,104729*i,d as 1,g),r=auditQuestion(q);count++;
   assert.deepEqual([...r.errors,...r.reviewRequired],[],`${g}/${d}/${m}/${i}`);assert.equal(r.solverVerified,true);assert.equal(q.type,CUBE_TOPICS[m]);
   assert.equal(q.options.filter(o=>independentlyMatchesCube(q.visualConfig,o.visualData)).length,1);
+  const correct=solveCube(q.visualConfig);if(d>=2&&'cells'in correct)assert.equal(correct.cells.every(Boolean),false,'Higher-level view needs a discriminating silhouette');
   assert.deepEqual(generateCubeQuestion(m,104729*i,d as 1,g),q);
   if(i===1){assert.equal(auditQuestion({...q,correctOptionId:q.options.find(o=>o.id!==q.correctOptionId)!.id}).solverVerified,false);
    const changed=structuredClone(q);changed.options[1].visualData=changed.options[0].visualData;assert.equal(auditQuestion(changed).solverVerified,false);
