@@ -60,9 +60,9 @@ export function referenceChoiceSet(b:ReferenceBoard,answer:ReferenceValue,seed:n
     }).sort((a,d)=>(a.missing+a.extra)-(d.missing+d.extra));
     for(const {set,missing,extra}of ranked)add({reference:'parts',pieces:set.map(i=>({...b.pieces[i],index:i+1}))},`Bu parçalar birleştiğinde ${missing} hedef hücresi eksik, ${extra} fazladan hücre oluşur. Tam hedefi veren parçaları seç.`);
   }else if('reference'in answer&&answer.reference==='layers'){
-    const last=answer.layers.length-1;
-    add({...answer,layers:answer.layers.map((l,i)=>i===last-1?answer.layers[last]:i===last?answer.layers[last-1]:l)},'En üstteki iki katmanın sırası değiştirilmiş. Ortada kalan malzeme ve çevresindeki sınırı birlikte izle.');
-    add({...answer,layers:answer.layers.map((l,i)=>i===last?{...l,shape:l.shape==='circle'?'square':'circle'}:l)},'Üst katmanın şekli değiştirilmiş. Renk aynı olsa bile dış sınırı verilen yapıyla uyuşmalı.');
+    const last=answer.layers.length-1,middle=Math.floor(answer.layers.length/2);
+    add({...answer,layers:answer.layers.map((l,i)=>i===0?answer.layers[1]:i===1?answer.layers[0]:l)},'Alttaki iki katmanın sırası değiştirilmiş. Dıştan içe görünen malzemelerin sırasını izle.');
+    add({...answer,layers:answer.layers.map((l,i)=>i===middle?{...l,shape:l.shape==='circle'?'square':'circle'}:l)},`${middle+1}. katmanın şekli değiştirilmiş. Renk aynı olsa bile dış sınırı verilen yapıyla uyuşmalı.`);
     for(let i=last;i>=0;i--)add({...answer,layers:answer.layers.map((l,j)=>i===j?{...l,color:(l.color+1)%6}:l)},`${i+1}. katmanın rengi verilene uymuyor. Alttan üste bütün görünür katmanları karşılaştır.`);
   }
   if(out.length!==3)throw Error('REFERENCE_CHOICE_QUALITY_EXHAUSTED');

@@ -96,6 +96,7 @@ test('codes and patches cannot be solved by any single option position; familiar
   if(b.mechanic==='paired-memory')for(const v of values)assert.ok('reference'in v&&v.reference==='object'&&b.pairs.flat().includes(v.id));
   if(b.mechanic==='number-memory')assert.ok(values.filter(v=>'textNumber'in v&&b.digits.includes(Number(v.textNumber))).length>=Math.min(4,b.digits.length));
   if(b.mechanic==='semantic-analogy')for(const v of values)assert.ok('reference'in v&&v.reference==='object'&&TOOL_PAIRS.some(p=>p[b.reverse?0:1]===v.id));
+  if(b.mechanic==='layered-top')for(let j=0;j<b.layers.length;j++)assert.ok(values.some(v=>'reference'in v&&v.reference==='layers'&&JSON.stringify(v.layers[j])!==JSON.stringify(b.layers[j])),'No layer is irrelevant to all four choices');
   assert.equal(Object.keys(q.authoring!.distractorNotes!).length,3);
   assert.doesNotMatch(Object.values(q.authoring!.distractorNotes!).join(' '),/undefined|NaN|en az biri sağlanmıyor/);
  }
