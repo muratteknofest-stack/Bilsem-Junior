@@ -104,6 +104,10 @@ zamanı, sahiplik ve kullanıcı metaverisi; alan gizliliği, boyut/MIME sınır
 politikalar ve `anon`/`authenticated`/`service_role` tablo yetkileri şifrelenir. Sınırlar:
 dosya başına 32 MiB, toplam 128 MiB, 10.000 dosya, 128 alan. Analytics/vector veya sürüm
 geçmişi etkin alanlar bu biçimde sessizce atlanmaz; desteklenmeyen kapsam olarak reddedilir.
+Katalog oturumunda `row_security=off`, RLS'nin veri filtreleyeceği yetersiz yetkili kimlikte
+hata üretir; tablo politikalarını kapatmaz veya kimliğe ek yetki vermez. Böylece eksik satır
+kümesi başarılı yedek olarak kabul edilmez. Politika ifadeleri iki hedefte de aynı
+`search_path=pg_catalog` bağlamında okunur; kaynak salt okunur işlem seçeneği korunur.
 
 Geri yükleme yalnız literal loopback Storage API'si ve aynı yerel veritabanıyla yapılır.
 Yeni dosyalar API üzerinden yüklenir; özel alanlar başlangıçta özel oluşturulur, son ayarlar

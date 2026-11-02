@@ -96,7 +96,7 @@ test('source capture is project-pinned, uses no writes and rejects a changed cat
  const fetcher=async(input:RequestInfo|URL,options?:RequestInit)=>{
   const url=String(input);assert.equal(options?.redirect,'error');assert.equal(options?.method,'GET');
   assert.ok(url.startsWith('https://api.supabase.com/v1/projects/vtcsoqohkiagbwatlabk/')||url.startsWith('https://vtcsoqohkiagbwatlabk.supabase.co/storage/v1/'));
-  if(url.endsWith('/api-keys'))return Response.json([{name:'service_role',api_key:'private-source-key'}]);
+  if(url.endsWith('/api-keys?reveal=true'))return Response.json([{name:'service_role',api_key:'private-source-key'}]);
   if(url.endsWith('/config/auth'))return Response.json({site_url:'https://app.example',smtp_pass:'private-password',external_google_secret:'private-secret'});
   return new Response(url.endsWith('empty.bin')?'':'abc',{headers:{'content-type':'application/octet-stream'}});
  };
@@ -175,7 +175,9 @@ test('real HTTP transfer plus PostgreSQL metadata restore preserves bytes, Turki
   assert.equal((await f.db.query('SELECT name FROM storage.objects')).rows.length,1,'Matching owner can see the private row');
   await f.db.exec("SELECT set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',false);");
   assert.equal((await f.db.query('SELECT name FROM storage.objects')).rows.length,0,'Another family cannot read the restored private row');
-  await f.db.exec('RESET ROLE;');
+  await f.db.exec('SET row_security=off;');
+  await assert.rejects(f.db.query('SELECT name FROM storage.objects'),{code:'42501'},'Backup mode must fail rather than return a row-filtered partial catalog');
+  await f.db.exec('RESET ROLE;SET row_security=on;');
   await assert.rejects(restoreStorageManifest(m,{apiUrl:f.apiUrl,serviceKey:localKey,anonKey,ownerEnv:{},readCatalog:f.readCatalog,executeSql:f.executeSql}),{code:'STORAGE_TARGET_NOT_EMPTY'});
   assert.equal(f.uploads,2,'A nonempty target is rejected before any overwrite');
  }finally{await f.close();}
@@ -186,7 +188,7 @@ test('the actual catalog subprocess pins policy rendering without dropping sourc
  try{
   writeFileSync(join(dir,'psql'),`#!${process.execPath}\nprocess.stdin.resume();process.stdin.on('end',()=>console.log(JSON.stringify({options:process.env.PGOPTIONS})));\n`,{mode:0o700});
   const output=await storagePsql({PATH:`${dir}:${process.env.PATH}`,PGOPTIONS:'-c default_transaction_read_only=on'},'SELECT 1;');
-  assert.deepEqual(JSON.parse(output),{options:'-c default_transaction_read_only=on -c search_path=pg_catalog'});
+  assert.deepEqual(JSON.parse(output),{options:'-c default_transaction_read_only=on -c search_path=pg_catalog -c row_security=off'});
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
 

@@ -12,7 +12,7 @@ export function nonSecretAuthConfig(config){
  return Object.fromEntries(AUTH_RECOVERY_FIELDS.filter(k=>Object.hasOwn(config??{},k)&&(config[k]===null||['string','boolean','number'].includes(typeof config[k]))).map(k=>[k,config[k]]));
 }
 export async function storageServiceKey(token,fetcher=fetch){
- let keys;try{keys=await backupManagementRequest('/api-keys',token,undefined,fetcher);}catch{throw storageError('STORAGE_KEY_ACCESS');}
+ let keys;try{keys=await backupManagementRequest('/api-keys?reveal=true',token,undefined,fetcher);}catch{throw storageError('STORAGE_KEY_ACCESS');}
  const key=Array.isArray(keys)&&keys.find(k=>k.name==='service_role'&&typeof k.api_key==='string')?.api_key;
  if(!key)throw storageError('STORAGE_KEY_ACCESS');return key;
 }
