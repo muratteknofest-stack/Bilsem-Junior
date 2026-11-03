@@ -165,7 +165,15 @@ export function RegistrationForm({ compact = false, onPageChange, setErrorMessag
       </fieldset>
       {busy && <p role="status" className="text-sm text-slate-600">Kayıt tamamlanırken lütfen sayfayı kapatmayın.</p>}
     </form>
-    {accountExists && onLogin && <button type="button" onClick={() => onLogin(draft.parentEmail.trim().toLowerCase())} className="min-h-11 font-semibold text-indigo-700 underline">Veli e-postamla giriş yap</button>}
+    {accountExists && onLogin && (
+      <div className="rounded-xl border border-indigo-200 bg-indigo-50/80 p-4 text-sm space-y-2 animate-in fade-in duration-200">
+        <p className="font-semibold text-indigo-950">Zaten bir hesabınız var mı?</p>
+        <p className="text-xs text-indigo-900 leading-relaxed">Bu e-posta adresi ile açılmış bir aile kaydı bulunuyor. Giriş yapabilir veya şifrenizi unuttuysanız sıfırlayabilirsiniz.</p>
+        <button type="button" onClick={() => onLogin(draft.parentEmail.trim().toLowerCase())} className="inline-flex items-center gap-1.5 min-h-10 font-bold text-indigo-700 hover:text-indigo-900 underline text-sm cursor-pointer">
+          Veli e-postamla giriş yap &rarr;
+        </button>
+      </div>
+    )}
     {topic && <FooterInfoModal onClose={() => setTopic(null)} topic={topic} />}
   </div>;
 }

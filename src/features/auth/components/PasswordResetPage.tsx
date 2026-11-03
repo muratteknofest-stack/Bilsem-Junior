@@ -2,7 +2,7 @@ import { NewPasswordFields } from './NewPasswordFields';
 import React, { useEffect, useState } from 'react';
 import { auth, isPasswordRecoveryReady, onPasswordRecovery, sendPasswordResetEmail, updateRecoveredPassword } from '../../../lib/supabase';
 import { forgotPasswordSchema, passwordResetSchema, formatZodError } from '../../../lib/validations';
-import { passwordResetRequestError } from '../auth-error-messages';
+import { parseRecoveryUrlNotice, passwordResetRequestError, passwordResetUpdateError } from '../auth-error-messages';
 
 type RecoveryState = 'checking' | 'ready' | 'invalid' | 'done';
 
@@ -14,9 +14,21 @@ export const PasswordResetPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [email, setEmail] = useState('');
   const [requestSent, setRequestSent] = useState(false);
+  const [invalidNotice, setInvalidNotice] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const parsed = parseRecoveryUrlNotice(window.location);
+      if (parsed?.isError) return parsed.message;
+    }
+    return null;
+  });
 
   useEffect(() => {
     let mounted = true;
+    const urlNotice = parseRecoveryUrlNotice(window.location);
+    if (urlNotice?.isError && mounted) {
+      setInvalidNotice(urlNotice.message);
+    }
+
     const unsubscribe = onPasswordRecovery(() => {
       // The Auth client has consumed the token; keep it out of browser history.
       window.history.replaceState({}, '', '/reset-password');
@@ -66,7 +78,7 @@ export const PasswordResetPage: React.FC = () => {
       setConfirmPassword('');
       setState('done');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Şifre değiştirilemedi. Yeni bağlantı isteyin.');
+      setError(passwordResetUpdateError(err));
     } finally {
       setSubmitting(false);
     }
@@ -80,7 +92,7 @@ export const PasswordResetPage: React.FC = () => {
         {state === 'invalid' && (
           <div className="mt-4 space-y-4">
             <p role="alert" className="text-sm text-rose-700">
-              Bu bağlantı kullanılmış veya süresi dolmuş olabilir. Aşağıdan yeni bir sıfırlama bağlantısı isteyin.
+              {invalidNotice || 'Bu bağlantı kullanılmış veya süresi dolmuş olabilir. Aşağıdan yeni bir sıfırlama bağlantısı isteyin.'}
             </p>
             {requestSent ? (
               <p role="status" className="text-sm text-emerald-800">Bu adrese bağlı hesap varsa yeni bağlantı gönderilir. Gelen kutusu ve spam klasörünü kontrol edin; yalnızca en son e-postadaki bağlantıyı kullanın.</p>
