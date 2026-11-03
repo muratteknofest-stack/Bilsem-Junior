@@ -4,7 +4,24 @@ on:
   workflow_dispatch:
     inputs:
       reel_date:
-        description: "Optional YYYY-MM-DD Türkiye date, preview only"
+        description: "Optional YYYY-MM-DD Türkiye date (manual preview only)"
+        required: false
+        type: string
+      grade:
+        description: "Class (1-4); blank means automatic"
+        required: false
+        type: string
+      difficulty:
+        description: "Difficulty (1-4); blank means automatic"
+        required: false
+        type: string
+      mechanic:
+        description: "Puzzle type: auto, analogy-grid, paired-analogy, matrix-attributes, feature-classification, attribute-sequence, interleaved-sequence"
+        required: false
+        default: "auto"
+        type: string
+      request_id:
+        description: "Unique manual request UUID (optional)"
         required: false
         type: string
   schedule:
@@ -47,6 +64,10 @@ jobs:
       - name: Select a checked original cognitive question
         env:
           REEL_DATE: ${{ inputs.reel_date }}
+          REEL_GRADE: ${{ inputs.grade }}
+          REEL_DIFFICULTY: ${{ inputs.difficulty }}
+          REEL_MECHANIC: ${{ inputs.mechanic }}
+          REEL_REQUEST_ID: ${{ inputs.request_id }}
         run: npx --no-install tsx scripts/reels/select-daily-question.ts
       - name: Create 1080x1920 MP4 with original audio
         run: .reels-venv/bin/python scripts/reels/render_reel.py
@@ -59,6 +80,36 @@ jobs:
             reels-out/reel.mp4
             reels-out/question.json
           retention-days: 7
+
+  manual-archive:
+    # Manual runs never publish to Instagram, only save the generated MP4.
+    # A main-only protected environment keeps the Storage key off untrusted branches.
+    if: github.ref == 'refs/heads/main'
+    needs: preview
+    runs-on: ubuntu-24.04
+    environment: production-reels
+    timeout-minutes: 15
+    steps:
+      - name: Checkout uploader
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download generated MP4
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download "$GITHUB_RUN_ID" --name bilsem-junior-reel --dir reels-out
+          test -s reels-out/reel.mp4
+          test -s reels-out/question.json
+      - name: Save manual preview to dedicated public video bucket
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          REELS_SUPABASE_URL: ${{ secrets.REELS_SUPABASE_URL }}
+          REELS_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.REELS_SUPABASE_SERVICE_ROLE_KEY }}
+          IG_REELS_BUCKET: ${{ vars.IG_REELS_BUCKET }}
+        run: python3 scripts/reels/upload_manual_preview.py
 
   scheduled-only:
     if: github.event_name == 'schedule' && vars.REELS_ENABLED == 'true'
