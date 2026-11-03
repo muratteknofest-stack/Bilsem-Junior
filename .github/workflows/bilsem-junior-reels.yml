@@ -1,0 +1,102 @@
+name: Bilsem Junior - daily Instagram Reels at 19:00 TR
+
+on:
+  workflow_dispatch:
+    inputs:
+      reel_date:
+        description: "Optional YYYY-MM-DD Türkiye date, preview only"
+        required: false
+        type: string
+  schedule:
+    # Prepare ahead of publication; GitHub schedules are best effort, not exact.
+    - cron: "40 18 * * *"
+      timezone: "Europe/Istanbul"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: bilsem-junior-reels
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    # The daily schedule is dormant until the owner explicitly opts in.
+    if: github.event_name == 'workflow_dispatch' || vars.REELS_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout application
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          package-manager-cache: false
+          cache: npm
+      - name: Install video dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-dejavu-core python3-venv
+          python3 -m venv .reels-venv
+          .reels-venv/bin/python -m pip install 'Pillow==11.3.0'
+          npm ci --ignore-scripts
+      - name: Select a checked original cognitive question
+        env:
+          REEL_DATE: ${{ inputs.reel_date }}
+        run: npx --no-install tsx scripts/reels/select-daily-question.ts
+      - name: Create 1080x1920 MP4 with original audio
+        run: .reels-venv/bin/python scripts/reels/render_reel.py
+      - name: Keep MP4 and proof for review
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          include-hidden-files: false
+          name: bilsem-junior-reel
+          path: |
+            reels-out/reel.mp4
+            reels-out/question.json
+          retention-days: 7
+
+  scheduled-only:
+    if: github.event_name == 'schedule' && vars.REELS_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Confirm authorized scheduled execution
+        run: echo 'Scheduled publishing enabled'
+
+  publish:
+    # Security policy requires a protected environment AND an exact main-only gate.
+    if: github.ref == 'refs/heads/main'
+    needs: [preview, scheduled-only]
+    runs-on: ubuntu-24.04
+    environment: production-reels
+    timeout-minutes: 35
+    steps:
+      - name: Checkout publishing script
+        if: github.event_name == 'schedule' && vars.REELS_ENABLED == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Retrieve today's approved MP4 artifact
+        if: github.event_name == 'schedule' && vars.REELS_ENABLED == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download "$GITHUB_RUN_ID" --name bilsem-junior-reel --dir reels-out
+          test -s reels-out/reel.mp4
+          test -s reels-out/question.json
+      - name: Publish through official Instagram API at 19:00 Türkiye
+        if: github.event_name == 'schedule' && vars.REELS_ENABLED == 'true'
+        env:
+          REELS_ENABLED: "true"
+          REELS_SCHEDULED: "true"
+          SUPABASE_URL: ${{ secrets.REELS_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.REELS_SUPABASE_SERVICE_ROLE_KEY }}
+          INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          IG_REELS_BUCKET: ${{ vars.IG_REELS_BUCKET }}
+          META_GRAPH_VERSION: ${{ vars.META_GRAPH_VERSION }}
+        run: python3 scripts/reels/publish_reel.py
