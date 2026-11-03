@@ -10,9 +10,8 @@ Downloaded 28 October 2026. Blob identities and Turkish glyph coverage were veri
 
 ## Rounded interface typography — 4 November 2026
 
-- Nunito: original `ofl/nunito/Nunito[wght].ttf`, Git blob `2ec1f4b0676c83ef33049db87b311171699e9192`, weights 200–1000; license `nunito-OFL.txt`.
-- Comfortaa: original `ofl/comfortaa/Comfortaa[wght].ttf`, Git blob `8b8e5f81bf740a8154bb6cd9f4eee5ac4bda6b18`, weights 300–700; license `comfortaa-OFL.txt`.
-- Official source: https://github.com/google/fonts/tree/main/ofl . Original Git blob identities were verified before conversion. FontTools converted the containers to WOFF2; outlines, names, variable axes and character maps were preserved. Combined WOFF2 size: 181,024 bytes.
-- Turkish `ÇĞİÖŞÜçğıöşüı`, digits and arithmetic `×÷−` were checked in both resulting font character maps. The arrow glyph may use the local fallback font.
-- WOFF2 SHA-256: Nunito `8ded0170b8c8004a67be330aa266f4eec09e5bac1f6a26d8fbf2cee51bf5dc35`; Comfortaa `911e79c8667e4cdf4f1da0e96083d48c25f64b3e4beecdef4b2b210983a23487`.
-- Shared definitions live in `junior-type.css`. Web, static package pages and Android serve these files locally. No runtime request is made to Google Fonts.
+- Nunito: source `ofl/nunito/Nunito[wght].ttf`, Git blob `2ec1f4b0676c83ef33049db87b311171699e9192`, weights 200–1000; license `nunito-OFL.txt`. Repackaged as WOFF2 with original name, copyright/license metadata, glyphs, metrics, variable axes and character maps preserved.
+- Comfortaa: original **unmodified TrueType** `ofl/comfortaa/Comfortaa[wght].ttf`, Git blob `8b8e5f81bf740a8154bb6cd9f4eee5ac4bda6b18`, weights 300–700; license `comfortaa-OFL.txt`. The original TTF is bundled byte for byte, including its Reserved Font Name notice.
+- Official source: https://github.com/google/fonts/tree/main/ofl . Git blob identities and the complete Turkish `ÇĞİÖŞÜçğıöşüı` range, digits and arithmetic `×÷−` were verified. The arrow glyph may use the local fallback font.
+- Combined file size: 309568 bytes. SHA-256: Nunito `d38f65e00e6faca60e556b26bdda59b4d60c189af2ee0d5a962ba4185f059f45`; Comfortaa `0fc3f45dc48b614db9c39181502544b37217ecbf8bee2fb35886992bc96c5bd3`.
+- Shared definitions live in `junior-type.css`. Web, static package pages and Android serve the font files locally; no runtime request is made to Google Fonts.
