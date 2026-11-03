@@ -33,7 +33,7 @@ test('all eight mechanics satisfy independent candidate proofs and grade limits 
   let count=0;
   for(const grade of [1,2,3,4] as const)for(let difficulty=1;difficulty<=EDUCATION_PROFILES[grade].maxDifficulty;difficulty++)for(const type of PRECISION_TYPES)for(let n=1;n<=20;n++){
     const q=generatePrecisionQuestion(type,n*104729,difficulty as 1,grade),report=auditQuestion(q);count++;
-    assert.deepEqual([...report.errors,...report.reviewRequired],[],`${type}/${grade}/${difficulty}/${n}`);assert.equal(report.solverVerified,true);
+    assert.deepEqual([...report.errors,...report.reviewRequired],[],`${type}/${grade}/${difficulty}/${n}`);assert.equal(report.solverVerified,true);assert.equal(q.seed,n*104729);
     assert.equal(q.options.filter(o=>independentlyMatchesPrecision(q.visualConfig,o.visualData)).length,1);
     assert.equal(new Set(q.options.map(o=>precisionValueKey(o.visualData as PrecisionValue))).size,4);
     assert.deepEqual(generatePrecisionQuestion(type,n*104729,difficulty as 1,grade),q);

@@ -168,10 +168,14 @@ export function generatePrecisionQuestion(type:PrecisionType,seed:number,d:Diffi
   if(type==='maze_path'){
     const passages:Array<[number,number]>=[],stack=[rng.nextInt(0,size**2-1)],visited=new Set(stack);
     while(stack.length){const i=stack.at(-1)!,neighbors=Array.from({length:size**2},(_,j)=>j).filter(j=>!visited.has(j)&&Math.abs(i%size-j%size)+Math.abs(Math.floor(i/size)-Math.floor(j/size))===1);if(!neighbors.length){stack.pop();continue;}const j=rng.pick(neighbors);passages.push([i,j]);visited.add(j);stack.push(j);}
-    const start=rng.nextInt(0,size**2-1),minimum=g===1?3:g===2?4:5,maximum=g===1?4:g===2?6:8;
-    const goals=Array.from({length:size**2},(_,goal)=>({goal,moves:route({...common,kind:type,size,passages,start,goal})})).filter(v=>v.moves.length>=minimum&&v.moves.length<=maximum);
-    if(!goals.length)return generatePrecisionQuestion(type,(seed+104729)%2147483647||1,d,g);
-    const goal=rng.pick(goals).goal;b={...common,kind:type,size,passages,start,goal};
+    const minimum=g===1?3:g===2?4:5,maximum=g===1?4:g===2?6:8;
+    let endpoints:{start:number;goal:number}|undefined;
+    for(const start of rng.shuffle(Array.from({length:size**2},(_,i)=>i))){
+      const goals=Array.from({length:size**2},(_,goal)=>({goal,moves:route({...common,kind:type,size,passages,start,goal})})).filter(v=>v.moves.length>=minimum&&v.moves.length<=maximum);
+      if(goals.length){endpoints={start,goal:rng.pick(goals).goal};break;}
+    }
+    if(!endpoints)throw Error('MAZE_ENDPOINTS_EXHAUSTED');
+    b={...common,kind:type,size,passages,...endpoints};
     prompt='Yeşil başlangıçtan bayrağa ulaş. Duvarları geçmeden, okları sırayla izleyen doğru rota hangisi?';
     steps=['Başlangıç hücresinden ilk oku uygula; duvar varsa o rota elenir.','Her oku bir komşu hücreye geçiş olarak izle. Son hücre bayrak olmalı.'];
   }else if(type==='visual_sequence'){
