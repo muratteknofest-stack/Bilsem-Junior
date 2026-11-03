@@ -43,6 +43,19 @@ try {
       assert.ok(box.height >= 44 && box.y >= 0 && box.y + box.height <= height, `${name} must fit the opening screen`);
     }
     await page.screenshot({ path: resolve(output, `opening-${width}.png`), fullPage: true });
+    if (width === 390) {
+      await page.evaluate(() => document.documentElement.classList.add('dark'));
+      const ratios = await page.evaluate(() => {
+        const luminance = color => color.match(/[\d.]+/g).slice(0,3).map(Number).map(v => { const c=v/255; return c<=.04045?c/12.92:((c+.055)/1.055)**2.4; }).reduce((sum,c,i)=>sum+c*[.2126,.7152,.0722][i],0);
+        return [['.bj-welcome-hero h1','.bj-welcome'],['.bj-wordmark','.bj-welcome'],['.bj-wordmark>span','.bj-welcome'],['.bj-welcome-parent','.bj-welcome-parent'],['.bj-welcome>footer a','.bj-welcome']].map(([text,background])=>{
+          const a=luminance(getComputedStyle(document.querySelector(text)).color),b=luminance(getComputedStyle(document.querySelector(background)).backgroundColor);
+          return {text,ratio:(Math.max(a,b)+.05)/(Math.min(a,b)+.05)};
+        });
+      });
+      assert.ok(ratios.every(item=>item.ratio>=4.5),JSON.stringify(ratios));
+      await page.screenshot({ path: resolve(output, 'opening-dark.png'), fullPage: true });
+      await page.evaluate(() => document.documentElement.classList.remove('dark'));
+    }
     await page.getByRole('button', { name: 'Öğrenci girişi', exact: true }).click();
     await page.getByLabel('Öğrenci kodu veya e-posta', { exact: true }).waitFor();
     assert.equal(new URL(page.url()).pathname, '/login');
