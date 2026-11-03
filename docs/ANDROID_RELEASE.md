@@ -1,3 +1,9 @@
+## 1.0.40 — Uygulama adı yazılı Android simgesi
+
+- Android sürümü 41 / 1.0.40. Ana ekran ve uygulama listesinde görünen simgenin içinde BİLSEM / JUNIOR adı iki satırda yer alır. Üç boyutlu tilki, kitap, yıldız ve mor arka plan korunur.
+- Yerel Android simgesi ve 512 px mağaza simgesi aynı görsele güncellendi. Mevcut uyarlanabilir simgenin güvenli iç boşluğu korunur; uygulama içi giriş düzeni değişmez.
+- `python3 scripts/package-android-candidate.py test-artifacts/android` derlenmiş paket kimliğini, varlıkları ve güvenlik bayraklarını doğrular. Test APK'sı üretim imzası, fiziksel cihaz testi veya ticari yayın kabulü değildir.
+
 ## 1.0.39 — Üç boyutlu Junior ve modern Android girişi
 
 - Android sürümü 40 / 1.0.39. Yeni, renkli 3B tilki maskotu; kitap ve yıldızlı yeni uygulama logosu; Android başlatıcı için eski sürüm ve uyarlanabilir simgeler.
@@ -81,3 +87,4 @@ Yerel doğrulama: TypeScript, kayıt/şifre/Android regresyonları; beş ekran b
 - Native WebView, Android sistem çubukları için alan ayırır (`viewport-fit=contain`, SystemBars native insets, AndroidX EdgeToEdge). Web sürümünün viewport ayarı ve yakınlaştırma desteği korunur.
 - Google Play'de bekleyen, askıya alınan veya duraklatılan üyelikler yeni satın alıma yönlendirilmez. Doğrulanmış durum ve gerçek bitiş tarihi API'den gelir. Ağ kesintisinde ödeme başlatılmaz; ödeme hazırlığı sırasında kesinti de yeniden kontrol edilir.
 - Android sürümü 30 / 1.0.29. Üretim yayını, mevcut yükleme anahtarıyla imzalı AAB ve Play Console kabulü gerektirir. Kod güncellemesi, yüklü APK'yı kendiliğinden güncellemez.
+
