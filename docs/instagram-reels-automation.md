@@ -85,3 +85,53 @@ python3 -m venv .reels-venv
   https://www.postman.com/meta/instagram/folder/830j7my/reels-publishing
 - GitHub Actions zamanlanmış iş akışları:
   https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax
+
+## Yönetici panelinden manuel Reels videosu oluşturma
+
+- Yönetici giriş adresi: `https://bilsemjunior.vercel.app/admin/giris`
+- Yönetici ekranında sol menü: **Instagram Reels Stüdyosu**
+- Burada 1–4. sınıf, zorluk ve desteklenen konu seçilir. **Şimdi Video Oluştur**
+  düğmesi, GitHub Actions'a sadece bir video üretim görevi gönderir.
+  **Manuel iş akışı Instagram'a kesinlikle paylaşım yapmaz.**
+- **Yenile** düğmesiyle durum görülür. Başarılı üretimde MP4 tarayıcıda
+  görüntülenir, videoyu yeni sekmede açıp indirebilirsiniz.
+- Üretim GitHub sunucusunda çalışır; kuyruk/süre, video üretimi ve upload
+  nedeniyle anlık/saniyelik garanti yoktur. Ekranda "başlatıldı" yazması,
+  videonun tamamlandığı veya Instagram'da yayınlandığı anlamına gelmez.
+
+### Bir defalık güvenli bağlantı ayarları
+
+1. Vercel'deki Bilsem Junior projesinin **server-only** environment
+   variable bölümüne `GITHUB_REELS_TOKEN` ekleyin. Bu, yalnız
+   `muratteknofest-stack/Bilsem-Junior` deposuna erişebilen, fine-grained
+   bir GitHub token'ı olmalı: **Actions: Read and write**, **Metadata: Read**.
+   Günlük yayın GitHub Actions üzerinden yapılır; Vercel'deki bu anahtar
+   yalnızca yönetici isteğini başlatır ve üretim durumunu okur.
+   Token'ı asla `VITE_` ile başlayan bir değişkene, GitHub koduna,
+   APK'ya veya bu sohbetin içine koymayın.
+2. GitHub -> Settings -> Environments -> `production-reels`
+   korumalı ortamını oluşturun. **Deployment branches** kuralını
+   yalnızca `main` olarak belirleyin. Manuel önizleme tamamlandıktan
+   sonra upload adımı bu korumalı ortamda çalışır.
+3. `production-reels` ortamında Actions secrets oluşturun:
+   `REELS_SUPABASE_URL` (Bilsem Junior proje URL'si) ve
+   `REELS_SUPABASE_SERVICE_ROLE_KEY` (yalnızca backend/service rolü).
+   Mevcut projedeki, herkese açık **sadece MP4** kabul eden
+   `instagram-reels` kovası bu işlemler içindir.
+   Normal öğrenci/veli hesaplarına upload hakkı verilmez.
+4. Henüz Meta Instagram canlı yayın bağlantısını etkinleştirmediyseniz
+   `REELS_ENABLED` değişkenini **açmayın**. Manuel video üretimi
+   bu değişkene ihtiyaç duymaz.
+5. Yeni Vercel deploy'undan sonra /admin/giris adresinde MFA ile
+   oturum açın; önce bir örnek video üretin, test edin.
+
+GitHub Actions'ta doğrudan manuel üretim:
+`https://github.com/muratteknofest-stack/Bilsem-Junior/actions/workflows/bilsem-junior-reels.yml`
+-> Run workflow -> main -> Run. Bu, Vercel token'ı olmadan da
+önizleme oluşturur. Upload için yine GitHub'daki Supabase secrets gerekir;
+secrets olmadan MP4, Actions artifact ZIP içinden indirilir.
+
+Manuel ve otomatik işler aynı soru motorunu kullanır ama farklı tetiklenir:
+- Manuel: yönetici isteği, özgün istek UUID'si, MP4 kaydı, **yayın yok**.
+- Otomatik: günlük 19.00 Türkiye hedef saati; yalnız ayrı yayın
+  yetkileri ve `REELS_ENABLED=true` ile Instagram yayını denenir.
