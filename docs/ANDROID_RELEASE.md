@@ -1,3 +1,10 @@
+## 1.0.39 — Üç boyutlu Junior ve modern Android girişi
+
+- Android sürümü 40 / 1.0.39. Yeni, renkli 3B tilki maskotu; kitap ve yıldızlı yeni uygulama logosu; Android başlatıcı için eski sürüm ve uyarlanabilir simgeler.
+- Kısa açılış; katmanlı renkler, küçük hareketler, belirgin öğrenci/veli düğmeleri ve kısa ikincil seçeneklerle yenilendi. Giriş formu aynı görsel dille güncellendi. Küçük ekran, klavye, koyu tema ve azaltılmış hareket düzenleri korunur.
+- Uygulamadaki rehber tilki kullanımları yeni WebP varlığına taşındı. Görseller paket içinden yüklenir; yeni hesap veya e-posta oluşturulmaz.
+- `python3 scripts/package-android-candidate.py test-artifacts/android` derlenmiş paketin kimliğini, varlıklarını ve güvenlik bayraklarını doğrular. Test APK'sı üretim imzası, gerçek fiziksel cihaz veya ticari yayın kabulü değildir.
+
 ## 1.0.38 — Daha kısa ve dokunmaya uygun APK açılışı
 
 - Android sürümü 39 / 1.0.38. Büyük illüstrasyon ve slogan alanı; küçük rehber görseli, kısa başlık ve iki belirgin öğrenci/veli giriş düğmesiyle yenilendi. Kayıt ve örnek soru yan yana iki kısa seçenek olarak yer alır; açıklayıcı erişilebilir adları korunur.

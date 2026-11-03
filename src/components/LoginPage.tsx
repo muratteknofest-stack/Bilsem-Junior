@@ -139,6 +139,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <p className="zp-auth-kicker">BİLSEM JUNIOR / HAZIRLIK HESABI</p>
               <h1 id="zp-auth-heading">{isAndroidApp ? (activeTab === 'login' ? selectedRole === 'parent' ? 'Veli girişi' : 'Öğrenci girişi' : 'Aile hesabı oluştur') : activeTab === 'login' ? 'Tekrar hoş geldin!' : 'Birlikte başlayalım'}</h1>
               <p>{activeTab === 'login' ? 'Hesabına gir, yeni sorular ve küçük zaferler seni bekliyor.' : 'Veli bilgilerini gir, öğrenci hesabını ekle ve e-postanı doğrula.'}</p>
+              {isAndroidApp && activeTab === 'login' && <img className="bj-auth-fox" src="/brand/junior-fox-3d.webp" alt="" width="76" height="76" />}
             </div>
 
             {!isAndroidApp && modeControls}

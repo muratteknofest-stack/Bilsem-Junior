@@ -1,6 +1,7 @@
 .bj-logo{display:inline-flex;align-items:center;gap:10px;min-width:0;max-width:100%;user-select:none}
 .bj-logo[role=button]{cursor:pointer;border-radius:12px}.bj-logo:focus-visible{outline:3px solid #0f766e;outline-offset:5px}
-.bj-logo-symbol{width:44px;height:44px;flex:none;filter:drop-shadow(0 3px 0 #31205920)}
+.bj-logo-symbol{width:44px;height:44px;flex:none;border-radius:25%;filter:drop-shadow(0 3px 2px #39216a30)}
+img[src="/brand/junior-fox-3d.webp"]{object-fit:contain}
 .bj-logo-copy{display:flex;flex-direction:column;min-width:0;gap:5px}
 .bj-wordmark{font-family:'Outfit',sans-serif;font-size:25px;font-weight:800;letter-spacing:-1.1px;line-height:1.08;white-space:nowrap;color:#282343}
 .bj-wordmark>span{color:#6e43cf}.bj-logo-tagline{color:#5b6177;font-size:9px;font-weight:700;line-height:1.4;letter-spacing:.025em}

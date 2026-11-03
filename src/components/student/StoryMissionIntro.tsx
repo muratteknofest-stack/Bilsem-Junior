@@ -28,7 +28,7 @@ export function StoryMissionIntro({ stage, grade, questionCount, difficulty, onD
       <div className="bj-mission-island"><i /><i /><i /></div>
       <div className="bj-mission-sprout bj-mission-sprout-one"><i /><i /></div>
       <div className="bj-mission-sprout bj-mission-sprout-two"><i /><i /></div>
-      <img className="bj-mission-fox" src="/brand/junior-fox-mission.svg" width="320" height="320" alt="" decoding="async" />
+      <img className="bj-mission-fox" src="/brand/junior-fox-3d.webp" width="320" height="320" alt="" decoding="async" />
       <span className="bj-mission-orbit"><Compass size={22}/></span>
       <span className="bj-mission-scene-label"><BookOpen size={13}/> JUNIOR İLE HİKÂYE MACERASI</span>
     </div>
