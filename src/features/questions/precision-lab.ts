@@ -177,7 +177,7 @@ export function generatePrecisionQuestion(type:PrecisionType,seed:number,d:Diffi
   }else if(type==='visual_sequence'){
     const lanes=g>=3&&d>=3?2:1,starts=Array.from({length:lanes},token),rules=Array.from({length:lanes},()=>({dots:rng.pick([1,2,3]),rotation:g>=2&&d>=2?rng.pick([1,2,3]):0,color:g>=3&&d>=3?rng.pick([1,2,3]):0}));
     const cards:Array<PrecisionToken|null>=Array.from({length:lanes===1?5:7},(_,i)=>{if(i===(lanes===1?4:6))return null;const a=starts[i%lanes],rule=rules[i%lanes],n=Math.floor(i/lanes);return {...a,dots:mod4(a.dots-1+n*rule.dots)+1,rotation:mod4(a.rotation+n*rule.rotation),color:mod4(a.color+n*rule.color)};});
-    b={...common,kind:type,lanes,cards};prompt=lanes===2?'Tek ve çift numaralı kartlar ayrı örüntüler izler. Yön, renk ve nokta değişimini sürdür; eksik kart hangisi?':'Kartların yön, renk ve nokta sayısındaki aynı değişimleri sürdür. Soru işaretine hangi kart gelmeli?';
+    b={...common,kind:type,lanes,cards};prompt=lanes===2?'Tek ve çift kartları ayrı izle. Noktalar 1–2–3–4–1 halkasında ilerler. Yön ve renk değişimini de sürdür; eksik kart hangisi?':'Noktalar 1–2–3–4–1 halkasında ilerler. Kartların aynı yön ve renk değişimini de sürdür. Eksik kart hangisi?';
     steps=[lanes===2?'1, 3 ve 5. kartlardaki ilişkiyi bul; 2, 4 ve 6. kartları ayrı izle.':'Ardışık kartlardaki yön, renk ve nokta değişimlerini karşılaştır.','Sonraki kartta bütün değişimler birlikte sağlanmalı; tek özelliğe bakma.'];
   }else if(type==='cube_counting'){
     const side=g===1?2:g===2?3:d<=2?3:4,cap=g===1?2:g===2?3:4,heights=Array<number>(side**2).fill(0);heights[rng.nextInt(0,heights.length-1)]=1;
@@ -188,7 +188,7 @@ export function generatePrecisionQuestion(type:PrecisionType,seed:number,d:Diffi
     prompt=task==='exposed'?'Yapının açıkta kalan üst ve yan birim yüzlerinin toplamı kaçtır? Zemine değen alt yüzleri ve küplerin temas yüzlerini sayma.':task==='layer'?`Yükseklik planına göre zeminden ${level}. katmanda kaç birim küp bulunur?` :task==='complete'?`Bütün tabanı ${level} kat yüksekliğinde tam bir blok yapmak için kaç birim küp eklenmeli?`:'Yükseklik planını kullan. Örtünenler dâhil yapıda toplam kaç birim küp var?';
     steps=task==='exposed'?['Her dolu sütun bir üst yüz verir; komşu sütunların yükseklik farkı açık yan yüzleri verir.','Dış kenarları da say. Temas eden iki yüzü ve zemine değen alt yüzleri ekleme.']:task==='layer'?['İstenen katmana ulaşan sütunları plandan bul.','Her uygun sütun bu katmana yalnız bir küp verir.']:task==='complete'?['Tam bloğun taban alanını kat yüksekliğiyle çarp.','Mevcut sütunlardaki küpleri topla; tam bloktan bu toplamı çıkar.']:['Plandaki her sayı o sütundaki bütün küpleri gösterir.','Sütun yüksekliklerini topla; örtünen küpleri de hesaba kat.'];
   }else if(type==='symbol_coding'){
-    const n=g===1?3:g===2?4:g===3?5:6,key=rng.shuffle(rng.pickUnique([0,1,2,3,4,5],n)).map((symbol,i)=>({symbol,digit:rng.pickUnique([0,1,2,3,4,5,6,7,8,9],n)[i]}));
+    const n=g===1?3:g===2?4:g===3?5:6,key=rng.pickUnique([0,1,2,3,4,5],n).map(symbol=>({symbol,digit:0}));
     const digits=rng.pickUnique([0,1,2,3,4,5,6,7,8,9],n);key.forEach((k,i)=>{k.digit=digits[i];});
     const length=g===1?3:g===2?4:g===3?5:6,query=Array.from({length},()=>rng.pick(key).symbol);query[length-1]=query[0];if(query.every(v=>v===query[0]))query[1]=key.find(k=>k.symbol!==query[0])!.symbol;
     const reading=g>=3&&d>=3&&rng.nextBool()?'backward':'forward';if(reading==='backward'&&query.every((v,i)=>v===query[length-1-i]))query[1]=key.find(k=>k.symbol!==query[length-2])!.symbol;b={...common,kind:type,key,query,reading};
@@ -200,7 +200,7 @@ export function generatePrecisionQuestion(type:PrecisionType,seed:number,d:Diffi
     steps=['Tabloyu satır satır tara; aynı kartı yeniden sayma.','Bir özelliği bile farklı olan benzer kartları ele. Tam eşleşmeleri topla.'];
   }else if(type==='odd_one_out'){
     const shift={rotation:g>=2?1:0,dots:rng.pick([1,2,3]),color:g>=3&&d>=3?1:0},odd=rng.nextInt(0,3),cards:Array<[PrecisionToken,PrecisionToken]>=Array.from({length:4},(_,i)=>{const a=token(),c={...a,rotation:mod4(a.rotation+shift.rotation),dots:mod4(a.dots-1+shift.dots)+1,color:mod4(a.color+shift.color)};if(i===odd){const field=rng.pick(g===1?['dots'] as const:g>=3?['rotation','dots','color'] as const:['rotation','dots'] as const);c[field]=field==='dots'?mod4(c.dots)+1:mod4(c[field]+1);}return [a,c];});
-    b={...common,kind:type,cards};prompt='Üç kartta soldan sağa aynı yön, renk ve nokta değişimi uygulanıyor. Bu ilişkiyi bozan numaralı kart hangisi?';
+    b={...common,kind:type,cards};prompt='Noktalar 1–2–3–4–1 halkasında ilerler. Üç kartta aynı yön, renk ve nokta değişimi uygulanıyor. İlişkiyi bozan kart hangisi?';
     steps=['Her kartta soldaki şekilden sağdakine ne değiştiğini karşılaştır.','Üç kartın ortak dönüşümünü bul. Bu dönüşüme uymayan tek kartı seç.'];pool=[1,2,3,4].map(value=>({precision:'number',value}));
   }else if(type==='symmetry_completion'){
     const axis=rng.pick(g<=2?['vertical','horizontal'] as const:['vertical','horizontal','diagonal','antidiagonal'] as const),cells=Array<number>(size**2).fill(0),indices=Array.from({length:size**2},(_,i)=>i).filter(i=>i<reflectIndex(i,size,axis));

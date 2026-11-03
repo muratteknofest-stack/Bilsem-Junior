@@ -45,10 +45,10 @@ function GridArt({cells,size,axis}:{cells:number[];size:number;axis?:Extract<Boa
 function TangramArt({pieces,choice=false}:{pieces:Polygon[];choice?:boolean}){
   const id=useId().replace(/:/g,'_');
   return <svg viewBox="-0.18 -0.18 4.36 4.36" className="bj-precision-tangram" role="img" aria-label={choice?'Tangram parçası; bir kare aralığı bir birim':'Altı parça ile kurulmuş kare; beyaz boşluğu tamamla'} shapeRendering="geometricPrecision" data-tangram-assembly={!choice||undefined}>
-    <defs>{pieces.map((_,i)=><linearGradient key={i} id={`${id}-${i}`} x2=".4" y2="1"><stop stopColor={palette[i%4]}/><stop offset="1" stopColor={palette[(i+1)%4]} stopOpacity=".84"/></linearGradient>)}</defs>
+    <defs>{pieces.map((_,i)=><linearGradient key={i} id={`${id}-${i}`} x2=".4" y2="1"><stop stopColor="#fff" stopOpacity=".32"/><stop offset=".4" stopColor="#fff" stopOpacity="0"/><stop offset="1" stopColor="#102b4e" stopOpacity=".2"/></linearGradient>)}</defs>
     <rect width="4" height="4" fill="#f8fbfe" stroke="#42617a" strokeWidth=".035"/>
     {[1,2,3].map(n=><g key={n} stroke="#d8e3ee" strokeWidth=".018"><path d={`M${n} 0V4M0 ${n}H4`}/></g>)}
-    {pieces.map((p,i)=><g key={i} data-tangram-piece="true"><polygon points={p.map(v=>v.join(',')).join(' ')} fill="#132e47" opacity=".22" transform="translate(0 .045)"/><polygon points={p.map(v=>v.join(',')).join(' ')} fill={`url(#${id}-${i})`} stroke="#1e405d" strokeWidth=".045" strokeLinejoin="round"/><polygon points={p.map(v=>v.join(',')).join(' ')} fill="none" stroke="#fff" strokeOpacity=".6" strokeWidth=".018"/></g>)}
+    {pieces.map((p,i)=><g key={i} data-tangram-piece="true"><polygon points={p.map(v=>v.join(',')).join(' ')} fill="#132e47" opacity=".22" transform="translate(0 .045)"/><polygon points={p.map(v=>v.join(',')).join(' ')} fill={palette[i%4]} stroke="#1e405d" strokeWidth=".045" strokeLinejoin="round"/><polygon points={p.map(v=>v.join(',')).join(' ')} fill={`url(#${id}-${i})`} stroke="#fff" strokeOpacity=".6" strokeWidth=".018"/></g>)}
   </svg>;
 }
 function MazeArt({board:b}:{board:Extract<Board,{kind:'maze_path'}>}){
@@ -83,5 +83,5 @@ export function PrecisionBoard({board:b}:{board:Board}){
   else if(b.kind==='symmetry_completion')content=<GridArt cells={b.cells} size={b.size} axis={b.axis}/>;
   else if(b.kind==='tangram_puzzle')content=<TangramArt pieces={b.pieces}/>;
   else content=<div className="bj-cube-givens"><div className="bj-cube-model"><CubeSculpture size={b.size} heights={b.heights}/></div><figure className="bj-cube-plan"><figcaption>Yükseklik planı</figcaption><div className="bj-cube-plan-grid" style={{gridTemplateColumns:`repeat(${b.size},1fr)`}}>{b.heights.map((h,i)=><span key={i} data-cube-height={h}>{h}</span>)}</div><span className="bj-cube-plan-front">ÖN ↑</span><span className="bj-cube-plan-right">← SAĞ</span><p>0 = boş hücre</p></figure></div>;
-  return <section className="bj-precision-board" data-precision-kind={b.kind} aria-label={PRECISION_TITLES[b.kind]}><p className="bj-precision-title">{PRECISION_TITLES[b.kind]}</p><div className="bj-precision-surface">{content}</div></section>;
+  return <section className="bj-precision-board" data-precision-kind={b.kind} aria-label={PRECISION_TITLES[b.kind]}><p className="bj-precision-title">{PRECISION_TITLES[b.kind]}</p><div className="bj-precision-surface">{content}</div>{(b.kind==='visual_sequence'||b.kind==='odd_one_out')&&<div className="bj-precision-color-cycle" aria-label="Renk halkası: 1 mavi, 2 turuncu, 3 yeşil, 4 mor, sonra 1 mavi">Renk sırası: {palette.map((color,i)=><React.Fragment key={color}><span style={{background:color}}>{i+1}</span><b aria-hidden="true">→</b></React.Fragment>)}<span style={{background:palette[0]}}>1</span></div>}</section>;
 }

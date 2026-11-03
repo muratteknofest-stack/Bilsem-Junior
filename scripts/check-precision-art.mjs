@@ -8,12 +8,12 @@ let browser;const failures=[],pageErrors=[];let count=0;
 try{
  browser=await chromium.launch({headless:true,args:['--no-proxy-server'],...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE}:{})});
  const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2});page.on('pageerror',e=>pageErrors.push(e.message));
- await page.goto('http://127.0.0.1:5197/tests/browser/precision-questions.html',{waitUntil:'commit'});await page.locator('[data-precision-kind]').waitFor({timeout:90000});
+ await page.goto('http://127.0.0.1:5197/tests/browser/precision-questions.html',{waitUntil:'commit'});await page.locator('[data-precision-kind]').first().waitFor({timeout:90000});
  if(process.env.QUESTION_FIXTURE_TARGET==='android')assert.equal(await page.locator('.zp-focus').getAttribute('data-app-target'),'android');
  for(const [width,height] of [[320,480],[360,640],[390,844],[667,375],[768,1024],[820,1180]])for(const grade of [1,4]){
   await page.setViewportSize({width,height});
   for(const type of await page.evaluate(()=>window.__precisionTypes)){
-   const id=await page.evaluate(({type,grade})=>window.__precision(type,grade,grade===1?2:6,81719),{type,grade});await page.locator(`[data-preview-question="${id}"]`).waitFor();await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+   const id=await page.evaluate(({type,grade})=>window.__precision(type,grade,grade===1?2:6,81719),{type,grade});await page.locator(`[data-preview-question="${id}"]`).waitFor({state:'attached'});await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
    const result=await page.evaluate(()=>{
     const bad=[],root=document.querySelector('.zp-focus'),frame=document.querySelector('.zp-focus-visual').getBoundingClientRect(),cards=[...document.querySelectorAll('.zp-answer-option')];
     if(cards.length!==4)bad.push('missing-options');if(root.scrollHeight>root.clientHeight+1||root.scrollWidth>root.clientWidth+1)bad.push('scroll');
