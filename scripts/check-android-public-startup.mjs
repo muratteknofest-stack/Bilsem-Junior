@@ -18,7 +18,7 @@ const origin = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch({ headless: true });
 const errors = [], mutations = [], checks = [];
 try {
-  for (const [width, height] of [[320,480], [360,640], [390,844], [768,1024]]) {
+  for (const [width, height] of [[320,480], [360,640], [390,844], [768,1024], [844,390]]) {
     const page = await browser.newPage({ viewport: { width, height }, reducedMotion: 'reduce' });
     page.on('pageerror', error => errors.push(error.message));
     await page.route('**/*', async route => {
@@ -38,7 +38,7 @@ try {
     const layout = await page.evaluate(() => ({ width: innerWidth, height: innerHeight, pageWidth: document.documentElement.scrollWidth, pageHeight: document.documentElement.scrollHeight }));
     assert.ok(layout.pageWidth <= width + 1 && layout.pageHeight <= height + 2, JSON.stringify(layout));
     assert.equal(await page.locator('.zp-colorful-home').count(), 0, 'An unauthenticated APK must not display the long web marketing page');
-    for (const name of ['Öğrenci girişi', 'Veli girişi', 'Yeni aile hesabı oluştur']) {
+    for (const name of ['Öğrenci girişi', 'Veli girişi', 'Yeni aile hesabı oluştur', 'Hesap açmadan bir soru dene']) {
       const box = await page.getByRole('button', { name, exact: true }).boundingBox();
       assert.ok(box.height >= 44 && box.y >= 0 && box.y + box.height <= height, `${name} must fit the opening screen`);
     }

@@ -1,3 +1,10 @@
+## 1.0.38 — Daha kısa ve dokunmaya uygun APK açılışı
+
+- Android sürümü 39 / 1.0.38. Büyük illüstrasyon ve slogan alanı; küçük rehber görseli, kısa başlık ve iki belirgin öğrenci/veli giriş düğmesiyle yenilendi. Kayıt ve örnek soru yan yana iki kısa seçenek olarak yer alır; açıklayıcı erişilebilir adları korunur.
+- Açılış düğmeleri en az 50 px yüksekliğindedir. Yatay telefon yerleşimi ve koyu tema eklendi; büyük metinde doğal kaydırma korunur. Yasal bağlantılar açılıştan erişilebilir kalır.
+- Gerçek derlenmiş uygulamanın oturumsuz başlangıç kabulü 320×480, 360×640, 390×844, 768×1024 ve 844×390 boyutlarını; dört açılış seçeneğini ve geri dönüşlerini kontrol eder. Gerçek hesap/e-posta oluşturulmaz.
+- `python3 scripts/package-android-candidate.py test-artifacts/android` sürümü, güvenlik bayraklarını ve derlenmiş varlıkları doğrular. Test APK'sı üretim imzası, gerçek fiziksel cihaz veya ticari yayın kabulü değildir.
+
 ## 1.0.37 — APK'nın gerçek ilk açılışını düzeltme
 
 - Android sürümü 38 / 1.0.37. Oturumsuz kök sayfayı yöneten AuthStartupView, Android paketinde uzun web tanıtım sayfası yerine AndroidWelcome açar. Öğrenci/veli girişleri, kayıt ve örnek soru, uygulamanın gerçek başlangıç yolunda erişilebilirdir.

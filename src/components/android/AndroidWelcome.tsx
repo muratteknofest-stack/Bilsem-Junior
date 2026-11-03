@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useState } from 'react';
-import { ArrowRight, GraduationCap, Heart, Sparkles } from 'lucide-react';
+import { ArrowRight, GraduationCap, Heart, Sparkles, UserPlus } from 'lucide-react';
 import type { UserRole } from '../../types';
 import { Logo } from '../Logo';
 import { LegalLinks } from '../LegalLinks';
@@ -24,14 +24,15 @@ export function AndroidWelcome({ onNavigateToLogin, onNavigate }: Props) {
   return <div ref={viewport} className="bj-welcome">
     <header><Logo size="sm" showTagline={false} /><span>1–4. sınıf</span></header>
     <main>
-      <div className="bj-welcome-art" aria-hidden="true"><span>✦</span><img src="/brand/junior-fox-mission.svg" alt="" width="190" height="190" /><i>✦</i></div>
-      <div className="bj-welcome-copy"><h1>Oyna, düşün,<br /><span>keşfet.</span></h1><p>BİLSEM hazırlık arkadaşın</p></div>
+      <div className="bj-welcome-hero"><img src="/brand/junior-fox-mission.svg" alt="" width="88" height="88" /><div><h1>Keşfe hazır mısın?</h1><p>Giriş yap, birlikte başlayalım.</p></div></div>
       <div className="bj-welcome-actions">
         <button type="button" className="bj-welcome-student" onClick={() => onNavigateToLogin('student')}><GraduationCap size={24} aria-hidden="true" /><span>Öğrenci girişi</span><ArrowRight size={20} aria-hidden="true" /></button>
         <button type="button" className="bj-welcome-parent" onClick={() => onNavigateToLogin('parent')}><Heart size={23} aria-hidden="true" /><span>Veli girişi</span><ArrowRight size={20} aria-hidden="true" /></button>
-        <button type="button" className="bj-welcome-register" onClick={() => onNavigate('register')}>Yeni aile hesabı oluştur <ArrowRight size={18} aria-hidden="true" /></button>
-        <button type="button" className="bj-welcome-try" onClick={() => setDiscovery(true)}><Sparkles size={18} aria-hidden="true" /> Hesap açmadan bir soru dene</button>
       </div>
+      <nav className="bj-welcome-secondary" aria-label="Diğer seçenekler">
+        <button type="button" aria-label="Yeni aile hesabı oluştur" onClick={() => onNavigate('register')}><UserPlus size={18} aria-hidden="true" /><span>Yeni hesap</span></button>
+        <button type="button" aria-label="Hesap açmadan bir soru dene" onClick={() => setDiscovery(true)}><Sparkles size={18} aria-hidden="true" /><span>Bir soru dene</span></button>
+      </nav>
     </main>
     <footer><LegalLinks mode="entry"/></footer>
   </div>;
