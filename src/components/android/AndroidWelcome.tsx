@@ -24,7 +24,10 @@ export function AndroidWelcome({ onNavigateToLogin, onNavigate }: Props) {
   return <div ref={viewport} className="bj-welcome">
     <header><Logo size="sm" showTagline={false} /><span>1–4. sınıf</span></header>
     <main>
-      <div className="bj-welcome-hero"><img src="/brand/junior-fox-mission.svg" alt="" width="88" height="88" /><div><h1>Keşfe hazır mısın?</h1><p>Giriş yap, birlikte başlayalım.</p></div></div>
+      <div className="bj-welcome-hero">
+        <div className="bj-welcome-scene" aria-hidden="true"><span>✦</span><img src="/brand/junior-fox-3d.webp" alt="" width="200" height="200" fetchPriority="high" /><i>✦</i></div>
+        <div className="bj-welcome-copy"><span>OYNA · DÜŞÜN · KEŞFET</span><h1>Keşfe hazır mısın?</h1><p>Junior’la yeni bir maceraya başla.</p></div>
+      </div>
       <div className="bj-welcome-actions">
         <button type="button" className="bj-welcome-student" onClick={() => onNavigateToLogin('student')}><GraduationCap size={24} aria-hidden="true" /><span>Öğrenci girişi</span><ArrowRight size={20} aria-hidden="true" /></button>
         <button type="button" className="bj-welcome-parent" onClick={() => onNavigateToLogin('parent')}><Heart size={23} aria-hidden="true" /><span>Veli girişi</span><ArrowRight size={20} aria-hidden="true" /></button>

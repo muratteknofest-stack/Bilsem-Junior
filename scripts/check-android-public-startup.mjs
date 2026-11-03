@@ -35,6 +35,9 @@ try {
     try { await page.locator('.bj-welcome').waitFor({ timeout: 12000 }); }
     catch (error) { await page.screenshot({ path: resolve(output, `wrong-opening-${width}.png`), fullPage: true }); throw error; }
     await page.evaluate(async () => { await document.fonts.ready; await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); });
+    await page.locator('.bj-welcome img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
+    assert.equal(await page.locator('.bj-welcome-scene img').evaluate(image => image.naturalWidth), 640, 'The packaged 3D mascot must load');
+    assert.equal(await page.locator('.bj-welcome-scene img').evaluate(image => getComputedStyle(image).animationName), 'none', 'Reduced motion must disable the floating mascot');
     const layout = await page.evaluate(() => ({ width: innerWidth, height: innerHeight, pageWidth: document.documentElement.scrollWidth, pageHeight: document.documentElement.scrollHeight }));
     assert.ok(layout.pageWidth <= width + 1 && layout.pageHeight <= height + 2, JSON.stringify(layout));
     assert.equal(await page.locator('.zp-colorful-home').count(), 0, 'An unauthenticated APK must not display the long web marketing page');

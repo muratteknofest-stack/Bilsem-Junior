@@ -13,7 +13,7 @@ export function StudentPassport({ progress }: { progress: StoryProgress }) {
   return <section className="bj-passport" aria-label="Keşif pasaportum" data-motion-zone>
     <StudentAdventureAtmosphere />
     <div className="bj-passport-copy"><span>JUNIOR KAŞİF KULÜBÜ</span><h2>Dünyan keşifle büyür.</h2><p>Her durak yeni bir başlangıç.</p></div>
-    <div className="bj-passport-mascot" aria-hidden="true"><span/><img src="/brand/junior-fox.svg" alt="" width={104} height={104}/><i>✦</i></div>
+    <div className="bj-passport-mascot" aria-hidden="true"><span/><img src="/brand/junior-fox-3d.webp" alt="" width={104} height={104}/><i>✦</i></div>
     <div className="bj-passport-stamps"><span><Compass size={16} aria-hidden="true"/><strong>{stops}</strong> keşif</span><span><Star size={16} aria-hidden="true"/><strong>{finished}</strong> hikâye</span><span><Sparkles size={16} aria-hidden="true"/> Yeni rotalar açık</span></div>
   </section>;
 }

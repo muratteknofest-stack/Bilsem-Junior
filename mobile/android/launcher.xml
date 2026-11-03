@@ -1,14 +1,2 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="512" android:viewportHeight="512">
-  <path android:fillColor="#6E43CF" android:pathData="M124 0H388Q512 0 512 124V388Q512 512 388 512H124Q0 512 0 388V124Q0 0 124 0Z"/>
-  <path android:pathData="M30 352c124-41 249 40 452-17v53c0 52-42 94-94 94H124c-52 0-94-42-94-94Z" android:fillColor="#fff" android:fillAlpha=".06"/>
-  <path android:pathData="M104 182c54-24 104-17 152 17 48-34 98-41 152-17v165c-60-22-108-14-152 16-44-30-92-38-152-16Z" android:fillColor="#FFFDF7"/>
-  <path android:pathData="M256 199c48-34 98-41 152-17v165c-60-22-108-14-152 16Z" android:fillColor="#D9F5DD"/>
-  <path android:pathData="M256 212v137" android:fillColor="#00000000" android:strokeColor="#8056C7" android:strokeWidth="9" android:strokeLineCap="round"/>
-  <path android:pathData="M138 230c28-7 51-4 78 10m-78 32c28-7 51-4 78 10m-78 31c28-7 51-4 78 10" android:fillColor="#00000000" android:strokeColor="#C7B5EE" android:strokeWidth="10" android:strokeLineCap="round"/>
-  <path android:pathData="M345 237v38c0 22-14 36-36 36-12 0-23-4-31-12" android:fillColor="#00000000" android:strokeColor="#367466" android:strokeWidth="16" android:strokeLineCap="round"/>
-  <path android:pathData="M324 238h42" android:fillColor="#00000000" android:strokeColor="#367466" android:strokeWidth="14" android:strokeLineCap="round"/>
-  <path android:pathData="M299 74l16 41 42 16-42 16-16 42-16-42-42-16 42-16Z" android:fillColor="#FFD66F" android:strokeColor="#FFF1BE" android:strokeWidth="5" android:strokeLineJoin="round"/>
-  <path android:fillColor="#AEE3C8" android:pathData="M163 112a12 12 0 1 0 0 24a12 12 0 1 0 0 -24Z"/>
-  <path android:fillColor="#FFF8E7" android:pathData="M377 104a6 6 0 1 0 0 12a6 6 0 1 0 0 -12Z"/>
-</vector>
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android" android:src="@drawable/bilsem_launcher_3d" android:gravity="fill" />

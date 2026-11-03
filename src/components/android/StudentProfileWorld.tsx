@@ -42,7 +42,7 @@ export function StudentProfileWorld({ user, progress, onNavigate, onUserUpdate, 
 
     <StudentPassport progress={progress} />
     <div className="bj-profile-identity" data-motion-zone>
-      <StudentHeroBanner user={user} greeting={{ text: 'Merhaba', emoji: '✦' }} xpProgress={levelProgress(user.xp)} onUserUpdate={onUserUpdate} onNavigate={onNavigate} prefersReducedMotion={reduced} avatarImageSrc={!user.avatar || user.avatar === '🦊' ? '/brand/junior-fox.svg' : undefined} />
+      <StudentHeroBanner user={user} greeting={{ text: 'Merhaba', emoji: '✦' }} xpProgress={levelProgress(user.xp)} onUserUpdate={onUserUpdate} onNavigate={onNavigate} prefersReducedMotion={reduced} avatarImageSrc={!user.avatar || user.avatar === '🦊' ? '/brand/junior-fox-3d.webp' : undefined} />
     </div>
 
     <section className="bj-profile-settings" aria-labelledby="bj-profile-settings-heading" data-motion-zone>

@@ -82,7 +82,7 @@ export function StudentExplorerScene() {
         <g transform="translate(390 64) rotate(12)"><path d="m0-13 13 7v15L0 16l-13-7V-6Z" fill="#b7a1f5"/><path d="m0-13 13 7L0 2-13-6Z" fill="#ede2ff"/><path d="M0 2v14l13-7V-6Z" fill="#8c73d4"/></g>
         <g fill="#fff5be"><path d="m155 42 3 7 7 3-7 3-3 7-3-7-7-3 7-3Z"/><path d="m427 91 2 5 5 2-5 2-2 5-2-5-5-2 5-2Z"/><circle cx="352" cy="42" r="3"/></g>
       </svg>
-      <img className="bj-explorer-guide" src="/brand/junior-fox.svg" alt="" width={160} height={160} decoding="async"/>
+      <img className="bj-explorer-guide" src="/brand/junior-fox-3d.webp" alt="" width={160} height={160} decoding="async"/>
     </div>
     <span className="bj-explorer-orbit bj-explorer-orbit-one">✦</span><span className="bj-explorer-orbit bj-explorer-orbit-two">✧</span>
   </div>;

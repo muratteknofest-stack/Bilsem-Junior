@@ -12,7 +12,7 @@ import sys
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-PREFIX = 'Bilsem-Junior-1.0.38'
+PREFIX = 'Bilsem-Junior-1.0.39'
 
 
 def run(args):
