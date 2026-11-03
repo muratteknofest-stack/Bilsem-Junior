@@ -36,6 +36,9 @@ jobs:
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0" "build-tools;36.0.0" "platforms;android-36"'
       - run: npm run lint && npm run test:google-play
       - run: npm run android:sync
+      - name: Compile Android Billing and release bundle
+        working-directory: android
+        run: ./gradlew --no-daemon :app:bundleRelease :app:assembleRelease :app:assembleDebug :app:writeReleaseDependencyInventory
       - name: Verify billing screens
         run: |
           npx --no-install playwright install --with-deps chromium
@@ -46,9 +49,6 @@ jobs:
           npm run test:legal-links
       - name: Verify Android story adventure and simplified menus
         run: npm run test:android-story
-      - name: Compile Android Billing and release bundle
-        working-directory: android
-        run: ./gradlew --no-daemon :app:bundleRelease :app:assembleRelease :app:assembleDebug :app:writeReleaseDependencyInventory
       - name: Verify release security
         run: python3 scripts/package-android-candidate.py test-artifacts/android
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

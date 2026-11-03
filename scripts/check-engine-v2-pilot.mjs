@@ -2,6 +2,16 @@ import {createServer} from 'vite';import {chromium} from 'playwright';import {mk
 const output='test-artifacts/engine-v2';await mkdir(output,{recursive:true});const server=await createServer({server:{host:'127.0.0.1',port:5193,strictPort:true}});await server.listen();
 const browser=await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE}:{}),args:['--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader','--use-gl=angle','--use-angle=swiftshader']});
 const errors=[],failures=[];let checks=0,webgl=false,contextFallback=false,pixelDifferenceRatio=null;
+// Rasterize the actual diagram at its displayed size. Page/element screenshots
+// can wait forever for unrelated transitions after hundreds of question swaps.
+async function captureDiagram(page){return page.locator('[data-spatial-scene] svg').first().evaluate(async svg=>{
+ const box=svg.getBoundingClientRect(),style=getComputedStyle(svg),copy=svg.cloneNode(true);
+ copy.setAttribute('xmlns','http://www.w3.org/2000/svg');copy.setAttribute('width',String(box.width));copy.setAttribute('height',String(box.height));
+ copy.style.cssText=`width:${box.width}px;height:${box.height}px;max-width:none;font-family:${style.fontFamily};color:${style.color}`;
+ const image=new Image();image.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(copy));await image.decode();
+ const canvas=document.createElement('canvas');canvas.width=Math.round(box.width*devicePixelRatio);canvas.height=Math.round(box.height*devicePixelRatio);
+ canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);return canvas.toDataURL('image/png').split(',')[1];
+});}
 try{
  const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2,reducedMotion:'reduce'});page.on('pageerror',error=>errors.push(error.message));await page.goto('http://127.0.0.1:5193/tests/browser/engine-v2-pilot.html');await page.waitForSelector('.zp-answer-option');const count=await page.evaluate(()=>window.__pilotCount);
  for(const [width,height] of [[320,568],[390,844],[768,1024]]){await page.setViewportSize({width,height});
@@ -20,9 +30,7 @@ try{
  }
  await page.setViewportSize({width:390,height:844});const cubeIndex=(await page.evaluate(()=>window.__pilotTypes)).indexOf('cube_counting');await page.evaluate(index=>window.__showPilot(index),cubeIndex);await page.waitForTimeout(150);
  await page.waitForTimeout(200);const geometryBefore=await page.locator('[data-spatial-scene] svg').first().evaluate(svg=>[svg.getAttribute('viewBox'),...Array.from(svg.querySelectorAll('path,polygon')).map(el=>el.getAttribute('d')||el.getAttribute('points'))]);
- // Capture the static SVG itself. Disabling every page animation here can stall
- // Chromium's screenshot after the repeated question transitions above.
- const svgBefore=await page.locator('[data-spatial-scene] svg').first().screenshot();
+ const svgBefore=await captureDiagram(page);
  const loaded=page.waitForResponse(response=>response.url().endsWith('/models/bilsem-unit-cube.glb')&&response.status()===200).then(()=>true).catch(()=>false);
  await page.getByRole('button',{name:'3B görünüm',exact:true}).first().click();await page.waitForSelector('[data-spatial-scene] canvas',{timeout:30000});if(!await loaded)throw Error('Blender GLB was not loaded');await page.waitForTimeout(1500);
  webgl=await page.locator('canvas').evaluate(canvas=>!!canvas.getContext('webgl2'));await page.screenshot({path:`${output}/cube-webgl.png`});
@@ -31,14 +39,14 @@ try{
  await page.locator('.zp-spatial-notice').evaluateAll(elements=>elements.forEach(el=>el.style.visibility='hidden'));
  await page.waitForTimeout(250);
  const geometryAfter=await page.locator('[data-spatial-scene] svg').first().evaluate(svg=>[svg.getAttribute('viewBox'),...Array.from(svg.querySelectorAll('path,polygon')).map(el=>el.getAttribute('d')||el.getAttribute('points'))]);
- const svgAfter=await page.locator('[data-spatial-scene] svg').first().screenshot();
+ const svgAfter=await captureDiagram(page);
  if(JSON.stringify(geometryBefore)!==JSON.stringify(geometryAfter))failures.push({bad:['svg-fallback-geometry-regression']});
  pixelDifferenceRatio=await page.evaluate(async([before,after])=>{
    const load=async data=>createImageBitmap(await (await fetch('data:image/png;base64,'+data)).blob()),a=await load(before),b=await load(after);
    if(Math.abs(a.width-b.width)>2||Math.abs(a.height-b.height)>2)return 1;
    const canvas=document.createElement('canvas');canvas.width=a.width;canvas.height=a.height;const c=canvas.getContext('2d');c.drawImage(a,0,0);const left=c.getImageData(0,0,a.width,a.height).data;c.clearRect(0,0,a.width,a.height);c.drawImage(b,0,0,a.width,a.height);const right=c.getImageData(0,0,a.width,a.height).data;
    let changed=0;for(let i=0;i<left.length;i+=4)if(Math.max(...[0,1,2,3].map(j=>Math.abs(left[i+j]-right[i+j])))>16)changed++;a.close();b.close();return changed/(canvas.width*canvas.height);
- },[svgBefore.toString('base64'),svgAfter.toString('base64')]);
+ },[svgBefore,svgAfter]);
  if(pixelDifferenceRatio>.01)failures.push({bad:['svg-fallback-pixel-regression'],pixelDifferenceRatio});
  if(!webgl)failures.push({bad:['webgl-context-unavailable']});
 }catch(error){failures.push({fatal:error.message});}finally{await browser.close();await server.close();}

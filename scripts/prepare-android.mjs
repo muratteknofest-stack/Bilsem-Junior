@@ -20,6 +20,7 @@ export function prepareAndroid(root) {
     ['launcher.xml', 'res/drawable/zekapark_launcher.xml'],
     ['launcher-3d.png', 'res/drawable-nodpi/bilsem_launcher_3d.png'],
     ['launcher-foreground.xml', 'res/drawable/bilsem_launcher_foreground.xml'],
+    ['launcher-background.xml', 'res/drawable/bilsem_launcher_background.xml'],
     ['launcher-adaptive.xml', 'res/drawable-v26/zekapark_launcher.xml'],
     ['MainActivity.java', `java/${packagePath}/MainActivity.java`],
     ['PlayBillingPlugin.java', `java/${packagePath}/PlayBillingPlugin.java`],
