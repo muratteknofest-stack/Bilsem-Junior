@@ -36,8 +36,12 @@ otomatik olarak iptal edilir ve iş başarısız bildirilir.
    ayrılmış, PUBLIC bir Storage bucket oluştur: instagram-reels.
    Burada sadece herkese açık paylaşılacak özgün videolar barınmalı.
    Öğrenci verilerini veya gizli dosyaları bu bucket'a koyma.
-3. GitHub -> Bilsem-Junior -> Settings -> Secrets and variables -> Actions
-   -> Repository secrets bölümüne şu değerleri ekle:
+3. GitHub -> Bilsem-Junior -> Settings -> Environments altında
+   **production-reels** adlı bir environment oluştur; deployment branches
+   kuralını **main** ile sınırla. Günlük otomasyonun durmaması için
+   zorunlu manuel reviewer onayı ekleme.
+   Ardından Settings -> Secrets and variables -> Actions -> Repository secrets
+   bölümüne (veya production-reels Environment secrets alanına) şu değerleri ekle:
    - REELS_SUPABASE_URL: aktif Supabase proje URL'si
    - REELS_SUPABASE_SERVICE_ROLE_KEY: sadece Actions secret; tarayıcıya asla verme
    - INSTAGRAM_ACCOUNT_ID: profesyonel Instagram hesap ID'si
@@ -45,7 +49,7 @@ otomatik olarak iptal edilir ve iş başarısız bildirilir.
 4. Aynı sayfada Actions Variables bölümünde istersen:
    - IG_REELS_BUCKET = instagram-reels
    - META_GRAPH_VERSION = v25.0 (kullandığın Meta API sürümüne göre kontrol et)
-5. Actions -> "Bilsem Junior - daily Instagram Reels at 19:00 TR" ->
+5. Değişiklik main dalına alındıktan sonra Actions -> "Bilsem Junior - daily Instagram Reels at 19:00 TR" ->
    Run workflow. Çıkan artifact içindeki "reel.mp4" ve soru dosyasını incele.
    Bu manuel test Instagram'a göndermez.
 6. Hesap yayını, token geçerliliği, herkese açık video URL'si ve onaylanan
@@ -70,9 +74,10 @@ otomatik olarak iptal edilir ve iş başarısız bildirilir.
 
 ## Yerel test
 npm ci
-npx tsx scripts/reels/select-daily-question.ts
-python -m pip install 'Pillow>=11,<13'
-python scripts/reels/render_reel.py
+npx --no-install tsx scripts/reels/select-daily-question.ts
+python3 -m venv .reels-venv
+.reels-venv/bin/pip install 'Pillow==11.3.0'
+.reels-venv/bin/python scripts/reels/render_reel.py
 # Video dosyası: reels-out/reel.mp4
 
 ## Kaynaklar
