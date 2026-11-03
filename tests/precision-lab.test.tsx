@@ -15,6 +15,7 @@ import {LEARNING_QUESTION_FORMAT,PREVIOUS_EXAM_QUESTION_FORMAT} from '../src/fea
 import {createPrecisionLearningPool} from '../server/precision-learning-pool';
 import {generateQuestion} from '../src/features/questions/generators';
 import {evaluateResponse} from '../src/features/questions/answer-interactions';
+import {prepareLearningQuestions,learningView,answerLearningSession,finishLearningSession,type LearningSession} from '../server/learning-model';
 
 test('hand-calculated maze walk, reversed code with zero, and exposed cube faces have exact proofs',()=>{
   const maze={displayMode:'precision_lab',kind:'maze_path',grade:1,size:3,start:0,goal:8,passages:[[0,1],[1,2],[1,4],[4,3],[4,5],[5,8],[8,7],[7,6]]};
@@ -74,4 +75,16 @@ test('student rendering, choice/place grading and old-client gating use the same
 test('bounded fresh pools cover focused practice without touching assigned snapshots or repeating stimuli',()=>{
   for(const type of PRECISION_TYPES){const pool=createPrecisionLearningPool({grade:3,difficulty:3,category:'mixed',topic:type,count:15,seed:81719});assert.ok(pool.length>=15,type);assert.ok(pool.length<=16);assert.equal(new Set(pool.map(questionStimulusKey)).size,pool.length);assert.ok(pool.every(q=>q.type===type&&q.targetGrade===3&&q.difficulty===3));}
   assert.deepEqual(createPrecisionLearningPool({grade:2,difficulty:2,category:'mixed',topic:'number_pattern',count:5,seed:81719}),[]);
+});
+test('new question snapshots cross public delivery and server scoring without disclosing keys or changing a saved answer',()=>{
+  const questions=prepareLearningQuestions(PRECISION_TYPES.map(type=>generatePrecisionQuestion(type,81719,3,3)));
+  let session:LearningSession={id:crypto.randomUUID(),student_id:crypto.randomUUID(),mode:'practice',title:'Soru atölyesi',questions,answers:{},created_at:'2026-11-03T10:00:00Z',expires_at:'2026-11-03T11:00:00Z',finished_at:null,revision:0,rewarded_xp:0,result:null};
+  const before=learningView(session);assert.equal(before.questions.length,8);assert.doesNotMatch(JSON.stringify(before),/correctOptionId|distractorNotes|authoring|precision-lab-1-/);
+  assert.ok(before.questions.every(q=>Object.keys(q).every(k=>!['seed','explanation','qualityReport'].includes(k))));
+  const now=Date.parse(session.created_at)+1000;
+  for(const [i,q] of questions.entries()){
+    session=answerLearningSession(session,i,{mode:i%2?'place':'choice',optionId:q.correctOptionId},now+i*1000);
+    const saved=session;session=answerLearningSession(session,i,{mode:'choice',optionId:q.options.find(o=>o.id!==q.correctOptionId)!.id},now+i*1000+1);assert.deepEqual(session,saved);
+  }
+  session=finishLearningSession(session,now+9000);assert.equal(session.result?.correctAnswers,8);assert.equal(session.result?.scorePercentage,100);assert.equal(Object.keys(learningView(session).solutions||{}).length,8);
 });
