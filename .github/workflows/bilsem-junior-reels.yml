@@ -1,0 +1,73 @@
+name: Bilsem Junior - daily Instagram Reels at 19:00 TR
+
+on:
+  workflow_dispatch:
+    inputs:
+      reel_date:
+        description: "Optional YYYY-MM-DD date in Türkiye, preview only"
+        required: false
+        type: string
+  schedule:
+    # Prepare in advance; publication is gated until 19:00 Europe/Istanbul.
+    # GitHub may delay scheduled workflows, so exact-second delivery is not guaranteed.
+    - cron: "40 18 * * *"
+      timezone: "Europe/Istanbul"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bilsem-junior-reels
+  cancel-in-progress: false
+
+jobs:
+  daily-reel:
+    # Remains dormant until owner connects Instagram and opts in.
+    if: github.event_name == 'workflow_dispatch' || vars.REELS_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout Bilsem Junior
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install video tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
+          python -m pip install 'Pillow>=11,<13'
+          npm ci --ignore-scripts
+      - name: Select and independently validate a daily Bilsem question
+        env:
+          REEL_DATE: ${{ inputs.reel_date }}
+        run: npx tsx scripts/reels/select-daily-question.ts
+      - name: Render 1080x1920 Reels MP4
+        run: python scripts/reels/render_reel.py
+      - name: Keep reviewable media for 7 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: bilsem-junior-reel
+          path: |
+            reels-out/reel.mp4
+            reels-out/question.json
+          retention-days: 7
+      - name: Publish daily Reel through official Meta Instagram API
+        # Workflow dispatch is always preview-only, never a live post.
+        if: github.event_name == 'schedule' && vars.REELS_ENABLED == 'true'
+        env:
+          REELS_ENABLED: "true"
+          REELS_SCHEDULED: "true"
+          SUPABASE_URL: ${{ secrets.REELS_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.REELS_SUPABASE_SERVICE_ROLE_KEY }}
+          INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          IG_REELS_BUCKET: ${{ vars.IG_REELS_BUCKET }}
+          META_GRAPH_VERSION: ${{ vars.META_GRAPH_VERSION }}
+        run: python scripts/reels/publish_reel.py
