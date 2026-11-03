@@ -5,8 +5,8 @@ dependencies {
 
 android {
     defaultConfig {
-        versionCode 36
-        versionName "1.0.35"
+        versionCode 37
+        versionName "1.0.36"
     }
 }
 

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, BookOpen, Map, Shapes } from 'lucide-react';
 import type { UserProfile } from '../../types';
 import { campaignLength, campaignsForGrade } from '../../features/student/story-catalog';
-import { campaignCompleted, nextCampaignStage, STORY_QUESTION_COUNT, type StoryProgress, type StoryStage } from '../../features/student/story-adventure';
+import { campaignCompleted, nextCampaignStage, type StoryProgress, type StoryStage } from '../../features/student/story-adventure';
 import { useAndroidBack } from '../../hooks/useAndroidBack';
 import { StoryAdventure } from '../student/StoryAdventure';
 import { StudentStoryScene } from '../student/StudentStoryScene';
@@ -44,13 +44,12 @@ export function AndroidStudentHome({ user, progress, saveError, onNavigate, onSt
   const completed = story ? campaignCompleted(progress, story.id) : 0;
   const chapter = story?.chapters[next?.chapter ?? story.chapters.length - 1];
   return <main className="bj-native-hub bj-android-home" aria-label="Öğrenci ana sayfası">
-    <header className="bj-home-greeting"><div><p>{user.grade || 1}. sınıf · {user.xp || 0} XP</p><h1>Merhaba, {user.name}!</h1></div><img src="/brand/junior-fox.svg" width="48" height="56" alt="" /></header>
+    <header className="bj-home-greeting"><div><p>{user.grade || 1}. sınıf</p><h1>Merhaba, {user.name}!</h1></div></header>
     {story && chapter && <section className="bj-home-adventure" aria-label="Sıradaki maceran">
       <div className="bj-home-scene" aria-hidden="true"><StudentStoryScene scene={chapter.scene} /></div>
-      <div className="bj-home-adventure-copy"><p>{next ? 'SIRADAKİ MACERAN' : 'HİKÂYE TAMAMLANDI'}</p><h2>{next ? chapter.title : 'Harika bir yolculuktu!'}</h2><p className="bj-home-story-name">{story.title}</p>
-        <div className="bj-home-progress"><progress aria-label="Hikâye ilerlemesi" value={completed} max={campaignLength(story)} /><span>{completed}/{campaignLength(story)}</span></div>
+      <div className="bj-home-adventure-copy"><h2>{next ? chapter.title : 'Harika bir yolculuktu!'}</h2>
+        <div className="bj-home-progress"><progress aria-label="Hikâye ilerlemesi" aria-valuetext={`${story.title}: ${completed}/${campaignLength(story)} görev`} value={completed} max={campaignLength(story)} /></div>
         <button type="button" className="bj-home-continue" onClick={() => next ? onStartStory(next) : openMap()}>{next ? 'Keşfe devam et' : 'Hikâyeleri keşfet'}<ArrowRight size={19} aria-hidden="true" /></button>
-        {next && <small>{STORY_QUESTION_COUNT} soru önerilir · Başlarken seçebilirsin</small>}
       </div>
     </section>}
     {saveError && <p role="alert" className="bj-home-error">{saveError}</p>}

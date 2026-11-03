@@ -1,3 +1,10 @@
+## 1.0.36 — Sade Android açılış ve giriş ekranı
+
+- Android sürümü 37 / 1.0.36. Açılış metinleri kısaltıldı; öğrenci ve veli girişleri büyük düğmelerde gösterilir. Giriş ekranında yinelenen Giriş Yap sekmesi kaldırıldı; Yeni Kayıt formun altında kalır.
+- Öğrenci/veli seçimi, kod/e-posta, şifre ve tek giriş düğmesi öne çıkar. Şifremi Unuttum ve Beni hatırla aynı satırda kalır; hatırlama varsayılan olarak kapalıdır ve seçildiğinde ortak cihaz uyarısı görünür. Doğrulama, hata ve onay e-postası akışları korunur.
+- Öğrenci ana ekranındaki yinelenen XP, hikâye adı ve soru sayısı açıklamaları azaltıldı; ilerleme çubuğunun erişilebilir açıklaması görev sayısını korur. Web arayüzüne yeni mobil yönlendirme eklenmedi.
+- `python3 scripts/package-android-candidate.py test-artifacts/android` paket sürümünü, web varlıklarını ve güvenlik bayraklarını doğrular. Test APK'sı üretim imzası, gerçek cihaz veya ticari yayın kabulü değildir.
+
 ## 1.0.35 — Kısa Android ana ekranı
 
 - Android sürümü 36 / 1.0.35; mevcut uygulama kimliği korunur. Tek devam kartı, Test çöz ve Konu öğren kısa yolları ana ekranda görünür. Tam parkur, hikâyeler ve koleksiyon Macera haritası ile açılır; Android geri tuşu kısa ana ekrana döner.

@@ -58,6 +58,18 @@ try {
     if (width === 390) await page.screenshot({ path: resolve(output, 'home.png') });
     await page.getByRole('button', { name: /Öğrenci girişi/ }).click();
     await page.getByLabel('Şifre', { exact: true }).waitFor(); await fits('student-login');
+    assert.equal(await page.getByRole('button', { name: 'Giriş yap', exact: true }).count(), 1);
+    assert.equal(await page.getByRole('button', { name: 'Giriş Yap', exact: true }).count(), 0, 'The login tab must not duplicate the submit button');
+    const remember = page.getByRole('checkbox', { name: 'Beni hatırla', exact: true });
+    assert.equal(await remember.isChecked(), false);
+    await remember.check();
+    await page.getByText('Paylaşılan cihazlarda işaretlemeyin.', { exact: true }).waitFor();
+    await fits('student-login-remember');
+    await remember.uncheck();
+    await page.getByRole('button', { name: 'Şifremi Unuttum?', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Şifre Sıfırlama', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Kapat', exact: true }).click();
+    await page.getByLabel('Şifre', { exact: true }).waitFor();
     await page.getByRole('button', { name: 'Veli', exact: true }).click(); await fits('parent-login');
     if (width === 390) await page.screenshot({ path: resolve(output, 'login.png') });
     await page.locator('#login-identifier').focus();

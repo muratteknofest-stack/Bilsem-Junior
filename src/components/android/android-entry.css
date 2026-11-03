@@ -4,7 +4,7 @@
 .bj-welcome>header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:none;max-width:480px;width:100%;margin:auto}
 .bj-welcome>header>span{border:1px solid #d8cdf0;border-radius:20px;padding:6px 10px;color:#605184;font-size:12px;font-weight:700;white-space:nowrap}
 .bj-welcome>main{flex:1;min-height:0;width:100%;max-width:400px;margin:auto;display:flex;flex-direction:column;justify-content:center;gap:clamp(6px,1.6vh,16px)}
-.bj-welcome-art{position:relative;display:flex;justify-content:center;align-items:center;flex:0 1 180px;min-height:70px;max-height:25dvh}
+.bj-welcome-art{position:relative;display:flex;justify-content:center;align-items:center;flex:0 1 130px;min-height:70px;max-height:22dvh}
 .bj-welcome-art:before{content:"";position:absolute;width:160px;max-width:65%;height:70%;background:#dacbff;border-radius:50%;filter:blur(20px)}
 .bj-welcome-art img{height:100%;max-height:190px;width:auto;position:relative;filter:drop-shadow(0 10px 8px #71609422)}
 .bj-welcome-art>span,.bj-welcome-art>i{position:absolute;left:20%;top:20%;color:#e4aa2c;font-size:27px;font-style:normal}.bj-welcome-art>i{left:auto;right:20%;top:55%;color:#9971d8;font-size:18px}
@@ -40,3 +40,17 @@
 .bj-welcome>footer button{min-width:44px}.zp-auth[data-native-entry=true] .zp-auth-dialog{max-height:calc(var(--bj-entry-height,100dvh) - 24px);overflow-y:auto;padding:20px}.zp-auth[data-native-entry=true] .zp-auth-modal{height:var(--bj-entry-height,100dvh);bottom:auto}
 
 .zp-auth[data-native-entry=true][data-keyboard=true] .bj-registration-password-note{display:none}
+
+/* Keep one login action; account creation remains a quiet link below the form. */
+.zp-auth[data-native-entry=true] .zp-auth-primary-content{display:flex;flex-direction:column}
+.zp-auth[data-native-entry=true] .zp-auth-mode{display:flex;justify-content:center;align-items:center;gap:8px;margin:10px 0 0;padding:0;background:transparent;border:0;box-shadow:none}
+.zp-auth[data-native-entry=true] .zp-auth-mode>span{font-size:12px;color:#647187}
+.zp-auth[data-native-entry=true] .zp-auth-mode-button{flex:none;width:auto;padding:6px 10px;min-height:44px;background:transparent;box-shadow:none;color:#7450ad}
+.zp-auth[data-native-entry=true] .zp-auth-role-button{min-height:48px;justify-content:center}
+.zp-auth[data-native-entry=true] .bj-login-password-label{min-height:0;margin-bottom:5px}
+.zp-auth[data-native-entry=true] form button[type=submit]{min-height:50px;background:#7852bd;color:#fff}
+.zp-auth[data-native-entry=true] .bj-login-remember{gap:8px}
+.zp-auth[data-native-entry=true] .bj-login-remember>.zp-auth-help{flex:none;white-space:nowrap}
+.zp-auth[data-native-entry=true] .bj-login-remember-note{font-size:11px;line-height:1.4;color:#647187}
+.dark .zp-auth[data-native-entry=true] .zp-auth-mode>span,.dark .zp-auth[data-native-entry=true] .bj-login-remember-note{color:#b8c9da}
+.dark .zp-auth[data-native-entry=true] .zp-auth-mode-button{color:#d6baff}
