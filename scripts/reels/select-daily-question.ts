@@ -43,7 +43,7 @@ for (let attempt = 0; attempt < 16 * mechanics.length; attempt++) {
     if (audit.errors.length || audit.reviewRequired.length || !audit.solverVerified ||
         !solved.canSolve || !solved.isMatch || solved.ambiguityDetected ||
         solved.expectedAnswerId !== q.correctOptionId || q.options.length !== 4 ||
-        q.visualConfig?.displayMode !== 'perceptual_board') continue;
+        ((q.visualConfig || {}) as Record<string, unknown>).displayMode !== 'perceptual_board') continue;
     selected = {
       day, grade, difficulty, mechanic,
       question: {
