@@ -17,10 +17,10 @@ export function CubeSculptureSvg({size, heights}: {size: number; heights: number
    <marker id={`${id}-arrow`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#133d6b"/></marker>
   </defs>
   {geometry.floor.map((p,i)=><polygon key={`floor-${i}`} points={points(p)} fill="#eef5fb" stroke="#9fb7cf" strokeWidth=".65"/>)}
-  {geometry.cubes.map(c=><g key={`${c.x}-${c.y}-${c.z}`} data-unit-cube="true" stroke="#174571" strokeWidth=".9" strokeLinejoin="round">
+  {geometry.cubes.map(c=><g key={`${c.x}-${c.y}-${c.z}`} data-unit-cube="true" stroke="#174571" strokeWidth="1.05" strokeLinejoin="round">
    {c.left&&<polygon data-cube-face="left" points={points(c.left)} fill={`url(#${id}-left)`}/>}
    {c.right&&<polygon data-cube-face="right" points={points(c.right)} fill={`url(#${id}-right)`}/>}
-   {c.top&&<polygon data-cube-face="top" points={points(c.top)} fill={`url(#${id}-top)`} stroke="#326d98"/>}
+   {c.top&&<><polygon data-cube-face="top" points={points(c.top)} fill={`url(#${id}-top)`} stroke="#326d98"/><polyline points={points(c.top.slice(0,3))} fill="none" stroke="#effcff" strokeWidth="1.5" strokeLinejoin="round" opacity=".9"/></>}
   </g>)}
   {(['front','right'] as const).map(side=>{const [from,to]=geometry[side];return <g key={side} data-cube-direction={side}><line x1={from[0]} y1={from[1]} x2={to[0]} y2={to[1]} stroke="#133d6b" strokeWidth="1.6" markerEnd={`url(#${id}-arrow)`}/><text x={from[0]} y={from[1]+14} textAnchor="middle" fontSize="10" fontWeight="800" fill="#133d6b">{side==='front'?'ÖN':'SAĞ'}</text></g>;})}
  </svg>;

@@ -1,3 +1,4 @@
+import {supportsVisualLabFormat,needsVisualLabFormat} from '../../src/features/student/learning-question-format';
 import{supportsExamFormat,needsExamFormat,supportsReferenceFormat,needsReferenceFormat}from'../../src/features/student/learning-question-format';
 import {supportsCubeFormat,needsCubeFormat} from '../../src/features/student/learning-question-format';
 import {recommendDifficulty,adaptDifficultyPlan} from '../../src/features/questions/adaptive-difficulty';
@@ -134,13 +135,14 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const perceptual = supportsPerceptualFormat(req.query.questionFormat);
     const cube=supportsCubeFormat(req.query.questionFormat);
     const reference=supportsReferenceFormat(req.query.questionFormat);
+    const visualLab=supportsVisualLabFormat(req.query.questionFormat);
     const examFormat=supportsExamFormat(req.query.questionFormat);
     const challengeMode = locale !== 'en' && topic === 'mixed' && difficulty === 'mixed';
     const recommendation=mode==='adaptive'?recommendDifficulty(grade,recent.answers):{adjustment:0 as const,sampleSize:0,accuracy:null,reason:'steady' as const};
     const challengeFloor = Math.max(1,gradeChallengeFloor(grade)+Math.min(0,recommendation.adjustment)) as DifficultyLevel;
     // Fetch only candidates that this client can use; all delivered questions still pass proofs.
     const bank = locale === 'en' ? {questions:englishBankForGrade(grade),bankVersion:ENGLISH_BANK_VERSION} : await loadPublishedLearningBank({ grade, difficulty, category, topic }, {
-      ...(modern && topic === 'mixed' ? {types:curriculumV2?ALL_TOPIC_TYPES.filter(type=>topicAllowedForGrade(type,grade)):professionalGradeTypes(grade),engines:CURRENT_REASONING_ENGINES.filter(engine=>(examFormat||engine!=='exam-lab-1')&&(curriculumV2||engine!=='curriculum-2')&&(perceptual||engine!=='perceptual-1')&&(cube||engine!=='cube-lab-1')&&(reference||!engine.startsWith('reference-lab-')))} : {}),
+      ...(modern && topic === 'mixed' ? {types:curriculumV2?ALL_TOPIC_TYPES.filter(type=>topicAllowedForGrade(type,grade)):professionalGradeTypes(grade),engines:CURRENT_REASONING_ENGINES.filter(engine=>(visualLab||engine!=='visual-lab-1')&&(examFormat||engine!=='exam-lab-1')&&(curriculumV2||engine!=='curriculum-2')&&(perceptual||engine!=='perceptual-1')&&(cube||engine!=='cube-lab-1')&&(reference||!engine.startsWith('reference-lab-')))} : {}),
       ...(challengeMode ? {minDifficulty:challengeFloor} : {}),
     });
     timing('bank');
@@ -159,13 +161,14 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     // Respect deliberate easy-level choices and specific-topic filters. For the
     // Turkish mixed-level pool, remove below-grade filler before selection.
     const gradeAppropriate = (q: BaseQuestion) => !challengeMode || q.difficulty >= challengeFloor;
-    const formatReady=(q:BaseQuestion)=>needsExamFormat(q)?examFormat:needsReferenceFormat(q)?reference:needsCubeFormat(q)?cube:needsPerceptualFormat(q)?perceptual:needsCurriculumV2Format(q)?curriculumV2:needsCurrentQuestionFormat(q)?supportsLabQuestionFormat(req.query.questionFormat):needsProfessionalV2Format(q)?supportsProfessionalV2Format(req.query.questionFormat):modern||!needsReasoningFormat(q);
-    const reasoningReady=(q:BaseQuestion)=>locale==='en'||topic!=='mixed'||currentReasoningCandidate(q,grade,modern,curriculumV2,perceptual,cube,reference,examFormat);
+    const formatReady=(q:BaseQuestion)=>needsVisualLabFormat(q)?visualLab:needsExamFormat(q)?examFormat:needsReferenceFormat(q)?reference:needsCubeFormat(q)?cube:needsPerceptualFormat(q)?perceptual:needsCurriculumV2Format(q)?curriculumV2:needsCurrentQuestionFormat(q)?supportsLabQuestionFormat(req.query.questionFormat):needsProfessionalV2Format(q)?supportsProfessionalV2Format(req.query.questionFormat):modern||!needsReasoningFormat(q);
+    const reasoningReady=(q:BaseQuestion)=>locale==='en'||topic!=='mixed'||currentReasoningCandidate(q,grade,modern,curriculumV2,perceptual,cube,reference,examFormat,visualLab);
     let candidates = topicCandidates.filter(q => fitsLearningSelection(q, selection) && gradeAppropriate(q) && formatReady(q)&&reasoningReady(q) && (locale !== 'en' || englishReady(q)));
     // Prefer the refreshed bank for focused practice when it can fill the whole
     // request. Keep the complete legacy pool for installed clients and long tests.
     if (curriculumV2 && topic !== 'mixed') {
-      const cubes=candidates.filter(q=>examFormat&&q.authoring?.engine==='exam-lab-1'||reference&&['reference-lab-1','reference-lab-2'].includes(q.authoring?.engine||'')||cube&&q.authoring?.engine==='cube-lab-1'||perceptual&&q.authoring?.engine==='perceptual-1');
+      const detailed=candidates.filter(q=>visualLab&&q.authoring?.engine==='visual-lab-1');
+      const cubes=detailed.length>=count?detailed:candidates.filter(q=>examFormat&&q.authoring?.engine==='exam-lab-1'||reference&&['reference-lab-1','reference-lab-2'].includes(q.authoring?.engine||'')||cube&&q.authoring?.engine==='cube-lab-1'||perceptual&&q.authoring?.engine==='perceptual-1');
       const visual = cubes.length>=count?cubes:perceptual ? candidates.filter(q=>q.authoring?.engine==='perceptual-1') : [];
       const refreshed = visual.length>=count?visual:candidates.filter(q=>q.authoring?.engine==='curriculum-2');
       if (refreshed.length >= count) candidates = refreshed;
@@ -198,7 +201,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
         if (locale === 'en') throw new LearningError('English practice is temporarily unavailable. Please try again.', 503);
         const nextDifficulty = plannedDifficulty ?? (difficulty === 'mixed' ? pickGradeChallenge(grade) : difficulty);
         const seed=randomInt(1,2147483647);
-        return generateVariedLearningQuestion({grade,category:nextCategory,difficulty:nextDifficulty,seed,typeCounts,reasoningCounts,exposure,acceptCandidate,legacy:!modern,lab:supportsLabQuestionFormat(req.query.questionFormat),curriculumV2,perceptual,cube,reference,exam:examFormat});
+        return generateVariedLearningQuestion({grade,category:nextCategory,difficulty:nextDifficulty,seed,typeCounts,reasoningCounts,exposure,acceptCandidate,legacy:!modern,lab:supportsLabQuestionFormat(req.query.questionFormat),curriculumV2,perceptual,cube,reference,exam:examFormat,visualLab});
       },
     });
     timing('assembly');

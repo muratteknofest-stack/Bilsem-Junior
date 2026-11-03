@@ -1,3 +1,4 @@
+import {generateVisualQuestion,type VisualMechanic} from '../../src/features/questions/visual-reasoning-lab';
 import React, { useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../../src/index.css';
@@ -21,11 +22,12 @@ function QA() {
     remaining: number; busy: boolean; expired: boolean; feedback: AnswerFeedback | null;
   }>({ index: 0, total: 20, mode: 'practice', progress: { answered: 0, streak: 0, xp: 0 }, remaining: 240, busy: false, expired: false, feedback: null });
   const show = (next: any) => { setScenario(next); setResponse(null); };
+  controls.__showVisual = (visualMechanic:VisualMechanic,grade=2,difficulty=2,seed=7919)=>show({visualMechanic,grade,difficulty,seed});
   controls.__show = (type: string, grade = 4) => show({ type, grade });
   controls.__showComplete = (type: string, grade = 4, difficulty = 6) => show({ type, grade, difficulty, profile: 'complete' });
   controls.__showReasoning = (type: string, seed: number, grade = 4, difficulty = 6) => show({ type, grade, difficulty, seed, profile: 'professional' });
   controls.__preview = (next: Partial<typeof preview>) => setPreview(value => ({ ...value, ...next }));
-  const q = useMemo(() => params.has('lab')
+  const q = useMemo(() => scenario?.visualMechanic ? generateVisualQuestion(scenario.visualMechanic,scenario.seed,scenario.difficulty,scenario.grade) : params.has('lab')
     ? generateLabQuestion(params.get('lab') as LabMechanic, Number(params.get('seed') || 321), Number(params.get('difficulty') || 2) as any, Number(params.get('grade') || 1) as any)
     : generateQuestion({ profile: scenario?.profile, type: scenario?.type || params.get('type') || 'mirror_reflection', targetGrade: Number(scenario?.grade || params.get('grade') || 2) as any, difficulty: scenario?.difficulty || 6, seed: scenario?.seed || 321 }), [scenario]);
   return <FocusedQuestionScreen {...preview} question={q} sessionKey={q.id} submitted={false} response={response}

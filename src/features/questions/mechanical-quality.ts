@@ -1,3 +1,4 @@
+import {validVisualValue,visualValueKey} from './visual-reasoning-lab';
 import{validReferenceValue,visibleReferenceKey}from'./reference-lab';
 import {validExamTile} from './exam-lab';
 import {validCubeValue} from './cube-lab';
@@ -16,6 +17,7 @@ export function visibleOptionKey(value:unknown):string {
   const v=value as Record<string,unknown>|null;
   if(!v||typeof v!=='object')return fingerprint(null);
   if(validReferenceValue(value)&&'reference'in value)return visibleReferenceKey(value);
+  if(v.lab&&validVisualValue(value))return visualValueKey(value);
   if(v.curriculum==='piece'&&Array.isArray(v.points))return fingerprint({curriculum:'piece',points:v.points.map(p=>JSON.stringify(p)).sort()});
   if(v.figure!==undefined){const f=v.figure as any;return fingerprint({figure:{shape:f.shape,half:f.half,lines:f.lines,outerFill:f.outerFill,innerFill:f.innerFill,...(f.outerFill!=='empty'||f.innerFill!=='empty'?{inner:f.inner}:{})}});}
   if(v.symbol!==undefined)return fingerprint({symbol:v.symbol});
@@ -29,6 +31,7 @@ export interface MechanicalChoiceReport {id:string;visibleKey:string;ruleMatch:b
 export interface MechanicalReport {passed:boolean;uniqueVisibleOptions:number;matchingOptions:number;errors:string[];proofSteps:string[];choices:MechanicalChoiceReport[];}
 export function analyzeQuestionMechanics(q:BaseQuestion):MechanicalReport {
   const errors:string[]=[], mode=(q.visualConfig as Record<string,unknown>)?.displayMode;
+  if(mode==='visual_lab'&&q.options.some(o=>!validVisualValue(o.visualData)))errors.push('Görsel muhakeme seçeneği geçersiz.');
   if(mode==='exam_lab'&&q.options.some(o=>!validExamTile(o.visualData)))errors.push('Deneme seçeneği geçersiz veya çizilmeyen alan içeriyor.');
   const keys=q.options.map(o=>visibleOptionKey(o.visualData));
   if(new Set(keys).size!==4)errors.push('VISIBLE_DUPLICATE: Öğrencinin gördüğü dört şık birbirinden farklı olmalı.');
