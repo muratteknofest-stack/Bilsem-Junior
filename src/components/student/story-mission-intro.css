@@ -1,5 +1,5 @@
 /* Scoped welcome art. No canvas/WebGL or extra network requests are needed. */
-.bj-mission{--mission-ink:#30234e;--mission-muted:#746785;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr);position:relative;isolation:isolate;gap:0;background:#f7f2ff;color:var(--mission-ink);font-family:'Plus Jakarta Sans',system-ui,sans-serif;overflow:hidden}
+.bj-mission{--mission-ink:#30234e;--mission-muted:#746785;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr);position:relative;isolation:isolate;gap:0;background:#f7f2ff;color:var(--mission-ink);font-family:var(--bj-font-body);overflow:hidden}
 .bj-mission *{box-sizing:border-box}
 .bj-mission .bj-mission-scene{height:clamp(190px,30dvh,300px);position:relative;isolation:isolate;overflow:hidden;background:radial-gradient(ellipse at 50% 35%,#ffffffad,transparent 62%),linear-gradient(160deg,#dfe6ff,#e4d7ff 54%,#f6d5ee);border-bottom:1px solid #e9ddfa}
 .bj-mission-scene:before{content:'';position:absolute;width:235px;height:235px;left:50%;top:44%;transform:translate(-50%,-50%);border-radius:50%;border:1px solid #ffffff9c;box-shadow:0 0 0 24px #ffffff25,0 0 0 48px #ffffff12}
@@ -32,7 +32,7 @@
 .bj-mission-options{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:10px;border:0;padding:0;margin:0 0 15px;min-width:0}
 .bj-mission-options legend{font-size:11px;font-weight:800;margin-bottom:7px;color:#61457d}
 .bj-mission-options label{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:10px;font-weight:750;color:#77628d}
-.bj-mission-options select{width:100%;min-width:0;min-height:44px;padding:8px 25px 8px 10px;border:1px solid #d9cbed;border-radius:12px;background:#faf7ff;color:#4c356a;font:700 11px system-ui,sans-serif;box-shadow:0 3px 0 #e7ddf3;cursor:pointer}
+.bj-mission-options select{width:100%;min-width:0;min-height:44px;padding:8px 25px 8px 10px;border:1px solid #d9cbed;border-radius:12px;background:#faf7ff;color:#4c356a;font:700 11px var(--bj-font-body);box-shadow:0 3px 0 #e7ddf3;cursor:pointer}
 .bj-mission-options select:focus-visible{outline:3px solid #ad82eb;outline-offset:3px}
 .bj-mission-options:disabled select{opacity:.65;cursor:wait}
 .bj-mission:has(.bj-mission-options) .bj-mission-scene{height:clamp(155px,23dvh,230px)}

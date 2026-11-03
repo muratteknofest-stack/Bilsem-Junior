@@ -7,7 +7,7 @@
   box-sizing: border-box; display: flex; flex-direction: column; gap: 10px;
   padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   overflow: auto; overscroll-behavior: none;
-  color: var(--zp-ink); font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  color: var(--zp-ink); font-family: var(--bj-font-body);
   background-color: #f7f5ff;
   background-image: radial-gradient(ellipse at 0 0, #e6dcff 0, transparent 48%), radial-gradient(ellipse at 100% 100%, #daf6ee 0, transparent 44%), radial-gradient(#8a6ccb1c .8px, transparent .8px);
   background-size: auto, auto, 20px 20px;

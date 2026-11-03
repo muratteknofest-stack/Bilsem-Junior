@@ -1,0 +1,29 @@
+/* Rounded headings, calm reading text. Keep numeric puzzles and access codes
+   on their own existing fonts; never apply tracking to individual symbols. */
+html, body { font-family: var(--bj-font-body); }
+button, input, select, textarea { font-family: inherit; }
+:where(h1, h2, h3, h4) {
+  font-family: var(--bj-font-display);
+  font-synthesis: style;
+  font-weight: 700;
+}
+.bj-welcome-hero h1,
+.bj-native-hub h1, .bj-native-hub h2,
+.bj-journey h1, .bj-journey h2,
+.bj-lessons h1, .bj-lessons h2, .bj-lessons h3 {
+  font-family: var(--bj-font-display);
+  font-weight: 700;
+  letter-spacing: -.025em;
+}
+.bj-welcome-actions > button,
+.bj-native-bottom button,
+.zp-game-launch,
+.bj-mission-primary {
+  font-family: var(--bj-font-body);
+  font-weight: 850;
+  letter-spacing: .005em;
+}
+.zp-focus-prompt {
+  font-family: var(--bj-font-body);
+  letter-spacing: 0;
+}

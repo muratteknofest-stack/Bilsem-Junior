@@ -15,12 +15,15 @@ export function publicPolicy(
   const source = PLATFORM_INFO.find((p) => p.slug === slug);
   if (!source) return undefined;
   const info: PlatformInfo = structuredClone(source),
-    b = settings.business;
-  const hasIdentity = !!(b.legalName && b.address && b.contactEmail && b.contactPhone && evidenceComplete(settings.commercial.operatorIdentity));
-  const hasContact = !!(b.contactEmail && (b.brandName || b.legalName));
-  const hasLegalDetails = registrationBlockers(settings).length === 0;
-  info.contactEmail = b.contactEmail || SUPPORT_EMAIL;
-  const identity = {
+    b = settings.business, publisher = settings.publisher;
+  const hasIdentity = !publisher && !!(b.legalName && b.address && b.contactEmail && b.contactPhone && evidenceComplete(settings.commercial.operatorIdentity));
+  const hasContact = !!publisher || !!(b.contactEmail && (b.brandName || b.legalName));
+  const hasLegalDetails = hasIdentity && registrationBlockers(settings).length === 0;
+  info.contactEmail = publisher?.email || b.contactEmail || SUPPORT_EMAIL;
+  const identity = publisher ? {
+    title: 'Yapımcı ve iletişim',
+    paragraphs: [`Yapımcı / marka: ${publisher.name}`, `Konum: ${publisher.location}`, `İletişim ve veri talepleri: ${publisher.email}`],
+  } : {
     title: hasIdentity ? "Yasal satıcı ve veri sorumlusu" : "Marka ve iletişim",
     paragraphs: [
       b.brandName ? `Marka: ${b.brandName}` : "", b.legalName, b.address,

@@ -1,3 +1,4 @@
+@import '../public/fonts/junior-type.css';
 @import './features/questions/renderers/visual-reasoning.css';
 @import './features/questions/renderers/reference-lab.css';
 @import './features/questions/renderers/exam-lab.css';
@@ -13,9 +14,10 @@
 @import "./features/questions/renderers/question-studio.css";
 @import "./features/questions/renderers/question-art.css";
 @import "./features/questions/renderers/perceptual-board.css";
+@import "./typography.css";
 
 @theme {
-  --font-sans: "Plus Jakarta Sans", "Inter", sans-serif;
+  --font-sans: var(--bj-font-body);
   
   /* Primary - Indigo (Student Theme) */
   --color-primary-50: #eef2ff;

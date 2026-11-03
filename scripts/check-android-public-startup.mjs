@@ -49,6 +49,13 @@ try {
     try { await page.locator('.bj-welcome').waitFor({ timeout: 12000 }); }
     catch (error) { await page.screenshot({ path: resolve(output, `wrong-opening-${width}.png`), fullPage: true }); throw error; }
     await page.evaluate(async () => { await document.fonts.ready; await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); });
+    const typography = await page.evaluate(async () => {
+      await Promise.all([document.fonts.load('700 24px Comfortaa', 'ÇĞİÖŞÜçğıöşü'), document.fonts.load('800 16px Nunito', 'Öğrenci girişi')]);
+      return { title: getComputedStyle(document.querySelector('.bj-welcome-hero h1')).fontFamily, button: getComputedStyle(document.querySelector('.bj-welcome-student')).fontFamily, loaded: document.fonts.check('700 24px Comfortaa') && document.fonts.check('800 16px Nunito') };
+    });
+    assert.equal(typography.loaded, true, 'The packaged variable fonts must load without an external font service');
+    assert.match(typography.title, /^Comfortaa/);
+    assert.match(typography.button, /^Nunito/);
     await page.locator('.bj-welcome img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
     assert.equal(await page.locator('.bj-welcome-scene img').evaluate(image => image.naturalWidth), 640, 'The packaged 3D mascot must load');
     assert.equal(await page.locator('.bj-welcome-scene img').evaluate(image => getComputedStyle(image).animationName), 'none', 'Reduced motion must disable the floating mascot');

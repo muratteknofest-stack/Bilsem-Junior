@@ -1,5 +1,5 @@
 /* The Turkish learner's game world. No question or scoring rules live here. */
-.bilsem-junior-skin .bj-student-game,.zp-student-pro.bj-student-game{--study-ink:#263453;--study-muted:#65718b;--study-line:#dce6f0;--study-paper:#fff;--study-accent:#7445d6;background:#f5faff;background-image:radial-gradient(#bcd8ed55 1px,transparent 1px);background-size:22px 22px;font-family:'Trebuchet MS',system-ui,sans-serif}
+.bilsem-junior-skin .bj-student-game,.zp-student-pro.bj-student-game{--study-ink:#263453;--study-muted:#65718b;--study-line:#dce6f0;--study-paper:#fff;--study-accent:#7445d6;background:#f5faff;background-image:radial-gradient(#bcd8ed55 1px,transparent 1px);background-size:22px 22px;font-family:var(--bj-font-body)}
 .bj-student-game h1,.bj-student-game h2,.bj-student-game h3{font-family:inherit!important}
 .bj-student-game .zp-student-shell{max-width:1240px;padding-top:20px}
 .bj-student-game .zp-student-topline{color:#65718b;font-weight:800}.bj-student-game .zp-brand-dot{background:#10bc87;border-color:#00a46c;box-shadow:0 3px 0 #078a61}

@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { LEGAL_DOCUMENTS, policyActionLinks } from '../src/content/legal-documents';
 import { FOOTER_GROUPS, PLATFORM_INFO } from '../src/content/platform-info';
 import { LegalLinks } from '../src/components/LegalLinks';
-import { defaultPlatformSettings } from '../src/lib/platform-settings';
+import { defaultPlatformSettings, platformSettingsSchema, registrationBlockers, registrationOpen, releaseBlockers } from '../src/lib/platform-settings';
 import { publicPolicy, policyHtml } from '../server/platform-policy';
 import { blogPlugin } from '../scripts/blog-vite-plugin';
 import { requestSecurity } from '../server/request-security';
@@ -90,4 +90,47 @@ test('rights and response deadlines remain public when operator legal details ar
   const deletion = policyHtml(publicPolicy('hesap-ve-veri-silme', settings)!);
   assert.match(deletion, /ilk|ulaşmasından itibaren/);
   assert.match(deletion, /en geç 30 gün/);
+});
+
+const publisher = { name: 'Quantum Tech App', email: 'zeka.kupu.test@gmail.com', location: 'Trabzon' };
+
+test('the public producer profile is shared by every legal document without presenting a city as a verified postal identity', () => {
+  const settings = defaultPlatformSettings();
+  settings.publisher = publisher;
+  settings.business = { ...settings.business, brandName: 'Old brand', legalName: 'Private operator fixture', address: 'Private street fixture', contactPhone: '+905550001122', contactEmail: 'private@example.invalid' };
+  settings.commercial.operatorIdentity = { confirmed: true, reference: 'Existing private acceptance fixture' };
+  for (const doc of LEGAL_DOCUMENTS) {
+    const info = publicPolicy(doc.slug, settings)!;
+    assert.deepEqual(info.sections[0], { title: 'Yapımcı ve iletişim', paragraphs: ['Yapımcı / marka: Quantum Tech App', 'Konum: Trabzon', 'İletişim ve veri talepleri: zeka.kupu.test@gmail.com'] });
+    assert.equal(info.contactEmail, publisher.email);
+    const html = policyHtml(info);
+    assert.doesNotMatch(html, /Old brand|Private operator fixture|Private street fixture|905550001122|private@example.invalid|Yasal satıcı ve veri sorumlusu/);
+    assert.match(html, /Quantum Tech App/); assert.match(html, /Konum: Trabzon/);
+  }
+  assert.match(policyHtml(publicPolicy('gizlilik-ve-veriler', settings)!), /tamamlanması gereken/);
+  assert.match(policyHtml(publicPolicy('kullanim-kosullari', settings)!), /kimlik ve adres bilgileri henüz/);
+});
+
+test('a public producer profile neither grants legal acceptance nor changes registration or payment readiness', () => {
+  for (const complete of [false, true]) {
+    const settings = defaultPlatformSettings();
+    if (complete) {
+      for (const key of ['legalName', 'address', 'contactPhone', 'contactEmail', 'legalBases', 'retention', 'transfers'] as const) settings.business[key] = key === 'contactEmail' ? 'operator@example.invalid' : 'Recorded private fixture';
+      for (const key of Object.keys(settings.commercial) as Array<keyof typeof settings.commercial>) settings.commercial[key] = { confirmed: true, reference: 'Recorded acceptance fixture' };
+      settings.release = { registrationEnabled: true, emailTested: true, restoreTested: true, familyPilotTested: true, monitoringTested: true };
+    }
+    const before = { registration: registrationOpen(settings), blockers: registrationBlockers(settings), release: releaseBlockers(settings) };
+    settings.publisher = publisher;
+    assert.deepEqual({ registration: registrationOpen(settings), blockers: registrationBlockers(settings), release: releaseBlockers(settings) }, before);
+    assert.equal(registrationOpen(settings), complete);
+  }
+});
+
+test('producer profiles validate contact fields and escape displayed name and city', () => {
+  assert.equal(platformSettingsSchema.safeParse({ publisher: { ...publisher, email: 'bad"@<invalid>' } }).success, false);
+  assert.equal(platformSettingsSchema.safeParse({ publisher: { ...publisher, postalAddressVerified: true } }).success, false);
+  const settings = defaultPlatformSettings(); settings.publisher = { ...publisher, name: '<script>bad()</script>', location: '<img src=x onerror=bad()>' };
+  const html = policyHtml(publicPolicy('iletisim-ve-destek', settings)!);
+  assert.ok(html.includes('&lt;script&gt;bad()&lt;/script&gt;')); assert.ok(html.includes('&lt;img src=x onerror=bad()&gt;'));
+  assert.ok(!html.includes('<script>bad()')); assert.ok(!html.includes('<img src=x onerror='));
 });

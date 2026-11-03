@@ -10,6 +10,7 @@ try {
  const page=await browser.newPage({viewport:{width:360,height:640}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/*',route=>new URL(route.request().url()).origin==='http://127.0.0.1:5182'?route.continue():route.abort());
  await page.goto('http://127.0.0.1:5182/tests/browser/question-screen.html');await page.locator('.zp-focus').waitFor();
+ await page.evaluate(async()=>{await document.fonts.ready;});
  const mechanics=['object-shadow','scene-difference','object-mirror','fold-punch','seven-piece','missing-symbol','raven-relation','cube-evidence'];let checked=0;
  const rasterSignatures=new Map();
  for(const [width,height] of [[320,480],[360,640],[390,844],[768,1024],[667,375]])for(const grade of [1,2,3,4])for(const mechanic of mechanics)for(let sample=1;sample<=3;sample++){

@@ -13,6 +13,11 @@ const exam = (count: number, seconds: number) =>
     .default({ count, seconds });
 export const platformSettingsSchema = z
   .object({
+    publisher: z.object({
+      name: z.string().trim().min(1).max(160),
+      email: z.string().trim().email().max(254),
+      location: z.string().trim().min(1).max(160),
+    }).strict().optional(),
     exams: z
       .object({
         mini: exam(15, 900),
