@@ -32,7 +32,7 @@ test('Reels status and generation endpoints reject unverified anonymous callers'
       ['GET','/api/admin/reels',undefined],
       ['POST','/api/admin/reels/generate',JSON.stringify({grade:2,difficulty:2,mechanic:'auto'})],
     ] as const) {
-      const response=await fetch('http://127.0.0.1:'+address.port+path, {
+      const response: Response = await fetch('http://127.0.0.1:'+address.port+path, {
         method, headers: {'Content-Type':'application/json'}, ...(body?{body}:{})
       });
       assert.equal(response.status,401,method+' '+path);
