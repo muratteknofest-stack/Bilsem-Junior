@@ -1,7 +1,9 @@
 import { lazy, Suspense } from 'react';
 import { accountEntryPath } from '../account-entry';
+import { isAndroidApp } from '../../../lib/native-app';
 
 const LandingPage = lazy(() => import('../../../components/LandingPage').then(module => ({ default: module.LandingPage })));
+const AndroidWelcome = lazy(() => import('../../../components/android/AndroidWelcome').then(module => ({ default: module.AndroidWelcome })));
 
 export function AuthConnectionNotice({ error }: { error: string }) {
   return <section role="alert" className="border-b border-amber-200 bg-amber-50 px-5 py-4 text-center text-sm text-amber-950">
@@ -25,10 +27,11 @@ function SessionWaiting({ error }: { error: string | null }) {
 /** This public content never reads a cached identity or unlocks a private route. */
 export function AuthStartupView({ error, publicLanding = false }: { error: string | null; publicLanding?: boolean }) {
   if (!publicLanding) return <SessionWaiting error={error} />;
+  const PublicHome = isAndroidApp ? AndroidWelcome : LandingPage;
   return <>
     {error && <AuthConnectionNotice error={error} />}
     <Suspense fallback={<SessionWaiting error={error} />}>
-      <LandingPage
+      <PublicHome
         onNavigateToLogin={role => window.location.assign(accountEntryPath('login', role))}
         onNavigate={route => {
           if (route === 'register') window.location.assign('/register');

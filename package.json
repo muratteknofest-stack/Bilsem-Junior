@@ -72,6 +72,7 @@
     "test:legal-links": "node --import tsx scripts/check-legal-links.tsx",
     "test:android-parent": "node --import tsx scripts/check-android-parent.tsx",
     "test:android-entry": "node --import tsx scripts/check-android-entry.tsx",
+    "test:android-public-startup": "node scripts/check-android-public-startup.mjs",
     "test:android-release": "python3 -m unittest discover -s tests -p \"android_release_test.py\" -v",
     "security:auth": "node scripts/auth-security.mjs",
     "security:ci": "node scripts/check-workflow-security.mjs",
