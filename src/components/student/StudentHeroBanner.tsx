@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import confetti from 'canvas-confetti';
 import { Copy, Check, Flame, ShieldCheck, ArrowUpRight, Trophy, Sparkles } from 'lucide-react';
 import { sound } from '../../lib/sound';
+import { useMusicScene } from '../../hooks/useAppAudio';
 import { StudentGradeSelector } from '../StudentGradeSelector';
 import type { UserProfile } from '../../types';
 
@@ -19,6 +20,8 @@ export interface StudentHeroBannerProps {
 export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({ user, greeting, xpProgress, onUserUpdate, onNavigate, prefersReducedMotion, avatarImageSrc }) => {
   const [copiedStudentCode, setCopiedStudentCode] = useState(false);
   const [copyError, setCopyError] = useState('');
+  const [profileOpen,setProfileOpen] = useState(false);
+  useMusicScene(profileOpen?'profile':null,profileOpen?20:0);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(copyTimer.current), []);
   const handleCopyStudentCode = async () => {
@@ -47,7 +50,7 @@ export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({ user, gree
           <h1>{greeting.text}, {user.name?.split(' ')[0] || 'Kaşif'}<span className="zp-profile-period" aria-hidden="true">.</span></h1>
           <div className="zp-profile-settings">
             <details className="zp-grade-settings"><summary>{user.grade || 1}. sınıf <span>Sınıfımı düzenle</span></summary><StudentGradeSelector key={user.id} user={user} onSaved={onUserUpdate} /></details>
-            <details className="zp-profile-tools"><summary>Hesap ve giriş bilgileri</summary><div className="zp-profile-tools-content">
+            <details className="zp-profile-tools" onToggle={event=>setProfileOpen(event.currentTarget.open)}><summary>Hesap ve giriş bilgileri</summary><div className="zp-profile-tools-content">
               {user.studentCode && <button type="button" onClick={handleCopyStudentCode} title="Giriş kodunu kopyala"><span>Giriş Kodu: <strong>{user.studentCode}</strong></span>{copiedStudentCode ? <Check size={15} aria-label="Kopyalandı" /> : <Copy size={15} aria-hidden="true" />}</button>}
               {user.linkedParentId && <button type="button" onClick={() => onNavigate('parent')} title="Veli alanına dönmek için veli şifresini doğrula"><ShieldCheck size={15} aria-hidden="true" />Veli Alanına Dön</button>}
               {user.id.startsWith('demo_') && <span>Deneme: toplam 3 örnek soru</span>}

@@ -8,6 +8,7 @@ import { isAdminLocation } from './lib/admin-access';
 import { normalizeAppPathname } from './lib/route-sync';
 import { accountEntry } from './features/auth/account-entry';
 import { PublicAccountEntry } from './features/auth/components/PublicAccountEntry';
+import { AppAudio } from './components/AppAudio';
 
 const AdminPortal = lazy(() => import('./components/AdminPortal').then(module => ({ default: module.AdminPortal })));
 const WordwallPage = lazy(() => import('./components/WordwallLibrary').then(module => ({ default: module.WordwallPage })));
@@ -53,6 +54,7 @@ createRoot(root).render(
   <StrictMode>
     <AppErrorBoundary>
     <AppReady />
+    <AppAudio />
     {pathname === '/reset-password' || isRecoveryRedirect ? (
       <PasswordRecoveryEntry />
     ) : pathname === '/wordwall' ? (

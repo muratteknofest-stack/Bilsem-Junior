@@ -18,3 +18,6 @@
 .bj-native-parent-header :focus-visible{outline:3px solid #507dc1;outline-offset:2px}
 .bj-parent-native-avatar img{width:32px;height:38px;object-fit:contain}
 .dark .bj-native-parent .bj-parent-student-selector select{background:#243d4b!important;color:#e7f2f9!important;border-color:#567486}
+
+.bj-native-audio-actions{display:flex;align-items:center;gap:4px;flex:none}
+.bj-native-audio-actions>button{display:grid;place-items:center;min-width:44px;min-height:44px;padding:8px;border-radius:12px;color:inherit}

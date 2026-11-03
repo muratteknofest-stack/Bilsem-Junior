@@ -1,3 +1,9 @@
+## 1.0.41 — Eğlenceli uygulama sesleri
+
+- Android sürümü 42 / 1.0.41. Web ve Android için kısa düğme ve geçiş sesleri; lobide neşeli, profilde sakin özgün melodiler.
+- Müzik ilk kullanıcı etkileşiminden sonra başlar; soru/konu ekranlarında ve arka planda durur. Görünüm ve ses alanında bağımsız müzik açma/kapatma ve düzey ayarı cihazda hatırlanır. Üst çubuk tüm sesleri susturur.
+- Sesler cihazda üretilir; indirme ve ek izin gerektirmez. `python3 scripts/package-android-candidate.py test-artifacts/android` paket sürümünü, derlenmiş varlıkları ve güvenlik bayraklarını doğrular. Test APK'sı üretim imzası, fiziksel cihaz testi veya ticari yayın kabulü değildir.
+
 ## 1.0.40 — Uygulama adı yazılı Android simgesi
 
 - Android sürümü 41 / 1.0.40. Ana ekran ve uygulama listesinde görünen simgenin içinde BİLSEM / JUNIOR adı iki satırda yer alır. Üç boyutlu tilki, kitap, yıldız ve mor arka plan korunur.
