@@ -148,7 +148,7 @@ export function StudentDashboard({ storyProgress, storySaveError, onStartStory, 
   const hour = new Date().getHours();
   const greeting = hour >= 5 && hour < 12 ? { text: 'Günaydın', emoji: '☀️' }
     : hour < 18 ? { text: 'Merhaba', emoji: '✦' } : { text: 'İyi akşamlar', emoji: '🌙' };
-  const switchSection = (section: Section) => { sound.playClick(); setActiveTab(section); };
+  const switchSection = (section: Section) => { sound.playTransition(); setActiveTab(section); };
   if (isLoading) return <main id="student-dashboard" aria-busy="true" className="zp-dashboard-page zp-student-dashboard zp-student-pro"><div className="zp-student-shell"><ProfileBannerSkeleton /><div className="zp-mode-grid"><ModeCardSkeleton /><ModeCardSkeleton /></div></div></main>;
   return <MotionConfig reducedMotion={reduced ? 'always' : 'user'}>
     <div ref={motionSurface} className="zp-dashboard-page zp-student-dashboard zp-student-pro bj-student-game bj-motion-world" data-reduced-motion={reduced}>

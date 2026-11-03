@@ -4,6 +4,7 @@ import type { UserProfile } from '../../types';
 import { campaignLength, campaignsForGrade } from '../../features/student/story-catalog';
 import { campaignCompleted, nextCampaignStage, type StoryProgress, type StoryStage } from '../../features/student/story-adventure';
 import { useAndroidBack } from '../../hooks/useAndroidBack';
+import { sound } from '../../lib/sound';
 import { StoryAdventure } from '../student/StoryAdventure';
 import { StudentStoryScene } from '../student/StudentStoryScene';
 import './android-home.css';
@@ -23,12 +24,14 @@ export function AndroidStudentHome({ user, progress, saveError, onNavigate, onSt
   const mapButton = useRef<HTMLButtonElement>(null);
   const backButton = useRef<HTMLButtonElement>(null);
   const returnHome = () => {
+    sound.playTransition();
     setShowMap(false);
     window.scrollTo(0, 0);
     requestAnimationFrame(() => mapButton.current?.focus({ preventScroll: true }));
   };
   useAndroidBack(returnHome, showMap);
   const openMap = () => {
+    sound.playTransition();
     setShowMap(true);
     window.scrollTo(0, 0);
     requestAnimationFrame(() => backButton.current?.focus({ preventScroll: true }));

@@ -1,4 +1,5 @@
 import { LegalLinks } from './components/LegalLinks';
+import { useRouteAudio } from './hooks/useAppAudio';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { isAndroidApp } from './lib/native-app';
@@ -123,6 +124,7 @@ export default function App() {
     return 'landing';
   });
   const previousRouteRef = useRef(currentRoute);
+  useRouteAudio(currentRoute,isAuth&&currentUser.role==='student');
   const testReturnRouteRef = useRef('dashboard');
   const hasTestHistoryEntryRef = useRef(false);
   const [masteries, setMasteries] = useState<SkillMastery[]>(() => dataService.getSkillMasteries());
