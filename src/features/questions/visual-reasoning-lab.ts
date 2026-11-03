@@ -11,7 +11,7 @@ export const VISUAL_MECHANICS = ['object-shadow','scene-difference','object-mirr
 export type VisualMechanic = typeof VISUAL_MECHANICS[number];
 const n = (a:number,b:number) => z.number().int().min(a).max(b);
 export const OBJECT_KINDS = ['bird','watering-can','rocket','sailboat','house','fish'] as const;
-export const objectSchema = z.object({kind:z.enum(OBJECT_KINDS),x:z.union([z.literal(25),z.literal(75)]),y:z.union([z.literal(25),z.literal(75)]),turn:n(0,3),flipped:z.boolean(),detail:n(0,2),color:n(0,4)}).strict();
+export const objectSchema = z.object({kind:z.enum(OBJECT_KINDS),x:n(25,75).refine((v):boolean=>v===25||v===75),y:n(25,75).refine((v):boolean=>v===25||v===75),turn:n(0,3),flipped:z.boolean(),detail:n(0,2),color:n(0,4)}).strict();
 export type SceneObject = z.infer<typeof objectSchema>;
 const scene = z.array(objectSchema).min(2).max(4);
 const point = z.tuple([n(0,4),n(0,4)]);
