@@ -49,6 +49,11 @@ jobs:
           npm run test:legal-links
       - name: Verify Android story adventure and simplified menus
         run: npm run test:android-story
+      - name: Verify larger Android question visuals and compact answers
+        env:
+          QUESTION_FIXTURE_TARGET: android
+          LAYOUT_OUTPUT: test-artifacts/android-question-layout
+        run: npm run test:layout
       - name: Verify release security
         run: python3 scripts/package-android-candidate.py test-artifacts/android
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -64,5 +69,6 @@ jobs:
             test-artifacts/android-public-startup/
             test-artifacts/android-parent/
             test-artifacts/legal-links/
+            test-artifacts/android-question-layout/
           if-no-files-found: ignore
           retention-days: 7

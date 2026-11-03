@@ -11,6 +11,25 @@ const page=await browser.newPage({viewport:{width:360,height:640},deviceScaleFac
 await page.goto('http://127.0.0.1:5182/tests/browser/question-screen.html',{waitUntil:'commit',timeout:30000});await page.waitForSelector('.zp-answer-option',{timeout:90000});await page.screenshot({path:output+'/zekapark-mobile.png'});
 
 const failures=[];let count=0;
+const nativeSizing=[];
+if(process.env.QUESTION_FIXTURE_TARGET==='android'){
+ if(await page.locator('.zp-focus').getAttribute('data-app-target')!=='android')throw Error('Android question target was not compiled');
+ for(const [width,height] of [[360,640],[390,844],[768,1024],[667,375]]){
+  await page.setViewportSize({width,height});
+  const sizing=await page.evaluate(async()=>{
+   const root=document.querySelector('.zp-focus');
+   const read=()=>{const visual=document.querySelector('.zp-focus-visual').getBoundingClientRect(),choice=document.querySelector('.zp-answer-option').getBoundingClientRect();return {visualWidth:visual.width,visualHeight:visual.height,choiceWidth:choice.width,choiceHeight:choice.height};};
+   const settle=()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+   await settle();const android=read();root.dataset.appTarget='web';await settle();const web=read();root.dataset.appTarget='android';await settle();return {android,web};
+  });
+  const {android,web}=sizing;
+  if(width<height ? android.visualHeight<=web.visualHeight||android.choiceHeight>=web.choiceHeight : android.visualWidth<=web.visualWidth||android.choiceWidth>=web.choiceWidth)failures.push({width,height,result:['native-sizing-not-improved'],sizing});
+  if(android.choiceWidth<44||android.choiceHeight<44)failures.push({width,height,result:['native-touch-target'],sizing});
+  nativeSizing.push({width,height,...sizing});
+ }
+ await page.setViewportSize({width:360,height:640});
+ await page.screenshot({path:output+'/android-larger-question.png',animations:'disabled'});
+}
 for(const [width,height] of [[320,480],[320,568],[360,560],[360,640],[390,844],[600,960],[667,375],[768,1024],[820,1180],[1024,1366],[1024,768]]){
  await page.setViewportSize({width,height});
  const types=await page.evaluate(()=>window.__types);
@@ -84,7 +103,7 @@ await page.keyboard.press('Escape');
 for(const height of [700,510,740]){await page.setViewportSize({width:360,height});await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));const overflow=await page.evaluate(()=>{const root=document.querySelector('.zp-focus');return root.scrollHeight>root.clientHeight+1;});if(overflow)failures.push({height,result:['viewport-resize-overflow']});count++;}
 await page.setViewportSize({width:768,height:1024});await page.evaluate(()=>window.__show('mirror_reflection',3));await page.screenshot({path:output+'/zekapark-tablet.png'});
 if(pageErrors.length)failures.push({pageErrors});console.log(JSON.stringify({count,failures}));
-await fs.writeFile(output+'/results.json',JSON.stringify({count,failures},null,2));
+await fs.writeFile(output+'/results.json',JSON.stringify({count,failures,nativeSizing},null,2));
 await browser.close();await server.close();
 
 if(failures.length)process.exitCode=1;
