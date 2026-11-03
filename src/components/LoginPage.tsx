@@ -66,6 +66,45 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setErrorMessage(null);
   };
 
+  const modeControls = (
+            <div className="zp-auth-mode" role="group" aria-label="Hesap işlemi">
+                {isAndroidApp && activeTab === 'login' && <span>Hesabın yok mu?</span>}
+                {(!isAndroidApp || activeTab === 'register') && <button
+                  type="button"
+                  onClick={() => {
+                    sound.playClick();
+                    if (registrationResult) { openParentLogin(registrationResult.identifier); return; }
+                    setActiveTab('login');
+                    onModeChange?.('login', selectedRole);
+                    setErrorMessage(null);
+                    setSuccessToast(null);
+                  }}
+                  disabled={registrationBusy}
+                  aria-pressed={activeTab === 'login'}
+                  className="zp-auth-mode-button"
+                >
+                  Giriş Yap
+                </button>}
+                {(!isAndroidApp || activeTab === 'login') && <button
+                  type="button"
+                  onClick={() => {
+                    sound.playClick();
+                    setActiveTab('register');
+                    setSelectedRole('parent');
+                    onModeChange?.('register', 'parent');
+                    setRegistrationResult(null);
+                    setErrorMessage(null);
+                    setSuccessToast(null);
+                  }}
+                  disabled={registrationBusy}
+                  aria-pressed={activeTab === 'register'}
+                  className="zp-auth-mode-button"
+                >
+                  Yeni Kayıt
+                </button>}
+            </div>
+  );
+
   return (
     <div ref={viewportRef} data-native-entry={isAndroidApp} data-registration-complete={Boolean(registrationResult)} data-registration-page={isAndroidApp && activeTab === 'register' && !registrationResult ? registrationPage : undefined} className="zp-auth min-h-[calc(100vh-4rem)] flex flex-col justify-center py-8 px-4 sm:px-6 lg:px-8">
       <div className="zp-auth-top max-w-6xl mx-auto w-full mb-4 flex items-center justify-between">
@@ -85,7 +124,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
       <main className="zp-auth-shell max-w-6xl mx-auto w-full overflow-hidden grid">
         <section className="zp-auth-form-panel flex flex-col justify-between" aria-labelledby="zp-auth-heading">
-          <div>
+          <div className="zp-auth-primary-content">
             <div className="zp-auth-brand-row flex items-center justify-between">
               <Logo
                 size="md"
@@ -98,45 +137,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
             <div className="zp-auth-intro">
               <p className="zp-auth-kicker">BİLSEM JUNIOR / HAZIRLIK HESABI</p>
-              <h1 id="zp-auth-heading">{isAndroidApp ? (activeTab === 'login' ? 'Tekrar hoş geldin!' : 'Birlikte başlayalım') : activeTab === 'login' ? 'Tekrar hoş geldin!' : 'Birlikte başlayalım'}</h1>
+              <h1 id="zp-auth-heading">{isAndroidApp ? (activeTab === 'login' ? selectedRole === 'parent' ? 'Veli girişi' : 'Öğrenci girişi' : 'Aile hesabı oluştur') : activeTab === 'login' ? 'Tekrar hoş geldin!' : 'Birlikte başlayalım'}</h1>
               <p>{activeTab === 'login' ? 'Hesabına gir, yeni sorular ve küçük zaferler seni bekliyor.' : 'Veli bilgilerini gir, öğrenci hesabını ekle ve e-postanı doğrula.'}</p>
             </div>
 
-            <div className="zp-auth-mode" role="group" aria-label="Hesap işlemi">
-                <button
-                  type="button"
-                  onClick={() => {
-                    sound.playClick();
-                    if (registrationResult) { openParentLogin(registrationResult.identifier); return; }
-                    setActiveTab('login');
-                    onModeChange?.('login', selectedRole);
-                    setErrorMessage(null);
-                    setSuccessToast(null);
-                  }}
-                  disabled={registrationBusy}
-                  aria-pressed={activeTab === 'login'}
-                  className="zp-auth-mode-button"
-                >
-                  Giriş Yap
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    sound.playClick();
-                    setActiveTab('register');
-                    setSelectedRole('parent');
-                    onModeChange?.('register', 'parent');
-                    setRegistrationResult(null);
-                    setErrorMessage(null);
-                    setSuccessToast(null);
-                  }}
-                  disabled={registrationBusy}
-                  aria-pressed={activeTab === 'register'}
-                  className="zp-auth-mode-button"
-                >
-                  Yeni Kayıt
-                </button>
-            </div>
+            {!isAndroidApp && modeControls}
 
             {/* Error Message */}
             {errorMessage && (
@@ -181,6 +186,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 onLogin={openParentLogin}
               />
             )}
+            {isAndroidApp && modeControls}
           </div>
 
           <div className="zp-auth-foot pt-6 mt-6 border-t flex flex-wrap items-center justify-between gap-3">

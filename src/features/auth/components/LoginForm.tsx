@@ -308,13 +308,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             <label htmlFor="login-password" className="block text-xs font-bold text-slate-700">
               Şifre
             </label>
-            <button
+            {!compact && <button
               type="button"
               onClick={onShowForgotPassword}
               className="zp-auth-help text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer"
             >
               Şifremi Unuttum?
-            </button>
+            </button>}
           </div>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -369,9 +369,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               onChange={(e) => setRememberMe(e.target.checked)}
               className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
             />
-            <span>Beni bu cihazda hatırla<small className="block text-xs text-slate-600 dark:text-slate-300">Paylaşılan cihazlarda işaretlemeyin.</small></span>
+            <span>{compact ? 'Beni hatırla' : 'Beni bu cihazda hatırla'}{!compact && <small className="block text-xs text-slate-600 dark:text-slate-300">Paylaşılan cihazlarda işaretlemeyin.</small>}</span>
           </label>
+          {compact && <button type="button" onClick={onShowForgotPassword} className="zp-auth-help text-xs font-semibold text-indigo-600">Şifremi Unuttum?</button>}
         </div>
+        {compact && rememberMe && <p className="bj-login-remember-note text-xs text-slate-600 dark:text-slate-300">Paylaşılan cihazlarda işaretlemeyin.</p>}
 
         <button
           type="submit"
