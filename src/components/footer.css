@@ -4,7 +4,7 @@
   background: linear-gradient(180deg, #f8faff 0%, #edf1fd 100%);
   color: #1e293b;
   border-top: 1px solid #dbe2f3;
-  font: 400 14px/1.6 'Plus Jakarta Sans', system-ui, sans-serif;
+  font: 400 14px/1.6 var(--bj-font-body);
   padding: 48px 0 24px;
   position: relative;
   overflow: hidden;
@@ -47,7 +47,7 @@
 }
 
 .platform-footer h2 {
-  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--bj-font-display);
   font-size: clamp(24px, 2.5vw, 34px);
   line-height: 1.25;
   letter-spacing: -0.03em;
@@ -319,7 +319,7 @@
 }
 
 .platform-footer h3 {
-  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--bj-font-display);
   font-size: 14.5px;
   font-weight: 800;
   margin: 0;
@@ -589,7 +589,7 @@
 }
 
 .platform-info-dialog-header h2 {
-  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--bj-font-display);
   font-size: 24px;
   font-weight: 800;
   color: #0f172a;
@@ -729,7 +729,7 @@
 }
 
 .platform-info-dialog-card-header h3 {
-  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--bj-font-display);
   font-size: 16px;
   font-weight: 800;
   color: #0f172a;

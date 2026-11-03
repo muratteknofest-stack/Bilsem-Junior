@@ -28,6 +28,20 @@ try {
     await page.setViewportSize({ width, height: width < 700 ? 844 : 1024 });
     await page.goto(origin + '/tests/browser/bilsem-branding.html');
     await page.getByRole('heading', { level: 1, name: /BİLSEM’e hazırlık/ }).waitFor();
+    await page.evaluate(async () => {
+      const sample = 'ÇĞİÖŞÜ çğıöşü 0123456789';
+      await Promise.all([document.fonts.load('700 24px Comfortaa', sample), document.fonts.load('600 16px Nunito', sample)]);
+      await document.fonts.ready;
+    });
+    const typography = await page.evaluate(() => ({
+      title: getComputedStyle(document.querySelector('.zp-landing h1')).fontFamily,
+      reading: getComputedStyle(document.querySelector('.zp-landing')).fontFamily,
+      fonts: [...document.fonts].filter(face => ['Comfortaa', 'Nunito'].includes(face.family.replaceAll('"', ''))).map(face => ({ family: face.family, status: face.status })),
+    }));
+    assert.match(typography.title, /^Comfortaa/);
+    assert.match(typography.reading, /^Nunito/);
+    assert.equal(typography.fonts.length, 2);
+    assert.ok(typography.fonts.every(face => face.status === 'loaded'), JSON.stringify(typography));
     await page.locator('.zp-public-brand .bj-wordmark').waitFor();
     assert.match(await page.locator('.zp-public-brand .bj-wordmark').innerText(), /Bilsem Junior/);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'Homepage overflow at ' + width);

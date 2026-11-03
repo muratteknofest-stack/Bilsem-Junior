@@ -1,3 +1,11 @@
+## 1.0.44 — Yuvarlak ve modern yazı düzeni
+
+- Android sürümü 45 / 1.0.44. Başlıklarda Comfortaa, okuma metinleri ve butonlarda Nunito; web ve APK için ortak yerel fontlar.
+- Türkçe harfler ve rakamlar font haritalarında doğrulanır. Soru sembolleri, öğrenci erişim kodları ve tek aralıklı teknik alanların yazı kuralları korunur.
+- WOFF2 fontlar APK içine alınır; sayfa açılırken dış font servisine bağlanılmaz. Telefon/tablet yerleşimi ve 44 px dokunma alanları kontrol edilir.
+- Test APK'sı ticari yayın kabulü veya üretim Play imzası değildir. Kurulumdan önce ilerlemenin hesapla eşitlendiği doğrulanmalıdır.
+- Paketleme: `python3 scripts/package-android-candidate.py test-artifacts/android`.
+
 ## 1.0.43 — Ayrıntılı görsel muhakeme motoru
 
 - Android sürümü 44 / 1.0.43. Nesne gölgesi, resimde fark, ayna, katlama/delik, yedi parçalı tangram, eksik sembol, Raven ve küp kanıtı için yeni visual-lab-1 formatı.

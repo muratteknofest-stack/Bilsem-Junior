@@ -1,6 +1,6 @@
 .bj-native-shell[data-entry-route=true]{min-height:0!important}
 /* Compact illustrated entry; enlarged text can still scroll naturally. */
-.bj-welcome{--bj-entry-ink:#282343;--bj-entry-accent:#6e43cf;--bj-entry-muted:#52657a;box-sizing:border-box;height:var(--bj-entry-height,100dvh);min-height:0;overflow:auto;background:radial-gradient(ellipse at 12% 12%,#e5dcff,transparent 52%),radial-gradient(ellipse at 95% 70%,#d8f5ee,transparent 45%),#f8f7ff;color:var(--bj-entry-ink);padding:14px 20px 4px;display:flex;flex-direction:column;font-family:system-ui,sans-serif}
+.bj-welcome{--bj-entry-ink:#282343;--bj-entry-accent:#6e43cf;--bj-entry-muted:#52657a;box-sizing:border-box;height:var(--bj-entry-height,100dvh);min-height:0;overflow:auto;background:radial-gradient(ellipse at 12% 12%,#e5dcff,transparent 52%),radial-gradient(ellipse at 95% 70%,#d8f5ee,transparent 45%),#f8f7ff;color:var(--bj-entry-ink);padding:14px 20px 4px;display:flex;flex-direction:column;font-family:var(--bj-font-body)}
 .bj-welcome>header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:none;max-width:440px;width:100%;margin:0 auto}
 .bj-welcome>header>span{border:1px solid #ded1f6;border-radius:20px;padding:6px 10px;background:#ffffffb8;color:#63498c;font-size:12px;font-weight:750;white-space:nowrap}
 .bj-welcome>main{flex:1 0 auto;min-height:0;width:100%;max-width:400px;margin:auto;display:flex;flex-direction:column;justify-content:center;gap:20px;padding:20px 0}

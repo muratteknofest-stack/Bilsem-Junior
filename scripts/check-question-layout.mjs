@@ -8,7 +8,7 @@ const server=await createQuestionFixtureServer(5182);
 await server.listen();
 const browser=await chromium.launch({headless:true,args:['--no-proxy-server'],...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE}: {})});
 const page=await browser.newPage({viewport:{width:360,height:640},deviceScaleFactor:1});const pageErrors=[];page.on('pageerror',e=>{pageErrors.push(e.message);console.log('ERROR',e.message);});
-await page.goto('http://127.0.0.1:5182/tests/browser/question-screen.html',{waitUntil:'commit',timeout:30000});await page.waitForSelector('.zp-answer-option',{timeout:90000});await page.screenshot({path:output+'/zekapark-mobile.png'});
+await page.goto('http://127.0.0.1:5182/tests/browser/question-screen.html',{waitUntil:'commit',timeout:30000});await page.waitForSelector('.zp-answer-option',{timeout:90000});await page.evaluate(async()=>{await document.fonts.ready;});await page.screenshot({path:output+'/zekapark-mobile.png'});
 
 const failures=[];let count=0;
 const nativeSizing=[];

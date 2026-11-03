@@ -1,0 +1,22 @@
+/* Local OFL fonts shared by the web application, static pages and Android. */
+@font-face {
+  font-family: 'Nunito';
+  src: url('/fonts/nunito-variable-2ec1f4b0.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 200 1000;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Comfortaa';
+  src: url('/fonts/comfortaa-variable-8b8e5f81.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+}
+:root {
+  --bj-font-body: 'Nunito', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --bj-font-display: 'Comfortaa', 'Nunito', system-ui, sans-serif;
+  --bj-font-data: 'Outfit', 'Nunito', system-ui, sans-serif;
+  --zp-font-body: var(--bj-font-body);
+  --zp-font-display: var(--bj-font-display);
+}
