@@ -18,7 +18,7 @@ const origin = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch({ headless: true });
 const errors = [], mutations = [], checks = [];
 try {
-  for (const [width, height] of [[320,480], [360,640], [390,844], [768,1024]]) {
+  for (const [width, height] of [[320,480], [360,640], [390,844], [768,1024], [844,390]]) {
     const page = await browser.newPage({ viewport: { width, height }, reducedMotion: 'reduce' });
     page.on('pageerror', error => errors.push(error.message));
     await page.route('**/*', async route => {
@@ -38,11 +38,24 @@ try {
     const layout = await page.evaluate(() => ({ width: innerWidth, height: innerHeight, pageWidth: document.documentElement.scrollWidth, pageHeight: document.documentElement.scrollHeight }));
     assert.ok(layout.pageWidth <= width + 1 && layout.pageHeight <= height + 2, JSON.stringify(layout));
     assert.equal(await page.locator('.zp-colorful-home').count(), 0, 'An unauthenticated APK must not display the long web marketing page');
-    for (const name of ['Öğrenci girişi', 'Veli girişi', 'Yeni aile hesabı oluştur']) {
+    for (const name of ['Öğrenci girişi', 'Veli girişi', 'Yeni aile hesabı oluştur', 'Hesap açmadan bir soru dene']) {
       const box = await page.getByRole('button', { name, exact: true }).boundingBox();
       assert.ok(box.height >= 44 && box.y >= 0 && box.y + box.height <= height, `${name} must fit the opening screen`);
     }
     await page.screenshot({ path: resolve(output, `opening-${width}.png`), fullPage: true });
+    if (width === 390) {
+      await page.evaluate(() => document.documentElement.classList.add('dark'));
+      const ratios = await page.evaluate(() => {
+        const luminance = color => color.match(/[\d.]+/g).slice(0,3).map(Number).map(v => { const c=v/255; return c<=.04045?c/12.92:((c+.055)/1.055)**2.4; }).reduce((sum,c,i)=>sum+c*[.2126,.7152,.0722][i],0);
+        return [['.bj-welcome-hero h1','.bj-welcome'],['.bj-wordmark','.bj-welcome'],['.bj-wordmark>span','.bj-welcome'],['.bj-welcome-parent','.bj-welcome-parent'],['.bj-welcome>footer a','.bj-welcome']].map(([text,background])=>{
+          const a=luminance(getComputedStyle(document.querySelector(text)).color),b=luminance(getComputedStyle(document.querySelector(background)).backgroundColor);
+          return {text,ratio:(Math.max(a,b)+.05)/(Math.min(a,b)+.05)};
+        });
+      });
+      assert.ok(ratios.every(item=>item.ratio>=4.5),JSON.stringify(ratios));
+      await page.screenshot({ path: resolve(output, 'opening-dark.png'), fullPage: true });
+      await page.evaluate(() => document.documentElement.classList.remove('dark'));
+    }
     await page.getByRole('button', { name: 'Öğrenci girişi', exact: true }).click();
     await page.getByLabel('Öğrenci kodu veya e-posta', { exact: true }).waitFor();
     assert.equal(new URL(page.url()).pathname, '/login');
