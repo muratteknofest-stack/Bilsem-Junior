@@ -2,7 +2,7 @@
 
 - Android soru ekranında görsel/şık alan oranı 1,12:1 yerine 1,45:1; yatay telefonda sütun oranı 1,1:1 yerine 1,35:1. Şık aralıkları, iç boşlukları ve harf etiketleri daha kompakt; en az 44 px dokunma yüksekliği korunur.
 - Soru, alıştırma, deneme ve macera ortak ekranında uygulanır. Hafıza sorularının gösterim/gizleme aşaması korunur. Android sürümü 43 / 1.0.42.
-- `python3 scripts/package-android-candidate.py test-artifacts/android` paket sürümünü, derlenmiş varlıkları ve güvenlik bayraklarını doğrular. Test APK'sı üretim imzası veya fiziksel cihaz kabulü değildir.
+- `python3 scripts/package-android-candidate.py test-artifacts/android` paket sürümünü, derlenmiş varlıkları ve güvenlik bayraklarını doğrular. Test APK'sı üretim imzası, fiziksel cihaz testi veya ticari yayın kabulü değildir.
 
 ## 1.0.41 — Eğlenceli uygulama sesleri
 
