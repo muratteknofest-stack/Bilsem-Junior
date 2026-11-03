@@ -70,6 +70,18 @@ export function inspectEducation(q: BaseQuestion, grade: SchoolGrade, age?: numb
   }
   if((q.visualConfig as Record<string,unknown>).displayMode==='colorful_board'){const c=q.visualConfig as unknown as ColorfulBoard;metrics.gridSize=c.source?.art==='mosaic'?c.source.size:0;metrics.itemCount=metrics.gridSize**2||c.layers?.length||1;}
   const audience: string[] = [], difficulty: string[] = [], visual: string[] = [];
+  if((q.visualConfig as Record<string,unknown>).displayMode==='visual_lab'){
+    const v=q.visualConfig as import('./visual-reasoning-lab').VisualBoard;
+    metrics.maxNumber=0;metrics.peopleCount=0;metrics.gridSize=0;metrics.symbolCount=0;metrics.itemCount=0;
+    if(v.mechanic==='object-shadow'||v.mechanic==='object-mirror'){metrics.itemCount=v.objects.length;metrics.symbolCount=new Set(v.objects.map(o=>o.kind)).size;}
+    else if(v.mechanic==='scene-difference'){metrics.itemCount=v.left.length*2;metrics.symbolCount=new Set(v.left.map(o=>o.kind)).size;}
+    else if(v.mechanic==='seven-piece')metrics.itemCount=7;
+    else if(v.mechanic==='fold-punch')metrics.itemCount=v.holes.length*2**v.folds.length;
+    else if(v.mechanic==='missing-symbol'){metrics.gridSize=v.side;metrics.itemCount=v.cells.length;metrics.symbolCount=v.side;}
+    else if(v.mechanic==='raven-relation'){metrics.gridSize=v.side;metrics.itemCount=v.cards.length-1;metrics.symbolCount=new Set(v.cards.filter(c=>c!==null).flatMap(c=>Array.from({length:8},(_,i)=>i).filter(i=>c.mask&(1<<i)))).size;}
+    else {const checked=inspectEducation({...q,visualConfig:v.cube},grade,age);Object.assign(metrics,checked.metrics);audience.push(...checked.audience);difficulty.push(...checked.difficulty);visual.push(...checked.visual);}
+    if(v.grade!==grade)audience.push('GRADE_MISMATCH: Görsel muhakeme sınıfı uyuşmuyor.');
+  }
   if((q.visualConfig as Record<string,unknown>).displayMode==='exam_lab'){
     const e=q.visualConfig as import('./exam-lab').ExamBoard;
     metrics.maxNumber=0;metrics.symbolCount=0;metrics.peopleCount=0;

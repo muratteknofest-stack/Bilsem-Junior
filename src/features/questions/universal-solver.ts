@@ -1,3 +1,5 @@
+import {validateVisualBoard,solveVisualBoard,visualValueKey,visualTopic,type VisualValue} from './visual-reasoning-lab';
+import {independentlyMatchesVisual} from './visual-reasoning-solver';
 import{solveReference,validateReferenceBoard,independentlyMatchesReference,REFERENCE_TOPICS}from'./reference-lab';
 import {solveExam,validateExamBoard,independentlyMatchesExam,examTopic} from './exam-lab';
 import {solveCube,validateCubeBoard,CUBE_TOPICS} from './cube-lab';
@@ -36,6 +38,13 @@ export function solveQuestion(q: BaseQuestion): UniversalSolverResult {
   });
   try {
     if (!q || !Array.isArray(q.options) || q.options.length !== 4 || q.options.some(o => !o)) return failure('Dört geçerli seçenek gerekli.');
+    if((q.visualConfig as Record<string,unknown>)?.displayMode==='visual_lab'){
+      const b=validateVisualBoard(q.visualConfig);if(visualTopic(b.mechanic,b.grade,b.mechanic==='cube-evidence'?b.cube:undefined)!==q.type||b.grade!==q.targetGrade)return failure('Görsel muhakeme konusu/sınıfı uyuşmuyor.');
+      const answer=solveVisualBoard(b,q.options.map(o=>o.visualData as VisualValue));
+      const primary=q.options.filter(o=>visualValueKey(o.visualData as VisualValue)===visualValueKey(answer)),independent=q.options.filter(o=>independentlyMatchesVisual(b,o.visualData));
+      if(primary.length!==1||independent.length!==1||primary[0].id!==independent[0].id)return failure('Geometri ve bağımsız aday kanıtı uyuşmuyor.',true);
+      return {canSolve:true,isMatch:primary[0].id===q.correctOptionId,expectedAnswerId:primary[0].id,expectedFingerprint:fingerprint(primary[0].visualData),solverMethod:'VisualGeometry-and-InverseCandidateProof-v1',confidence:1,ambiguityDetected:false,proofSteps:['Görünen konum, biçim ve dönüşüm koşulları çözüldü.','Her aday ters dönüşüm, tam kaplama veya iki yönlü ilişkiyle denetlendi.','Tek uygun seçenek: '+primary[0].id]};
+    }
     if((q.visualConfig as Record<string,unknown>)?.displayMode==='exam_lab'){
       const b=validateExamBoard(q.visualConfig);if(examTopic(b.mechanic,b.grade)!==q.type||b.grade!==q.targetGrade)return failure('Deneme konusu/sınıfı uyuşmuyor.');
       const answer=solveExam(b),primary=q.options.filter(o=>fingerprint(o.visualData)===fingerprint(answer)),independent=q.options.filter(o=>independentlyMatchesExam(b,o.visualData));

@@ -1,3 +1,5 @@
+import {validVisualValue} from '../visual-reasoning-lab';
+import {VisualValueArt} from './VisualReasoningBoard';
 import{ReferenceLabBoard,ReferenceValueArt}from'./ReferenceLabBoard';
 import{validReferenceValue}from'../reference-lab';
 import {CubeView} from './CubeLabBoard';
@@ -71,6 +73,7 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
   }
 
   const renderVisualContent = () => {
+    if((visualData as Record<string,unknown>)?.lab&&validVisualValue(visualData))return <VisualValueArt value={visualData}/>;
     if(validExamTile(visualData))return <ExamTileArt value={visualData}/>;
     if(validReferenceValue(visualData)&&'reference'in visualData)return <ReferenceValueArt value={visualData}/>;
     if(validCubeValue(visualData)&&'cubeView'in visualData)return <CubeView value={visualData}/>;

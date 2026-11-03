@@ -1,3 +1,9 @@
+## 1.0.43 — Ayrıntılı görsel muhakeme motoru
+
+- Android sürümü 44 / 1.0.43. Nesne gölgesi, resimde fark, ayna, katlama/delik, yedi parçalı tangram, eksik sembol, Raven ve küp kanıtı için yeni visual-lab-1 formatı.
+- Görünür verilenlerden tek cevap, bağımsız aday çözümü, sınıfa göre yük sınırı ve yakın çeldiriciler. Keskin SVG nesne çizimleri ve ayrıntılı küp yüzeyleri; eski kayıtlı soruların kaynakları korunur.
+- `python3 scripts/package-android-candidate.py test-artifacts/android` sürüm, varlık ve güvenlik doğrulamasını yapar. Test APK'sı üretim imzası, gerçek cihaz veya ticari yayın kabulü değildir.
+
 ## 1.0.42 — Daha büyük soru görselleri, daha küçük şıklar
 
 - Android soru ekranında görsel/şık alan oranı 1,12:1 yerine 1,45:1; yatay telefonda sütun oranı 1,1:1 yerine 1,35:1. Şık aralıkları, iç boşlukları ve harf etiketleri daha kompakt; en az 44 px dokunma yüksekliği korunur.
