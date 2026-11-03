@@ -53,7 +53,7 @@ export function generateQuestionByType(
 }
 
 export function generateQuestion(options: {
-  profile?: 'professional' | 'complete' | 'professional-v2';
+  profile?: 'professional' | 'complete' | 'professional-v2' | 'visual-lab';
   targetGrade?: SchoolGrade;
   category?: CognitiveCategory | 'mixed';
   difficulty?: DifficultyLevel;
@@ -64,13 +64,17 @@ export function generateQuestion(options: {
   if (!Number.isSafeInteger(seed) || seed < 1 || options.targetGrade !== undefined && !isSchoolGrade(options.targetGrade) || options.difficulty !== undefined && (!Number.isInteger(options.difficulty) || options.difficulty < 1 || options.difficulty > 6)) throw new Error('INVALID_GENERATION_INPUT: Sınıf, zorluk veya tohum geçersiz.');
   const rng = new SeededRNG(seed);
   const difficulty = options.targetGrade ? gradeDifficulty(options.targetGrade, options.difficulty ?? 3) : options.difficulty ?? 3;
+  if(options.profile==='visual-lab'){
+    if(!isSchoolGrade(options.targetGrade))throw Error('Görsel muhakeme için sınıf gerekli.');
+    const variants=VISUAL_MECHANICS.filter(m=>visualAllowed(m,options.targetGrade!,difficulty)&&(!options.type||visualTopic(m,options.targetGrade!)===options.type)&&(!options.category||options.category==='mixed'||STUDENT_CATEGORY_TYPES[options.category].includes(visualTopic(m,options.targetGrade!))));
+    if(!variants.length)throw Error('VISUAL_TOPIC_UNAVAILABLE');
+    const q=generateVisualQuestion(rng.pick(variants),seed,difficulty,options.targetGrade);assertQuestionReadyForStudents(q);return q;
+  }
   if(options.profile==='professional-v2'){
     if(!isSchoolGrade(options.targetGrade))throw Error('V2 üretim için sınıf gerekli.');
     const pool=options.category&&options.category!=='mixed'?STUDENT_CATEGORY_TYPES[options.category]:ALL_TOPIC_TYPES;
     const type=options.type||rng.pick(pool.filter(type=>topicAllowedForGrade(type,options.targetGrade)));
     if(!pool.includes(type))throw Error('CATEGORY_MISMATCH');
-    const visualLab=VISUAL_MECHANICS.filter(m=>visualAllowed(m,options.targetGrade!,difficulty)&&visualTopic(m,options.targetGrade!)===type);
-    if(visualLab.length){const q=generateVisualQuestion(rng.pick(visualLab),seed,difficulty,options.targetGrade);assertQuestionReadyForStudents(q);return q;}
     const referenceMechanics=REFERENCE_MECHANICS.filter(m=>REFERENCE_TOPICS[m]===type&&referenceAllowed(m,options.targetGrade!,difficulty));
     if(referenceMechanics.length){const variants=[...referenceMechanics.map(m=>()=>generateReferenceQuestion(m,seed,difficulty,options.targetGrade!)),...CUBE_MECHANICS.filter(m=>CUBE_TOPICS[m]===type&&cubeAllowed(m,options.targetGrade!,difficulty)).map(m=>()=>generateCubeQuestion(m,seed,difficulty,options.targetGrade!)),...PERCEPTUAL_MECHANICS.filter(m=>PERCEPTUAL_TOPICS[m]===type&&perceptualAllowed(m,options.targetGrade!,difficulty)).map(m=>()=>generatePerceptualQuestion(m,seed,difficulty,options.targetGrade!))];const q=rng.pick(variants)();assertQuestionReadyForStudents(q);return q;}
     const cubeMechanics=CUBE_MECHANICS.filter(m=>CUBE_TOPICS[m]===type&&cubeAllowed(m,options.targetGrade!,difficulty));
