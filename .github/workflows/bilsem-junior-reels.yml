@@ -60,10 +60,17 @@ jobs:
             reels-out/question.json
           retention-days: 7
 
+  scheduled-only:
+    if: github.event_name == 'schedule' && vars.REELS_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Confirm authorized scheduled execution
+        run: echo 'Scheduled publishing enabled'
+
   publish:
     # Security policy requires a protected environment AND an exact main-only gate.
     if: github.ref == 'refs/heads/main'
-    needs: preview
+    needs: [preview, scheduled-only]
     runs-on: ubuntu-24.04
     environment: production-reels
     timeout-minutes: 35
