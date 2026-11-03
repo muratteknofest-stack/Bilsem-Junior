@@ -41,6 +41,7 @@ jobs:
           npx --no-install playwright install --with-deps chromium
           node --import tsx scripts/check-google-play-ui.tsx
           npm run test:android-entry
+          npm run test:android-public-startup
           npm run test:android-parent
           npm run test:legal-links
       - name: Verify Android story adventure and simplified menus
@@ -60,6 +61,7 @@ jobs:
             test-artifacts/google-play-ui/
             test-artifacts/android-story/
             test-artifacts/android-entry/
+            test-artifacts/android-public-startup/
             test-artifacts/android-parent/
             test-artifacts/legal-links/
           if-no-files-found: ignore

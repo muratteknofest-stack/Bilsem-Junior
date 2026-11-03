@@ -1,3 +1,10 @@
+## 1.0.37 — APK'nın gerçek ilk açılışını düzeltme
+
+- Android sürümü 38 / 1.0.37. Oturumsuz kök sayfayı yöneten AuthStartupView, Android paketinde uzun web tanıtım sayfası yerine AndroidWelcome açar. Öğrenci/veli girişleri, kayıt ve örnek soru, uygulamanın gerçek başlangıç yolunda erişilebilirdir.
+- Önceki 1.0.36 derlemesinde gerçek derlenmiş index.html ile hata yeniden üretildi. Önceki doğrudan bileşen testleri bu AuthProvider yolunu kapsamıyordu. Yeni `test:android-public-startup`, derlenmiş uygulamayı 320×480, 360×640, 390×844 ve 768×1024 boyutlarında gerçekten açar; giriş, kayıt, örnek soru ve geri dönüş bağlantılarını izole ağ yanıtlarıyla kontrol eder. Hesap/e-posta oluşturulmaz.
+- Web'in masaüstü tanıtım sayfası aynı kalır. AuthProvider erişim koşulları veya üyelik kuralları değiştirilmez; yalnız herkese açık başlangıç görünümü platforma göre seçilir.
+- `python3 scripts/package-android-candidate.py test-artifacts/android` sürümü ve derlenmiş varlıkları doğrular. Test APK'sı üretim imzası, gerçek fiziksel cihaz veya ticari yayın kabulü değildir.
+
 ## 1.0.36 — Sade Android açılış ve giriş ekranı
 
 - Android sürümü 37 / 1.0.36. Açılış metinleri kısaltıldı; öğrenci ve veli girişleri büyük düğmelerde gösterilir. Giriş ekranında yinelenen Giriş Yap sekmesi kaldırıldı; Yeni Kayıt formun altında kalır.
