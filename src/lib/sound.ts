@@ -181,7 +181,7 @@ export class SoundEngine {
   playTransition() {
     const now=typeof performance!=='undefined'?performance.now():Date.now();
     if(!this.active||!this.appActive||this.level===0||now-this.lastTransition<120)return;
-    this.lastTransition=now;this.melody([392,523.25,659.25],.035,.16,.035,'triangle');
+    this.lastTransition=now;this.melody([392,493.88,587.33],.035,.16,.035,'triangle');
   }
   playLevelUp() { this.melody([440, 554.37, 659.25, 880], .09, .3, .1); }
   playCombo(comboCount: number) {
