@@ -16,7 +16,7 @@ def main():
     key = os.environ.get('REELS_SUPABASE_SERVICE_ROLE_KEY') or ''
     bucket = os.environ.get('IG_REELS_BUCKET') or 'instagram-reels'
     run_id = os.environ.get('GITHUB_RUN_ID', '')
-    if not re.fullmatch(r'https://[a-z0-9-]+\.supabase\\.co', base):
+    if not re.fullmatch(r'https://[a-z0-9-]+\.supabase\.co', base):
         raise RuntimeError('Reels Supabase project URL secret is missing or invalid')
     if not key:
         raise RuntimeError('Reels Supabase storage key is not configured')
