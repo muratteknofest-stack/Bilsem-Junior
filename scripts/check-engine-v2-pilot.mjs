@@ -20,7 +20,9 @@ try{
  }
  await page.setViewportSize({width:390,height:844});const cubeIndex=(await page.evaluate(()=>window.__pilotTypes)).indexOf('cube_counting');await page.evaluate(index=>window.__showPilot(index),cubeIndex);await page.waitForTimeout(150);
  await page.waitForTimeout(200);const geometryBefore=await page.locator('[data-spatial-scene] svg').first().evaluate(svg=>[svg.getAttribute('viewBox'),...Array.from(svg.querySelectorAll('path,polygon')).map(el=>el.getAttribute('d')||el.getAttribute('points'))]);
- const svgBefore=await page.screenshot({clip:await page.locator('[data-spatial-scene] svg').first().boundingBox(),animations:'disabled'});
+ // Capture the static SVG itself. Disabling every page animation here can stall
+ // Chromium's screenshot after the repeated question transitions above.
+ const svgBefore=await page.locator('[data-spatial-scene] svg').first().screenshot();
  const loaded=page.waitForResponse(response=>response.url().endsWith('/models/bilsem-unit-cube.glb')&&response.status()===200).then(()=>true).catch(()=>false);
  await page.getByRole('button',{name:'3B görünüm',exact:true}).first().click();await page.waitForSelector('[data-spatial-scene] canvas',{timeout:30000});if(!await loaded)throw Error('Blender GLB was not loaded');await page.waitForTimeout(1500);
  webgl=await page.locator('canvas').evaluate(canvas=>!!canvas.getContext('webgl2'));await page.screenshot({path:`${output}/cube-webgl.png`});
@@ -29,7 +31,7 @@ try{
  await page.locator('.zp-spatial-notice').evaluateAll(elements=>elements.forEach(el=>el.style.visibility='hidden'));
  await page.waitForTimeout(250);
  const geometryAfter=await page.locator('[data-spatial-scene] svg').first().evaluate(svg=>[svg.getAttribute('viewBox'),...Array.from(svg.querySelectorAll('path,polygon')).map(el=>el.getAttribute('d')||el.getAttribute('points'))]);
- const svgAfter=await page.screenshot({clip:await page.locator('[data-spatial-scene] svg').first().boundingBox(),animations:'disabled'});
+ const svgAfter=await page.locator('[data-spatial-scene] svg').first().screenshot();
  if(JSON.stringify(geometryBefore)!==JSON.stringify(geometryAfter))failures.push({bad:['svg-fallback-geometry-regression']});
  pixelDifferenceRatio=await page.evaluate(async([before,after])=>{
    const load=async data=>createImageBitmap(await (await fetch('data:image/png;base64,'+data)).blob()),a=await load(before),b=await load(after);

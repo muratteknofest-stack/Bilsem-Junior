@@ -39,10 +39,47 @@ jobs:
           npx --no-install esbuild server.ts --bundle --platform=node --format=cjs --packages=external --outfile=build/server.cjs
           node scripts/security-http-smoke.mjs
       - run: npm run test:load
+
+  browser-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          package-manager-cache: false
+          node-version: 22
+          cache: npm
+      - run: npm ci
       - name: Install Chromium for mobile and tablet layout checks
         run: npx --no-install playwright install --with-deps chromium
       - name: Check question layouts on mobile and tablet viewports
         run: npm run test:layout
+      - name: Check entry routes, separate student progress and activity timer cleanup
+        run: npm run test:audit-browser
+
+      - name: Check Google Play membership controls on mobile and tablet
+        run: npm run test:play-layout
+      - name: Verify English practice, device progress and mobile layouts
+        run: npm run test:english-browser
+
+  question-art:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          package-manager-cache: false
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium for question artwork checks
+        run: npx --no-install playwright install --with-deps chromium
       - name: Check original question artwork and silhouette uniqueness
         run: npm run test:question-art
         env:
@@ -56,13 +93,6 @@ jobs:
           path: test-artifacts/question-art/
           if-no-files-found: ignore
           retention-days: 7
-      - name: Check entry routes, separate student progress and activity timer cleanup
-        run: npm run test:audit-browser
-
-      - name: Check Google Play membership controls on mobile and tablet
-        run: npm run test:play-layout
-      - name: Verify English practice, device progress and mobile layouts
-        run: npm run test:english-browser
 
   student-game-world:
     env:
@@ -204,7 +234,7 @@ jobs:
 
   live-release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [quality, english-accounts, turkish-accounts, learning-launch, branding, topic-lessons, student-game-world]
+    needs: [quality, browser-regressions, question-art, english-accounts, turkish-accounts, learning-launch, branding, topic-lessons, student-game-world]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
