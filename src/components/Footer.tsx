@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import type { UserRole } from '../types';
 import { FOOTER_GROUPS, SUPPORT_EMAIL } from '../content/platform-info';
+import { APP_PUBLISHER } from '../lib/brand';
 import { Logo } from './Logo';
 import './footer.css';
 
@@ -228,6 +229,7 @@ export function Footer({ onNavigate, onNavigateToLogin }: FooterProps) {
         <div className="platform-footer-bottom">
           <div className="platform-footer-bottom-copy">
             <span>© {new Date().getFullYear()} Bilsem Junior · Merakla büyüyen zihinler için.</span>
+            <span>Yapımcı: {APP_PUBLISHER.name} · {APP_PUBLISHER.location}</span>
           </div>
           <div className="platform-footer-bottom-links">
             <a href="/blog/feed.xml" className="platform-footer-rss-link">

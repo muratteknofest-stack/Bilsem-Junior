@@ -1,6 +1,7 @@
-## 1.0.44 — Yuvarlak ve modern yazı düzeni
+## 1.0.44 — Modern yazı düzeni ve yapımcı künyesi
 
 - Android sürümü 45 / 1.0.44. Başlıklarda Comfortaa, okuma metinleri ve butonlarda Nunito; web ve APK için ortak yerel fontlar.
+- Görünen yapımcı künyesi: Quantum Tech App, zeka.kupu.test@gmail.com ve konum olarak Trabzon. Bu şehir bilgisi tam yasal adres doğrulaması sayılmaz.
 - Türkçe harfler ve rakamlar font haritalarında doğrulanır. Soru sembolleri, öğrenci erişim kodları ve tek aralıklı teknik alanların yazı kuralları korunur.
 - Yerel fontlar APK içine alınır; sayfa açılırken dış font servisine bağlanılmaz. Telefon/tablet yerleşimi ve 44 px dokunma alanları kontrol edilir.
 - Test APK'sı ticari yayın kabulü veya üretim Play imzası değildir. Kurulumdan önce ilerlemenin hesapla eşitlendiği doğrulanmalıdır.

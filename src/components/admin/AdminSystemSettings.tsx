@@ -94,6 +94,13 @@ export function AdminSystemSettings({
     setNotice("");
   }
 
+  function publisher(key: keyof NonNullable<PlatformSettings['publisher']>, value: string) {
+    setRecord(r => r && ({ ...r, settings: { ...r.settings,
+      publisher: { name: '', email: '', location: '', ...r.settings.publisher, [key]: value },
+    } }));
+    setNotice('');
+  }
+
   const labels: Record<keyof PlatformSettings["business"], string> = {
     brandName: "Marka adı (şirket unvanı yerine geçmez)",
     legalName: "Yasal satıcı / veri sorumlusu adı veya unvanı",
@@ -241,8 +248,17 @@ export function AdminSystemSettings({
               </div>)}
             </section>
             <section className="space-y-4 rounded-2xl border bg-white p-5">
+              <h3 className="text-lg font-bold">Görünen yapımcı ve iletişim künyesi</h3>
+              <p>Bu bilgiler uygulamanın iletişim ve açıklama sayfalarında gösterilir. Marka ve şehir bilgisi, yasal işletmeci kimliği veya tam adres doğrulaması yerine geçmez.</p>
+              {([['name', 'Yapımcı / marka'], ['email', 'İletişim e-postası'], ['location', 'Konum / şehir']] as const).map(([key, label]) => <label key={key} className="block">
+                {label}<input type={key === 'email' ? 'email' : 'text'} maxLength={key === 'email' ? 254 : 160}
+                  value={record.settings.publisher?.[key] || ''} onChange={event => publisher(key, event.target.value)}
+                  className="mt-2 w-full rounded-lg border p-3" />
+              </label>)}
+            </section>
+            <section className="space-y-4 rounded-2xl border bg-white p-5">
               <h3 className="text-lg font-bold">
-                Kayıt öncesinde yayımlanan işletmeci bilgileri
+                Yasal işletmeci ve hazırlık kayıtları
               </h3>
               <p>
                 Doğrulanmış bilgileri girin. Bu alanların doldurulması hukuki

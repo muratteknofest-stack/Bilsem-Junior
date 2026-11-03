@@ -1,5 +1,6 @@
 import { LEGAL_DOCUMENTS } from './legal-documents';
-export const SUPPORT_EMAIL = 'zeka.kupu.test@gmail.com';
+import { APP_PUBLISHER } from '../lib/brand';
+export const SUPPORT_EMAIL = APP_PUBLISHER.email;
 export const INFO_DATE = '2026-10-10';
 export interface PlatformInfo {
   slug: string;
@@ -21,6 +22,7 @@ export const PLATFORM_INFO: PlatformInfo[] = [
     icon: 'Compass',
     color: 'emerald',
     sections: [
+      { title: 'Yapımcı ve iletişim', paragraphs: [`Yapımcı / marka: ${APP_PUBLISHER.name}`, `Konum: ${APP_PUBLISHER.location}`, `İletişim: ${APP_PUBLISHER.email}`] },
       { title: 'Merakla başlayan bir çalışma alanı', paragraphs: ['Bilsem Junior; örüntü, mantık, dikkat, görsel algı, matris, uzamsal düşünme, sayısal akıl yürütme ve sembol kodlama alıştırmaları sunar. 1, 2, 3 ve 4. sınıflara göre çalışma seçenekleri bulunur.', 'Öğrenci alanında pratik, uyarlanabilir çalışma, deneme, yanlışları tekrar etme, sözlük ve kazanılan rozetleri görme akışları yer alır. Veli alanı bağlı öğrenci kayıtlarının çalışma ve ilerleme bilgilerini gösterir.'] },
       { title: 'Bağımsız eğitim içeriği', paragraphs: ['Bilsem Junior’ın MEB veya BİLSEM ile kurumsal bağlantısı yoktur. Sorular resmî sınav soruları değildir. Alıştırmalar zekâ testi, psikolojik değerlendirme veya tanılama aracı olarak kullanılamaz; sınav sonucu garanti edilmez.', 'Blogdaki 30 rehber; BİLSEM, dikkat, mantık, görsel düşünme, aile desteği ve sınıfa göre çalışma konularını ele alır. Sınav takvimi ve başvuru koşulları için MEB’in güncel duyuruları esas alınmalıdır.'] },
     ],
