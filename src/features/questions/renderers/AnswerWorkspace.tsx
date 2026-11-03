@@ -1,3 +1,5 @@
+import {PrecisionBoard,PrecisionValueArt} from './PrecisionBoard';
+import {validPrecisionValue} from '../precision-lab';
 import{ReferenceLabBoard,ReferenceValueArt}from'./ReferenceLabBoard';
 import {validExamTile} from '../exam-lab';
 import {ExamTileArt} from './ExamLabBoard';
@@ -22,6 +24,7 @@ const labels: Record<AnswerMode, string> = { choice: 'Şık seç', place: 'Sür�
 type Props = { compact?: boolean; question: BaseQuestion; response: QuestionResponse | null; onChange: (r: QuestionResponse) => void; submitted?: boolean; allowedModes?: AnswerMode[]; preferredMode?: AnswerMode };
 
 function CardValue({ value, theme }: { value: unknown; theme: VisualTheme }) {
+  if(validPrecisionValue(value))return <PrecisionValueArt value={value}/>;
   if(validExamTile(value))return <ExamTileArt value={value}/>;
   if(validReferenceValue(value)&&'reference'in value)return <ReferenceValueArt value={value}/>;
   if(validCubeValue(value))return <CubeView value={value}/>;

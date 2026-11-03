@@ -64,6 +64,10 @@ jobs:
           QUESTION_FIXTURE_TARGET: android
           LAYOUT_OUTPUT: test-artifacts/android-question-layout
         run: npm run test:layout
+      - name: Verify precise Android puzzle geometry and placement
+        env:
+          QUESTION_FIXTURE_TARGET: android
+        run: npm run test:precision
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -78,5 +82,6 @@ jobs:
             test-artifacts/android-parent/
             test-artifacts/legal-links/
             test-artifacts/android-question-layout/
+            test-artifacts/precision-android/
           if-no-files-found: ignore
           retention-days: 7
