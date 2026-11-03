@@ -25,16 +25,26 @@ if (!/^\d{4}-\d{2}-\d{2}$/.test(day) ||
   throw Error('REEL_DATE must be a real YYYY-MM-DD date');
 }
 const dayIndex = Math.floor(Date.parse(day + 'T00:00:00Z') / 86_400_000);
-const grade = (1 + ((dayIndex % 4 + 4) % 4)) as 1 | 2 | 3 | 4;
-const difficulty = (grade === 1 ? 1 + dayIndex % 2 : 2 + dayIndex % 2) as DifficultyLevel;
-const mechanics = PERCEPTUAL_MECHANICS.filter(m => perceptualAllowed(m, grade, difficulty));
-if (!mechanics.length) throw Error('No supported question mechanic');
+const requestId = process.env.REEL_REQUEST_ID || '';
+if (requestId && !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)) {
+  throw Error('Invalid manual Reel request ID');
+}
+const gradeInput = process.env.REEL_GRADE;
+const difficultyInput = process.env.REEL_DIFFICULTY;
+if (gradeInput && !/^[1-4]$/.test(gradeInput)) throw Error('Invalid Reel grade');
+if (difficultyInput && !/^[1-4]$/.test(difficultyInput)) throw Error('Invalid Reel difficulty');
+const grade = (gradeInput ? Number(gradeInput) : 1 + ((dayIndex % 4 + 4) % 4)) as 1 | 2 | 3 | 4;
+const difficulty = (difficultyInput ? Number(difficultyInput) : grade === 1 ? 1 + dayIndex % 2 : 2 + dayIndex % 2) as DifficultyLevel;
+const requestedMechanic = process.env.REEL_MECHANIC || 'auto';
+if (requestedMechanic !== 'auto' && !PERCEPTUAL_MECHANICS.some(m => m === requestedMechanic)) throw Error('Invalid Reel topic');
+const mechanics = PERCEPTUAL_MECHANICS.filter(m => perceptualAllowed(m, grade, difficulty) && (requestedMechanic === 'auto' || m === requestedMechanic));
+if (!mechanics.length) throw Error('Chosen question type is not available at this class/difficulty');
 
 const start = ((Math.floor(dayIndex / 4) % mechanics.length) + mechanics.length) % mechanics.length;
 let selected;
 for (let attempt = 0; attempt < 16 * mechanics.length; attempt++) {
   const mechanic = mechanics[(start + attempt) % mechanics.length];
-  const seedHex = createHash('sha256').update('bilsem-junior-reels-v1:' + day + ':' + mechanic + ':' + attempt).digest('hex');
+  const seedHex = createHash('sha256').update('bilsem-junior-reels-v2:' + day + ':' + requestId + ':' + grade + ':' + difficulty + ':' + mechanic + ':' + attempt).digest('hex');
   const seed = parseInt(seedHex.slice(0, 7), 16) + 1;
   try {
     const q = generatePerceptualQuestion(mechanic, seed, difficulty, grade);
@@ -45,7 +55,7 @@ for (let attempt = 0; attempt < 16 * mechanics.length; attempt++) {
         solved.expectedAnswerId !== q.correctOptionId || q.options.length !== 4 ||
         ((q.visualConfig || {}) as Record<string, unknown>).displayMode !== 'perceptual_board') continue;
     selected = {
-      day, grade, difficulty, mechanic,
+      day, grade, difficulty, mechanic, requestId,
       question: {
         type: q.type, prompt: q.prompt, visualConfig: q.visualConfig,
         options: q.options.map(o => ({ id: o.id, label: o.label, visualData: o.visualData })),
