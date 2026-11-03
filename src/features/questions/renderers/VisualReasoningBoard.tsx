@@ -3,6 +3,7 @@ import type { VisualBoard, VisualValue, SceneObject, Point } from '../visual-rea
 import { CubeLabBoard, CubeView } from './CubeLabBoard';
 
 const COLORS=['#ef7137','#147fc0','#21a878','#9a53d5','#e4a019'];
+const DARK_COLORS=['#ab3c1c','#075282','#09674e','#613092','#99610b'];
 /** Outer outlines are shared by the material illustration and its exact black silhouette. */
 export function objectOutline(kind:SceneObject['kind'],detail:number) {
  const d=detail;
@@ -16,7 +17,7 @@ export function objectOutline(kind:SceneObject['kind'],detail:number) {
  }
 }
 function ObjectArt({object:o,silhouette,id}:{object:SceneObject;silhouette:boolean;id:string}) {
- return <g transform={`translate(${o.x} ${o.y}) rotate(${o.turn*90}) scale(${o.flipped?-.8:.8} .8)`}>
+ return <g transform={`translate(${o.x} ${o.y}) rotate(${o.turn*90}) scale(${o.flipped?-1:1} 1)`}>
   <path d={objectOutline(o.kind,o.detail)} fill={silhouette?'#162a3c':`url(#${id}-${o.color})`} fillRule="evenodd" stroke={silhouette?'#162a3c':'#29485e'} strokeWidth=".9" strokeLinejoin="round"/>
   {!silhouette&&<g fill="none" stroke="#ffffffb8" strokeWidth="1.1" strokeLinecap="round">
    {o.kind==='bird'?<><path d="M-8 1Q-4 -4 4 1Q1 7 -8 1"/><circle cx="4" cy="-7" r="1.4" fill="#182d42" stroke="none"/></>:o.kind==='rocket'?<><circle cy="-6" r="4" fill="#e6f7ff" stroke="#28475d"/><path d="M-5 10H5M-2 13V16"/></>:o.kind==='house'?<><path d="M-5 18V5H2V18" stroke="#253e53"/><rect x="6" y="4" width="5" height="6" fill="#dcf6ff" stroke="#2c4a5d"/><path d="M-12 -1L0 -12L13 -1"/></>:o.kind==='fish'?<><path d="M-7 -6Q-3 0 -7 6M0 -5L4 0L0 5"/><circle cx="12" cy="-2" r="1.5" fill="#162c40" stroke="none"/></>:o.kind==='watering-can'?<><path d="M-8 -2H2M-8 8H2"/><path d="M-9 -5V-8H2V-5" stroke="#29485e"/></>:<><path d="M-13 11H13M-2 -14L-13 3M3 -11L12 3"/><path d="M-2 -19V7" stroke="#263d52"/></>}
@@ -26,7 +27,7 @@ function ObjectArt({object:o,silhouette,id}:{object:SceneObject;silhouette:boole
 export function SceneArt({objects,silhouette=false}:{objects:SceneObject[];silhouette?:boolean}) {
  const id=useId().replace(/:/g,'_');
  return <svg viewBox="0 0 100 100" className="bj-vlab-scene" role="img" aria-label={silhouette?'Nesnelerin dış sınırlarından oluşan gölge':'Ayrıntılı nesne resmi'} shapeRendering="geometricPrecision">
-  <defs>{COLORS.map((color,i)=><linearGradient key={i} id={`${id}-${i}`} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#fff4d8"/><stop offset=".24" stopColor={color}/><stop offset="1" stopColor={color}/></linearGradient>)}</defs>
+  <defs>{COLORS.map((color,i)=><linearGradient key={i} id={`${id}-${i}`} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#fff4d8"/><stop offset=".3" stopColor={color}/><stop offset="1" stopColor={DARK_COLORS[i]}/></linearGradient>)}</defs>
   {objects.map((o,i)=><ObjectArt key={i} object={o} silhouette={silhouette} id={id}/>)}
  </svg>;
 }
@@ -52,7 +53,7 @@ export function VisualValueArt({value:v}:{value:VisualValue}) {
  switch(v.lab){case'scene':return <SceneArt objects={v.objects} silhouette={v.silhouette}/>;case'holes':return <HoleArt size={v.size} holes={v.holes}/>;case'pieces':return <PiecesArt polygons={v.polygons}/>;case'symbol':return <SymbolArt symbol={v.symbol}/>;case'marks':return <MarksArt mask={v.mask} turn={v.turn}/>;}
 }
 export function VisualReasoningBoard({board:b}:{board:VisualBoard}) {
- if(b.mechanic==='cube-evidence')return <CubeLabBoard board={b.cube}/>;
+ if(b.mechanic==='cube-evidence')return <div className="bj-vlab-cube"><CubeLabBoard board={b.cube}/></div>;
  return <div className="bj-vlab" data-visual-mechanic={b.mechanic}>
   {b.mechanic==='object-shadow'?<SceneArt objects={b.objects}/>:b.mechanic==='scene-difference'?<div className="bj-vlab-pair"><figure><figcaption>1. resim</figcaption><SceneArt objects={b.left}/></figure><figure><figcaption>2. resim</figcaption><SceneArt objects={b.right}/></figure></div>:b.mechanic==='object-mirror'?<div className={`bj-vlab-mirror is-${b.axis}`}><SceneArt objects={b.objects}/><div className="bj-vlab-mirror-line">AYNA</div></div>:b.mechanic==='fold-punch'?<div className="bj-vlab-fold"><div className="bj-vlab-fold-steps">{b.folds.map((axis,i)=><span key={axis}>{i+1}. {axis==='x'?'Sağ → sol':'Alt → üst'}</span>)}<span>Del → tam aç</span></div><HoleArt size={b.size} holes={b.holes} folds={b.folds}/></div>:b.mechanic==='seven-piece'?<PiecesArt polygons={b.pieces} outline/>:b.mechanic==='missing-symbol'?<div className="bj-vlab-grid" style={{gridTemplateColumns:`repeat(${b.side},minmax(0,1fr))`}}>{b.cells.map((v,i)=><div key={i} data-query={i===b.query}>{v===null?(i===b.query?'?':'·'):<SymbolArt symbol={b.symbols[v]}/>}</div>)}</div>:<div className="bj-vlab-grid" style={{gridTemplateColumns:`repeat(${b.side},minmax(0,1fr))`}}>{b.cards.map((v,i)=><div key={i} data-query={v===null}>{v?<MarksArt mask={v.mask} turn={v.turn}/>:<span>?</span>}</div>)}</div>}
  </div>;
