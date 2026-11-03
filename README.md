@@ -111,3 +111,11 @@ see [CI and legacy Firebase security](docs/ci-legacy-firebase-security.md).
 Katalog `src/content/wordwall-catalog.json` içinde tutulur. `npm run import:wordwall` public klasör ağacını okuyup her etkinliğin sahibini ve gömme adresini resmi oEmbed yanıtıyla doğrular; herhangi bir hata halinde mevcut dosyayı değiştirmez. Yeni etkinlikler için komutu çalıştırıp oluşan kataloğu gözden geçirerek yayımlayın. Gizli veya paylaşılmamış etkinlikler içeri alınmaz.
 
 Giriş bilgileri ve öğrenci verileri içe aktarma sırasında kullanılmaz. Oyunlar kullanıcının seçimiyle Wordwall sunucularından yüklenir. Wordwall sonuçları ZekaPark/Supabase ilerleme ve ödül kayıtlarına otomatik yazılmaz. Gömme ve görsel adresleri yalnızca resmi HTTPS alan adlarından kabul edilir; iframe üst sayfayı yönlendiremez.
+
+## Lisans / License
+
+Bilsem Junior is proprietary software. Copyright (c) 2026 Quantum Tech App — Bilsem Junior.
+All rights reserved. No permission to copy, modify, redistribute, sublicense or
+commercially use the proprietary source code is granted without written authorization.
+Third-party dependencies and embedded materials remain subject to their own terms.
+See [LICENSE.md](LICENSE.md) for the complete notice.
