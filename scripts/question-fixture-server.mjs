@@ -6,6 +6,7 @@ import tailwindcss from '@tailwindcss/vite';
 export function createQuestionFixtureServer(port, entry = 'tests/browser/question-screen.html') {
   return createServer({
     configFile: false,
+    define: { 'import.meta.env.VITE_APP_TARGET': JSON.stringify(process.env.QUESTION_FIXTURE_TARGET || 'web') },
     plugins: [react(), tailwindcss()],
     cacheDir: `node_modules/.vite-question-fixture-${port}`,
     optimizeDeps: { entries: [entry] },

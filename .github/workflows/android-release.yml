@@ -39,6 +39,16 @@ jobs:
       - name: Compile Android Billing and release bundle
         working-directory: android
         run: ./gradlew --no-daemon :app:bundleRelease :app:assembleRelease :app:assembleDebug :app:writeReleaseDependencyInventory
+      - name: Verify release security
+        run: python3 scripts/package-android-candidate.py test-artifacts/android
+      - name: Save verified package before browser checks
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          include-hidden-files: false
+          name: Bilsem-Junior-verified-Android-package
+          path: test-artifacts/android/
+          if-no-files-found: error
+          retention-days: 7
       - name: Verify billing screens
         run: |
           npx --no-install playwright install --with-deps chromium
@@ -49,8 +59,11 @@ jobs:
           npm run test:legal-links
       - name: Verify Android story adventure and simplified menus
         run: npm run test:android-story
-      - name: Verify release security
-        run: python3 scripts/package-android-candidate.py test-artifacts/android
+      - name: Verify larger Android question visuals and compact answers
+        env:
+          QUESTION_FIXTURE_TARGET: android
+          LAYOUT_OUTPUT: test-artifacts/android-question-layout
+        run: npm run test:layout
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -64,5 +77,6 @@ jobs:
             test-artifacts/android-public-startup/
             test-artifacts/android-parent/
             test-artifacts/legal-links/
+            test-artifacts/android-question-layout/
           if-no-files-found: ignore
           retention-days: 7

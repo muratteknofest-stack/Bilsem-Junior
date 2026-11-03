@@ -1,6 +1,7 @@
 import { useStudentReducedMotion } from '../features/student/experience-preferences';
 import { ArrowLeft, ArrowRight, Check, Clock3, Grid2X2, LoaderCircle, Maximize2, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { sound } from '../lib/sound';
+import { isAndroidApp } from '../lib/native-app';
 import type { AnswerFeedback } from '../features/student/answer-feedback';
 import { LearningAnswerFeedback } from './student/LearningAnswerFeedback';
 import { LearningSessionProgress } from './student/LearningSessionProgress';
@@ -84,7 +85,7 @@ export function FocusedQuestionScreen(p:Props) {
     if(lastTransition.current!==p.sessionKey){lastTransition.current=p.sessionKey;sound.playTransition();}
   },[p.sessionKey]);
   const status=p.feedback?'Sıradaki keşfe…':p.busy?'Cevabın kaydediliyor…':p.expired?'Süre tamamlandı':p.submitted?'Cevabın kaydedildi':'Cevabını seç, keşfe devam et';
-  const content=<main ref={screen} className="zp-focus" data-mode={p.mode || 'practice'} data-reduced-motion={reducedMotion} data-answer-feedback={p.feedback?.kind} aria-label="Soru çözme ekranı">
+  const content=<main ref={screen} className="zp-focus" data-app-target={isAndroidApp?'android':'web'} data-mode={p.mode || 'practice'} data-reduced-motion={reducedMotion} data-answer-feedback={p.feedback?.kind} aria-label="Soru çözme ekranı">
     <header className="zp-focus-header">
       <button type="button" onClick={requestLeave} disabled={p.busy} aria-label="Çalışmadan çık"><ArrowLeft size={20} aria-hidden="true" /></button>
       <div className="zp-focus-brand"><span className="zp-focus-brand-icon" aria-hidden="true"><Sparkles size={21}/></span><span><b>Bilsem Junior</b><small>{p.question.targetGrade || ''}. sınıf · {p.mode==='exam'?'Deneme':p.mode==='adaptive'?'Sana özel keşif':'Zihin atölyesi'}</small></span></div>
