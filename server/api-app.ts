@@ -13,7 +13,7 @@ import reelsRoutes from './routes/reels-routes';
 import authRoutes from './routes/auth-routes';
 import profileRoutes from './routes/profile-routes';
 import editorialRoutes from './routes/editorial-routes';
-import { browserDirectives, resolveConnectSrcOrigins, securityHeaders } from './browser-security';
+import { browserDirectives, resolveConnectSrcOrigins, resolveMediaSrcOrigins, securityHeaders } from './browser-security';
 import { checkedSupabaseOrigin } from '../shared/supabase-environment.mjs';
 import { requestSecurity } from './request-security';
 import createPlatformRoutes from './routes/platform-routes';
@@ -28,17 +28,25 @@ export function createApiApp(options: { limits?: Partial<RequestLimitPolicy> } =
   const app = express();
   const limits = createRequestLimits(options.limits);
   const publicSettings = createCachedRead(readPlatformSettings, 5000);
-  let connectSrc = browserDirectives.connectSrc;
+  let connectSrc: string[] = browserDirectives.connectSrc;
+  let mediaSrc: string[] = browserDirectives.mediaSrc;
   try {
-    if (process.env.SUPABASE_URL) connectSrc = resolveConnectSrcOrigins(checkedSupabaseOrigin(process.env.SUPABASE_URL, process.env));
-  } catch { connectSrc = ["'self'"]; }
+    if (process.env.SUPABASE_URL) {
+      const origin = checkedSupabaseOrigin(process.env.SUPABASE_URL, process.env);
+      connectSrc = resolveConnectSrcOrigins(origin);
+      mediaSrc = resolveMediaSrcOrigins(origin);
+    }
+  } catch {
+    connectSrc = ["'self'"];
+    mediaSrc = ["'self'", 'blob:'];
+  }
   app.disable('x-powered-by');
   // Vercel owns and overwrites the final forwarding hop. A directly exposed
   // Node/VPS server must not accept an attacker's X-Forwarded-For as its IP.
   app.set('trust proxy', process.env.VERCEL === '1' ? 1 : false);
   app.use(helmet({
     contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
-      directives: { ...browserDirectives, connectSrc },
+      directives: { ...browserDirectives, connectSrc, mediaSrc },
     } : false,
     crossOriginResourcePolicy: { policy: 'same-origin' },
     crossOriginOpenerPolicy: { policy: 'same-origin' },
