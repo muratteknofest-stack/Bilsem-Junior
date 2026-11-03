@@ -48,10 +48,25 @@ export function resolveConnectSrcOrigins(customSupabaseUrl?: string): string[] {
   return base;
 }
 
+/** Public Reels are hosted on the active deployment's own Storage origin.
+ * A preview must never connect to, or load media from, the production database.
+ */
+export function resolveMediaSrcOrigins(customSupabaseUrl?: string): string[] {
+  if (!customSupabaseUrl) return [...browserDirectives.mediaSrc];
+  try {
+    const parsed = new URL(customSupabaseUrl);
+    if (parsed.protocol === 'https:' && parsed.origin === customSupabaseUrl) {
+      return ["'self'", 'blob:', parsed.origin];
+    }
+  } catch { /* Invalid Storage origins are not permitted. */ }
+  return ["'self'", 'blob:'];
+}
+
 export function buildContentSecurityPolicy(customSupabaseUrl?: string): string {
   const directives = {
     ...browserDirectives,
     connectSrc: resolveConnectSrcOrigins(customSupabaseUrl),
+    mediaSrc: resolveMediaSrcOrigins(customSupabaseUrl),
   };
   return Object.entries(directives)
     .map(([key, values]) => `${key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}${values.length ? ` ${values.join(" ")}` : ""}`)
