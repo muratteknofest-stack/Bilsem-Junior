@@ -154,6 +154,11 @@ export function AdminReelsStudio() {
           className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-fuchsia-600 to-indigo-500 px-5 py-3 font-black text-white shadow-lg shadow-fuchsia-800/20 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50">
           <PlayCircle size={21}/> {busy ? 'Üretim isteği gönderiliyor…' : 'Şimdi Video Oluştur'}
         </button>
+        <a href="https://github.com/muratteknofest-stack/Bilsem-Junior/actions/workflows/bilsem-junior-reels.yml"
+          target="_blank" rel="noopener noreferrer"
+          className="mt-3 flex min-h-11 items-center justify-center rounded-xl border border-slate-600 px-4 text-sm font-bold text-indigo-200 hover:bg-slate-800">
+          Alternatif: GitHub Actions'ta manuel video oluştur
+        </a>
         <p className="mt-3 text-xs leading-5 text-slate-400">
           MP4 üretimi GitHub Actions sunucusunda yapılır. İşlem kuyruğa alınabilir; süre GitHub yoğunluğuna bağlıdır.
           Günlük 19.00 yayını bu işlemden etkilenmez.
