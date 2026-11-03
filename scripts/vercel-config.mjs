@@ -16,5 +16,6 @@ export function createVercelConfig(env = {}) {
   const policy = config.headers[0].headers.find(/** @param {{key:string}} header */ header => header.key === 'Content-Security-Policy');
   if (!policy || !/connect-src [^;]+/.test(policy.value)) throw new Error('Supabase bağlantı güvenlik politikası eksik.');
   policy.value = policy.value.replace(/connect-src [^;]+/, `connect-src 'self' ${origin} ${origin.replace('https:', 'wss:')}`);
+  policy.value = policy.value.replace(/media-src [^;]+/, `media-src 'self' blob: ${origin}`);
   return config;
 }
