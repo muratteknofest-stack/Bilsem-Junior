@@ -16,15 +16,18 @@ const server = app.listen(0, '127.0.0.1');
 await once(server, 'listening');
 const origin = `http://127.0.0.1:${server.address().port}`;
 async function checkContrast(page) {
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const ratios = await page.evaluate(() => {
     const luminance = color => color.match(/[\d.]+/g).slice(0,3).map(Number).map(v => { const c=v/255; return c<=.04045?c/12.92:((c+.055)/1.055)**2.4; }).reduce((sum,c,i)=>sum+c*[.2126,.7152,.0722][i],0);
     return [['.bj-welcome-hero h1','.bj-welcome'],['.bj-wordmark','.bj-welcome'],['.bj-wordmark>span','.bj-welcome'],['.bj-welcome-student','.bj-welcome-student'],['.bj-welcome-parent','.bj-welcome-parent'],['.bj-welcome-secondary button','.bj-welcome-secondary button'],['.bj-welcome>footer a','.bj-welcome']].map(([text,background]) => {
       const foreground=luminance(getComputedStyle(document.querySelector(text)).color),style=getComputedStyle(document.querySelector(background));
       const colors=[style.backgroundColor,...(style.backgroundImage.match(/rgba?\([^)]+\)/g)||[])].filter(color=>!/^rgba\([^)]*, 0\)$/.test(color));
-      return {text,ratio:Math.min(...colors.map(color=>{const b=luminance(color);return (Math.max(foreground,b)+.05)/(Math.min(foreground,b)+.05);}))};
+      return {text,foreground:getComputedStyle(document.querySelector(text)).color,backgrounds:colors,ratio:Math.min(...colors.map(color=>{const b=luminance(color);return (Math.max(foreground,b)+.05)/(Math.min(foreground,b)+.05);}))};
     });
   });
-  assert.ok(ratios.every(item=>Number.isFinite(item.ratio)&&item.ratio>=4.5),JSON.stringify(ratios));
+  const passed=ratios.every(item=>Number.isFinite(item.ratio)&&item.ratio>=4.5);
+  if (!passed) await page.screenshot({path:resolve(output,'contrast-failure.png'),fullPage:true});
+  assert.ok(passed,JSON.stringify(ratios));
 }
 const browser = await chromium.launch({ headless: true });
 const errors = [], mutations = [], checks = [];
