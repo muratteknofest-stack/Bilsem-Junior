@@ -1,3 +1,5 @@
+import {solvePrecision,validatePrecisionBoard,precisionValueKey,type PrecisionValue} from './precision-lab';
+import {independentlyMatchesPrecision} from './precision-proof';
 import{solveReference,validateReferenceBoard,independentlyMatchesReference,REFERENCE_TOPICS}from'./reference-lab';
 import {solveExam,validateExamBoard,independentlyMatchesExam,examTopic} from './exam-lab';
 import {solveCube,validateCubeBoard,CUBE_TOPICS} from './cube-lab';
@@ -36,6 +38,12 @@ export function solveQuestion(q: BaseQuestion): UniversalSolverResult {
   });
   try {
     if (!q || !Array.isArray(q.options) || q.options.length !== 4 || q.options.some(o => !o)) return failure('Dört geçerli seçenek gerekli.');
+    if((q.visualConfig as Record<string,unknown>)?.displayMode==='precision_lab'){
+      const b=validatePrecisionBoard(q.visualConfig);if(b.kind!==q.type||b.grade!==q.targetGrade)return failure('Kesin geometri konusu veya sınıfı uyuşmuyor.');
+      const answer=solvePrecision(b,q.options.map(o=>o.visualData as PrecisionValue)),first=q.options.filter(o=>precisionValueKey(o.visualData as PrecisionValue)===precisionValueKey(answer)),second=q.options.filter(o=>independentlyMatchesPrecision(b,o.visualData));
+      if(first.length!==1||second.length!==1||first[0].id!==second[0].id)return failure('Bağımsız rota, hücre veya parça kanıtları tek yanıtta birleşmiyor.',true);
+      return {canSolve:true,isMatch:first[0].id===q.correctOptionId,expectedAnswerId:first[0].id,expectedFingerprint:fingerprint(first[0].visualData),solverMethod:'PrecisionInference-and-GeometryProof-v1',confidence:1,ambiguityDetected:false,proofSteps:['Yalnız görünür verilenlerden ilişki hesaplandı.','Dört aday ayrı bir yürüme, hücre, birim küp veya alan kaplama yöntemiyle sınandı.','Tek uygun seçenek: '+first[0].id]};
+    }
     if((q.visualConfig as Record<string,unknown>)?.displayMode==='exam_lab'){
       const b=validateExamBoard(q.visualConfig);if(examTopic(b.mechanic,b.grade)!==q.type||b.grade!==q.targetGrade)return failure('Deneme konusu/sınıfı uyuşmuyor.');
       const answer=solveExam(b),primary=q.options.filter(o=>fingerprint(o.visualData)===fingerprint(answer)),independent=q.options.filter(o=>independentlyMatchesExam(b,o.visualData));

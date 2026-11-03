@@ -70,6 +70,13 @@ export function inspectEducation(q: BaseQuestion, grade: SchoolGrade, age?: numb
   }
   if((q.visualConfig as Record<string,unknown>).displayMode==='colorful_board'){const c=q.visualConfig as unknown as ColorfulBoard;metrics.gridSize=c.source?.art==='mosaic'?c.source.size:0;metrics.itemCount=metrics.gridSize**2||c.layers?.length||1;}
   const audience: string[] = [], difficulty: string[] = [], visual: string[] = [];
+  if((q.visualConfig as Record<string,unknown>).displayMode==='precision_lab'){
+    const c=q.visualConfig as import('./precision-lab').PrecisionBoard;
+    metrics.gridSize='size'in c?c.size:0;metrics.symbolCount=c.kind==='symbol_coding'?c.key.length:0;metrics.peopleCount=0;
+    metrics.itemCount=c.kind==='cube_counting'?c.heights.reduce((s,h)=>s+h,0):c.kind==='tangram_puzzle'?7:c.kind==='symbol_coding'?c.key.length+c.query.length:'cards'in c?c.cards.length:'cells'in c?c.cells.length:c.size**2;
+    metrics.maxNumber=Math.max(0,...q.options.flatMap(o=>{const v=o.visualData as import('./precision-lab').PrecisionValue;return v.precision==='number'?[v.value]:v.precision==='code'?v.digits:[];}));
+    if(c.grade!==grade)audience.push('GRADE_MISMATCH: Geometri sınıfı uyuşmuyor.');
+  }
   if((q.visualConfig as Record<string,unknown>).displayMode==='exam_lab'){
     const e=q.visualConfig as import('./exam-lab').ExamBoard;
     metrics.maxNumber=0;metrics.symbolCount=0;metrics.peopleCount=0;

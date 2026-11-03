@@ -1,3 +1,4 @@
+import {precisionAllowed,generatePrecisionQuestion} from '../precision-lab';
 import{REFERENCE_MECHANICS,REFERENCE_TOPICS,referenceAllowed,generateReferenceQuestion}from'../reference-lab';
 import {CUBE_MECHANICS,CUBE_TOPICS,cubeAllowed,generateCubeQuestion} from '../cube-lab';
 import {assessCandidate} from '../multi-stage-quality';
@@ -52,7 +53,7 @@ export function generateQuestionByType(
 }
 
 export function generateQuestion(options: {
-  profile?: 'professional' | 'complete' | 'professional-v2';
+  profile?: 'professional' | 'complete' | 'professional-v2' | 'precision-v1';
   targetGrade?: SchoolGrade;
   category?: CognitiveCategory | 'mixed';
   difficulty?: DifficultyLevel;
@@ -63,6 +64,12 @@ export function generateQuestion(options: {
   if (!Number.isSafeInteger(seed) || seed < 1 || options.targetGrade !== undefined && !isSchoolGrade(options.targetGrade) || options.difficulty !== undefined && (!Number.isInteger(options.difficulty) || options.difficulty < 1 || options.difficulty > 6)) throw new Error('INVALID_GENERATION_INPUT: Sınıf, zorluk veya tohum geçersiz.');
   const rng = new SeededRNG(seed);
   const difficulty = options.targetGrade ? gradeDifficulty(options.targetGrade, options.difficulty ?? 3) : options.difficulty ?? 3;
+  if(options.profile==='precision-v1'){
+    if(!isSchoolGrade(options.targetGrade)||!options.type||!precisionAllowed(options.type,options.targetGrade,difficulty))throw Error('Kesin geometri için desteklenen konu ve sınıf gerekli.');
+    const q=generatePrecisionQuestion(options.type,seed,difficulty,options.targetGrade);
+    if(options.category&&options.category!=='mixed'&&q.category!==options.category)throw Error('CATEGORY_MISMATCH');
+    assertQuestionReadyForStudents(q);return q;
+  }
   if(options.profile==='professional-v2'){
     if(!isSchoolGrade(options.targetGrade))throw Error('V2 üretim için sınıf gerekli.');
     const pool=options.category&&options.category!=='mixed'?STUDENT_CATEGORY_TYPES[options.category]:ALL_TOPIC_TYPES;

@@ -1,3 +1,11 @@
+## 1.0.43 — Sekiz soru türünde kesin mantık ve net çizimler
+
+- Labirent rota seçimi, görsel örüntü, küp sayımı/açık yüzler, sembol şifreleme, görsel dikkat, farklı ilişki, simetri ve gerçek tangram yerleşimi için `precision-lab-1` biçimi.
+- Her soru görünür verilenlerden çözülür; dört aday ayrı rota yürütme, hücre ilişkisi, voxel veya üçgensel alan kaplama kanıtıyla sınanır. Sınıf sınırları korunur; otomatik kanıt insan eğitmen incelemesi değildir.
+- `npm run test:precision` gerçek soru ekranını web/Android hedeflerinde telefon, yatay telefon ve tablet boyutlarında; şık seçimi ve dokunarak yerleştirmeyle kontrol eder. `python3 scripts/package-android-candidate.py test-artifacts/android` derlenmiş paket kimliğini, varlıkları ve güvenlik bayraklarını doğrular.
+- Android sürümü 44 / 1.0.43. Eski uygulamalar desteklemedikleri çizimleri alamaz; önceden atanmış testlerin anlık görüntüsü korunur. Yeni sorular yeni bir çalışma başlatıldığında gelir.
+- Test APK'sı üretim imzası, Google Play yayını, gerçek cihaz, gerçek ödeme veya ticari yayın kabulü değildir. Önceki test APK'sıyla imza farklıysa güncelleme reddedilebilir; eski kurulum kaldırılmadan önce ilerleme hesaba eşitlenmelidir.
+
 ## 1.0.42 — Daha büyük soru görselleri, daha küçük şıklar
 
 - Android soru ekranında görsel/şık alan oranı 1,12:1 yerine 1,45:1; yatay telefonda sütun oranı 1,1:1 yerine 1,35:1. Şık aralıkları, iç boşlukları ve harf etiketleri daha kompakt; en az 44 px dokunma yüksekliği korunur.

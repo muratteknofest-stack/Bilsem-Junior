@@ -1,3 +1,5 @@
+import {PrecisionBoard,PrecisionValueArt} from './PrecisionBoard';
+import {validPrecisionValue} from '../precision-lab';
 import{ReferenceLabBoard,ReferenceValueArt}from'./ReferenceLabBoard';
 import{validReferenceValue}from'../reference-lab';
 import {CubeView} from './CubeLabBoard';
@@ -71,6 +73,7 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
   }
 
   const renderVisualContent = () => {
+    if(validPrecisionValue(visualData))return <PrecisionValueArt value={visualData}/>;
     if(validExamTile(visualData))return <ExamTileArt value={visualData}/>;
     if(validReferenceValue(visualData)&&'reference'in visualData)return <ReferenceValueArt value={visualData}/>;
     if(validCubeValue(visualData)&&'cubeView'in visualData)return <CubeView value={visualData}/>;

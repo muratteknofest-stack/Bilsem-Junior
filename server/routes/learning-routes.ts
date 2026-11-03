@@ -1,3 +1,5 @@
+import {supportsPrecisionFormat,needsPrecisionFormat} from '../../src/features/student/learning-question-format';
+import {createPrecisionLearningPool} from '../precision-learning-pool';
 import{supportsExamFormat,needsExamFormat,supportsReferenceFormat,needsReferenceFormat}from'../../src/features/student/learning-question-format';
 import {supportsCubeFormat,needsCubeFormat} from '../../src/features/student/learning-question-format';
 import {recommendDifficulty,adaptDifficultyPlan} from '../../src/features/questions/adaptive-difficulty';
@@ -134,18 +136,21 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const perceptual = supportsPerceptualFormat(req.query.questionFormat);
     const cube=supportsCubeFormat(req.query.questionFormat);
     const reference=supportsReferenceFormat(req.query.questionFormat);
+    const precision=supportsPrecisionFormat(req.query.questionFormat);
     const examFormat=supportsExamFormat(req.query.questionFormat);
     const challengeMode = locale !== 'en' && topic === 'mixed' && difficulty === 'mixed';
     const recommendation=mode==='adaptive'?recommendDifficulty(grade,recent.answers):{adjustment:0 as const,sampleSize:0,accuracy:null,reason:'steady' as const};
     const challengeFloor = Math.max(1,gradeChallengeFloor(grade)+Math.min(0,recommendation.adjustment)) as DifficultyLevel;
     // Fetch only candidates that this client can use; all delivered questions still pass proofs.
     const bank = locale === 'en' ? {questions:englishBankForGrade(grade),bankVersion:ENGLISH_BANK_VERSION} : await loadPublishedLearningBank({ grade, difficulty, category, topic }, {
-      ...(modern && topic === 'mixed' ? {types:curriculumV2?ALL_TOPIC_TYPES.filter(type=>topicAllowedForGrade(type,grade)):professionalGradeTypes(grade),engines:CURRENT_REASONING_ENGINES.filter(engine=>(examFormat||engine!=='exam-lab-1')&&(curriculumV2||engine!=='curriculum-2')&&(perceptual||engine!=='perceptual-1')&&(cube||engine!=='cube-lab-1')&&(reference||!engine.startsWith('reference-lab-')))} : {}),
+      ...(modern && topic === 'mixed' ? {types:curriculumV2?ALL_TOPIC_TYPES.filter(type=>topicAllowedForGrade(type,grade)):professionalGradeTypes(grade),engines:CURRENT_REASONING_ENGINES.filter(engine=>(precision||engine!=='precision-lab-1')&&(examFormat||engine!=='exam-lab-1')&&(curriculumV2||engine!=='curriculum-2')&&(perceptual||engine!=='perceptual-1')&&(cube||engine!=='cube-lab-1')&&(reference||!engine.startsWith('reference-lab-')))} : {}),
       ...(challengeMode ? {minDifficulty:challengeFloor} : {}),
     });
     timing('bank');
     const seen = new Set<string>();
-    const topicCandidates = topic === 'mixed' ? bank.questions : bank.questions.filter(q => {
+    const refreshed=precision&&locale!=='en'?createPrecisionLearningPool({grade,difficulty,category,topic,count:requestedCount,seed:randomInt(1,2147483647)}):[];
+    const combined=[...refreshed,...bank.questions];
+    const topicCandidates = topic === 'mixed' ? combined : combined.filter(q => {
       if (q.type !== topic || q.targetGrade !== grade || q.category !== category || q.difficulty > EDUCATION_PROFILES[grade].maxDifficulty || (difficulty !== 'mixed' && q.difficulty !== difficulty) || !isQuestionReadyForStudents(q)) return false;
       const key = questionStimulusKey(q);
       if (seen.has(key)) return false;
@@ -153,22 +158,24 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     });
     const count = requestedCount;
     if (topic!=='mixed'&&!topicCandidates.length) throw new LearningError('Seçilen sınıf, konu ve zorlukta yayımlanmış soru yok. Zorluk filtresini değiştirip yeniden dene.', 422);
-    const selection: LearningSelection = { ...(modern?{questionFormat:req.query.questionFormat as LearningSelection['questionFormat']}:{}), ...(parsed.data.mixCategories ? {mixCategories:true} : {}), topic, grade: profile.data.grade, difficulty, category, exam: mode === 'exam' ? exam : '', count, bankVersion: bank.bankVersion, ...(locale === 'en' ? { locale } : {}) };
+    const selection: LearningSelection = { ...(modern?{questionFormat:req.query.questionFormat as LearningSelection['questionFormat']}:{}), ...(parsed.data.mixCategories ? {mixCategories:true} : {}), topic, grade: profile.data.grade, difficulty, category, exam: mode === 'exam' ? exam : '', count, bankVersion: bank.bankVersion+(precision?'|precision-lab-1':''), ...(locale === 'en' ? { locale } : {}) };
     // Starting a test always draws a fresh shuffled set. Explicit GET/resume keeps its snapshot.
     const englishReady = (q: BaseQuestion) => (q.visualConfig as Record<string,unknown>)?.displayMode === 'colorful_board' && ENGLISH_AREAS.some(a => a.id === q.type);
     // Respect deliberate easy-level choices and specific-topic filters. For the
     // Turkish mixed-level pool, remove below-grade filler before selection.
     const gradeAppropriate = (q: BaseQuestion) => !challengeMode || q.difficulty >= challengeFloor;
-    const formatReady=(q:BaseQuestion)=>needsExamFormat(q)?examFormat:needsReferenceFormat(q)?reference:needsCubeFormat(q)?cube:needsPerceptualFormat(q)?perceptual:needsCurriculumV2Format(q)?curriculumV2:needsCurrentQuestionFormat(q)?supportsLabQuestionFormat(req.query.questionFormat):needsProfessionalV2Format(q)?supportsProfessionalV2Format(req.query.questionFormat):modern||!needsReasoningFormat(q);
-    const reasoningReady=(q:BaseQuestion)=>locale==='en'||topic!=='mixed'||currentReasoningCandidate(q,grade,modern,curriculumV2,perceptual,cube,reference,examFormat);
+    const formatReady=(q:BaseQuestion)=>needsPrecisionFormat(q)?precision:needsExamFormat(q)?examFormat:needsReferenceFormat(q)?reference:needsCubeFormat(q)?cube:needsPerceptualFormat(q)?perceptual:needsCurriculumV2Format(q)?curriculumV2:needsCurrentQuestionFormat(q)?supportsLabQuestionFormat(req.query.questionFormat):needsProfessionalV2Format(q)?supportsProfessionalV2Format(req.query.questionFormat):modern||!needsReasoningFormat(q);
+    const reasoningReady=(q:BaseQuestion)=>locale==='en'||topic!=='mixed'||currentReasoningCandidate(q,grade,modern,curriculumV2,perceptual,cube,reference,examFormat,precision);
     let candidates = topicCandidates.filter(q => fitsLearningSelection(q, selection) && gradeAppropriate(q) && formatReady(q)&&reasoningReady(q) && (locale !== 'en' || englishReady(q)));
     // Prefer the refreshed bank for focused practice when it can fill the whole
     // request. Keep the complete legacy pool for installed clients and long tests.
     if (curriculumV2 && topic !== 'mixed') {
+      const precise=candidates.filter(q=>precision&&q.authoring?.engine==='precision-lab-1');
       const cubes=candidates.filter(q=>examFormat&&q.authoring?.engine==='exam-lab-1'||reference&&['reference-lab-1','reference-lab-2'].includes(q.authoring?.engine||'')||cube&&q.authoring?.engine==='cube-lab-1'||perceptual&&q.authoring?.engine==='perceptual-1');
       const visual = cubes.length>=count?cubes:perceptual ? candidates.filter(q=>q.authoring?.engine==='perceptual-1') : [];
       const refreshed = visual.length>=count?visual:candidates.filter(q=>q.authoring?.engine==='curriculum-2');
-      if (refreshed.length >= count) candidates = refreshed;
+      if(precise.length>=count)candidates=precise;
+      else if (refreshed.length >= count) candidates = refreshed;
     }
     if (locale === 'en' && candidates.length < count) throw new LearningError('This activity is not available in English at this level. Try mixed practice.', 422);
     const exposure = recent.exposure;
@@ -198,7 +205,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
         if (locale === 'en') throw new LearningError('English practice is temporarily unavailable. Please try again.', 503);
         const nextDifficulty = plannedDifficulty ?? (difficulty === 'mixed' ? pickGradeChallenge(grade) : difficulty);
         const seed=randomInt(1,2147483647);
-        return generateVariedLearningQuestion({grade,category:nextCategory,difficulty:nextDifficulty,seed,typeCounts,reasoningCounts,exposure,acceptCandidate,legacy:!modern,lab:supportsLabQuestionFormat(req.query.questionFormat),curriculumV2,perceptual,cube,reference,exam:examFormat});
+        return generateVariedLearningQuestion({grade,category:nextCategory,difficulty:nextDifficulty,seed,typeCounts,reasoningCounts,exposure,acceptCandidate,legacy:!modern,lab:supportsLabQuestionFormat(req.query.questionFormat),curriculumV2,perceptual,cube,reference,exam:examFormat,precision});
       },
     });
     timing('assembly');
