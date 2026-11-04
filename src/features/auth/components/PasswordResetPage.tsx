@@ -1,4 +1,5 @@
 import { NewPasswordFields } from './NewPasswordFields';
+import { RecoveryMfaGate } from './RecoveryMfaGate';
 import React, { useEffect, useState } from 'react';
 import { auth, isPasswordRecoveryReady, onPasswordRecovery, sendPasswordResetEmail, updateRecoveredPassword } from '../../../lib/supabase';
 import { forgotPasswordSchema, passwordResetSchema, formatZodError } from '../../../lib/validations';
@@ -109,6 +110,7 @@ export const PasswordResetPage: React.FC = () => {
           </div>
         )}
         {state === 'ready' && (
+          <RecoveryMfaGate>
           <form onSubmit={submit} className="mt-5 space-y-4">
             <p className="text-sm text-slate-600">Yeni şifrenizi belirleyin. En az 8 karakter, bir harf ve bir rakam kullanın.</p>
             <NewPasswordFields label="Yeni şifre" value={password} confirmation={confirmPassword} onChange={setPassword} onConfirmation={setConfirmPassword} disabled={submitting} />
@@ -118,6 +120,7 @@ export const PasswordResetPage: React.FC = () => {
               {submitting ? 'Kaydediliyor…' : 'Şifreyi yenile'}
             </button>
           </form>
+          </RecoveryMfaGate>
         )}
       </section>
     </main>
