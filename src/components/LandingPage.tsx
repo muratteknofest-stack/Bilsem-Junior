@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { ArrowRight, ArrowUpRight, Sparkles, Shapes, Brain, ScanEye, Trophy, Check, ChevronDown, Move, Keyboard, ShieldCheck, Heart, Volume2, VolumeX, Target, Zap, Medal, GraduationCap, Rotate3D, Hash, Puzzle, Compass, Timer, MousePointer2 } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Sparkles, Shapes, Brain, ScanEye, Trophy, Check, ChevronDown, Move, Keyboard, ShieldCheck, Heart, Volume2, VolumeX, Target, Zap, Medal, GraduationCap, Rotate3D, Hash, Puzzle, Compass, Timer, MousePointer2, Smartphone } from 'lucide-react';
 import type { QuestionType, UserRole } from '../types';
 import { generateQuestionByType } from '../features/questions/generators';
 import { evaluateResponse, type QuestionResponse } from '../features/questions/answer-interactions';
@@ -16,6 +16,9 @@ import { PremiumButton } from './landing/PremiumUI';
 import { GradeExplorer } from './landing/GradeExplorer';
 import { createGradePreview, type PreviewGrade } from './landing/grade-preview';
 import { Footer } from './Footer';
+import { AppDownloadLinks } from './AppDownloadLinks';
+import { useAppDownloads } from '../hooks/useAppDownloads';
+import { isAndroidApp } from '../lib/native-app';
 import './landing/landing.css';
 import './landing/design-system.css';
 import './landing/colorful-home.css';
@@ -63,6 +66,7 @@ const faqs = [
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onNavigate, demoOnly = false, onCloseDemo }) => {
   const registration = useRegistrationAvailability();
+  const downloads = useAppDownloads();
   const registerLabel = registration === 'open' ? 'Veli hesabı oluştur' : 'Kayıt bilgilerini incele';
   const registrationNote = registration === 'open' ? 'Kaydı veli tamamlar; öğrenci ayrı giriş bilgileriyle devam eder.' : registration === 'closed' ? 'Yeni hesap oluşturma şu anda kapalı. Bir örnek soru deneyebilir, mevcut hesabınla giriş yapabilirsin.' : registration === 'loading' ? 'Kayıt durumu kontrol ediliyor… Örnek soru için hesap gerekmez.' : 'Kayıt durumu şu anda doğrulanamadı. Kayıt sayfasında yeniden kontrol edebilirsin.';
   const reducedMotion = useReducedMotion();
@@ -154,12 +158,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
           <p className="zp-hero-description">Bilsem Junior ile görsel düşünme, mantık, örüntü ve dikkat çalış. Sınıfına uygun alıştırmaları çöz, açıklamaları keşfet; her gün kendi gelişiminde bir adım at.</p>
           <div className="zp-hero-buttons"><PremiumButton onClick={() => goDemo()}>Bir soru dene <ArrowRight size={19} /></PremiumButton><PremiumButton tone="quiet" onClick={() => onNavigate('register')}>{registerLabel} <ArrowUpRight size={17} /></PremiumButton></div>
           <p className="bj-registration-notice" role="status">{registrationNote}</p><div className="zp-hero-reassurance"><span><Check size={14} /> Hesap açmadan dene</span><span><Check size={14} /> Kendi hızında ilerle</span></div>
+          {!isAndroidApp && <div className="bj-hero-downloads"><p>Keşif cebinde de devam etsin.</p><AppDownloadLinks downloads={downloads} compact/></div>}
           <div className="zp-hero-footnote"><span className="zp-hero-mini-medal"><Trophy size={23} /></span><p>Küçük adımlarla düzenli çalışma.<br /><strong>Büyük bir merak, sana ait bir yol.</strong></p></div>
         </motion.div>
         <LearningIsland moving={moving} />
         </div>
       </section>
       <div className="zp-skill-ribbon" aria-label="Çalışma becerileri"><div className="zp-container"><span><Shapes size={18} /> Örüntüleri keşfet</span><i>✦</i><span><Brain size={18} /> Bağlantı kur</span><i>✦</i><span><ScanEye size={18} /> Ayrıntıları yakala</span><i>✦</i><span><Trophy size={18} /> Kendini geliştir</span></div></div>
+      {!isAndroidApp && <section id="uygulamayi-indir" className="zp-container bj-download-section" aria-labelledby="download-title"><div className="bj-download-panel"><div className="bj-download-orbit" aria-hidden="true"><Smartphone size={52}/><span>✦</span><i>●</i></div><div className="bj-download-intro"><p className="zp-kicker"><Sparkles size={16} aria-hidden="true"/> KÜÇÜK EKRAN, BÜYÜK MERAK</p><h2 id="download-title" tabIndex={-1}>Bir dokunuşla<br/><span>keşfe devam!</span></h2><p>Telefonunda ya da tabletinde düşün, çöz, keşfet. Cihazına uygun mağazadan Bilsem Junior’a ulaş.</p></div><div className="bj-download-stores"><AppDownloadLinks downloads={downloads}/><p className="bj-download-note">Mağaza bağlantıları yeni sekmede açılır. iPhone ve iPad’de web sürümünü de kullanabilirsin.</p></div></div></section>}
       {discovery}
       <GradeExplorer onTry={tryGrade} completed={submitted} />
       <section id="dunyalar" className="zp-container zp-section" aria-labelledby="worlds-title">
@@ -185,6 +191,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
       <section id="yardim" className="zp-container zp-section zp-faq" aria-labelledby="faq-title"><div><p className="zp-kicker">AKLINDA BİR SORU MU VAR?</p><h2 id="faq-title">Merak etmek<br />işin başlangıcı.</h2></div><div>{faqs.map(([q, a]) => <details key={q}><summary>{q}<ChevronDown size={19} /></summary><p>{a}</p></details>)}</div></section>
       <section className="zp-container zp-final-section"><div className="zp-final-cta"><span aria-hidden="true" className="zp-cta-star">✦</span><p className="zp-kicker">HADİ, BİR ADIM ATALIM.</p><h2>BİLSEM yolculuğunda ilk adım.</h2><PremiumButton tone="lime" onClick={() => onNavigate('register')}>{registerLabel} <ArrowRight size={19} /></PremiumButton><p className="zp-final-note">Bilsem Junior ile düşünmenin farklı yollarını keşfet.</p></div></section>
     </main>
-    <Footer onNavigate={onNavigate} onNavigateToLogin={onNavigateToLogin} />
+    <Footer downloads={downloads} onNavigate={onNavigate} onNavigateToLogin={onNavigateToLogin} />
   </div>;
 };

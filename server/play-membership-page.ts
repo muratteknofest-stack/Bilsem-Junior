@@ -5,15 +5,15 @@ import { PlayMembershipPage, type PlayMembershipPageProps } from '../src/compone
 import { readPlatformSettings } from './platform-settings';
 import { paidSalesReady } from './google-play-sales';
 import { paidAccessStartsAt } from './paid-access-policy';
-import { playStoreListing } from './play-listing';
+import { appStoreListing, playStoreListing } from './play-listing';
 
 export async function publicPlayMembership(readSettings = readPlatformSettings) {
   const { settings } = await readSettings();
   const startsAt = paidAccessStartsAt();
-  return { brand: APP_BRAND.name, storeUrl: playStoreListing(),
+  return { brand: APP_BRAND.name, storeUrl: playStoreListing(), appStoreUrl: appStoreListing(),
     paidAccessFrom: startsAt === null ? null : new Date(startsAt).toISOString(),
     ready: paidSalesReady(settings) };
 }
 export function playMembershipPageHtml(config: PlayMembershipPageProps) {
-  return `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f8f7f2"><meta name="description" content="Bilsem Junior Google Play üyeliği: aylık, 3 aylık ve yıllık aboneliklerle aynı öğrenci hesabında web ve Android erişimi."><title>Bilsem Junior · Google Play üyeliği</title><link rel="icon" href="/logo.svg"><link rel="stylesheet" href="/sales/sales.css"></head><body>${renderToStaticMarkup(React.createElement(PlayMembershipPage, config))}</body></html>`;
+  return `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f8f7f2"><meta name="description" content="Bilsem Junior Google Play üyeliği: aylık, 3 aylık ve yıllık aboneliklerle aynı öğrenci hesabında web ve Android erişimi."><title>Bilsem Junior · Google Play üyeliği</title><link rel="icon" href="/logo.svg"><link rel="stylesheet" href="/sales/sales.css"><link rel="stylesheet" href="/app-downloads.css"></head><body>${renderToStaticMarkup(React.createElement(PlayMembershipPage, config))}</body></html>`;
 }

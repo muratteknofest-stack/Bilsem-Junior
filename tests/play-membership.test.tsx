@@ -6,8 +6,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { PlayMembershipPage } from '../src/components/PlayMembershipPage';
 import { WebPlayMembershipPanel } from '../src/components/WebPlayMembershipPanel';
 import { PlayBillingFlow, initialPlayBillingState, playConfigSchema, canBuyPlay } from '../src/lib/google-play-flow';
-import { safePlayStoreUrl } from '../src/lib/play-listing';
-import { playStoreListing } from '../server/play-listing';
+import { safeAppStoreUrl, safePlayStoreUrl } from '../src/lib/play-listing';
+import { appStoreListing, playStoreListing } from '../server/play-listing';
 
 const storeUrl = 'https://play.google.com/store/apps/details?id=com.quantumtech.bilsemjunior';
 const config = { ready: true, enforced: true, productId: 'zekapark_uyelik', storeUrl,
@@ -71,4 +71,37 @@ test('only a real Android platform may initialize purchasing; browser and other 
       assert.equal(canBuyPlay(flow.snapshot(), 'monthly'), false);
     } finally { flow.dispose(); }
   }
+});
+
+
+test('download cards expose only validated published store links, separate from sales readiness', async () => {
+  const { AppDownloadLinks } = await import('../src/components/AppDownloadLinks');
+  const apple = 'https://apps.apple.com/tr/app/bilsem-junior/id1234567890';
+  const html = renderToStaticMarkup(<AppDownloadLinks downloads={{ storeUrl, appStoreUrl: apple, status: 'ready' }}/>);
+  assert.match(html, /href="https:\/\/play.google.com/);
+  assert.ok(html.includes(`href="${apple}"`));
+  assert.equal((html.match(/rel="noopener noreferrer"/g) || []).length, 2);
+  const waiting = renderToStaticMarkup(<AppDownloadLinks downloads={{ storeUrl: null, appStoreUrl: 'javascript:alert(1)', status: 'ready' }}/>);
+  assert.ok(!waiting.includes('href='));
+  assert.match(waiting, /İndirme bağlantısı yakında/);
+  const unavailable = renderToStaticMarkup(<AppDownloadLinks downloads={{ storeUrl: null, status: 'unavailable' }}/>);
+  assert.match(unavailable, /Bağlantı şu anda alınamadı/);
+  assert.ok(!unavailable.includes('yakında'));
+  const page = renderToStaticMarkup(<PlayMembershipPage brand="Bilsem Junior" storeUrl={storeUrl} appStoreUrl={apple} ready={false}/>);
+  assert.ok(page.includes(apple)); assert.match(page, /henüz satışa açılmadı/);
+});
+
+test('Apple publication requires an explicit flag and a direct App Store listing', () => {
+  const keys = ['APP_STORE_PUBLISHED', 'APP_STORE_URL'] as const;
+  const old = keys.map(key => process.env[key]);
+  const apple = 'https://apps.apple.com/tr/app/bilsem-junior/id1234567890';
+  try {
+    process.env.APP_STORE_URL = apple;
+    delete process.env.APP_STORE_PUBLISHED; assert.equal(appStoreListing(), null);
+    process.env.APP_STORE_PUBLISHED = 'true'; assert.equal(appStoreListing(), apple);
+    for (const invalid of ['https://apps.apple.com.evil.test/tr/app/id1234567890', 'https://user:secret@apps.apple.com/tr/app/id1234567890', 'https://apps.apple.com/tr/search', apple + '?redirect=evil', apple + '#token', 'http://apps.apple.com/tr/app/id1234567890']) {
+      assert.equal(safeAppStoreUrl(invalid), false);
+      process.env.APP_STORE_URL = invalid; assert.equal(appStoreListing(), null);
+    }
+  } finally { keys.forEach((key, i) => { if (old[i] === undefined) delete process.env[key]; else process.env[key] = old[i]; }); }
 });
