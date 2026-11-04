@@ -2,7 +2,11 @@ import { getServiceClient } from './supabase-admin';
 import { studentRequiresPaidAccess } from './paid-access-policy';
 import { googlePlayAccess } from './google-play-access';
 import { GooglePlayError } from './google-play-model';
-import { isLicenseTestFamily, licenseTestStudentId } from './google-play-license-test';
+import { isLicenseTestFamily, licenseTestStudentId, licenseTestLegalReady } from './google-play-license-test';
+import { readPlatformSettings } from './platform-settings';
+import { paidSalesReady } from './google-play-sales';
+import { playSetupReady } from './google-play-client';
+import { membershipRequiredMessage } from './membership-message';
 async function linkedParentId(studentId: string): Promise<string | null> {
   const student = await getServiceClient().from('profiles').select('linked_parent_id').eq('id',studentId).single();
   if (student.error) throw new GooglePlayError('Üyelik durumu doğrulanamadı.');
@@ -18,6 +22,18 @@ export async function requireLearningAccess(studentId: string) {
   if (!enforced && licenseTestStudentId() !== studentId) return;
   const parentId = await linkedParentId(studentId);
   if (!enforced && (!parentId || !isLicenseTestFamily(parentId, studentId))) return;
-  if (!parentId || !(await googlePlayAccess(parentId,studentId)).active)
-    throw new GooglePlayError('Bu tam çalışma için aktif öğrenci aboneliği gerekli. Veliniz Üyelik bölümünden devam edebilir. Günün üç ücretsiz görevini kullanabilirsiniz.',403);
+  const access = parentId ? await googlePlayAccess(parentId,studentId) : null;
+  if (access?.active) return;
+  // Determine the explanation only after denying access. A sales outage must
+  // neither grant premium content nor revoke an already verified entitlement.
+  let ready: boolean | null = null;
+  try {
+    const { settings } = await readPlatformSettings();
+    ready = parentId && isLicenseTestFamily(parentId, studentId)
+      ? playSetupReady() && licenseTestLegalReady(settings) : paidSalesReady(settings);
+  } catch {
+    // Sales metadata is optional for explaining an already denied entitlement.
+    // Missing metadata must not change that denial or claim sales are closed.
+  }
+  throw new GooglePlayError(membershipRequiredMessage(ready, access?.state),403);
 }

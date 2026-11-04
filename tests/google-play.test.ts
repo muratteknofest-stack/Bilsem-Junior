@@ -11,6 +11,7 @@ import playRoutes from '../server/routes/google-play-routes';
 import learningRoutes from '../server/routes/learning-routes';
 import challengeRoutes from '../server/routes/challenge-routes';
 import { requireLearningAccess } from '../server/membership-access';
+import { membershipRequiredMessage } from '../server/membership-message';
 import { paidAccessStartsAt } from '../server/paid-access-policy';
 import { publicPlayMembership } from '../server/play-membership-page';
 import { googlePlayAccess } from '../server/google-play-access';
@@ -46,6 +47,18 @@ test('signup cutoff is explicit, accepts only ISO timestamps and fails closed fo
   assert.equal(paidAccessStartsAt({GOOGLE_PLAY_PAID_ACCESS_FROM:'2026-10-27T03:00:00+03:00'}),Date.parse('2026-10-27T00:00:00Z'));
   for(const value of ['invalid','2026-10-27','0','2026-02-30T00:00:00Z'])
     assert.throws(()=>paidAccessStartsAt({GOOGLE_PLAY_PAID_ACCESS_FROM:value}),GooglePlayError);
+});
+test('denied full-study messages distinguish closed sales and existing payment problems', () => {
+  assert.match(membershipRequiredMessage(false), /henüz satışa açılmadı/);
+  assert.doesNotMatch(membershipRequiredMessage(false), /Üyelik bölümünden devam/);
+  assert.match(membershipRequiredMessage(true), /Üyelik bölümünden devam/);
+  assert.match(membershipRequiredMessage(null), /bilgileri şu anda alınamıyor/);
+  assert.doesNotMatch(membershipRequiredMessage(null), /henüz satışa açılmadı|Üyelik bölümünden devam/);
+  for (const [state, text] of [['PENDING', 'henüz tamamlanmadı'], ['ON_HOLD', 'ödeme sorunu'], ['PAUSED', 'duraklatılmış']]) {
+    const message = membershipRequiredMessage(true, 'SUBSCRIPTION_STATE_' + state);
+    assert.ok(message.includes(text)); assert.doesNotMatch(message, /Üyelik bölümünden devam/);
+    assert.match(message, /üç ücretsiz görev/);
+  }
 });
 test('only Google-authoritative active, grace and canceled-unexpired subscriptions grant access',()=>{
   const now=Date.parse('2026-10-16T12:00:00Z');
@@ -125,7 +138,7 @@ test('real Postgres preserves one binding and exact expiry, rejects stale grants
 test('authenticated flow verifies before grant, acknowledges after durable save, restores and enforces paid learning',{timeout:30000},async()=>{
   const savedEnv={...process.env},originalFetch=globalThis.fetch,originalToken=GoogleAuth.prototype.getAccessToken,originalVerify=OAuth2Client.prototype.verifyIdToken;
   Object.assign(process.env,{VERCEL:'',VERCEL_ENV:'',GOOGLE_PLAY_PAID_ACCESS_FROM:'',GOOGLE_PLAY_LICENSE_TEST_ENABLED:'false',GOOGLE_PLAY_AUTH_MODE:'service_account',SUPABASE_URL:'https://play-fixture.invalid',SUPABASE_SERVICE_ROLE_KEY:'unit-test',GOOGLE_PLAY_BINDING_SECRET:secret,GOOGLE_PLAY_TOKEN_KEY:key,GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:JSON.stringify({type:'service_account',client_email:'fixture@fixture.iam.gserviceaccount.com',private_key:'-----BEGIN PRIVATE KEY-----fixture-only'}),GOOGLE_PLAY_ENFORCE_PAID_ACCESS:'true',GOOGLE_PLAY_BILLING_ENABLED:'true',GOOGLE_PLAY_ALLOW_TEST_PURCHASES:'false',GOOGLE_PLAY_RTDN_AUDIENCE:'https://api.example.test/api/google-play/notifications',GOOGLE_PLAY_RTDN_EMAIL:'push@fixture.iam.gserviceaccount.com'});
-  const platform=defaultPlatformSettings();let ledger:any[]=[],events:string[]=[],payload=subscription(),failSave=false,failAck=false,emailVerified=true,catalogReady=true,role='parent';
+  const platform=defaultPlatformSettings();let ledger:any[]=[],events:string[]=[],payload=subscription(),failSave=false,failAck=false,emailVerified=true,catalogReady=true,platformUnavailable=false,role='parent';
   GoogleAuth.prototype.getAccessToken=async()=> 'fixture-oauth';
   let oidcValid=false, preparedBinding=false, authCreatedAt='2026-10-26T00:00:00Z', authUnavailable=false;
   OAuth2Client.prototype.verifyIdToken=(async(options:any)=>{assert.equal(options.audience,process.env.GOOGLE_PLAY_RTDN_AUDIENCE);if(!oidcValid)throw Error('invalid signature');return {getPayload:()=>({email:process.env.GOOGLE_PLAY_RTDN_EMAIL,email_verified:true,iss:'https://accounts.google.com'})};}) as any;
@@ -149,7 +162,7 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     else if(u.pathname==='/auth/v1/user')value={id:role==='student'?student:parent,email:'parent@example.com',email_confirmed_at:emailVerified?new Date().toISOString():null,app_metadata:{role}};
     else if(u.pathname==='/rest/v1/rpc/is_user_session_active'||u.pathname==='/rest/v1/rpc/consume_api_limit')value=true;
     else if(u.pathname==='/rest/v1/daily_challenge_attempts'||u.pathname==='/rest/v1/learning_sessions')value=[];
-    else if(u.pathname==='/rest/v1/platform_settings')value={settings:platform,revision:1,updated_at:null};
+    else if(u.pathname==='/rest/v1/platform_settings'){if(platformUnavailable)throw Error('private-platform-failure');value={settings:platform,revision:1,updated_at:null};}
     else if(u.pathname==='/rest/v1/profiles'){
       const id=u.searchParams.get('id')?.slice(3);const row=id===student?{id:student,role:'student',linked_parent_id:parent}:id===other?{id:other,role:'student',linked_parent_id:'44444444-4444-4444-8444-444444444444'}:{id:parent,role,linked_student_ids:[student]};
       value=req.headers.get('accept')?.includes('vnd.pgrst.object')?row:[row];
@@ -197,9 +210,13 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     payload=subscription();
     process.env.GOOGLE_PLAY_BILLING_ENABLED='false';
     await requireLearningAccess(student); // disabling new sales never grants free premium access or revokes a verified purchase
-    payload=subscription({subscriptionState:'SUBSCRIPTION_STATE_ON_HOLD'});await assert.rejects(requireLearningAccess(student),e=>(e as any).status===403);
+    payload=subscription({subscriptionState:'SUBSCRIPTION_STATE_ON_HOLD'});await assert.rejects(requireLearningAccess(student),e=>e instanceof GooglePlayError && e.status===403 && e.message.includes('ödeme sorunu'));
     payload=subscription({subscriptionState:'SUBSCRIPTION_STATE_CANCELED'});await requireLearningAccess(student);
-    payload=subscription({subscriptionState:'SUBSCRIPTION_STATE_EXPIRED'});await assert.rejects(requireLearningAccess(student),e=>(e as any).status===403);
+    payload=subscription({subscriptionState:'SUBSCRIPTION_STATE_EXPIRED'});await assert.rejects(requireLearningAccess(student),e=>e instanceof GooglePlayError && e.status===403 && e.message.includes('henüz satışa açılmadı') && !e.message.includes('Üyelik bölümünden devam'));
+    platformUnavailable=true;
+    await assert.rejects(requireLearningAccess(student),e=>e instanceof GooglePlayError && e.status===403 && e.message.includes('bilgileri şu anda alınamıyor') && !e.message.includes('private-platform-failure'));
+    payload=subscription();await requireLearningAccess(student); // optional sales metadata cannot revoke verified paid access
+    platformUnavailable=false;payload=subscription({subscriptionState:'SUBSCRIPTION_STATE_EXPIRED'});
     events=[];const notification={message:{data:Buffer.from(JSON.stringify({packageName:'com.quantumtech.bilsemjunior',subscriptionNotification:{purchaseToken}})).toString('base64'),messageId:'test'}};
     assert.equal((await post('google-play/notifications',notification)).status,401);assert.equal(events.length,0);
     oidcValid=true;assert.equal((await post('google-play/notifications',notification)).status,204);assert.deepEqual(events,['google','save']);
