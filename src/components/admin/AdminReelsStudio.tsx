@@ -137,7 +137,7 @@ export function AdminReelsStudio() {
       </p>
       <h2 id="admin-reels-title" className="text-2xl font-black sm:text-3xl">Instagram Reels Stüdyosu</h2>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-indigo-100">
-        Kendi BİLSEM tarzı soru videonu tek tuşla hazırla. 1080 × 1920 dikey MP4, dört seçenek, geri sayım, cevap açıklaması ve ses efektleri.
+        Kendi BİLSEM tarzı soru videonu tek tuşla hazırla. 1080 × 1920 dikey video, dört seçenek, geri sayım, doğru cevap ve özgün ses efektleri. MP4 desteklenmeyen tarayıcılarda WebM kaydedilir.
         Bu işlem <strong>Instagram'a gönderi yayınlamaz</strong>; videoyu önce izle ve indir.
       </p>
       <div className="mt-5 flex flex-wrap gap-2 text-xs font-bold">
@@ -149,6 +149,12 @@ export function AdminReelsStudio() {
 
     {error && <p role="alert" className="rounded-2xl border border-rose-700 bg-rose-950/70 p-4 text-sm text-rose-100">{error}</p>}
     {notice && <p role="status" className="rounded-2xl border border-emerald-600 bg-emerald-950/70 p-4 text-sm text-emerald-100">{notice}</p>}
+    {(status?.runs || []).some(run => run.manual && run.conclusion === 'failure') && (
+      <p role="status" className="rounded-2xl border border-amber-500/50 bg-amber-900/30 p-4 text-sm text-amber-100">
+        Önceki GitHub video görevleri başarısız oldu; son kontrollerde GitHub çalıştırıcısı hiç başlatılamamıştı.
+        Tekrar başarısız sunucu denemesi yapmak yerine <strong>Şimdi Video Oluştur (Cihazda)</strong> düğmesini kullanabilirsin.
+      </p>
+    )}
     {status && !status.configured && <p role="status" className="rounded-2xl border border-amber-500/50 bg-amber-900/20 p-4 text-sm text-amber-100">
       <strong>Video üretim bağlantısı henüz etkinleştirilmedi.</strong> Vercel sunucu ayarına <code>GITHUB_REELS_TOKEN</code> eklenmeli.
       Anahtarı hiçbir zaman bu sayfaya veya sohbete yazma. Bu sırada GitHub Actions ekranından manuel önizleme üretebilirsin.
