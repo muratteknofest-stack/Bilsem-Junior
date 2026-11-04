@@ -21,6 +21,7 @@ try {
   await context.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   let registrationStatus = false;
   await context.route('**/api/public/platform',route=>route.fulfill({json:{registrationOpen:registrationStatus,policyVersion:'2026-10-28.1'}}));
+  await context.route('**/api/public/membership', route => route.fulfill({json:{storeUrl:'https://play.google.com/store/apps/details?id=com.quantumtech.bilsemjunior',appStoreUrl:null,ready:false}}));
   page = await context.newPage();
   page.on('pageerror', error => errors.push(error.message));
   let checks = 0;
@@ -49,6 +50,19 @@ try {
       const rect = await button.boundingBox();
       assert.ok(rect && rect.x >= -1 && rect.x + rect.width <= width + 1, 'Header action must stay on screen at ' + width);
     }
+    const downloads = page.locator('#uygulamayi-indir');
+    await downloads.getByRole('link', { name: /Google Play üzerinden indir/ }).waitFor();
+    assert.equal(await downloads.getByRole('link').count(), 1);
+    assert.match(await downloads.innerText(), /App Store/);
+    assert.match(await downloads.innerText(), /İndirme bağlantısı yakında/);
+    assert.equal(await page.locator('.bj-hero-downloads .bj-app-link').count(), 2);
+    assert.equal(await page.locator('.bj-footer-downloads .bj-app-link').count(), 2);
+    assert.equal(await downloads.locator('.bj-download-orbit').evaluate(el => getComputedStyle(el).animationName), 'none');
+    for (const card of await downloads.locator('.bj-app-link').all()) {
+      const box = await card.boundingBox();
+      assert.ok(box && box.x >= 0 && box.x + box.width <= width + 1 && box.height >= 44, 'Download card fits at ' + width);
+    }
+    await downloads.screenshot({path: output + '/downloads-' + width + '.png', animations:'disabled'});
     assert.equal(await page.locator('.bj-guide-card').count(), 4);
     await page.waitForFunction(() => { const img=document.querySelector('.bj-logo-symbol'); return img instanceof HTMLImageElement && img.complete && img.naturalWidth>0; }, undefined, {timeout:10000});
     assert.equal(await page.locator('.bj-logo-symbol').first().evaluate(img => img.complete && img.naturalWidth > 0), true);
@@ -58,7 +72,9 @@ try {
     if (width <= 1200) {
       await page.getByRole('button', { name: 'Menüyü aç', exact: true }).click();
       await page.getByRole('dialog').getByRole('link', { name: /BİLSEM hazırlık rehberi/ }).waitFor();
-      await page.getByRole('button', { name: 'Menüyü kapat', exact: true }).click();
+      await page.getByRole('dialog').getByRole('link', {name:'Uygulamayı indir'}).click();
+      await page.getByRole('dialog').waitFor({state:'hidden'});
+      assert.equal(await page.locator('#download-title').evaluate(el => el === document.activeElement), true);
     }
     await page.getByRole('button', { name: 'Kayıt bilgisi', exact: true }).click();
     await page.getByRole('heading', { name: 'Birlikte başlayalım', exact: true }).waitFor();
@@ -79,6 +95,23 @@ try {
   await page.reload();
   await page.getByRole('button',{name:'Kayıt durumu',exact:true}).waitFor();
   await page.getByText('Kayıt durumu şu anda doğrulanamadı.',{exact:false}).first().waitFor();
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.reload();
+  await page.locator('#uygulamayi-indir .bj-app-link[href]').waitFor();
+  assert.equal(await page.locator('.bj-download-orbit').evaluate(el => getComputedStyle(el).animationName), 'bj-download-float');
+  await page.getByRole('button',{name:'Görünüm ve ses ayarları'}).click();
+  await page.getByRole('button',{name:'Animasyonları durdur',exact:true}).click();
+  assert.equal(await page.locator('.bj-download-orbit').evaluate(el => getComputedStyle(el).animationName), 'none');
+  await context.unroute('**/api/public/membership');
+  await context.route('**/api/public/membership',route=>route.fulfill({status:503,json:{error:'Fixture unavailable'}}));
+  await page.reload();
+  await page.locator('#uygulamayi-indir').getByText('Bağlantı şu anda alınamadı').first().waitFor();
+  assert.equal(await page.locator('#uygulamayi-indir a').count(),0);
+  await context.unroute('**/api/public/membership');
+  await context.route('**/api/public/membership',route=>route.fulfill({json:{storeUrl:'https://play.google.com/store/apps/details?id=com.quantumtech.bilsemjunior',appStoreUrl:'https://apps.apple.com/tr/app/bilsem-junior/id1234567890',ready:false}}));
+  await page.reload();
+  await page.locator('#uygulamayi-indir').getByRole('link',{name:/App Store üzerinden indir/}).waitFor();
+  assert.equal(await page.locator('#uygulamayi-indir a').count(),2);
   assert.deepEqual(errors, []);
   console.log('Bilsem Junior: ' + checks + ' homepage/register/login viewport checks; logo, preparation guide and mobile navigation passed.');
 } catch (error) {

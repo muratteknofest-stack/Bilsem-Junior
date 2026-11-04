@@ -8,3 +8,13 @@ export function safePlayStoreUrl(value: unknown): value is string {
       && /^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*){2,}$/.test(url.searchParams.get('id') || '');
   } catch { return false; }
 }
+
+/** Accept only a direct HTTPS Apple app listing, never search or redirect URLs. */
+export function safeAppStoreUrl(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  try {
+    const url = new URL(value);
+    return url.origin === 'https://apps.apple.com' && !url.username && !url.password && !url.hash && !url.search
+      && /^\/(?:[a-z]{2}\/)?app\/(?:[^/]+\/)?id[1-9]\d{5,}$/.test(url.pathname);
+  } catch { return false; }
+}

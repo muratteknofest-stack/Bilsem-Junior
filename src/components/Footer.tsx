@@ -1,4 +1,5 @@
-import { publicPageUrl } from '../lib/native-app';
+import { isAndroidApp, publicPageUrl } from '../lib/native-app';
+import { AppDownloadLinks, type AppDownloadState } from './AppDownloadLinks';
 import React, { useState } from 'react';
 import {
   ArrowUpRight,
@@ -29,6 +30,7 @@ import { Logo } from './Logo';
 import './footer.css';
 
 interface FooterProps {
+  downloads?: AppDownloadState;
   onNavigate: (route: string) => void;
   onNavigateToLogin: (role: UserRole) => void;
 }
@@ -61,7 +63,7 @@ const COGNITIVE_SKILLS = [
   { label: 'Kodlama', emoji: '💻', colorClass: 'zp-chip-violet' },
 ];
 
-export function Footer({ onNavigate, onNavigateToLogin }: FooterProps) {
+export function Footer({ onNavigate, onNavigateToLogin, downloads }: FooterProps) {
   const [copiedEmail, setCopiedEmail] = useState(false);
 
   const handleCopyEmail = async (e: React.MouseEvent) => {
@@ -148,6 +150,7 @@ export function Footer({ onNavigate, onNavigateToLogin }: FooterProps) {
               </div>
             </div>
 
+            {!isAndroidApp && downloads && <div className="bj-footer-downloads"><p>MACERANI YANINDA TAŞI</p><AppDownloadLinks downloads={downloads} compact/></div>}
             <div className="platform-footer-contact-card">
               <div className="platform-footer-contact-header">
                 <span className="platform-footer-contact-title">
