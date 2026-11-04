@@ -10,8 +10,11 @@ export const PREVIOUS_CUBE_QUESTION_FORMAT='cube-lab-1';
 export const PREVIOUS_REFERENCE_QUESTION_FORMAT='reference-lab-1';
 export const PREVIOUS_EXAM_QUESTION_FORMAT='exam-lab-1';
 export const PREVIOUS_VISUAL_QUESTION_FORMAT = 'visual-lab-1';
-export const LEARNING_QUESTION_FORMAT = 'shadow-lab-1';
-export function supportsShadowFormat(format:unknown){return format===LEARNING_QUESTION_FORMAT;}
+export const PREVIOUS_SHADOW_QUESTION_FORMAT = 'shadow-lab-1';
+export const LEARNING_QUESTION_FORMAT = 'photo-lab-1';
+export function supportsPhotoFormat(format:unknown){return format===LEARNING_QUESTION_FORMAT;}
+export function needsPhotoFormat(q:Pick<BaseQuestion,'visualConfig'>){return (q.visualConfig as Record<string,unknown>)?.displayMode==='photo_lab';}
+export function supportsShadowFormat(format:unknown){return supportsPhotoFormat(format)||format===PREVIOUS_SHADOW_QUESTION_FORMAT;}
 export function needsShadowFormat(q:Pick<BaseQuestion,'visualConfig'>){return (q.visualConfig as Record<string,unknown>)?.displayMode==='composite_shadow';}
 export function supportsVisualLabFormat(format:unknown){return supportsShadowFormat(format)||format===PREVIOUS_VISUAL_QUESTION_FORMAT;}
 export function needsVisualLabFormat(q:Pick<BaseQuestion,'visualConfig'>){return (q.visualConfig as Record<string,unknown>)?.displayMode==='visual_lab';}
@@ -36,5 +39,5 @@ export function learningFormatPath(path: string): string {
 /** Older installed apps must not receive a board whose givens they draw differently. */
 export function needsReasoningFormat(q: Pick<BaseQuestion,'visualConfig'|'authoring'>): boolean {
   const b=q.visualConfig as Board;
-  return needsShadowFormat(q)||needsVisualLabFormat(q)||needsExamFormat(q)||needsReferenceFormat(q)||needsCubeFormat(q)||needsPerceptualFormat(q)||needsCurriculumV2Format(q)||needsCurrentQuestionFormat(q)||needsProfessionalV2Format(q)||b.displayMode==='verified_board' && !!(b.transformSteps || b.matrixMode || b.machineQuery || b.countScope || b.rule==='multiply-add' || b.rule==='interleaved-growing' || b.constraints?.some(c=>c.kind==='notAdjacent'));
+  return needsPhotoFormat(q)||needsShadowFormat(q)||needsVisualLabFormat(q)||needsExamFormat(q)||needsReferenceFormat(q)||needsCubeFormat(q)||needsPerceptualFormat(q)||needsCurriculumV2Format(q)||needsCurrentQuestionFormat(q)||needsProfessionalV2Format(q)||b.displayMode==='verified_board' && !!(b.transformSteps || b.matrixMode || b.machineQuery || b.countScope || b.rule==='multiply-add' || b.rule==='interleaved-growing' || b.constraints?.some(c=>c.kind==='notAdjacent'));
 }

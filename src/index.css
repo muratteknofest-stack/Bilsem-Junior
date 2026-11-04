@@ -1,3 +1,4 @@
+@import "./features/questions/renderers/photo-lab.css";
 @import "./features/questions/renderers/composite-shadow.css";
 @import '../public/fonts/junior-type.css';
 @import './features/questions/renderers/visual-reasoning.css';

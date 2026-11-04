@@ -1,3 +1,4 @@
+import { PHOTO_MECHANICS, PHOTO_TOPICS, generatePhotoQuestion } from '../photo-lab';
 import { generateShadowQuestion } from '../composite-shadow';
 import {VISUAL_MECHANICS,visualAllowed,visualTopic,generateVisualQuestion} from '../visual-reasoning-lab';
 import{REFERENCE_MECHANICS,REFERENCE_TOPICS,referenceAllowed,generateReferenceQuestion}from'../reference-lab';
@@ -54,7 +55,7 @@ export function generateQuestionByType(
 }
 
 export function generateQuestion(options: {
-  profile?: 'professional' | 'complete' | 'professional-v2' | 'visual-lab';
+  profile?: 'professional' | 'complete' | 'professional-v2' | 'visual-lab' | 'photo-lab';
   targetGrade?: SchoolGrade;
   category?: CognitiveCategory | 'mixed';
   difficulty?: DifficultyLevel;
@@ -65,6 +66,12 @@ export function generateQuestion(options: {
   if (!Number.isSafeInteger(seed) || seed < 1 || options.targetGrade !== undefined && !isSchoolGrade(options.targetGrade) || options.difficulty !== undefined && (!Number.isInteger(options.difficulty) || options.difficulty < 1 || options.difficulty > 6)) throw new Error('INVALID_GENERATION_INPUT: Sınıf, zorluk veya tohum geçersiz.');
   const rng = new SeededRNG(seed);
   const difficulty = options.targetGrade ? gradeDifficulty(options.targetGrade, options.difficulty ?? 3) : options.difficulty ?? 3;
+  if(options.profile==='photo-lab'){
+    if(!isSchoolGrade(options.targetGrade))throw Error('Fotoğraf sorusu için sınıf gerekli.');
+    const variants=PHOTO_MECHANICS.filter(m=>(!options.type||PHOTO_TOPICS[m]===options.type)&&(!options.category||options.category==='mixed'||STUDENT_CATEGORY_TYPES[options.category].includes(PHOTO_TOPICS[m])));
+    if(!variants.length)throw Error('PHOTO_TOPIC_UNAVAILABLE');
+    const q=generatePhotoQuestion(rng.pick(variants),seed,difficulty,options.targetGrade);assertQuestionReadyForStudents(q);return q;
+  }
   if(options.profile==='visual-lab'){
     if(!isSchoolGrade(options.targetGrade))throw Error('Görsel muhakeme için sınıf gerekli.');
     if(options.type==='shadow_matching'){const q=generateShadowQuestion(seed,difficulty,options.targetGrade);assertQuestionReadyForStudents(q);return q;}

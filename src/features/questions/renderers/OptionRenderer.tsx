@@ -1,3 +1,5 @@
+import { PhotoValueArt } from './PhotoLabBoard';
+import { validPhotoValue } from '../photo-lab';
 import { CompositeShadowArt } from './CompositeShadowBoard';
 import { validShadowValue } from '../composite-shadow';
 import {validVisualValue} from '../visual-reasoning-lab';
@@ -75,6 +77,7 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
   }
 
   const renderVisualContent = () => {
+    if(validPhotoValue(visualData))return <PhotoValueArt value={visualData}/>;
     if(validShadowValue(visualData))return <CompositeShadowArt value={visualData}/>;
     if((visualData as Record<string,unknown>)?.lab&&validVisualValue(visualData))return <VisualValueArt value={visualData}/>;
     if(validExamTile(visualData))return <ExamTileArt value={visualData}/>;

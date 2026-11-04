@@ -1,3 +1,4 @@
+import { validPhotoValue, photoValueKey } from './photo-lab';
 import { validShadowValue, shadowKey } from './composite-shadow';
 import {validVisualValue,visualValueKey} from './visual-reasoning-lab';
 import{validReferenceValue,visibleReferenceKey}from'./reference-lab';
@@ -18,6 +19,7 @@ export function visibleOptionKey(value:unknown):string {
   const v=value as Record<string,unknown>|null;
   if(!v||typeof v!=='object')return fingerprint(null);
   if(validReferenceValue(value)&&'reference'in value)return visibleReferenceKey(value);
+  if(validPhotoValue(value))return photoValueKey(value);
   if(validShadowValue(value))return shadowKey(value);
   if(v.lab&&validVisualValue(value))return visualValueKey(value);
   if(v.curriculum==='piece'&&Array.isArray(v.points))return fingerprint({curriculum:'piece',points:v.points.map(p=>JSON.stringify(p)).sort()});
@@ -33,6 +35,7 @@ export interface MechanicalChoiceReport {id:string;visibleKey:string;ruleMatch:b
 export interface MechanicalReport {passed:boolean;uniqueVisibleOptions:number;matchingOptions:number;errors:string[];proofSteps:string[];choices:MechanicalChoiceReport[];}
 export function analyzeQuestionMechanics(q:BaseQuestion):MechanicalReport {
   const errors:string[]=[], mode=(q.visualConfig as Record<string,unknown>)?.displayMode;
+  if(mode==='photo_lab'&&q.options.some(o=>!validPhotoValue(o.visualData)))errors.push('Fotoğraf seçeneği geçersiz.');
   if(mode==='composite_shadow'&&q.options.some(o=>!validShadowValue(o.visualData)))errors.push('Birleşik gölge seçeneği geçersiz.');
   if(mode==='visual_lab'&&q.options.some(o=>!validVisualValue(o.visualData)))errors.push('Görsel muhakeme seçeneği geçersiz.');
   if(mode==='exam_lab'&&q.options.some(o=>!validExamTile(o.visualData)))errors.push('Deneme seçeneği geçersiz veya çizilmeyen alan içeriyor.');
