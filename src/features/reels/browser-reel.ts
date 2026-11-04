@@ -16,7 +16,7 @@ const titles: Record<PerceptualMechanic, string> = {
   'attribute-sequence': 'GÖRSEL ÖRÜNTÜ', 'interleaved-sequence': 'KARMA ÖRÜNTÜ',
 };
 
-async function questionFor(request: LocalReelRequest): Promise<LocalQuestion> {
+export async function selectLocalReelQuestion(request: LocalReelRequest): Promise<LocalQuestion> {
   const [perceptual, quality, solver] = await Promise.all([
     import('../questions/perceptual-engine'),
     import('../questions/quality'),
@@ -176,9 +176,8 @@ export async function createBrowserReel(request:LocalReelRequest,onProgress:(per
   // Resume immediately, while the user gesture is still active. Never hang
   // the entire video if a mobile browser disallows audio playback.
   void audioContext.resume().catch(() => {});
-  let startedRecording = false;
   try {
-  const q=await questionFor(request);
+  const q=await selectLocalReelQuestion(request);
   onProgress(9);
   const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
   const ctx=canvas.getContext('2d',{alpha:false});
@@ -215,7 +214,6 @@ export async function createBrowserReel(request:LocalReelRequest,onProgress:(per
     });
     recorder.start(1000);
     const started=performance.now();
-    startedRecording = true;
     let lastProgress = 10;
     await new Promise<void>((resolve,reject)=>{
       const tick=()=>{
@@ -235,7 +233,6 @@ export async function createBrowserReel(request:LocalReelRequest,onProgress:(per
     return {blob,extension:format.extension,mimeType:blob.type,topic:titles[q.mechanic]};
   }finally{
     stream.getTracks().forEach(track=>track.stop());
-    if (startedRecording) onProgress(99);
   }
   } finally {
     await audioContext.close().catch(() => {});
