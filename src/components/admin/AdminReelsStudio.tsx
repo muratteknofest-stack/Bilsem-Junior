@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { authenticatedFetch } from '../../lib/api-client';
 import {
+  Calendar,
   Clapperboard,
   Download,
   Film,
@@ -54,8 +55,23 @@ type ReelsStatus = {
   notice?: string;
 };
 
+type MonthlyCalendarDay = {
+  dayNumber: number;
+  dateStr: string;
+  grade: 1 | 2 | 3 | 4;
+  difficulty: 1 | 2 | 3;
+  mechanic: Exclude<Mechanic, 'auto'>;
+  mechanicTitle: string;
+  themeId: ReelThemeId;
+  musicTrack: MusicTrackId;
+};
+
 const topics: Array<{ id: Mechanic; title: string; note: string }> = [
-  { id: 'auto', title: 'Karışık sorular', note: 'Her videoda farklı soru türü' },
+  {
+    id: 'auto',
+    title: 'Otomatik Karışık Konu & Soru Tarzı',
+    note: 'Her videoda farklı konu ve soru tarzı otomatik seçilir',
+  },
   { id: 'analogy-grid', title: 'Görsel analoji', note: 'Aynı değişimi uygula' },
   { id: 'paired-analogy', title: 'Şekil ilişkileri', note: 'İlişki ve benzetim' },
   { id: 'matrix-attributes', title: 'Raven / matris', note: 'Satır ve sütun muhakemesi' },
@@ -63,6 +79,72 @@ const topics: Array<{ id: Mechanic; title: string; note: string }> = [
   { id: 'attribute-sequence', title: 'Örüntü', note: 'Şekil dizileri' },
   { id: 'interleaved-sequence', title: 'Karma örüntü', note: 'İç içe diziler' },
 ];
+
+const SPECIFIC_MECHANICS: Array<Exclude<Mechanic, 'auto'>> = [
+  'analogy-grid',
+  'paired-analogy',
+  'matrix-attributes',
+  'feature-classification',
+  'attribute-sequence',
+  'interleaved-sequence',
+];
+
+const ALL_THEMES: ReelThemeId[] = [
+  'space_academy',
+  'neon_quiz',
+  'playful_pop',
+  'classic_bilsem',
+];
+
+const AUTO_MUSIC_LIST: MusicTrackId[] = [
+  'quiz_show',
+  'playful_marimba',
+  'lofi_focus',
+  'cosmic_synth',
+];
+
+function build30DayMixedCalendar(seedOffset = 0): MonthlyCalendarDay[] {
+  const today = new Date();
+  const days: MonthlyCalendarDay[] = [];
+  const grades: Array<1 | 2 | 3 | 4> = [1, 2, 3, 4];
+
+  for (let i = 0; i < 30; i++) {
+    const idx = i + seedOffset;
+    const g = grades[(idx + Math.floor(idx / 3)) % grades.length];
+    let diff: 1 | 2 | 3 = (((idx + Math.floor(idx / 2)) % 3) + 1) as 1 | 2 | 3;
+    if (g === 1 && diff === 3) diff = 2;
+
+    let mech = SPECIFIC_MECHANICS[(idx * 2 + Math.floor(idx / 3)) % SPECIFIC_MECHANICS.length];
+    if (g === 1 && (mech === 'matrix-attributes' || mech === 'interleaved-sequence')) {
+      mech = 'analogy-grid';
+    }
+    if (mech === 'interleaved-sequence' && diff < 2) {
+      diff = 2;
+    }
+
+    const themeId = ALL_THEMES[(idx + Math.floor(idx / 2)) % ALL_THEMES.length];
+    const musicTrack =
+      AUTO_MUSIC_LIST[(idx + Math.floor(idx / 4)) % AUTO_MUSIC_LIST.length];
+
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+
+    days.push({
+      dayNumber: i + 1,
+      dateStr: `${yyyy}-${mm}-${dd}`,
+      grade: g,
+      difficulty: diff,
+      mechanic: mech,
+      mechanicTitle: topics.find((t) => t.id === mech)?.title || mech,
+      themeId,
+      musicTrack,
+    });
+  }
+  return days;
+}
 
 const statusText = (run: ReelRun) => {
   if (run.status === 'completed')
@@ -76,17 +158,22 @@ const statusText = (run: ReelRun) => {
 };
 
 export function AdminReelsStudio() {
-  const [grade, setGrade] = useState<1 | 2 | 3 | 4>(2);
-  const [difficulty, setDifficulty] = useState(2);
+  // 0 means "Otomatik Karışık" (Mixed Grade / Mixed Difficulty)
+  const [gradeMode, setGradeMode] = useState<0 | 1 | 2 | 3 | 4>(0);
+  const [difficultyMode, setDifficultyMode] = useState<0 | 1 | 2 | 3>(0);
   const [mechanic, setMechanic] = useState<Mechanic>('auto');
   const [themeId, setThemeId] = useState<ReelThemeId>('space_academy');
   const [musicTrack, setMusicTrack] = useState<MusicTrackId>('quiz_show');
+  const [autoMixVisualAudio, setAutoMixVisualAudio] = useState(true);
   const [musicVolume, setMusicVolume] = useState(35);
   const [customAudioBuffer, setCustomAudioBuffer] = useState<AudioBuffer | null>(null);
   const [customMp3Name, setCustomMp3Name] = useState('');
   const [showMascot, setShowMascot] = useState(true);
   const [showSubtitles, setShowSubtitles] = useState(true);
   const [hideAnswerSpoiler, setHideAnswerSpoiler] = useState(true);
+  const [calendarSeed, setCalendarSeed] = useState(0);
+  const [selectedDayNum, setSelectedDayNum] = useState<number>(1);
+
   const [autoPilotDaily, setAutoPilotDaily] = useState<boolean>(() => {
     try {
       return localStorage.getItem('bilsem_reels_autopilot') !== 'false';
@@ -94,6 +181,11 @@ export function AdminReelsStudio() {
       return true;
     }
   });
+
+  const monthlyCalendar = useMemo(
+    () => build30DayMixedCalendar(calendarSeed),
+    [calendarSeed]
+  );
 
   const [previewQuestion, setPreviewQuestion] = useState<LocalQuestion | null>(null);
   const [isTestingMusic, setIsTestingMusic] = useState(false);
@@ -127,19 +219,98 @@ export function AdminReelsStudio() {
     []
   );
 
-  // Generate a live verified preview question whenever grade/difficulty/mechanic changes
-  const refreshPreviewQuestion = useCallback(async () => {
-    try {
-      const q = await selectLocalReelQuestion({ grade, difficulty, mechanic });
-      setPreviewQuestion(q);
-    } catch {
-      // ignore if combination unsupported
-    }
-  }, [grade, difficulty, mechanic]);
+  // Resolves concrete grade, difficulty, mechanic, theme & music when "Otomatik Karışık" is active
+  const resolveMixedParams = useCallback(
+    (overrideDay?: MonthlyCalendarDay) => {
+      if (overrideDay) {
+        return {
+          grade: overrideDay.grade,
+          difficulty: overrideDay.difficulty,
+          mechanic: overrideDay.mechanic as Mechanic,
+          themeId: overrideDay.themeId,
+          musicTrack:
+            musicTrack === 'custom_mp3' ? 'custom_mp3' : overrideDay.musicTrack,
+        };
+      }
+      const grades: Array<1 | 2 | 3 | 4> = [1, 2, 3, 4];
+      const resolvedGrade: 1 | 2 | 3 | 4 =
+        gradeMode === 0
+          ? grades[Math.floor(Math.random() * grades.length)]
+          : gradeMode;
+      const maxDiff = resolvedGrade === 1 ? 2 : 3;
+      const resolvedDifficulty =
+        difficultyMode === 0
+          ? Math.floor(Math.random() * maxDiff) + 1
+          : Math.min(difficultyMode, maxDiff);
+
+      let resolvedMechanic: Mechanic = mechanic;
+      if (
+        resolvedGrade === 1 &&
+        (resolvedMechanic === 'matrix-attributes' ||
+          resolvedMechanic === 'interleaved-sequence')
+      ) {
+        resolvedMechanic = 'auto';
+      }
+      if (resolvedMechanic === 'interleaved-sequence' && resolvedDifficulty < 2) {
+        resolvedMechanic = 'auto';
+      }
+
+      const resolvedTheme: ReelThemeId = autoMixVisualAudio
+        ? ALL_THEMES[Math.floor(Math.random() * ALL_THEMES.length)]
+        : themeId;
+      const resolvedMusic: MusicTrackId =
+        musicTrack === 'custom_mp3'
+          ? 'custom_mp3'
+          : autoMixVisualAudio
+          ? AUTO_MUSIC_LIST[Math.floor(Math.random() * AUTO_MUSIC_LIST.length)]
+          : musicTrack;
+
+      return {
+        grade: resolvedGrade,
+        difficulty: resolvedDifficulty,
+        mechanic: resolvedMechanic,
+        themeId: resolvedTheme,
+        musicTrack: resolvedMusic,
+      };
+    },
+    [gradeMode, difficultyMode, mechanic, autoMixVisualAudio, themeId, musicTrack]
+  );
+
+  // Generate a live verified preview question
+  const refreshPreviewQuestion = useCallback(
+    async (overrideDay?: MonthlyCalendarDay) => {
+      try {
+        const params = resolveMixedParams(overrideDay);
+        if (overrideDay || autoMixVisualAudio) {
+          setThemeId(params.themeId);
+          if (musicTrack !== 'custom_mp3') {
+            setMusicTrack(params.musicTrack);
+          }
+        }
+        const q = await selectLocalReelQuestion({
+          grade: params.grade,
+          difficulty: params.difficulty,
+          mechanic: params.mechanic,
+        });
+        setPreviewQuestion(q);
+      } catch {
+        // fallback to safe default if combination fails
+        try {
+          const q = await selectLocalReelQuestion({
+            grade: 2,
+            difficulty: 2,
+            mechanic: 'auto',
+          });
+          setPreviewQuestion(q);
+        } catch {}
+      }
+    },
+    [resolveMixedParams, autoMixVisualAudio, musicTrack]
+  );
 
   useEffect(() => {
     void refreshPreviewQuestion();
-  }, [refreshPreviewQuestion]);
+  }, [gradeMode, difficultyMode, mechanic]);
 
   // 60 FPS Live Canvas Preview Loop
   useEffect(() => {
@@ -187,22 +358,13 @@ export function AdminReelsStudio() {
     void load();
   }, [load]);
 
-  const gradeChanged = (next: 1 | 2 | 3 | 4) => {
-    setGrade(next);
-    if (next === 1) {
-      setDifficulty((current) => Math.min(current, 2));
-      if (mechanic === 'matrix-attributes' || mechanic === 'interleaved-sequence')
-        setMechanic('auto');
-    }
-  };
-
   const eligibleTopic = (id: Mechanic) => {
     if (
-      grade === 1 &&
+      gradeMode === 1 &&
       (id === 'matrix-attributes' || id === 'interleaved-sequence')
     )
       return false;
-    if (id === 'interleaved-sequence' && difficulty < 2) return false;
+    if (id === 'interleaved-sequence' && difficultyMode === 1) return false;
     return true;
   };
 
@@ -265,9 +427,14 @@ export function AdminReelsStudio() {
     setError('');
     setNotice('');
     try {
+      const params = resolveMixedParams();
       const response = await authenticatedFetch('/api/admin/reels/generate', {
         method: 'POST',
-        body: JSON.stringify({ grade, difficulty, mechanic }),
+        body: JSON.stringify({
+          grade: params.grade,
+          difficulty: params.difficulty,
+          mechanic: params.mechanic,
+        }),
       });
       const payload: { error?: string; message?: string } =
         await response.json();
@@ -284,22 +451,38 @@ export function AdminReelsStudio() {
     }
   }
 
-  async function generateOnDevice() {
+  async function generateOnDevice(overrideDay?: MonthlyCalendarDay) {
     if (localBusy || busy) return;
     setLocalBusy(true);
     setError('');
+    const params = resolveMixedParams(overrideDay);
+    if (overrideDay || autoMixVisualAudio) {
+      setThemeId(params.themeId);
+      if (musicTrack !== 'custom_mp3') {
+        setMusicTrack(params.musicTrack);
+      }
+    }
     setNotice(
-      'Cihazda orijinal soru doğrulanıyor, arka plan müziği ve BİLSEM Junior Tilki maskotu ile 9:16 video hazırlanıyor...'
+      `Karışık mod (${params.grade}. Sınıf • Seviye ${params.difficulty} • ${REEL_THEME_SPECS[params.themeId].name}) ile 9:16 müzikli Reels videosu hazırlanıyor...`
     );
     setLocalProgress(0);
     try {
+      const targetQuestion = overrideDay
+        ? await selectLocalReelQuestion({
+            grade: params.grade,
+            difficulty: params.difficulty,
+            mechanic: params.mechanic,
+          })
+        : previewQuestion || undefined;
+      if (targetQuestion) setPreviewQuestion(targetQuestion);
+
       const result = await createBrowserReel(
         {
-          grade,
-          difficulty,
-          mechanic,
-          themeId,
-          musicTrack,
+          grade: params.grade,
+          difficulty: params.difficulty,
+          mechanic: params.mechanic,
+          themeId: params.themeId,
+          musicTrack: params.musicTrack,
           musicVolume,
           customAudioBuffer,
           showMascot,
@@ -307,7 +490,7 @@ export function AdminReelsStudio() {
           hideAnswerSpoiler,
         },
         setLocalProgress,
-        previewQuestion || undefined
+        targetQuestion
       );
       const url = URL.createObjectURL(result.blob);
       if (localVideoUrlRef.current) URL.revokeObjectURL(localVideoUrlRef.current);
@@ -315,7 +498,7 @@ export function AdminReelsStudio() {
       setLocalVideo({
         url,
         extension: result.extension,
-        topic: result.topic,
+        topic: `${params.grade}. Sınıf • ${result.topic}`,
       });
       setNotice(
         result.extension === 'mp4'
@@ -334,7 +517,7 @@ export function AdminReelsStudio() {
     }
   }
 
-  // Automatic Daily Reel Preparation on Admin Panel open if today's video hasn't been generated yet
+  // Automatic Daily Reel Preparation on Admin Panel open using today's 30-day calendar slot
   useEffect(() => {
     if (!autoPilotDaily || autoPilotTriggeredRef.current || localVideo || localBusy)
       return;
@@ -344,12 +527,13 @@ export function AdminReelsStudio() {
       if (lastDate !== todayKey && previewQuestion) {
         autoPilotTriggeredRef.current = true;
         localStorage.setItem('bilsem_reels_last_auto_date', todayKey);
-        void generateOnDevice();
+        const todaySlot = monthlyCalendar[0];
+        void generateOnDevice(todaySlot);
       }
     } catch {
       // ignore storage errors
     }
-  }, [autoPilotDaily, previewQuestion, localVideo, localBusy]);
+  }, [autoPilotDaily, previewQuestion, localVideo, localBusy, monthlyCalendar]);
 
   const manualRuns = (status?.runs || []).filter((run) => run.manual);
   const lastVideo = manualRuns.find((run) => !!run.videoUrl);
@@ -366,7 +550,7 @@ export function AdminReelsStudio() {
             />
             <div>
               <p className="mb-1 inline-flex items-center gap-2 text-xs font-black uppercase tracking-[.18em] text-cyan-300">
-                <Clapperboard size={16} /> BİLSEM JUNIOR / OTOMATİK REELS STÜDYOSU
+                <Clapperboard size={16} /> BİLSEM JUNIOR / 30 GÜNLÜK OTOMATİK REELS STÜDYOSU
               </p>
               <h2 id="admin-reels-title" className="text-2xl font-black sm:text-3xl">
                 Instagram Reels Stüdyosu
@@ -388,26 +572,25 @@ export function AdminReelsStudio() {
               className="h-4 w-4 accent-emerald-400"
             />
             <Zap size={15} className="text-emerald-300" />
-            <span>Otomatik Günlük Reels Hazırlama Aktif</span>
+            <span>Otomatik Karışık Günlük Reels Hazırlama Aktif</span>
           </label>
         </div>
 
         <p className="mt-3 max-w-3xl text-sm leading-6 text-indigo-100">
-          BİLSEM Junior Tilki maskotu, telifsiz yarışma müzikleri, kelime kelime
-          karaoke altyazılar ve TV yarışması geri sayım halkasıyla 1080 × 1920
-          dikey Reels videolarını otomatik hazırlar. GitHub sunucusuna ihtiyaç
-          duymadan doğrudan Admin panelinde çalışır.
+          Karışık sınıf düzeyinde (1–4. Sınıf), karışık konularda ve karışık soru
+          tarzlarında 1080 × 1920 dikey Reels videolarını BİLSEM Junior Tilki
+          maskotu ve telifsiz yarışma müzikleriyle otomatik hazırlar.
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold">
           <span className="rounded-full border border-indigo-400/40 bg-indigo-500/20 px-3 py-1.5">
-            Günlük otomasyon: 19.00 Türkiye
+            1 Aylık (30 Günlük) Otomatik Takvim
           </span>
           <span className="rounded-full border border-cyan-400/40 bg-cyan-500/10 px-3 py-1.5 text-cyan-200">
-            4 Sahne Teması & Telifsiz Müzik Mikseri
+            Karışık Sınıf (1-4. Sınıf) & Karışık Konu
           </span>
           <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1.5 text-amber-200">
-            BİLSEM Junior Tilki Maskotu & Canlı Ekolayzır
+            BİLSEM Junior Tilki Maskotu & Müzik Mikseri
           </span>
         </div>
       </div>
@@ -434,15 +617,15 @@ export function AdminReelsStudio() {
         <div className="space-y-5 rounded-3xl border border-slate-700 bg-slate-900/90 p-5 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="flex items-center gap-2 text-lg font-black">
-              <WandSparkles size={22} className="text-amber-300" /> Yeni Reels
-              Videosu ve Müzik Ayarları
+              <WandSparkles size={22} className="text-amber-300" /> Otomatik
+              Karışık Reels & Müzik Ayarları
             </h3>
             <button
               type="button"
               onClick={() => void refreshPreviewQuestion()}
               className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-400/40 bg-indigo-500/20 px-3 py-2 text-xs font-bold text-indigo-100 hover:bg-indigo-500/30"
             >
-              <Sparkles size={14} /> Yeni Soru Değiştir
+              <Sparkles size={14} /> Karışık Yeni Soru Getir
             </button>
           </div>
 
@@ -450,12 +633,13 @@ export function AdminReelsStudio() {
             <label className="block text-sm font-semibold text-slate-200">
               Sınıf düzeyi
               <select
-                value={grade}
+                value={gradeMode}
                 onChange={(e) =>
-                  gradeChanged(Number(e.target.value) as 1 | 2 | 3 | 4)
+                  setGradeMode(Number(e.target.value) as 0 | 1 | 2 | 3 | 4)
                 }
                 className="mt-2 min-h-12 w-full rounded-xl border border-slate-600 bg-slate-950 px-4 text-white"
               >
+                <option value={0}>Otomatik Karışık (1–4. Sınıf)</option>
                 {[1, 2, 3, 4].map((g) => (
                   <option key={g} value={g}>
                     {g}. sınıf
@@ -466,22 +650,20 @@ export function AdminReelsStudio() {
             <label className="block text-sm font-semibold text-slate-200">
               Zorluk
               <select
-                value={difficulty}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  setDifficulty(v);
-                  if (v < 2 && mechanic === 'interleaved-sequence')
-                    setMechanic('auto');
-                }}
+                value={difficultyMode}
+                onChange={(e) =>
+                  setDifficultyMode(Number(e.target.value) as 0 | 1 | 2 | 3)
+                }
                 className="mt-2 min-h-12 w-full rounded-xl border border-slate-600 bg-slate-950 px-4 text-white"
               >
+                <option value={0}>Otomatik Karışık (Kolay / Orta / Zor)</option>
                 <option value={1}>Kolay</option>
                 <option value={2}>Orta</option>
-                {grade !== 1 && <option value={3}>Zor</option>}
+                {gradeMode !== 1 && <option value={3}>Zor</option>}
               </select>
             </label>
             <label className="block text-sm font-semibold text-slate-200 sm:col-span-2">
-              Soru türü
+              Konu ve Soru Tarzı
               <select
                 value={mechanic}
                 onChange={(e) => setMechanic(e.target.value as Mechanic)}
@@ -503,9 +685,20 @@ export function AdminReelsStudio() {
 
           {/* 4 Visual Themes */}
           <div className="border-t border-slate-800 pt-4">
-            <p className="mb-2.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-cyan-300">
-              <Palette size={15} /> Sahne ve Arka Plan Teması
-            </p>
+            <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+              <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-cyan-300">
+                <Palette size={15} /> Sahne ve Arka Plan Teması
+              </p>
+              <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-emerald-300">
+                <input
+                  type="checkbox"
+                  checked={autoMixVisualAudio}
+                  onChange={(e) => setAutoMixVisualAudio(e.target.checked)}
+                  className="h-3.5 w-3.5 accent-emerald-400"
+                />
+                <span>Tema ve Müziği Her Videoda Otomatik Karıştır</span>
+              </label>
+            </div>
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
               {(Object.keys(REEL_THEME_SPECS) as ReelThemeId[]).map((id) => {
                 const spec = REEL_THEME_SPECS[id];
@@ -684,7 +877,9 @@ export function AdminReelsStudio() {
               Video
             </span>
             <span className="rounded-lg bg-indigo-500/20 px-2.5 py-1 text-xs font-bold text-indigo-200">
-              1080 × 1920
+              {previewQuestion
+                ? `${previewQuestion.grade}. Sınıf • Seviye ${previewQuestion.difficulty}`
+                : '1080 × 1920'}
             </span>
           </h3>
 
@@ -753,6 +948,105 @@ export function AdminReelsStudio() {
         </div>
       </div>
 
+      {/* 1-MONTH (30-DAY) AUTOMATIC MIXED REELS CALENDAR */}
+      <div className="rounded-3xl border border-slate-700 bg-slate-900/90 p-5 sm:p-6">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="flex items-center gap-2 text-lg font-black">
+              <Calendar size={20} className="text-amber-300" /> 1 Aylık (30
+              Günlük) Otomatik Karışık Reels Takvimi
+            </h3>
+            <p className="mt-1 text-xs text-slate-400">
+              30 gün boyunca her gün farklı sınıf düzeyi (1–4. Sınıf), farklı
+              konu, farklı soru tarzı, farklı sahne teması ve müzik otomatik
+              dağıtılır.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCalendarSeed((s) => s + 7)}
+            className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-indigo-400/40 bg-indigo-500/20 px-4 text-xs font-bold text-indigo-100 hover:bg-indigo-500/30"
+          >
+            <RefreshCw size={15} /> 30 Günlük Karışık Takvimi Yenile
+          </button>
+        </div>
+
+        <div className="max-h-[420px] overflow-y-auto rounded-2xl border border-slate-800">
+          <table className="w-full border-collapse text-left text-xs">
+            <thead className="sticky top-0 bg-slate-950 text-slate-300">
+              <tr className="border-b border-slate-800">
+                <th className="px-3 py-3">Gün</th>
+                <th className="px-3 py-3">Tarih</th>
+                <th className="px-3 py-3">Sınıf & Zorluk</th>
+                <th className="px-3 py-3">Konu & Soru Tarzı</th>
+                <th className="px-3 py-3">Tema & Müzik</th>
+                <th className="px-3 py-3 text-right">İşlem</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/80">
+              {monthlyCalendar.map((day) => {
+                const isSelected = selectedDayNum === day.dayNumber;
+                return (
+                  <tr
+                    key={day.dayNumber}
+                    className={
+                      isSelected ? 'bg-indigo-950/60' : 'hover:bg-slate-950/40'
+                    }
+                  >
+                    <td className="px-3 py-2.5 font-black text-cyan-300">
+                      {day.dayNumber}. Gün
+                    </td>
+                    <td className="px-3 py-2.5 font-mono text-slate-300">
+                      {day.dateStr} • 19:00
+                    </td>
+                    <td className="px-3 py-2.5 font-semibold text-white">
+                      {day.grade}. Sınıf •{' '}
+                      {day.difficulty === 1
+                        ? 'Kolay'
+                        : day.difficulty === 2
+                        ? 'Orta'
+                        : 'Zor'}
+                    </td>
+                    <td className="px-3 py-2.5 text-indigo-200">
+                      {day.mechanicTitle}
+                    </td>
+                    <td className="px-3 py-2.5 text-slate-300">
+                      {REEL_THEME_SPECS[day.themeId].name} •{' '}
+                      {MUSIC_TRACK_SPECS[day.musicTrack].name}
+                    </td>
+                    <td className="px-3 py-2.5 text-right">
+                      <div className="inline-flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedDayNum(day.dayNumber);
+                            void refreshPreviewQuestion(day);
+                          }}
+                          className="rounded-lg border border-slate-600 px-2.5 py-1 font-bold text-slate-200 hover:bg-slate-800"
+                        >
+                          Önizle
+                        </button>
+                        <button
+                          type="button"
+                          disabled={localBusy || busy}
+                          onClick={() => {
+                            setSelectedDayNum(day.dayNumber);
+                            void generateOnDevice(day);
+                          }}
+                          className="rounded-lg bg-cyan-500 px-2.5 py-1 font-black text-slate-950 hover:brightness-110 disabled:opacity-50"
+                        >
+                          Video Üret
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div className="rounded-3xl border border-slate-700 bg-slate-900/90 p-5 sm:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-lg font-black">Video üretim geçmişi</h3>
@@ -769,7 +1063,7 @@ export function AdminReelsStudio() {
         {manualRuns.length === 0 ? (
           <p className="text-sm text-slate-400">
             Henüz manuel GitHub Reels üretimi başlatılmadı. Üstteki yeşil butonla
-            anında cihazda müzikli Reels üretebilirsiniz.
+            veya 30 günlük takvimden anında cihazda müzikli Reels üretebilirsiniz.
           </p>
         ) : (
           <div className="space-y-2">
