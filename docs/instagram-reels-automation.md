@@ -135,3 +135,35 @@ Manuel ve otomatik işler aynı soru motorunu kullanır ama farklı tetiklenir:
 - Manuel: yönetici isteği, özgün istek UUID'si, MP4 kaydı, **yayın yok**.
 - Otomatik: günlük 19.00 Türkiye hedef saati; yalnız ayrı yayın
   yetkileri ve `REELS_ENABLED=true` ile Instagram yayını denenir.
+
+## Manuel video — GitHub Actions çalışmasa da
+
+GitHub'da `preview` görevi başarısız olup **hiçbir runner atanmadıysa**
+(`runner_name` boş, `steps=[]`, `billable.UBUNTU.total_ms=0`),
+sorun video motoruna ulaşmadan oluşmuştur. Bu sinyaller doğrudan
+GitHub Actions çalıştırıcısı/hesap kullanımı/izinleri kontrolünü gerektirir.
+Depo özel (private) olduğundan Actions plan/kullanım sınırı ve
+faturalandırma ayarları GitHub hesabında ayrıca kontrol edilmelidir.
+Bu sorun yalnızca iş akışını yeniden denemekle çözülmez.
+
+Yönetici panelinde ikinci yol:
+**Instagram Reels Stüdyosu → Şimdi Video Oluştur (Cihazda)**
+
+- Sınıf, zorluk ve BİLSEM soru türünü seç.
+- Tarayıcı soru motorundan yeni bir soru alır ve `auditQuestion`,
+  bağımsız `solveQuestion` doğrulaması ile tek doğru cevabı kontrol eder.
+- Telefon/bilgisayar tarayıcısı **1080×1920** dikey video ve özgün sentetik
+  sesleri yaklaşık **19 saniyelik gerçek zamanlı** kayıtta oluşturur.
+  Video süresince sayfa açık/ön planda tutulmalıdır.
+- Tarayıcı MP4 MediaRecorder destekliyorsa **MP4** dosyası, yoksa **WebM**
+  oluşturulur; WebM doğrudan Instagram Reels için uygun değildir,
+  MP4 dönüşümü gerektirir. Uygulama biçimi dosya adında ve düğmede gösterir.
+- Oluşan dosya **Son oluşturulan video** bölümünde önizlenir;
+  indirme düğmesi video dosyasını cihaza kaydeder.
+- Bu işlem öğrenci verisi okumaz, Supabase Storage'a video yüklemez,
+  hiçbir Instagram yayını oluşturmaz ve GitHub sunucusu gerektirmez.
+- Yerel Blob bağlantısı geçicidir: sayfa kapatılmadan indirilmelidir.
+
+GitHub Actions eski (bulut) yöntemi alternatif olarak kalır; özel depo
+Actions runner erişimi ve Storage ortam sırları düzeltilmeden bulut yöntemi
+videoyu bitiremez ve günlük otomatik Instagram yayını da çalışmayabilir.
