@@ -125,7 +125,7 @@ function frame(ctx: CanvasRenderingContext2D, q: LocalQuestion, second: number) 
   const cw=(bw-(cols-1)*gap)/cols,ch=(bh-(rows-1)*gap)/rows;
   const x0=(W-bw)/2,y0=546+(rows===1?165:rows===2?53:0);
   cards.forEach((v,i)=>card(ctx,v,x0+(i%cols)*(cw+gap),y0+Math.floor(i/cols)*(ch+gap),cw,ch));
-  label(ctx,'EKSİK OLANI BUL',W/2,1152,33,'#dbeaff');
+  label(ctx,q.mechanic === 'feature-classification' ? 'ORTAK ÖZELLİĞİ BUL' : 'EKSİK OLANI BUL',W/2,1152,33,'#dbeaff');
 
   rectangle(ctx,62,1230,956,344,35,'#fbfcff');
   for(let i=0;i<q.options.length;i++){
@@ -172,6 +172,12 @@ function recordingFormat(): {mimeType:string;extension:'mp4'|'webm'} {
 export async function createBrowserReel(request:LocalReelRequest,onProgress:(percent:number)=>void):Promise<LocalReelResult> {
   const format=recordingFormat();
   onProgress(2);
+  const audioContext = new AudioContext();
+  // Resume immediately, while the user gesture is still active. Never hang
+  // the entire video if a mobile browser disallows audio playback.
+  void audioContext.resume().catch(() => {});
+  let startedRecording = false;
+  try {
   const q=await questionFor(request);
   onProgress(9);
   const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
@@ -179,13 +185,11 @@ export async function createBrowserReel(request:LocalReelRequest,onProgress:(per
   if(!ctx)throw Error('Telefon bu video boyutunda çizim oluşturamıyor.');
   frame(ctx,q,0);
   const stream=canvas.captureStream(15);
-  const audioContext=new AudioContext();
   const audioDestination=audioContext.createMediaStreamDestination();
   const sound=audioContext.createGain();
   sound.gain.value=.18;sound.connect(audioDestination);
   audioDestination.stream.getAudioTracks().forEach(track=>stream.addTrack(track));
   try {
-    await audioContext.resume();
     const tone=(when:number,frequency:number,length:number)=>{
       const o=audioContext.createOscillator(),gain=audioContext.createGain();
       o.type='sine';o.frequency.value=frequency;
@@ -211,12 +215,15 @@ export async function createBrowserReel(request:LocalReelRequest,onProgress:(per
     });
     recorder.start(1000);
     const started=performance.now();
+    startedRecording = true;
+    let lastProgress = 10;
     await new Promise<void>((resolve,reject)=>{
       const tick=()=>{
         if(recorder.state==='inactive'){reject(Error('Video kaydı tarayıcı tarafından durduruldu.'));return;}
         const elapsed=(performance.now()-started)/1000;
         frame(ctx,q,Math.min(LENGTH-.001,elapsed));
-        onProgress(Math.min(99,Math.round(10+elapsed/LENGTH*89)));
+        const progress = Math.min(99,Math.round(10+elapsed/LENGTH*89));
+        if (progress !== lastProgress) { lastProgress = progress; onProgress(progress); }
         if(elapsed>=LENGTH){resolve();return;}
         requestAnimationFrame(tick);
       };
@@ -228,6 +235,9 @@ export async function createBrowserReel(request:LocalReelRequest,onProgress:(per
     return {blob,extension:format.extension,mimeType:blob.type,topic:titles[q.mechanic]};
   }finally{
     stream.getTracks().forEach(track=>track.stop());
-    await audioContext.close().catch(()=>{});
+    if (startedRecording) onProgress(99);
+  }
+  } finally {
+    await audioContext.close().catch(() => {});
   }
 }
