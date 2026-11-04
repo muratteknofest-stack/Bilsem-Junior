@@ -10,6 +10,8 @@ import { defaultPlatformSettings, platformSettingsSchema, registrationBlockers, 
 import { publicPolicy, policyHtml } from '../server/platform-policy';
 import { blogPlugin } from '../scripts/blog-vite-plugin';
 import { requestSecurity } from '../server/request-security';
+import { registrationReadySettings } from './fixtures/launch-settings';
+import { POLICY_CONTENT_VERSION } from '../src/lib/policy-version';
 
 test('every legal link resolves to a public document and deployed policies cannot become stale static files', () => {
   const config = JSON.parse(fs.readFileSync('config/vercel-base.json', 'utf8'));
@@ -133,4 +135,21 @@ test('producer profiles validate contact fields and escape displayed name and ci
   const html = policyHtml(publicPolicy('iletisim-ve-destek', settings)!);
   assert.ok(html.includes('&lt;script&gt;bad()&lt;/script&gt;')); assert.ok(html.includes('&lt;img src=x onerror=bad()&gt;'));
   assert.ok(!html.includes('<script>bad()')); assert.ok(!html.includes('<img src=x onerror='));
+});
+
+test('producer branding retains approved data disclosures without exposing private operator identity', () => {
+  const settings = registrationReadySettings();
+  settings.publisher = publisher;
+  const info = publicPolicy('gizlilik-ve-veriler', settings)!;
+  const html = policyHtml(info);
+  assert.equal(info.updatedAt, POLICY_CONTENT_VERSION);
+  for (const value of [settings.business.legalBases, settings.business.retention, settings.business.transfers]) assert.ok(html.includes(value));
+  assert.match(html, /kimlik açıklaması ayrıca tamamlanmalıdır/);
+  for (const value of [settings.business.legalName, settings.business.address, settings.business.contactPhone!, settings.business.contactEmail]) assert.ok(!html.includes(value));
+  const before = registrationOpen(settings);
+  settings.commercial.internationalTransfers.confirmed = false;
+  const incomplete = policyHtml(publicPolicy('gizlilik-ve-veriler', settings)!);
+  assert.ok(!incomplete.includes(settings.business.transfers));
+  assert.match(incomplete, /henüz belirtilmemiştir/);
+  assert.equal(before, true); assert.equal(registrationOpen(settings), false);
 });

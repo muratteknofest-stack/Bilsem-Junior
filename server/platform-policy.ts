@@ -7,6 +7,7 @@ import {
 } from "../src/content/platform-info";
 import { evidenceComplete, registrationBlockers, type PlatformSettings } from "../src/lib/platform-settings";
 import { escapeHtml } from "./security";
+import { POLICY_CONTENT_VERSION } from '../src/lib/policy-version';
 
 export function publicPolicy(
   slug: string,
@@ -18,7 +19,9 @@ export function publicPolicy(
     b = settings.business, publisher = settings.publisher;
   const hasIdentity = !publisher && !!(b.legalName && b.address && b.contactEmail && b.contactPhone && evidenceComplete(settings.commercial.operatorIdentity));
   const hasContact = !!publisher || !!(b.contactEmail && (b.brandName || b.legalName));
-  const hasLegalDetails = hasIdentity && registrationBlockers(settings).length === 0;
+  // Producer branding must not suppress approved processing disclosures. It also
+  // must never turn a city/brand into a verified public controller identity.
+  const hasLegalDetails = registrationBlockers(settings).length === 0;
   info.contactEmail = publisher?.email || b.contactEmail || SUPPORT_EMAIL;
   const identity = publisher ? {
     title: 'Yapımcı ve iletişim',
@@ -32,10 +35,13 @@ export function publicPolicy(
     ].filter(Boolean),
   };
   if (slug === "gizlilik-ve-veriler") {
+    info.updatedAt = POLICY_CONTENT_VERSION;
     if (hasIdentity || hasContact) info.sections.unshift(identity);
     if (hasIdentity && hasLegalDetails) info.sections = info.sections.filter(s => !s.title.includes("tamamlanması gereken"));
-    else if (hasIdentity) info.sections = info.sections.map(s => s.title.includes("tamamlanması gereken") ? {
-      ...s, paragraphs: ["İşletmeci iletişim bilgileri yukarıda sunulmuştur. Her işleme amacı için hukuki dayanak, saklama ve silme süreleri ile yurt dışı aktarım koşulları henüz tamamlanmamıştır. Bu açıklama tamamlanmış bir KVKK aydınlatma metni veya mevzuata uyum güvencesi değildir."]
+    else if (hasIdentity || hasLegalDetails) info.sections = info.sections.map(s => s.title.includes("tamamlanması gereken") ? {
+      ...s, paragraphs: [hasLegalDetails
+        ? "Onaylı işleme amaçları, hukuki dayanaklar, saklama ve aktarım açıklamaları aşağıda sunulmuştur. Yukarıdaki yapımcı / marka ve konum bilgileri, veri sorumlusunun doğrulanmış kimliği ve tam adresinin kamuya açık açıklanması yerine geçmez. Bu kimlik açıklaması ayrıca tamamlanmalıdır."
+        : "İşletmeci iletişim bilgileri yukarıda sunulmuştur. Her işleme amacı için hukuki dayanak, saklama ve silme süreleri ile yurt dışı aktarım koşulları henüz tamamlanmamıştır. Bu açıklama tamamlanmış bir KVKK aydınlatma metni veya mevzuata uyum güvencesi değildir."]
     } : s);
     if (hasLegalDetails) info.sections.push(
       {

@@ -32,7 +32,7 @@ test('direct registration and login addresses preserve the public account form a
   for (const path of ['/', '/admin/giris', '/register/extra', '/blog/login']) assert.equal(accountEntry(new URL(path, 'https://bilsemjunior.vercel.app')), null);
   assert.equal(accountEntryPath('register','parent'),'/register'); assert.equal(accountEntryPath('login','parent'),'/login?role=parent'); assert.equal(accountEntryPath('login','admin'),'/login');
 });
-const input = { parentEmail: ' VELI@example.com ', parentPassword: 'VeliGüvenli937', studentPassword: 'ÖğrenciGüvenli938', studentName: ' Deniz ', grade: 2, examFocus: 'Genel Zihinsel Yetenek', consentAccepted: true, termsAccepted: true, guardianConfirmed: true, policyVersion: '2026-10-28.1' };
+const input = { parentEmail: ' VELI@example.com ', parentPassword: 'VeliGüvenli937', studentPassword: 'ÖğrenciGüvenli938', studentName: ' Deniz ', grade: 2, examFocus: 'Genel Zihinsel Yetenek', consentAccepted: true, termsAccepted: true, guardianConfirmed: true, policyVersion: currentPolicyVersion(1) };
 async function run(options: { fail?: 'config'|'password'|'parent'|'student'|'profiles'|'mail'|'cleanup'; closed?: boolean; stale?: boolean; collision?: boolean; incompleteReadiness?: boolean; body?: unknown } = {}) {
   const actions: string[] = [], profiles: Array<Record<string, unknown>> = [];
   const settings = registrationReadySettings();
@@ -126,9 +126,11 @@ test('confirmation presents actual account state and code without passwords; log
 
 
 test('changed legal copy invalidates an old content version even when saved settings have the same revision', async () => {
-  const stale = await run({ body: { ...input, policyVersion: '2026-10-11.1' } });
-  assert.equal(stale.status, 409); assert.equal(stale.payload.code, 'POLICY_UPDATED');
-  assert.deepEqual(stale.actions, ['config']);
+  for (const policyVersion of ['2026-10-11.1', '2026-10-28.1']) {
+    const stale = await run({ body: { ...input, policyVersion } });
+    assert.equal(stale.status, 409); assert.equal(stale.payload.code, 'POLICY_UPDATED');
+    assert.deepEqual(stale.actions, ['config']);
+  }
 });
 
 
