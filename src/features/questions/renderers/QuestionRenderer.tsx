@@ -1,3 +1,4 @@
+import { PhotoLabBoard } from './PhotoLabBoard';
 import { CompositeShadowBoard } from './CompositeShadowBoard';
 import type { ShadowBoard } from '../composite-shadow';
 import {VisualReasoningBoard} from './VisualReasoningBoard';
@@ -44,6 +45,7 @@ export const QuestionRenderer: React.FC<QuestionRendererProps> = ({ question,pre
   const mode = typeof visualConfig.displayMode === 'string' ? visualConfig.displayMode : 'default';
   
   const renderEngine = () => {
+    if(mode==='photo_lab')return <PhotoLabBoard board={visualConfig as unknown as import('../photo-lab').PhotoBoard}/>;
     if(mode==='composite_shadow')return <CompositeShadowBoard board={visualConfig as unknown as ShadowBoard}/>;
     if(mode==='visual_lab')return <VisualReasoningBoard board={visualConfig as unknown as VisualBoard}/>;
     if(mode==='exam_lab')return <ExamLabBoard board={visualConfig as unknown as import('../exam-lab').ExamBoard}/>;

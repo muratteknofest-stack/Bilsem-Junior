@@ -1,3 +1,4 @@
+import { PHOTO_TOPICS, validatePhotoBoard, solvePhotoBoard, validPhotoValue, photoValueKey, independentlyMatchesPhoto } from './photo-lab';
 import { validateShadowBoard, shadowAnswer, shadowKey, independentlyMatchesShadow, validShadowValue } from './composite-shadow';
 import {validateVisualBoard,solveVisualBoard,visualValueKey,visualTopic,type VisualValue} from './visual-reasoning-lab';
 import {independentlyMatchesVisual} from './visual-reasoning-solver';
@@ -39,6 +40,13 @@ export function solveQuestion(q: BaseQuestion): UniversalSolverResult {
   });
   try {
     if (!q || !Array.isArray(q.options) || q.options.length !== 4 || q.options.some(o => !o)) return failure('Dört geçerli seçenek gerekli.');
+    if((q.visualConfig as Record<string,unknown>)?.displayMode==='photo_lab'){
+      const b=validatePhotoBoard(q.visualConfig);
+      if(q.type!==PHOTO_TOPICS[b.mechanic]||b.grade!==q.targetGrade)return failure('Fotoğraf konusu/sınıfı uyuşmuyor.');
+      const key=photoValueKey(solvePhotoBoard(b)),primary=q.options.filter(o=>validPhotoValue(o.visualData)&&photoValueKey(o.visualData)===key),independent=q.options.filter(o=>independentlyMatchesPhoto(b,o.visualData));
+      if(primary.length!==1||independent.length!==1||primary[0].id!==independent[0].id)return failure('Fotoğraf sorusunda tek kanıtlanmış cevap gerekli.',true);
+      return {canSolve:true,isMatch:primary[0].id===q.correctOptionId,expectedAnswerId:primary[0].id,expectedFingerprint:fingerprint(primary[0].visualData),solverMethod:'PhotoEvidence-and-IndependentScan-v1',confidence:1,ambiguityDetected:false,proofSteps:['Yerel fotoğraf kimlikleri ve görünen kartlar doğrulandı.','Her seçenek sıra, konum veya bağımsız kart sayımı ile sınandı.','Tek uygun seçenek: '+primary[0].id]};
+    }
     if((q.visualConfig as Record<string,unknown>)?.displayMode==='composite_shadow'){
       const b=validateShadowBoard(q.visualConfig);
       if(q.type!=='shadow_matching'||b.grade!==q.targetGrade)return failure('Birleşik gölge konusu/sınıfı uyuşmuyor.');

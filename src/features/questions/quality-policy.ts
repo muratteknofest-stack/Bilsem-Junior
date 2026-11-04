@@ -70,6 +70,12 @@ export function inspectEducation(q: BaseQuestion, grade: SchoolGrade, age?: numb
   }
   if((q.visualConfig as Record<string,unknown>).displayMode==='colorful_board'){const c=q.visualConfig as unknown as ColorfulBoard;metrics.gridSize=c.source?.art==='mosaic'?c.source.size:0;metrics.itemCount=metrics.gridSize**2||c.layers?.length||1;}
   const audience: string[] = [], difficulty: string[] = [], visual: string[] = [];
+  if((q.visualConfig as Record<string,unknown>).displayMode==='photo_lab'){
+    const v=q.visualConfig as import('./photo-lab').PhotoBoard;
+    const ids=v.mechanic==='photo-sequence'?v.sequence:v.mechanic==='photo-difference'?[...v.left,...v.right]:v.cards;
+    metrics.maxNumber=v.mechanic==='photo-count'?v.cards.length:v.mechanic==='photo-difference'?v.left.length:0;metrics.gridSize=v.mechanic==='photo-count'||v.mechanic==='photo-difference'?v.columns:0;metrics.peopleCount=0;metrics.symbolCount=new Set(ids).size;metrics.itemCount=ids.length;
+    if(v.grade!==grade)audience.push('GRADE_MISMATCH: Fotoğraf sınıfı uyuşmuyor.');
+  }
   if((q.visualConfig as Record<string,unknown>).displayMode==='composite_shadow'){
     const v=q.visualConfig as import('./composite-shadow').ShadowBoard;
     metrics.maxNumber=0;metrics.gridSize=0;metrics.peopleCount=0;metrics.symbolCount=v.shapes.length;metrics.itemCount=v.shapes.length+v.holes.length;

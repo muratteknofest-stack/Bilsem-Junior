@@ -1,3 +1,4 @@
+import { PHOTO_ENGINE, PHOTO_TOPICS, validatePhotoBoard, generatePhotoQuestion } from './photo-lab';
 import { SHADOW_ENGINE, validateShadowBoard, generateShadowQuestion, shadowKey, shadowAnswer } from './composite-shadow';
 import {VISUAL_LAB_ENGINE,validateVisualBoard,visualTopic,generateVisualQuestion} from './visual-reasoning-lab';
 import{REFERENCE_ENGINE,REFERENCE_TOPICS,validateReferenceBoard,generateReferenceQuestion,generateReferenceQuestionV1,isReferenceEngine}from'./reference-lab';
@@ -83,6 +84,11 @@ export function auditQuestion(value: unknown, existing: QuestionVisualReference[
     if (!Number.isFinite(q.estimatedSeconds) || q.estimatedSeconds < 10 || q.estimatedSeconds > 600) result.errors.push('Tahmini süre 10–600 saniye arasında olmalı.');
     if (!q.visualConfig || typeof cfg?.displayMode !== 'string') result.errors.push('Görsel gösterim yapılandırması eksik.');
     if (!Array.isArray(q.skills) || q.skills.length === 0) result.warnings.push('Ölçülen beceriyi belirtin.');
+    if(cfg?.displayMode==='photo_lab'){
+      const board=validatePhotoBoard(cfg);
+      if(q.authoring?.engine!==PHOTO_ENGINE||!isSchoolGrade(q.targetGrade)||board.grade!==q.targetGrade||q.type!==PHOTO_TOPICS[board.mechanic])result.errors.push('Fotoğraf motoru/sınıfı/konusu uyuşmuyor.');
+      else {const reference=generatePhotoQuestion(board.mechanic,q.seed,q.difficulty,q.targetGrade);for(const field of ['prompt','secondaryPrompt','explanation','visualConfig','category','options','authoring'] as const)if(fingerprint(q[field])!==fingerprint(reference[field]))result.reviewRequired.push('Fotoğraf şablonu değişmiş: '+field);}
+    }
     if(cfg?.displayMode==='composite_shadow'){
       const board=validateShadowBoard(cfg);
       if(q.authoring?.engine!==SHADOW_ENGINE||!isSchoolGrade(q.targetGrade)||board.grade!==q.targetGrade||q.type!=='shadow_matching')result.errors.push('Birleşik gölge motoru/sınıfı/konusu uyuşmuyor.');

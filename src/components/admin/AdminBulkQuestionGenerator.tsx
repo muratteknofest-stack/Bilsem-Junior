@@ -1,3 +1,4 @@
+import { PHOTO_TOPICS } from '../../features/questions/photo-lab';
 import {assessCandidate} from '../../features/questions/multi-stage-quality';
 import {gradeDifficulty} from '../../features/questions/quality-policy';
 import {BulkQuestionSaveError} from '../../services/durable-question-batch';
@@ -134,6 +135,7 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
 }) => {
   // State: Configuration
   const [questionCount, setQuestionCount] = useState<number>(30);
+  const [useRealPhotos, setUseRealPhotos] = useState(false);
   const [selectedGradeMode, setSelectedGradeMode] = useState<GradeSelection>('balanced');
   const [selectedCategories, setSelectedCategories] = useState<CognitiveCategory[]>([
     'matrix',
@@ -272,6 +274,12 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
       candidateTypes.push(...ALL_QUESTION_TYPES);
     }
 
+    const availableTypes = useRealPhotos ? candidateTypes.filter(type => Object.values(PHOTO_TOPICS).includes(type)) : candidateTypes;
+    if (!availableTypes.length) {
+      showNotification('Fotoğraflı sorular için örüntü, dikkat veya hafıza kategorisi seçin.', 'error');
+      setIsGenerating(false); return;
+    }
+
     // Process chunked with small timeouts to give real-time rendering feedback
     const startTime = Date.now();
     for (let i = 0; i < totalToGenerate; i++) {
@@ -285,17 +293,17 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
 
       // 2. Pick Category & Question Type (favor grade recommended types if available)
       const gradeCfg = GRADE_CONFIGS[targetGrade];
-      const matchingGradeTypes = candidateTypes.filter((t) =>
+      const matchingGradeTypes = availableTypes.filter((t) =>
         gradeCfg.recommendedTypes.includes(t)
       );
-      const typePool = matchingGradeTypes.length > 0 ? matchingGradeTypes : candidateTypes;
+      const typePool = matchingGradeTypes.length > 0 ? matchingGradeTypes : availableTypes;
       const chosenType = typePool[Math.floor(Math.random() * typePool.length)];
 
       // 3. Determine Difficulty
       const chosenDiff=gradeDifficulty(targetGrade,pickDifficulty(difficultyStrategy,i,totalToGenerate));
       const seed=saltSeedBase+i*173;let q:BaseQuestion;
       try{
-        q=generateDiverseQuestion({profile:'professional-v2',type:chosenType,seed,targetGrade,difficulty:chosenDiff},[...history,...batchResult]);
+        q=generateDiverseQuestion({profile:useRealPhotos?'photo-lab':'professional-v2',type:chosenType,seed,targetGrade,difficulty:chosenDiff},[...history,...batchResult]);
         q.id='bulk-'+crypto.randomUUID();q.createdAt=new Date().toISOString();q.isCustom=true;q.reviewPolicy='professional-v2';q.sourceBatch=sourceBatch;
         q.qualityReport=assessCandidate(q,{grade:targetGrade,difficulty:chosenDiff},[...history,...batchResult]);q.status='review';
       }catch(error){failures.push(`${i+1}. soru (${chosenType}, tohum ${seed}): ${error instanceof Error?error.message:'Üretim doğrulanamadı.'}`);setGenerationErrors([...failures]);await new Promise(r=>setTimeout(r,0));continue;}
@@ -571,6 +579,11 @@ export const AdminBulkQuestionGenerator: React.FC<AdminBulkQuestionGeneratorProp
               </h3>
               <span className="text-xs text-slate-400">Özelleştirilmiş Üretim Ayarları</span>
             </div>
+
+            <label className="flex items-start gap-3 rounded-2xl border border-emerald-700/50 bg-emerald-950/30 p-4 text-sm text-emerald-100">
+              <input type="checkbox" checked={useRealPhotos} disabled={isGenerating} onChange={event => setUseRealPhotos(event.target.checked)} className="mt-1 h-4 w-4" />
+              <span><strong className="block">Gerçek fotoğraflarla soru üret</strong><span className="mt-1 block text-xs text-emerald-200/80">Fotoğraf örüntüsü, değişen kart, hedef kart sayma ve görsel hafıza. Seçilen sınıf ve zorluk korunur.</span></span>
+            </label>
 
             {/* 1. Soru Adedi (Quantity) */}
             <div className="space-y-3">

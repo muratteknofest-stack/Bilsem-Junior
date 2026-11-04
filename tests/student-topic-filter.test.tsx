@@ -1,3 +1,4 @@
+import { PHOTO_MECHANICS, PHOTO_TOPICS } from '../src/features/questions/photo-lab';
 import {generateVisualQuestion} from '../src/features/questions/visual-reasoning-lab';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -349,6 +350,21 @@ test('real authenticated learning API preserves mixed choices, permits practice 
       assert.equal(JSON.stringify(bank),originalBank,'starting compound practice never rewrites the published bank');
       const installed=await start({mode:'practice',questionCount:1,topic:'shadow_matching',difficulty:2},true,'visual-lab-1');
       assert.equal(installed.status,201,JSON.stringify(installed.body));assert.equal(installed.body.questions[0].visualConfig.displayMode,'visual_lab');
+    }
+    // Real photographs can start focused practice without mutating the published bank.
+    for(const g of [1,2,3,4] as const)for(const mechanic of PHOTO_MECHANICS){
+      grade=g;rows=[];bank=[];
+      const topic=PHOTO_TOPICS[mechanic];
+      const photos=await start({mode:'practice',questionCount:3,topic,difficulty:2},true,LEARNING_QUESTION_FORMAT);
+      assert.equal(photos.status,201,JSON.stringify(photos.body));assert.equal(photos.body.questions.length,3);
+      assert.ok(photos.body.questions.every((q:BaseQuestion)=>q.type===topic&&(q.visualConfig as Record<string,unknown>).displayMode==='photo_lab'&&q.targetGrade===g));
+      assert.ok(photos.body.questions.every((q:BaseQuestion)=>!('correctOptionId' in q)&&!('explanation' in q)));
+      assert.deepEqual(bank,[]);
+      const answer=await originalFetch(`${origin}/api/learning/${photos.body.id}/answer?questionFormat=${LEARNING_QUESTION_FORMAT}`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token()}`},body:JSON.stringify({index:0,response:{mode:'choice',optionId:rows[0].questions[0].correctOptionId}})});
+      assert.equal(answer.status,200,await answer.text());assert.equal(rows[0].answers['0'].correct,true);
+      rows=[];
+      const installed=await start({mode:'practice',questionCount:3,topic,difficulty:2},true,'shadow-lab-1');
+      assert.equal(installed.status,422,'installed APK must not generate unsupported photograph boards');
     }
   } finally {
     await new Promise<void>(resolve => server.close(() => resolve()));
