@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { createPasswordChecker, PasswordPolicyError } from '../server/password-policy';
-import { createPasswordChangeHandler } from '../server/password-change';
+import { createPasswordChangeHandler, PasswordStepUpRequiredError } from '../server/password-change';
 import { verifyHealthResponse } from '../scripts/verify-live-release.mjs';
 import type { AuthenticatedRequest } from '../server/security';
 import type { Response as ExpressResponse } from 'express';
@@ -62,12 +62,12 @@ for (const [name, reply] of Object.entries({
   });
 }
 
-async function runChange(options: { authenticated?: boolean; body?: unknown; reject?: 'policy' | 'provider' | 'revoke' } = {}) {
+async function runChange(options: { authenticated?: boolean; body?: unknown; reject?: 'policy' | 'provider' | 'revoke' | 'mfa' } = {}) {
   const actions: string[] = [];
   let status = 0; let result: unknown;
   const handler = createPasswordChangeHandler({
     async check() { actions.push('check'); if (options.reject === 'policy') throw new PasswordPolicyError('PASSWORD_COMPROMISED'); },
-    async update(token) { assert.equal(token, 'test-user-jwt'); actions.push('update'); if (options.reject === 'provider') throw new Error('Provider failed'); },
+    async update(token) { assert.equal(token, 'test-user-jwt'); actions.push('update'); if (options.reject === 'provider') throw new Error('Provider failed'); if (options.reject === 'mfa') throw new PasswordStepUpRequiredError(); },
     async revoke(id) { assert.equal(id, 'test-user'); actions.push('revoke'); if (options.reject === 'revoke') throw new Error('Revocation failed'); },
   });
   const req = { body: options.body ?? { password }, authUser: options.authenticated === false ? undefined : { uid: 'test-user' },
@@ -96,6 +96,14 @@ test('provider and revocation failures never report password-change success', as
   assert.equal(provider.status, 503); assert.deepEqual(provider.actions, ['check', 'update']);
   const revoke = await runChange({ reject: 'revoke' });
   assert.equal(revoke.status, 503); assert.deepEqual(revoke.actions, ['check', 'update', 'revoke']);
+});
+
+test('enrolled MFA blocks password change until the user verifies a second factor', async () => {
+  const result = await runChange({ reject: 'mfa' });
+  assert.equal(result.status, 403);
+  assert.deepEqual(result.actions, ['check', 'update']);
+  assert.equal((result.result as {code?: string}).code, 'MFA_REQUIRED');
+  assert.ok((result.result as {error?: string}).error?.includes('iki aşamalı doğrulamayı'));
 });
 
 const expected = { commit: 'a'.repeat(40), projectRef: 'vtcsoqohkiagbwatlabk' };

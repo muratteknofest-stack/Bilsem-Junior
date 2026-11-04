@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { registerFamilySchema, registerStudentSchema } from '../server/routes/auth-routes';
 import { passwordResetSchema } from '../src/lib/validations';
@@ -72,3 +73,15 @@ test('reset requests from previews use the configured production recovery page',
 });
 
 
+
+test('recovery screen verifies TOTP and AAL2 before allowing a password change', () => {
+  const form = readFileSync(new URL('../src/features/auth/components/PasswordResetPage.tsx', import.meta.url), 'utf8');
+  const gate = readFileSync(new URL('../src/features/auth/components/RecoveryMfaGate.tsx', import.meta.url), 'utf8');
+  assert.match(form, /<RecoveryMfaGate>/);
+  assert.match(gate, /getAuthenticatorAssuranceLevel/);
+  assert.match(gate, /nextLevel !== 'aal2'/);
+  assert.match(gate, /\.status === 'verified'/);
+  assert.match(gate, /challengeAndVerify/);
+  assert.match(gate, /currentLevel !== 'aal2'/);
+  assert.doesNotMatch(gate, /auth\.admin\.updateUserById/);
+});

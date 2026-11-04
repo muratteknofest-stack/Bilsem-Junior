@@ -7,6 +7,7 @@ import { getServiceClient } from './supabase-admin';
 import { logServerFailure } from './safe-log';
 import { checkedSupabaseOrigin } from '../shared/supabase-environment.mjs';
 const schema = z.object({ password: strongPasswordSchema }).strict();
+export class PasswordStepUpRequiredError extends Error {}
 interface ChangeDependencies {
   check: (password: string) => Promise<void>;
   update: (token: string, password: string) => Promise<void>;
@@ -27,6 +28,7 @@ export function createPasswordChangeHandler(deps: ChangeDependencies) {
       return res.status(204).send();
     } catch (error) {
       if (error instanceof PasswordPolicyError) return res.status(error.status).json({ error: error.message, code: error.code });
+      if (error instanceof PasswordStepUpRequiredError) return res.status(403).json({ error: 'Şifre değişikliği için doğrulayıcı uygulamanızdaki 6 haneli kodla iki aşamalı doğrulamayı tamamlayın.', code: 'MFA_REQUIRED' });
       logServerFailure('Password change failed', error);
       return res.status(503).json({ error: updated ? 'Şifre yenilendi ancak eski oturumların kapatılması doğrulanamadı. Yeni şifrenizle giriş yaparak tekrar deneyin.' : 'Şifre yenilenemedi. Yeni bağlantı isteyin veya biraz sonra tekrar deneyin.' });
     }
@@ -42,7 +44,16 @@ export const changeOwnPassword = createPasswordChangeHandler({
       headers: { Authorization: `Bearer ${token}`, apikey: process.env.SUPABASE_SERVICE_ROLE_KEY || '', 'Content-Type': 'application/json' },
       body: JSON.stringify({ password }),
     });
-    if (!response.ok) { await response.body?.cancel(); throw new Error('Auth password update rejected'); }
+    if (!response.ok) {
+      if (response.status === 401) {
+        const reply: unknown = await response.json().catch(() => null);
+        const fields = reply && typeof reply === 'object' ? reply as Record<string, unknown> : {};
+        if (fields.code === 'insufficient_aal' || fields.error_code === 'insufficient_aal')
+          throw new PasswordStepUpRequiredError('MFA step-up required');
+      }
+      await response.body?.cancel();
+      throw new Error('Auth password update rejected');
+    }
     await response.body?.cancel();
   },
   async revoke(userId) {
