@@ -37,7 +37,7 @@ test('narration database and Storage remain server-only even if another bucket h
  }finally{await db.close();}
 });
 test('lesson HTTP enforces identity, verified role, paid access and MFA before uploads',async()=>{
- const original=globalThis.fetch,env={...process.env};Object.assign(process.env,{SUPABASE_URL:'https://lessons-fixture.invalid',SUPABASE_SERVICE_ROLE_KEY:'sb_secret_fixture',VERCEL:'',VERCEL_ENV:'',GOOGLE_PLAY_PAID_ACCESS_FROM:'2026-10-27T00:00:00Z',GOOGLE_PLAY_ENFORCE_PAID_ACCESS:'false',GOOGLE_PLAY_LICENSE_TEST_ENABLED:'false'});
+ const original=globalThis.fetch,env={...process.env};Object.assign(process.env,{BILSEM_LIFETIME_ACCESS_BEFORE:'',SUPABASE_URL:'https://lessons-fixture.invalid',SUPABASE_SERVICE_ROLE_KEY:'sb_secret_fixture',VERCEL:'',VERCEL_ENV:'',GOOGLE_PLAY_PAID_ACCESS_FROM:'2026-10-27T00:00:00Z',GOOGLE_PLAY_ENFORCE_PAID_ACCESS:'false',GOOGLE_PLAY_LICENSE_TEST_ENABLED:'false'});
  const student='11111111-1111-4111-8111-111111111111';let role='student',verified=true,created='2026-10-27T03:00:00Z',reads=0,uploads=0,saved:any=null;
  globalThis.fetch=async(input,init)=>{const r=new Request(input,init),u=new URL(r.url);assert.equal(u.origin,'https://lessons-fixture.invalid');let value:unknown;
   if(u.pathname==='/auth/v1/user')value={id:student,email:'fixture@example.invalid',email_confirmed_at:verified?'2026-10-27T00:00:00Z':null,app_metadata:{role}};
