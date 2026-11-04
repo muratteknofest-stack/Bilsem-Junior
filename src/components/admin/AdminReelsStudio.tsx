@@ -525,8 +525,10 @@ export function AdminReelsStudio() {
     );
   };
 
-  const handleDirectPublishToInstagram = async () => {
-    if (!localVideo || isDirectPublishing) return;
+  const handleDirectPublishToInstagram = async (overrideBlob?: Blob, overrideCaption?: string) => {
+    const targetBlob = overrideBlob || localVideo?.blob;
+    const targetCaption = overrideCaption || captionText;
+    if (!targetBlob || isDirectPublishing) return;
     setIsDirectPublishing(true);
     setError('');
     setNotice('1/3 • Instagram Reels yükleme oturumu başlatılıyor (Meta Graph API)…');
@@ -537,7 +539,7 @@ export function AdminReelsStudio() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'init',
-          caption: captionText,
+          caption: targetCaption,
         }),
       });
       const initData = (await initRes.json()) as Record<string, unknown>;
@@ -547,7 +549,7 @@ export function AdminReelsStudio() {
 
       const containerId = String(initData.containerId);
       const uploadUri = String(initData.uploadUri);
-      const arrayBuf = await localVideo.blob.arrayBuffer();
+      const arrayBuf = await targetBlob.arrayBuffer();
       const bytes = new Uint8Array(arrayBuf);
       const totalSize = bytes.length;
       const chunkSize = 96 * 1024; // 96 KB chunks (< 256 KB JSON limit)
@@ -677,7 +679,7 @@ export function AdminReelsStudio() {
     }
   }
 
-  async function generateOnDevice(overrideDay?: MonthlyCalendarDay) {
+  async function generateOnDevice(overrideDay?: MonthlyCalendarDay, autoPublishToIg = false) {
     if (localBusy || busy) return;
     setLocalBusy(true);
     setError('');
@@ -754,6 +756,9 @@ export function AdminReelsStudio() {
           ? 'Müzikli ve animasyonlu 9:16 Reels videosu oluşturuldu! Sağdaki "Manuel Yayınla & Paylaş" kutusundan tek tıkla Instagram\'da paylaşabilirsin.'
           : 'Müzikli ve animasyonlu 9:16 Reels videosu oluşturuldu! Sağdaki kutudan indirebilir veya paylaşabilirsin.'
       );
+      if (autoPublishToIg) {
+        void handleDirectPublishToInstagram(result.blob, generatedCaption);
+      }
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -777,7 +782,7 @@ export function AdminReelsStudio() {
         autoPilotTriggeredRef.current = true;
         localStorage.setItem('bilsem_reels_last_auto_date', todayKey);
         const todaySlot = monthlyCalendar[0];
-        void generateOnDevice(todaySlot);
+        void generateOnDevice(todaySlot, true);
       }
     } catch {
       // ignore storage errors
