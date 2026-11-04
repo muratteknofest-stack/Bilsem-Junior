@@ -10,9 +10,10 @@ import { playRequest, verifyPlayPush } from '../server/google-play-client';
 import playRoutes from '../server/routes/google-play-routes';
 import learningRoutes from '../server/routes/learning-routes';
 import challengeRoutes from '../server/routes/challenge-routes';
+import { authorizeLearningStart, reserveFreePractice } from '../server/free-membership';
 import { requireLearningAccess } from '../server/membership-access';
 import { membershipRequiredMessage } from '../server/membership-message';
-import { paidAccessStartsAt } from '../server/paid-access-policy';
+import { lifetimeAccessBefore, studentHasLifetimeAccess, paidAccessStartsAt } from '../server/paid-access-policy';
 import { publicPlayMembership } from '../server/play-membership-page';
 import { googlePlayAccess } from '../server/google-play-access';
 import { defaultPlatformSettings } from '../src/lib/platform-settings';
@@ -142,10 +143,10 @@ test('real Postgres preserves one binding and exact expiry, rejects stale grants
 });
 test('authenticated flow verifies before grant, acknowledges after durable save, restores and enforces paid learning',{timeout:30000},async()=>{
   const savedEnv={...process.env},originalFetch=globalThis.fetch,originalToken=GoogleAuth.prototype.getAccessToken,originalVerify=OAuth2Client.prototype.verifyIdToken;
-  Object.assign(process.env,{VERCEL:'',VERCEL_ENV:'',GOOGLE_PLAY_PAID_ACCESS_FROM:'',GOOGLE_PLAY_LICENSE_TEST_ENABLED:'false',GOOGLE_PLAY_AUTH_MODE:'service_account',SUPABASE_URL:'https://play-fixture.invalid',SUPABASE_SERVICE_ROLE_KEY:'unit-test',GOOGLE_PLAY_BINDING_SECRET:secret,GOOGLE_PLAY_TOKEN_KEY:key,GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:JSON.stringify({type:'service_account',client_email:'fixture@fixture.iam.gserviceaccount.com',private_key:'-----BEGIN PRIVATE KEY-----fixture-only'}),GOOGLE_PLAY_ENFORCE_PAID_ACCESS:'true',GOOGLE_PLAY_BILLING_ENABLED:'true',GOOGLE_PLAY_ALLOW_TEST_PURCHASES:'false',GOOGLE_PLAY_RTDN_AUDIENCE:'https://api.example.test/api/google-play/notifications',GOOGLE_PLAY_RTDN_EMAIL:'push@fixture.iam.gserviceaccount.com'});
+  Object.assign(process.env,{VERCEL:'',VERCEL_ENV:'',BILSEM_LIFETIME_ACCESS_BEFORE:'',GOOGLE_PLAY_PAID_ACCESS_FROM:'',GOOGLE_PLAY_LICENSE_TEST_ENABLED:'false',GOOGLE_PLAY_AUTH_MODE:'service_account',SUPABASE_URL:'https://play-fixture.invalid',SUPABASE_SERVICE_ROLE_KEY:'unit-test',GOOGLE_PLAY_BINDING_SECRET:secret,GOOGLE_PLAY_TOKEN_KEY:key,GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:JSON.stringify({type:'service_account',client_email:'fixture@fixture.iam.gserviceaccount.com',private_key:'-----BEGIN PRIVATE KEY-----fixture-only'}),GOOGLE_PLAY_ENFORCE_PAID_ACCESS:'true',GOOGLE_PLAY_BILLING_ENABLED:'true',GOOGLE_PLAY_ALLOW_TEST_PURCHASES:'false',GOOGLE_PLAY_RTDN_AUDIENCE:'https://api.example.test/api/google-play/notifications',GOOGLE_PLAY_RTDN_EMAIL:'push@fixture.iam.gserviceaccount.com'});
   const platform=defaultPlatformSettings();let ledger:any[]=[],events:string[]=[],payload=subscription(),failSave=false,failAck=false,emailVerified=true,catalogReady=true,platformUnavailable=false,role='parent';
   GoogleAuth.prototype.getAccessToken=async()=> 'fixture-oauth';
-  let oidcValid=false, preparedBinding=false, authCreatedAt='2026-10-26T00:00:00Z', authUnavailable=false;
+  let oidcValid=false, preparedBinding=false, authCreatedAt='2026-10-26T00:00:00Z', authUnavailable=false, freeQuotaAvailable=true;
   OAuth2Client.prototype.verifyIdToken=(async(options:any)=>{assert.equal(options.audience,process.env.GOOGLE_PLAY_RTDN_AUDIENCE);if(!oidcValid)throw Error('invalid signature');return {getPayload:()=>({email:process.env.GOOGLE_PLAY_RTDN_EMAIL,email_verified:true,iss:'https://accounts.google.com'})};}) as any;
   globalThis.fetch=(async(input,init)=>{
     const req=new Request(input as RequestInfo,init),u=new URL(req.url);let value:unknown;
@@ -166,7 +167,8 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     else if(u.pathname==='/auth/v1/admin/users/'+student){if(authUnavailable)return Response.json({message:'private-auth-error'},{status:503});value={id:student,created_at:authCreatedAt,user_metadata:{created_at:'2000-01-01T00:00:00Z'}};}
     else if(u.pathname==='/auth/v1/admin/users/'+other)value={id:other,created_at:authCreatedAt};
     else if(u.pathname==='/auth/v1/user')value={id:role==='student'?student:parent,email:'parent@example.com',email_confirmed_at:emailVerified?new Date().toISOString():null,app_metadata:{role}};
-    else if(u.pathname==='/rest/v1/rpc/is_user_session_active'||u.pathname==='/rest/v1/rpc/consume_api_limit')value=true;
+    else if(u.pathname==='/rest/v1/rpc/consume_api_limit'){const args=await req.json();if(args.p_scope==='free-practice-v1'){assert.equal(args.p_limit,2);assert.equal(args.p_seconds,86400);assert.match(args.p_key,/^[a-f0-9]{64}$/);value=freeQuotaAvailable;}else value=true;}
+    else if(u.pathname==='/rest/v1/rpc/is_user_session_active')value=true;
     else if(u.pathname==='/rest/v1/daily_challenge_attempts'||u.pathname==='/rest/v1/learning_sessions')value=[];
     else if(u.pathname==='/rest/v1/platform_settings'){if(platformUnavailable)throw Error('private-platform-failure');value={settings:platform,revision:1,updated_at:null};}
     else if(u.pathname==='/rest/v1/profiles'){
@@ -254,7 +256,7 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     assert.equal((await getAccess()).body.ready,false);assert.equal((await getAccess()).body.licenseTest,false);
     process.env.GOOGLE_PLAY_LICENSE_TEST_PARENT_ID=parent;authCreatedAt=createdBeforePilot;
     await assert.rejects(requireLearningAccess(student),e=>(e as any).status===403);
-    assert.equal((await post('parent/google-play/prepare',{studentId:other})).status,503);
+    assert.equal((await post('parent/google-play/prepare',{studentId:other})).status,403);
     const beforeOtherStudent=events.length;await requireLearningAccess(other);assert.equal(events.length,beforeOtherStudent);
     const legalName=platform.business.legalName;platform.business.legalName='';
     assert.equal((await getAccess()).body.ready,false);
@@ -291,11 +293,25 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     authCreatedAt='2026-10-26T23:59:59.999Z';
     assert.equal((await getAccess()).body.enforced,false);
     await requireLearningAccess(student); // existing student keeps previous access
+    process.env.BILSEM_LIFETIME_ACCESS_BEFORE='2026-11-04T18:57:21.708Z';
+    process.env.GOOGLE_PLAY_ENFORCE_PAID_ACCESS='true';
+    const gifted=await getAccess();assert.equal(gifted.body.lifetime,true);assert.equal(gifted.body.ready,false);assert.equal(gifted.body.access.active,false);
+    await requireLearningAccess(student);
+    assert.equal((await post('parent/google-play/prepare',{studentId:student})).status,409);
+    authUnavailable=true;await assert.rejects(studentHasLifetimeAccess(student));authUnavailable=false;
+    authCreatedAt='2026-11-04T18:57:21.708Z';
+    assert.equal(await studentHasLifetimeAccess(student),false);
+    ledger=[];assert.equal(await authorizeLearningStart(student,'practice'),true);
+    await assert.rejects(authorizeLearningStart(student,'adaptive'),e=>(e as any).status===403);
+    await reserveFreePractice(student);freeQuotaAvailable=false;
+    await assert.rejects(reserveFreePractice(student),e=>(e as any).status===429);freeQuotaAvailable=true;
+    authUnavailable=true;await assert.rejects(authorizeLearningStart(student,'practice'),e=>(e as any).status!==403);authUnavailable=false;
+    process.env.BILSEM_LIFETIME_ACCESS_BEFORE='';process.env.GOOGLE_PLAY_ENFORCE_PAID_ACCESS='false';
     authCreatedAt='2026-10-27T00:00:00Z';
     assert.equal((await getAccess()).body.enforced,true);
     await assert.rejects(requireLearningAccess(student),e=>(e as any).status===403);
     role='student';
-    for(const mode of ['practice','adaptive','exam'])
+    for(const mode of ['adaptive','exam'])
       assert.equal((await post('learning/start',{mode})).status,403);
     assert.equal((await post('learning/review',{mistakeId:'fixture'})).status,403);
     for(const path of ['challenges/today','learning/history']){
@@ -332,3 +348,22 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
   }
 });
 
+
+
+test('lifetime boundary is explicit and invalid settings cannot grant membership',()=>{
+ assert.equal(lifetimeAccessBefore({}),null);
+ assert.equal(lifetimeAccessBefore({BILSEM_LIFETIME_ACCESS_BEFORE:'2026-11-04T18:57:21.708Z'}),Date.parse('2026-11-04T18:57:21.708Z'));
+ for(const value of ['today','2026-11-04','2026-02-30T00:00:00Z'])assert.throws(()=>lifetimeAccessBefore({BILSEM_LIFETIME_ACCESS_BEFORE:value}),GooglePlayError);
+});
+test('database daily quota accepts two concurrent starts and isolates students',async()=>{
+ const db=new PGlite();try{
+  await db.exec(`create schema auth; create function auth.jwt() returns jsonb language sql as $$select '{"role":"service_role"}'::jsonb$$;create role service_role; create role anon; create role authenticated;
+  create table public.api_rate_windows(key text,scope text,window_start timestamptz,used integer not null default 0,primary key(key,scope,window_start));`);
+  const sql=await readFile('supabase/migrations/20261017183500_phase2_indexes_and_rate_limit_optimization.sql','utf8');
+  await db.exec(sql.slice(sql.indexOf('create or replace function public.consume_api_limit')));
+  const starts=await Promise.all(Array.from({length:6},()=>db.query<{allowed:boolean}>("select public.consume_api_limit($1,'free-practice-v1',2,86400) as allowed",['a'.repeat(64)])));
+  assert.equal(starts.filter(r=>r.rows[0].allowed).length,2);
+  assert.equal((await db.query<{allowed:boolean}>("select public.consume_api_limit($1,'free-practice-v1',2,86400) as allowed",['b'.repeat(64)])).rows[0].allowed,true);
+  await db.exec('set role authenticated');await assert.rejects(db.query("select public.consume_api_limit($1,'free-practice-v1',2,86400)",['c'.repeat(64)]));
+ }finally{await db.close();}
+});

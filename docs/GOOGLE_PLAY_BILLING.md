@@ -249,3 +249,12 @@ Bu sürümün APK'sı geliştirme test anahtarıyla imzalanmış test dağıtım
 Abonelik erişimi okunurken başarılı fakat aktif olmayan Google sonucu artık durumunu ve bitiş tarihini kaybetmez. `PENDING`, `PAUSED` ve `ON_HOLD` durumlarında istemci satın alma açmaz; `/prepare` de 409 döner. Kullanıcı Google Play'den ödeme/duraklatma sorununu çözer ve yeniden doğrular. Grace döneminde erişim korunurken ödeme yöntemi uyarısı gösterilir. İşlem öncesi ve `/prepare` yanıtından sonra çevrimiçi durum ipucu kontrol edilir; bağlantı yoksa native ödeme çağrısı yapılmaz. Bu ipucu ödeme veya erişim kanıtı değildir.
 
 Gerçek Play kataloğunun üç etkin dönemle okunması, kimliği doğrulanmış RTDN teslimi ve lisans testçisiyle imzalı uygulamadaki ödeme/yenileme/iade kabulü hâlâ ayrıca doğrulanmalıdır. Otomatik ve yalıtılmış arayüz testleri gerçek Google Play satın alımı sayılmaz.
+
+
+## Süresiz üyelik ve ücretsiz keşif planı
+
+`BILSEM_LIFETIME_ACCESS_BEFORE` sabit ISO kayıt sınırıdır. Bu tarihten önce Auth kaydı oluşturulan öğrenciye işletmeci hediyesi olarak süresiz tam erişim verilir. Profil tarihi veya istemci verisi kullanılmaz. Google Play makbuzu, ödeme kaydı ve otomatik yenileme durumu değiştirilmez. Aile yetkisi ayrıca doğrulanır; eski veliye sonradan eklenen yeni öğrenci otomatik süresiz hak kazanmaz.
+
+Yeni öğrenciler, aktif Google üyeliği yoksa, her UTC takvim gününde iki kısa pratik başlatabilir; pratik başına en fazla beş soru. Haklar Türkiye saati 03.00’te yenilenir. Kota, mevcut `consume_api_limit` işlemiyle sunucuda atomik uygulanır; web/Android ve cihazlar arasında ortaktır. Sorular hazırlandıktan sonra ve kayıt öncesinde hak ayrılır. Başlatılmış çalışmaya tekrar giriş yeni hak tüketmez. Başlatma başarısız olursa ayrılan hak aynı gün için tüketilmiş kalabilir; kota aşılmasına izin verilmez.
+
+Üç günlük görev, Örüntü Dedektifi/Dikkatli Gözler örnek anlatımları, profil, sonuçlar ve temel veli takibi ücretsizdir. Denemeler, adaptif çalışmalar, maceralar ve kalan anlatımlar tam erişim gerektirir. Mevcut gerçek Google aboneliği hediye nedeniyle kendiliğinden iptal edilmez; kullanıcı Google Play üzerinden ayrıca yönetebilir.

@@ -116,3 +116,24 @@ test('Apple publication requires an explicit flag and a direct App Store listing
     }
   } finally { keys.forEach((key, i) => { if (old[i] === undefined) delete process.env[key]; else process.env[key] = old[i]; }); }
 });
+
+
+test('lifetime membership is distinct from a Google purchase and prevents checkout on web and Android', async () => {
+  const lifetime = {...config, lifetime:true, ready:false};
+  assert.equal(playConfigSchema.parse(lifetime).access.active,false);
+  const state={...initialPlayBillingState(),phase:'idle' as const,fresh:true,storeChecked:true,config:lifetime,offers:[{basePlanId:'monthly' as const,price:'₺99',period:'P1M'}]};
+  assert.equal(canBuyPlay({...state,config:{...lifetime,ready:true}},'monthly'),false);
+  for(const html of [renderToStaticMarkup(<PlayBillingPanel state={state} onPurchase={()=>{}} onRestore={()=>{}} onRefresh={()=>{}}/>),renderToStaticMarkup(<WebPlayMembershipPanel state={state} onRefresh={()=>{}}/>)]){
+    assert.match(html,/Süresiz üyeliğiniz aktif/);assert.match(html,/Web ve Android|web ve Android/i);
+    assert.doesNotMatch(html,/Seçili dönem|Şu anda sunulmuyor|Google Play ile devam et|Invalid Date/);
+  }
+  const unexpected=async()=>{throw Error('Lifetime must not open the store');};
+  const flow=new PlayBillingFlow({studentId:'fixture',native:true,isCurrent:()=>true,changed(){},store:{catalog:unexpected,restore:unexpected,purchase:unexpected},async request(){return lifetime;}});
+  await flow.refresh();assert.equal(flow.snapshot().notice.kind,'success');assert.match(flow.snapshot().notice.text,/Süresiz üyeliğiniz aktif/);await flow.purchase('monthly');flow.dispose();
+});
+test('free plan explains the same limits on web and Android', () => {
+ const state={...initialPlayBillingState(),phase:'idle' as const,fresh:true,storeChecked:true,config:{...config,ready:false,lifetime:false}};
+ for(const html of [renderToStaticMarkup(<PlayBillingPanel state={state} onPurchase={()=>{}} onRestore={()=>{}} onRefresh={()=>{}}/>),renderToStaticMarkup(<WebPlayMembershipPanel state={state} onRefresh={()=>{}}/>)]){
+  for(const text of ['Ücretsiz keşif üyeliği','2 kısa pratik','10 soru','3 günlük görev','2 örnek konu anlatımı'])assert.ok(html.includes(text),text);
+ }
+});

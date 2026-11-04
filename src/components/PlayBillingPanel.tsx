@@ -1,3 +1,4 @@
+import { FREE_MEMBERSHIP } from '../lib/membership-plan';
 import { LegalLinks } from './LegalLinks';
 import React, { useId, useState } from 'react';
 import { AlertCircle, ArrowRight, Check, CheckCircle2, Clock3, Crown, ExternalLink, Gift, LoaderCircle, LockKeyhole, RefreshCw, Rocket, RotateCcw, ShieldCheck, Sparkles } from 'lucide-react';
@@ -12,7 +13,8 @@ const PLAN_ART: Record<PlayPlanId, { image: string; caption: string; badge: stri
 export function PlayBillingPanel({ state, studentName, online = true, onPurchase, onRestore, onRefresh }: Props) {
   const [preferred, setPreferred] = useState<PlayPlanId>('monthly'), radioName = useId();
   const { config, phase, notice, fresh, pending, otherStudent } = state;
-  const busy = phase !== 'idle', active = config?.access.active === true && fresh;
+  const lifetime = config?.lifetime === true && fresh;
+  const busy = phase !== 'idle', active = (config?.access.active === true || lifetime) && fresh;
   // A region/account may only receive some plans. Never leave checkout pointing at an unavailable default.
   const available = PLAY_PLANS.filter(plan => state.offers.some(offer => offer.basePlanId === plan.id && offer.period === plan.period));
   const selected = available.some(plan => plan.id === preferred) ? preferred : available[0]?.id ?? preferred;
@@ -30,7 +32,7 @@ export function PlayBillingPanel({ state, studentName, online = true, onPurchase
     <div className="zp-play-hero">
       <div className="zp-play-hero-sparks" aria-hidden="true"><span>✦</span><span>✧</span><span>✦</span></div>
       <span className="zp-play-hero-sticker" aria-hidden="true"><Rocket size={38}/><Sparkles size={20}/></span>
-      <div className="zp-play-hero-copy"><span className="zp-play-provider"><ShieldCheck size={15} aria-hidden="true"/>Google Play üzerinden</span>
+      <div className="zp-play-hero-copy"><span className="zp-play-provider"><ShieldCheck size={15} aria-hidden="true"/>{lifetime ? 'Bilsem Junior üyeliği' : 'Google Play üzerinden'}</span>
         <h2>Keşif yolculuğunuz büyüsün!</h2>
         <p>Renkli sorular, yeni düşünme yolları ve birlikte takip edebileceğiniz gelişim.</p></div>
       <div className="zp-play-perks"><span><Sparkles size={14} aria-hidden="true"/>Konu testleri</span><span><Rocket size={14} aria-hidden="true"/>Adaptif çalışma</span><span><Crown size={14} aria-hidden="true"/>Veli takibi</span></div>
@@ -44,7 +46,7 @@ export function PlayBillingPanel({ state, studentName, online = true, onPurchase
         <li data-current={phase === 'opening' || phase === 'verifying'} data-done={active}><span>{active ? <Check size={14} aria-hidden="true"/> : '3'}</span>Google Play</li>
       </ol>
       {busy && <p className="zp-play-busy" role="status"><LoaderCircle size={18} aria-hidden="true"/>{phaseText}…</p>}
-      {active ? <div className="zp-play-active">
+      {lifetime ? <div className="zp-play-active"><span className="zp-play-active-medal" aria-hidden="true"><Crown size={30}/></span><div><p><CheckCircle2 size={19} aria-hidden="true"/>Süresiz üyeliğiniz aktif</p><p>Mevcut hesabınıza tam erişim hediye edildi. Bitiş tarihi ve bu hak için yenileme ödemesi yok.</p><small>Web ve Android’de tüm çalışmalar açık. Varsa önceki Google Play aboneliğinizi ayrıca yönetebilirsiniz.</small></div></div> : active ? <div className="zp-play-active">
         <span className="zp-play-active-medal" aria-hidden="true"><Crown size={30}/></span><div><p><CheckCircle2 size={19} aria-hidden="true"/>Aboneliğiniz aktif</p>
         {date && <p>{date} tarihine kadar erişim.</p>}
         <small>{config.access.autoRenewing === false ? 'Otomatik yenileme kapalı. Kalan sürenizi kullanabilirsiniz.' : 'Aboneliğinizi ve yenileme ayarlarınızı Google Play’den yönetebilirsiniz.'}</small></div>
@@ -75,7 +77,7 @@ export function PlayBillingPanel({ state, studentName, online = true, onPurchase
         </button>{canPurchase && selectedOffer ? <p>{selectedPlan.title} · {selectedOffer.price} · {selectedPlan.renewal} otomatik yenilenir</p> : !busy && <p>{!online ? 'Bağlantı geldiğinde Yenile’ye dokunup devam edebilirsiniz.' : config && !config.ready ? 'Abonelik satışı henüz açık değil.' : !fresh ? 'Bilgileri tekrar yüklemek için Yenile’ye dokunun.' : !state.storeChecked ? 'Önce mevcut satın alımları geri yükleyerek kontrol edin.' : 'Bu hesap için şu anda satın alınabilir dönem yok.'}</p>}</div>
       </>}
       <div className="zp-play-notice" data-tone={notice.kind} role={notice.kind === 'error' ? 'alert' : 'status'} aria-live={notice.kind === 'error' ? 'assertive' : 'polite'}><NoticeIcon size={20} aria-hidden="true"/><span>{displayNotice}</span></div>
-      {config && !config.enforced && !active && <p className="zp-play-free">Mevcut ücretsiz kullanım devam ediyor.</p>}
+      {config && !active && <div className="zp-play-state-note"><div><strong>Ücretsiz keşif üyeliği</strong><p>{FREE_MEMBERSHIP.summary}</p><p>{FREE_MEMBERSHIP.premium}</p><small>Kısa pratik hakları Türkiye saatiyle 03.00’te yenilenir.</small></div></div>}
       <div className="zp-play-recovery">
         <button type="button" disabled={!online || busy} onClick={onRefresh} className="zp-play-refresh"><RefreshCw size={18} aria-hidden="true"/>Yenile</button>
         <button type="button" disabled={!online || busy || !config?.binding} onClick={onRestore} className="zp-play-restore"><RotateCcw size={18} aria-hidden="true"/>Satın alımları geri yükle</button>

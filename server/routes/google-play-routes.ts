@@ -4,7 +4,9 @@ import { requireSupabaseAuth, requireVerifiedEmail, requireProfileRole, type Aut
 import { sharedRateLimit } from '../shared-rate-limit';
 import { getServiceClient } from '../supabase-admin';
 import { readPlatformSettings } from '../platform-settings';
-import { studentRequiresPaidAccess } from '../paid-access-policy';
+import { studentHasLifetimeAccess, studentAccessPolicy } from '../paid-access-policy';
+import { FREE_MEMBERSHIP } from '../../src/lib/membership-plan';
+import { assertBillingFamily } from '../billing-family';
 import { paidSalesReady } from '../google-play-sales';
 import { PLAY_PLANS } from '../../src/lib/google-play-contract';
 import { GooglePlayError, playBindings, playTokenSchema, encryptPlayToken } from '../google-play-model';
@@ -24,16 +26,20 @@ routes.get('/parent/google-play/access', sharedRateLimit('play-access', 60, 600)
   try {
     const id = student.parse(req.query.studentId), config = playConfig();
     const { settings } = await readPlatformSettings();
-    const licenseTest = isLicenseTestFamily(req.authUser!.uid, id);
-    const ready = licenseTest ? playSetupReady() && licenseTestLegalReady(settings) : paidSalesReady(settings);
-    const access = await googlePlayAccess(req.authUser!.uid, id);
-    const enforced = await studentRequiresPaidAccess(id) || licenseTest;
-    res.json({ ready, licenseTest, storeUrl: playStoreListing(), enforced, productId: config.productId, plans: PLAY_PLANS, binding: process.env.GOOGLE_PLAY_BINDING_SECRET ? playBindings(req.authUser!.uid, id) : null, access });
+    await assertBillingFamily(req.authUser!.uid, id);
+    const { lifetime, requiresSubscription } = await studentAccessPolicy(id);
+    const licenseTest = !lifetime && isLicenseTestFamily(req.authUser!.uid, id);
+    const ready = !lifetime && (licenseTest ? playSetupReady() && licenseTestLegalReady(settings) : paidSalesReady(settings));
+    const access = lifetime ? { active: false, expiresAt: null } : await googlePlayAccess(req.authUser!.uid, id);
+    const enforced = requiresSubscription || licenseTest;
+    res.json({ ready, licenseTest, lifetime, freePlan: FREE_MEMBERSHIP, storeUrl: playStoreListing(), enforced, productId: config.productId, plans: PLAY_PLANS, binding: process.env.GOOGLE_PLAY_BINDING_SECRET ? playBindings(req.authUser!.uid, id) : null, access });
   } catch (error) { failure(error, res); }
 });
 routes.post('/parent/google-play/prepare', sharedRateLimit('play-prepare', 12, 3600), async (req: AuthenticatedRequest, res) => {
   try {
     const { studentId } = z.object({ studentId: student }).strict().parse(req.body), config = playConfig();
+    await assertBillingFamily(req.authUser!.uid, studentId);
+    if (await studentHasLifetimeAccess(studentId)) throw new GooglePlayError('Bu öğrencinin süresiz üyeliği aktif. Yeni ödeme gerekmez.', 409);
     const { settings } = await readPlatformSettings();
     const licenseTest = isLicenseTestFamily(req.authUser!.uid, studentId);
     if (licenseTest ? !playSetupReady() || !licenseTestLegalReady(settings) : !paidSalesReady(settings))

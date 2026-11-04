@@ -8,7 +8,7 @@ export const LESSON_CATALOG: readonly LessonCard[] = [
   {id:'dice_unfold',title:'Küpü Keşfet',description:'Yüzleri, köşeleri ve karşılıklı yüzleri incele.',group:'Görsel düşünme',symbol:'⬡',tone:'sky'},
   {id:'matrix_2x2',title:'Görsel Matris',description:'Satırın kuralını bul, boş kutuyu tamamla.',group:'Görsel düşünme',symbol:'⊞',tone:'peach'},
   {id:'symmetry_completion',title:'Aynanın Öteki Yanı',description:'Ayna çizgisinin iki tarafını eşleştir.',group:'Görsel düşünme',symbol:'↔',tone:'rose'},
-  {id:'visual_attention',title:'Dikkatli Gözler',description:'Küçük ayrıntıyı izle, aynı şekli yakala.',group:'Dikkat ve hafıza',symbol:'◎',tone:'violet'},
+  {id:'visual_attention',title:'Dikkatli Gözler',description:'Küçük ayrıntıyı izle, aynı şekli yakala.',group:'Dikkat ve hafıza',symbol:'◎',tone:'violet',preview:true},
   {id:'direction_path',title:'Haritada Adım Adım',description:'Okları sırayla takip ederek hedefe ulaş.',group:'Görsel düşünme',symbol:'➜',tone:'mint'},
   {id:'symbol_coding',title:'Şifre Atölyesi',description:'Simgelerin anahtarını kullan, mesajı çöz.',group:'Mantık ve sayılar',symbol:'⌘',tone:'sky'},
   {id:'shadow_matching',title:'Gölge Avcısı',description:'Renkler gidince kalan dış çizgiyi tanı.',group:'Görsel düşünme',symbol:'◐',tone:'peach'},

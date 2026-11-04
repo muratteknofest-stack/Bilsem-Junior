@@ -7,7 +7,7 @@ export const playAccessSchema = z.object({ active: z.boolean(), expiresAt: z.iso
   .refine(v => !v.active || v.expiresAt !== null);
 const bindingSchema = z.object({ accountId: z.string().regex(/^[a-f0-9]{64}$/), profileId: z.string().regex(/^[a-f0-9]{64}$/) });
 const productId = z.string().regex(/^[a-z0-9][a-z0-9_.]{0,39}$/);
-export const playConfigSchema = z.object({ ready: z.boolean(), enforced: z.boolean(), licenseTest: z.boolean().optional(), productId,
+export const playConfigSchema = z.object({ ready: z.boolean(), enforced: z.boolean(), licenseTest: z.boolean().optional(), lifetime: z.boolean().optional(), productId,
   binding: bindingSchema.nullable(), storeUrl: z.string().refine(safePlayStoreUrl).nullable().optional(), access: playAccessSchema }).refine(v => !v.ready || v.binding !== null);
 const preparedSchema = bindingSchema.extend({ productId });
 const purchaseSchema = z.object({ purchases: z.array(z.object({ token: z.string().min(8).max(4096), state: z.enum(['purchased','pending']),
@@ -46,7 +46,7 @@ interface Dependencies {
   deadlineMs?: number;
 }
 export function canBuyPlay(state: PlayBillingState, plan: PlayPlanId) {
-  return state.phase === 'idle' && state.fresh && state.storeChecked && state.config?.ready === true && !state.config.access.active
+  return state.phase === 'idle' && state.fresh && state.storeChecked && state.config?.ready === true && !state.config.access.active && !state.config.lifetime
     && !playNeedsManagement(state.config.access)
     && !state.pending && !state.otherStudent && state.offers.some(o => o.basePlanId === plan && PLAY_PLANS.some(p => p.id === plan && p.period === o.period));
 }
@@ -107,6 +107,7 @@ export class PlayBillingFlow {
     return this.run(this.state.config ? 'refreshing' : 'loading', async () => {
       this.patch({ offers: [], storeChecked: false });
       const config = await this.load(); if (!this.current()) return;
+      if (config.lifetime) { this.notice('success', 'Süresiz üyeliğiniz aktif. Tüm çalışmalar web ve Android’de açık.'); return; }
       const guidance = playStateGuidance(config.access);
       this.notice(guidance ? 'warning' : config.access.active ? 'success' : 'info', guidance || (config.access.active ? 'Aboneliğiniz doğrulandı.' : config.ready ? 'Döneminizi seçip Google Play ile devam edin.' : 'Google Play abonelikleri henüz satışa açılmadı.'));
       if (!this.deps.native) { if (!config.access.active) this.notice('info', 'Satın alma Android uygulamasındaki veli panelinde Google Play ile tamamlanır.'); return; }

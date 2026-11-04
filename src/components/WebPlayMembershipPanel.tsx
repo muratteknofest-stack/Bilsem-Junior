@@ -1,4 +1,5 @@
 import React from 'react';
+import { FREE_MEMBERSHIP } from '../lib/membership-plan';
 import { CheckCircle2, Crown, ExternalLink, RefreshCw, Rocket, ShieldCheck, Smartphone, Sparkles } from 'lucide-react';
 import type { PlayBillingState } from '../lib/google-play-flow';
 import { PLAY_PLANS } from '../lib/google-play-contract';
@@ -9,16 +10,18 @@ export function WebPlayMembershipPanel({ state, studentName, onRefresh }: {
 }) {
   const { config, fresh, phase, notice } = state;
   const busy = phase !== 'idle';
+  const lifetime = fresh && config?.lifetime === true;
   const active = fresh && config?.access.active === true;
   const storeUrl = safePlayStoreUrl(config?.storeUrl) ? config.storeUrl : null;
   return <section className="zp-play-billing zp-play-web" aria-label="Google Play aboneliği" aria-busy={busy}>
     <div className="zp-play-hero"><div className="zp-play-hero-sparks" aria-hidden="true"><span>✦</span><span>✧</span><span>✦</span></div><span className="zp-play-hero-sticker" aria-hidden="true"><Rocket size={38}/><Sparkles size={20}/></span>
-      <div className="zp-play-hero-copy"><span className="zp-play-provider"><ShieldCheck size={15} aria-hidden="true"/>Google Play üyeliği</span><h2>Bir üyelik, iki keşif alanı!</h2><p>Android’de başlayın, aynı öğrencinin hesabıyla webde de devam edin.</p></div>
+      <div className="zp-play-hero-copy"><span className="zp-play-provider"><ShieldCheck size={15} aria-hidden="true"/>{lifetime ? 'Bilsem Junior üyeliği' : 'Google Play üyeliği'}</span><h2>Bir üyelik, iki keşif alanı!</h2><p>Android’de başlayın, aynı öğrencinin hesabıyla webde de devam edin.</p></div>
       <div className="zp-play-perks"><span><Smartphone size={14} aria-hidden="true"/>Android</span><span><Sparkles size={14} aria-hidden="true"/>Web</span><span><Crown size={14} aria-hidden="true"/>Veli takibi</span></div>
     </div>
     <div className="zp-play-body">
+      {config && !lifetime && !active && <div className="zp-play-state-note"><div><strong>Ücretsiz keşif üyeliği</strong><p>{FREE_MEMBERSHIP.summary}</p><p>{FREE_MEMBERSHIP.premium}</p></div></div>}
       {studentName && <p className="zp-play-student"><span aria-hidden="true"><Crown size={19}/></span><span>Seçili öğrenci<strong>{studentName}</strong></span></p>}
-      {active ? <div className="zp-play-active"><span className="zp-play-active-medal" aria-hidden="true"><Crown size={28}/></span><div><p><CheckCircle2 size={18} aria-hidden="true"/>Aboneliğiniz aktif</p><p>{new Date(config.access.expiresAt!).toLocaleDateString('tr-TR')} tarihine kadar bu öğrenci hesabıyla webden de çalışabilirsiniz.</p></div></div>
+      {lifetime ? <div className="zp-play-active"><span className="zp-play-active-medal" aria-hidden="true"><Crown size={28}/></span><div><p><CheckCircle2 size={18} aria-hidden="true"/>Süresiz üyeliğiniz aktif</p><p>Mevcut hesabınıza tam erişim hediye edildi. Web ve Android’de tüm çalışmalar açık; bu hak için bitiş tarihi veya yenileme ödemesi yok.</p><small>Varsa önceki Google Play aboneliğinizi ayrıca yönetebilirsiniz.</small></div></div> : active ? <div className="zp-play-active"><span className="zp-play-active-medal" aria-hidden="true"><Crown size={28}/></span><div><p><CheckCircle2 size={18} aria-hidden="true"/>Aboneliğiniz aktif</p><p>{new Date(config.access.expiresAt!).toLocaleDateString('tr-TR')} tarihine kadar bu öğrenci hesabıyla webden de çalışabilirsiniz.</p></div></div>
         : <><p className="zp-play-web-copy">Satın alma yalnızca Android uygulamasındaki veli panelinde Google Play ile tamamlanır. Aynı Bilsem Junior veli hesabına girip aynı öğrenciyi seçin. Doğrulanan abonelik bu öğrenci için webde de geçerlidir.</p>
           <div className="zp-play-web-periods" aria-label="Abonelik dönemleri">{PLAY_PLANS.map(plan => <span key={plan.id}>{plan.title}</span>)}</div>
           <p className="zp-play-terms">Fiyat ve yenileme koşulları ödeme öncesinde Google Play’de gösterilir. Üyelik iptal edilmedikçe seçilen dönemde otomatik yenilenir.</p>

@@ -1,4 +1,5 @@
 import { StoryAdventure } from './student/StoryAdventure';
+import { MembershipAccessBanner } from './student/MembershipAccessBanner';
 import type { StoryProgress, StoryStage } from '../features/student/story-adventure';
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'motion/react';
@@ -153,6 +154,7 @@ export function StudentDashboard({ storyProgress, storySaveError, onStartStory, 
   return <MotionConfig reducedMotion={reduced ? 'always' : 'user'}>
     <div ref={motionSurface} className="zp-dashboard-page zp-student-dashboard zp-student-pro bj-student-game bj-motion-world" data-reduced-motion={reduced}>
       <main id="student-dashboard" className="zp-student-shell" data-adventure={activeTab==='adventure'}>
+        <MembershipAccessBanner studentId={activeUser.id} onPractice={() => onStartPractice()}/>
         <div className="zp-student-topline"><span><span className="zp-brand-dot" /> Bilsem Junior <span className="zp-topline-divider">/</span> Çalışma masam</span><StudentExperienceControls /></div>
         {activeTab!=='adventure'&&<StudentMotionToggle />}
         {activeTab !== 'tests' && activeTab !== 'adventure' && <StudentHeroBanner user={activeUser} greeting={greeting} xpProgress={xpProgress} onUserUpdate={onUserUpdate} onNavigate={onNavigate} prefersReducedMotion={reduced} />}
