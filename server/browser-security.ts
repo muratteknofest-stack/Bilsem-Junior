@@ -48,7 +48,7 @@ export function resolveConnectSrcOrigins(customSupabaseUrl?: string): string[] {
   return base;
 }
 
-/** Public Reels are hosted on the active deployment's own Storage origin.
+/** Public media assets are hosted on the active deployment's own Storage origin.
  * A preview must never connect to, or load media from, the production database.
  */
 export function resolveMediaSrcOrigins(customSupabaseUrl?: string): string[] {

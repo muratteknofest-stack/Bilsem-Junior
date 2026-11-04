@@ -36,7 +36,6 @@ import {
   Target,
   Brain,
   HelpCircle,
-  Play,
   ArrowRight,
   Sliders,
   Check,
@@ -73,7 +72,6 @@ import { AdminBulkQuestionGenerator } from './admin/AdminBulkQuestionGenerator';
 import { CreateQuestionWizard } from './CreateQuestionWizard';
 import { QuestionAuthoringWorkbench } from './admin/QuestionAuthoringWorkbench';
 import { AdminAiQuestionEngine } from './admin/AdminAiQuestionEngine';
-import { AdminReelsStudio } from './admin/AdminReelsStudio';
 
 type AdminTab =
   | 'dashboard'
@@ -86,7 +84,6 @@ type AdminTab =
   | 'curriculum'
   | 'stresstest'
   | 'support'
-  | 'reels'
   | 'settings';
 
 const CATEGORY_ICONS_CONFIG: Record<string, { icon: any; color: string; bg: string }> = {
@@ -101,7 +98,7 @@ const CATEGORY_ICONS_CONFIG: Record<string, { icon: any; color: string; bg: stri
 };
 
 export const AdminPanelView: React.FC = () => {
-  const [activeTab, updateActiveTab] = useState<AdminTab>(() => new URLSearchParams(window.location.search).get('section') === 'reels' ? 'reels' : new URLSearchParams(window.location.search).get('section') === 'review' ? 'question_review' : 'dashboard');
+  const [activeTab, updateActiveTab] = useState<AdminTab>(() => new URLSearchParams(window.location.search).get('section') === 'review' ? 'question_review' : 'dashboard');
   const pendingQuestions = useRef(false);
   const onPendingQuestions = useCallback((pending: boolean) => { pendingQuestions.current = pending; }, []);
   const setActiveTab = (tab: AdminTab) => {
@@ -181,7 +178,6 @@ export const AdminPanelView: React.FC = () => {
     { id: 'curriculum', label: 'BİLSEM Müfredat Matrisi', icon: Compass },
     { id: 'stresstest', label: 'Motor Stres Testi', icon: Zap },
     { id: 'support', label: 'Soru ve Hesap Bildirimleri', icon: FileQuestion },
-    { id: 'reels', label: 'Instagram Reels Stüdyosu', icon: Play, badge: 'Video' },
     { id: 'settings', label: 'Sistem Parametreleri', icon: Settings },
   ];
 
@@ -521,7 +517,6 @@ export const AdminPanelView: React.FC = () => {
               )}
 
               {activeTab === 'support' && <AdminSupportQueue />}
-              {activeTab === 'reels' && <AdminReelsStudio />}
               {/* TAB 4: DEEP ANALYTICS */}
               {activeTab === 'analytics' && (
                 <AdminQuestionAnalyticsDashboard
