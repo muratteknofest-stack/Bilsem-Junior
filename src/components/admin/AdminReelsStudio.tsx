@@ -2,13 +2,18 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { authenticatedFetch } from '../../lib/api-client';
 import {
   Calendar,
+  Check,
   Clapperboard,
+  Copy,
   Download,
+  ExternalLink,
   Film,
   Music,
   Palette,
   PlayCircle,
   RefreshCw,
+  Send,
+  Share2,
   ShieldCheck,
   Sparkles,
   Upload,
@@ -45,6 +50,15 @@ type ReelRun = {
   createdAt: string | null;
   runUrl: string;
   videoUrl: string | null;
+};
+
+type LocalGeneratedEntry = {
+  id: string;
+  createdAt: string;
+  topic: string;
+  grade: number;
+  extension: string;
+  caption: string;
 };
 
 type ReelsStatus = {
@@ -103,6 +117,10 @@ const AUTO_MUSIC_LIST: MusicTrackId[] = [
   'cosmic_synth',
 ];
 
+function buildInstagramCaption(grade: number, topicLabel: string): string {
+  return `🦊 BİLSEM Junior Günün Zeka Sorusu! (${grade}. Sınıf • ${topicLabel})\n⏱️ Süre bitmeden soru işaretli yere hangi şeklin geleceğini bulabilir misin?\n👇 Cevabını yorumlara yaz (A, B, C veya D)! Bakalım kimler doğru bilecek? 🧠✨\n\n#bilsem #bilsemjunior #zekasorusu #ilkokul #${grade}sınıf #mantıksorusu #bilsemsınavı #çocukgelişimi #keşfet #reels`;
+}
+
 function build30DayMixedCalendar(seedOffset = 0): MonthlyCalendarDay[] {
   const today = new Date();
   const days: MonthlyCalendarDay[] = [];
@@ -151,7 +169,7 @@ const statusText = (run: ReelRun) => {
     return run.conclusion === 'success'
       ? 'Video üretildi'
       : run.conclusion === 'failure'
-      ? 'Üretim başarısız'
+      ? 'GitHub sunucu kotası dolu (Cihazda üretimi kullanın)'
       : 'Tamamlandı: ' + (run.conclusion || 'bilinmiyor');
   if (run.status === 'in_progress') return 'Video hazırlanıyor';
   return 'Üretim kuyruğunda';
@@ -182,6 +200,15 @@ export function AdminReelsStudio() {
     }
   });
 
+  const [localHistory, setLocalHistory] = useState<LocalGeneratedEntry[]>(() => {
+    try {
+      const raw = localStorage.getItem('bilsem_reels_local_history');
+      return raw ? (JSON.parse(raw) as LocalGeneratedEntry[]) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const monthlyCalendar = useMemo(
     () => build30DayMixedCalendar(calendarSeed),
     [calendarSeed]
@@ -199,15 +226,24 @@ export function AdminReelsStudio() {
   const [localProgress, setLocalProgress] = useState(0);
   const [localVideo, setLocalVideo] = useState<{
     url: string;
+    blob: Blob;
     extension: string;
     topic: string;
+    grade: number;
   } | null>(null);
+
+  const [captionText, setCaptionText] = useState<string>(() =>
+    buildInstagramCaption(1, 'Görsel analoji')
+  );
+  const [copiedCaption, setCopiedCaption] = useState(false);
+  const [showFailedGithubRuns, setShowFailedGithubRuns] = useState(false);
 
   const localVideoUrlRef = useRef<string | null>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const mp3InputRef = useRef<HTMLInputElement | null>(null);
   const musicTestCtxRef = useRef<AudioContext | null>(null);
   const autoPilotTriggeredRef = useRef(false);
+  const downloadLinkRef = useRef<HTMLAnchorElement | null>(null);
 
   useEffect(
     () => () => {
@@ -294,7 +330,6 @@ export function AdminReelsStudio() {
         });
         setPreviewQuestion(q);
       } catch {
-        // fallback to safe default if combination fails
         try {
           const q = await selectLocalReelQuestion({
             grade: 2,
@@ -421,6 +456,74 @@ export function AdminReelsStudio() {
     }
   };
 
+  const handleCopyCaption = async () => {
+    try {
+      await navigator.clipboard.writeText(captionText);
+      setCopiedCaption(true);
+      setNotice('Instagram açıklama metni ve hashtagler panoya kopyalandı!');
+      window.setTimeout(() => setCopiedCaption(false), 3000);
+    } catch {
+      setError('Panoya kopyalanamadı. Metin kutusundan seçip kopyalayabilirsiniz.');
+    }
+  };
+
+  const handleDownloadAndCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(captionText);
+      setCopiedCaption(true);
+      window.setTimeout(() => setCopiedCaption(false), 3000);
+    } catch {}
+    if (downloadLinkRef.current) {
+      downloadLinkRef.current.click();
+    }
+    setNotice(
+      '1) MP4 video cihazınıza indirildi ve 2) Instagram açıklama metni kopyalandı! Şimdi Instagram Reels yükleme ekranına yapıştırabilirsiniz.'
+    );
+  };
+
+  const handleManualShareToInstagram = async () => {
+    if (!localVideo) return;
+    try {
+      await navigator.clipboard.writeText(captionText);
+      setCopiedCaption(true);
+      window.setTimeout(() => setCopiedCaption(false), 3000);
+    } catch {}
+
+    const fileName = `bilsem-junior-reels-${Date.now()}.${localVideo.extension}`;
+    const mimeType =
+      localVideo.extension === 'mp4' ? 'video/mp4' : 'video/webm';
+    const file = new File([localVideo.blob], fileName, { type: mimeType });
+
+    if (
+      typeof navigator !== 'undefined' &&
+      navigator.share &&
+      (!navigator.canShare || navigator.canShare({ files: [file] }))
+    ) {
+      try {
+        await navigator.share({
+          title: `BİLSEM Junior — ${localVideo.topic}`,
+          text: captionText,
+          files: [file],
+        });
+        setNotice(
+          'Paylaşım menüsü açıldı! Instagram Reels seçip kopyalanan açıklamayı yapıştırabilirsiniz.'
+        );
+        return;
+      } catch {
+        // User cancelled or share failed; fallback below
+      }
+    }
+
+    // Desktop / fallback: trigger download + copy caption + open Instagram
+    if (downloadLinkRef.current) {
+      downloadLinkRef.current.click();
+    }
+    window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer');
+    setNotice(
+      'Video indirildi, açıklama metni panoya kopyalandı ve Instagram açıldı! Instagramda (+) Oluştur > Reels kısmından indirilen MP4 videoyu seçip açıklamayı yapıştırın (Ctrl+V).'
+    );
+  };
+
   async function generate() {
     if (busy || !status?.configured) return;
     setBusy(true);
@@ -495,15 +598,38 @@ export function AdminReelsStudio() {
       const url = URL.createObjectURL(result.blob);
       if (localVideoUrlRef.current) URL.revokeObjectURL(localVideoUrlRef.current);
       localVideoUrlRef.current = url;
+
+      const generatedCaption = buildInstagramCaption(params.grade, result.topic);
+      setCaptionText(generatedCaption);
+
       setLocalVideo({
         url,
+        blob: result.blob,
         extension: result.extension,
         topic: `${params.grade}. Sınıf • ${result.topic}`,
+        grade: params.grade,
       });
+
+      const entry: LocalGeneratedEntry = {
+        id: String(Date.now()).slice(-8),
+        createdAt: new Date().toISOString(),
+        topic: `${params.grade}. Sınıf • ${result.topic}`,
+        grade: params.grade,
+        extension: result.extension,
+        caption: generatedCaption,
+      };
+      setLocalHistory((prev) => {
+        const next = [entry, ...prev].slice(0, 12);
+        try {
+          localStorage.setItem('bilsem_reels_local_history', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+
       setNotice(
         result.extension === 'mp4'
-          ? 'Müzikli ve animasyonlu 9:16 Reels videosu oluşturuldu! Önizleyebilir veya MP4 olarak indirebilirsin.'
-          : 'Müzikli ve animasyonlu 9:16 Reels videosu oluşturuldu! WebM olarak indirilebilir.'
+          ? 'Müzikli ve animasyonlu 9:16 Reels videosu oluşturuldu! Sağdaki "Manuel Yayınla & Paylaş" kutusundan tek tıkla Instagram\'da paylaşabilirsin.'
+          : 'Müzikli ve animasyonlu 9:16 Reels videosu oluşturuldu! Sağdaki kutudan indirebilir veya paylaşabilirsin.'
       );
     } catch (cause) {
       setError(
@@ -536,6 +662,9 @@ export function AdminReelsStudio() {
   }, [autoPilotDaily, previewQuestion, localVideo, localBusy, monthlyCalendar]);
 
   const manualRuns = (status?.runs || []).filter((run) => run.manual);
+  const visibleGithubRuns = showFailedGithubRuns
+    ? manualRuns
+    : manualRuns.filter((run) => run.conclusion === 'success');
   const lastVideo = manualRuns.find((run) => !!run.videoUrl);
 
   return (
@@ -590,7 +719,7 @@ export function AdminReelsStudio() {
             Karışık Sınıf (1-4. Sınıf) & Karışık Konu
           </span>
           <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1.5 text-amber-200">
-            BİLSEM Junior Tilki Maskotu & Müzik Mikseri
+            Tek Tıkla Manuel Instagram Paylaşım & Açıklama Kopyalama
           </span>
         </div>
       </div>
@@ -612,7 +741,7 @@ export function AdminReelsStudio() {
         </p>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,.85fr)]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,.95fr)]">
         {/* Left Controls */}
         <div className="space-y-5 rounded-3xl border border-slate-700 bg-slate-900/90 p-5 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -869,12 +998,12 @@ export function AdminReelsStudio() {
           </button>
         </div>
 
-        {/* Right Column: Live 9:16 Stage & Recorded Video Download */}
+        {/* Right Column: Live 9:16 Stage & Manual Instagram Publishing Card */}
         <div className="space-y-5 rounded-3xl border border-slate-700 bg-slate-900/90 p-5 sm:p-6">
           <h3 className="flex items-center justify-between gap-2 text-lg font-black">
             <span className="flex items-center gap-2">
               <Film size={20} className="text-cyan-300" /> Canlı 9:16 Sahne &
-              Video
+              Manuel Yayınlama
             </span>
             <span className="rounded-lg bg-indigo-500/20 px-2.5 py-1 text-xs font-bold text-indigo-200">
               {previewQuestion
@@ -884,7 +1013,7 @@ export function AdminReelsStudio() {
           </h3>
 
           {/* Live 60 FPS Interactive Canvas Preview */}
-          <div className="mx-auto w-full max-w-[260px] overflow-hidden rounded-2xl border-2 border-slate-700 bg-slate-950 shadow-xl">
+          <div className="mx-auto w-full max-w-[240px] overflow-hidden rounded-2xl border-2 border-slate-700 bg-slate-950 shadow-xl">
             <canvas
               ref={previewCanvasRef}
               width={1080}
@@ -894,33 +1023,110 @@ export function AdminReelsStudio() {
           </div>
 
           {localVideo ? (
-            <div className="mt-4 space-y-3 border-t border-slate-800 pt-4">
-              <p className="text-center text-sm font-bold text-emerald-300">
-                Hazır Video: {localVideo.topic} •{' '}
-                {localVideo.extension.toUpperCase()}
-              </p>
+            <div className="mt-4 space-y-4 rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-black text-emerald-300">
+                  ✅ Hazır Video: {localVideo.topic} •{' '}
+                  {localVideo.extension.toUpperCase()}
+                </p>
+                <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-bold text-emerald-200">
+                  Yayınlamaya Hazır
+                </span>
+              </div>
+
               <video
                 key={localVideo.url}
                 src={localVideo.url}
                 controls
                 playsInline
                 preload="metadata"
-                className="mx-auto max-h-[360px] w-full max-w-[220px] rounded-2xl bg-black"
+                className="mx-auto max-h-[300px] w-full max-w-[190px] rounded-2xl bg-black shadow-lg"
                 aria-label="Cihazda oluşturulan Instagram Reels videosunu izle"
               />
-              <a
-                href={localVideo.url}
-                download={
-                  'bilsem-junior-reels-' +
-                  Date.now() +
-                  '.' +
-                  localVideo.extension
-                }
-                className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 font-black text-slate-950"
-              >
-                <Download size={18} /> Videoyu indir (
-                {localVideo.extension.toUpperCase()})
-              </a>
+
+              {/* Ready-to-copy Instagram Caption & Hashtags */}
+              <div className="space-y-2 rounded-xl border border-slate-700 bg-slate-950/90 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-amber-300">
+                    Instagram Reels Açıklama Metni & Hashtagler
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void handleCopyCaption()}
+                    className="inline-flex items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-500/20 px-2.5 py-1 text-xs font-bold text-amber-200 hover:bg-amber-500/30"
+                  >
+                    {copiedCaption ? <Check size={13} /> : <Copy size={13} />}
+                    {copiedCaption ? 'Kopyalandı!' : 'Metni Kopyala'}
+                  </button>
+                </div>
+                <textarea
+                  rows={4}
+                  value={captionText}
+                  onChange={(e) => setCaptionText(e.target.value)}
+                  className="w-full rounded-lg border border-slate-800 bg-slate-900 p-2.5 text-xs leading-relaxed text-slate-200"
+                />
+              </div>
+
+              {/* Manual Publishing Action Buttons */}
+              <div className="space-y-2.5">
+                <button
+                  type="button"
+                  onClick={() => void handleManualShareToInstagram()}
+                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 px-4 py-2.5 text-sm font-black text-white shadow-lg hover:brightness-110"
+                >
+                  <Share2 size={18} /> Şimdi Instagram'da Manuel Yayınla (Paylaş)
+                </button>
+
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <a
+                    ref={downloadLinkRef}
+                    href={localVideo.url}
+                    download={
+                      'bilsem-junior-reels-' +
+                      Date.now() +
+                      '.' +
+                      localVideo.extension
+                    }
+                    className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-400 px-3 text-xs font-black text-slate-950 hover:brightness-110"
+                  >
+                    <Download size={16} /> Videoyu indir (
+                    {localVideo.extension.toUpperCase()})
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={() => void handleDownloadAndCopy()}
+                    className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-cyan-400/50 bg-cyan-500/20 px-3 text-xs font-bold text-cyan-100 hover:bg-cyan-500/30"
+                  >
+                    <Copy size={15} /> İndir + Açıklamayı Kopyala
+                  </button>
+                </div>
+
+                <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-[11px] leading-5 text-slate-300">
+                  <p className="font-bold text-cyan-300">
+                    📌 Manuel Nasıl Yayınlanır? (3 Saniyelik Adım):
+                  </p>
+                  <ol className="mt-1 list-inside list-decimal space-y-0.5">
+                    <li>
+                      Üstteki pembe{' '}
+                      <strong className="text-white">
+                        "Şimdi Instagram'da Manuel Yayınla"
+                      </strong>{' '}
+                      butonuna basın (Video otomatik iner ve açıklama metni
+                      kopyalanır).
+                    </li>
+                    <li>
+                      Instagram'da <strong className="text-white">(+) Oluştur → Reels</strong>{' '}
+                      bölümünden indirilen MP4 videoyu seçin.
+                    </li>
+                    <li>
+                      Açıklama alanına basılı tutup{' '}
+                      <strong className="text-white">Yapıştır (Ctrl+V)</strong>{' '}
+                      deyin ve paylaşın!
+                    </li>
+                  </ol>
+                </div>
+              </div>
             </div>
           ) : (
             lastVideo?.videoUrl && (
@@ -959,7 +1165,8 @@ export function AdminReelsStudio() {
             <p className="mt-1 text-xs text-slate-400">
               30 gün boyunca her gün farklı sınıf düzeyi (1–4. Sınıf), farklı
               konu, farklı soru tarzı, farklı sahne teması ve müzik otomatik
-              dağıtılır.
+              dağıtılır. İstediğiniz günün yanındaki &quot;Hazırla &amp; Yayınla&quot;
+              butonuyla o günün videosunu anında üretip paylaşabilirsiniz.
             </p>
           </div>
           <button
@@ -1033,9 +1240,9 @@ export function AdminReelsStudio() {
                             setSelectedDayNum(day.dayNumber);
                             void generateOnDevice(day);
                           }}
-                          className="rounded-lg bg-cyan-500 px-2.5 py-1 font-black text-slate-950 hover:brightness-110 disabled:opacity-50"
+                          className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-cyan-500 to-emerald-400 px-2.5 py-1 font-black text-slate-950 hover:brightness-110 disabled:opacity-50"
                         >
-                          Video Üret
+                          <Send size={12} /> Hazırla & Yayınla
                         </button>
                       </div>
                     </td>
@@ -1047,70 +1254,134 @@ export function AdminReelsStudio() {
         </div>
       </div>
 
+      {/* VIDEO GENERATION HISTORY (Device + GitHub) */}
       <div className="rounded-3xl border border-slate-700 bg-slate-900/90 p-5 sm:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-lg font-black">Video üretim geçmişi</h3>
-          <button
-            type="button"
-            onClick={() => void load()}
-            disabled={loading || busy}
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-600 px-4 text-sm font-bold hover:bg-slate-800 disabled:opacity-50"
-          >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />{' '}
-            Yenile
-          </button>
-        </div>
-        {manualRuns.length === 0 ? (
-          <p className="text-sm text-slate-400">
-            Henüz manuel GitHub Reels üretimi başlatılmadı. Üstteki yeşil butonla
-            veya 30 günlük takvimden anında cihazda müzikli Reels üretebilirsiniz.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {manualRuns.slice(0, 8).map((run) => (
-              <div
-                key={run.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-700 bg-slate-950/80 p-3 text-sm"
+          <div>
+            <h3 className="text-lg font-black">Video üretim geçmişi</h3>
+            <p className="text-xs text-slate-400">
+              Cihazda üretilen hazır videolarınız ve sunucu kayıtları
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {manualRuns.some((r) => r.conclusion === 'failure') && (
+              <button
+                type="button"
+                onClick={() => setShowFailedGithubRuns((v) => !v)}
+                className="rounded-xl border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800"
               >
-                <div>
-                  <p className="font-bold">
-                    Reels #{run.id}{' '}
-                    <span className="ml-2 text-xs font-normal text-slate-400">
-                      {statusText(run)}
-                    </span>
-                  </p>
-                  <p className="mt-1 text-xs text-slate-400">
-                    {run.createdAt
-                      ? new Date(run.createdAt).toLocaleString('tr-TR', {
-                          timeZone: 'Europe/Istanbul',
-                        })
-                      : 'Tarih bilinmiyor'}
-                  </p>
-                </div>
-                <div className="flex gap-3 text-xs font-semibold">
+                {showFailedGithubRuns
+                  ? 'Eski Başarısız Sunucu Kayıtlarını Gizle'
+                  : 'Eski Sunucu Kayıtlarını Göster'}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => void load()}
+              disabled={loading || busy}
+              className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-600 px-4 text-xs font-bold hover:bg-slate-800 disabled:opacity-50"
+            >
+              <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />{' '}
+              Yenile
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-2.5">
+          {localHistory.map((item) => (
+            <div
+              key={item.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-3 text-sm"
+            >
+              <div>
+                <p className="font-bold text-emerald-200">
+                  ✅ Reels #{item.id} — {item.topic} ({item.extension.toUpperCase()})
+                  <span className="ml-2 rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-semibold text-emerald-300">
+                    Cihazda Üretildi • Yayınlamaya Hazır
+                  </span>
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {new Date(item.createdAt).toLocaleString('tr-TR', {
+                    timeZone: 'Europe/Istanbul',
+                  })}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCaptionText(item.caption);
+                    void navigator.clipboard.writeText(item.caption);
+                    setNotice('Açıklama metni panoya kopyalandı!');
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg border border-amber-400/40 bg-amber-500/20 px-3 py-1.5 text-amber-200 hover:bg-amber-500/30"
+                >
+                  <Copy size={13} /> Açıklamayı Kopyala
+                </button>
+                <a
+                  href="https://www.instagram.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded-lg bg-pink-600 px-3 py-1.5 text-white hover:bg-pink-500"
+                >
+                  <ExternalLink size={13} /> Instagram'ı Aç
+                </a>
+              </div>
+            </div>
+          ))}
+
+          {visibleGithubRuns.slice(0, 8).map((run) => (
+            <div
+              key={run.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-700 bg-slate-950/80 p-3 text-sm"
+            >
+              <div>
+                <p className="font-bold">
+                  Reels #{run.id}{' '}
+                  <span className="ml-2 text-xs font-normal text-slate-400">
+                    {statusText(run)}
+                  </span>
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {run.createdAt
+                    ? new Date(run.createdAt).toLocaleString('tr-TR', {
+                        timeZone: 'Europe/Istanbul',
+                      })
+                    : 'Tarih bilinmiyor'}
+                </p>
+              </div>
+              <div className="flex gap-3 text-xs font-semibold">
+                <a
+                  href={run.runUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-300 underline underline-offset-2"
+                >
+                  GitHub durumu
+                </a>
+                {run.videoUrl && (
                   <a
-                    href={run.runUrl}
+                    href={run.videoUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-indigo-300 underline underline-offset-2"
+                    className="text-emerald-300 underline underline-offset-2"
                   >
-                    GitHub durumu
+                    MP4 aç
                   </a>
-                  {run.videoUrl && (
-                    <a
-                      href={run.videoUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-emerald-300 underline underline-offset-2"
-                    >
-                      MP4 aç
-                    </a>
-                  )}
-                </div>
+                )}
               </div>
-            ))}
-          </div>
-        )}
+            </div>
+          ))}
+
+          {localHistory.length === 0 && visibleGithubRuns.length === 0 && (
+            <p className="text-sm text-slate-400">
+              Üstteki &quot;Şimdi Video Oluştur (Cihazda)&quot; butonuna veya 30
+              günlük takvimdeki &quot;Hazırla &amp; Yayınla&quot; butonuna basarak
+              videonuzu saniyeler içinde oluşturup manuel yayınlayabilirsiniz.
+            </p>
+          )}
+        </div>
+
         <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-slate-400">
           <ShieldCheck size={16} className="shrink-0 text-emerald-400" />
           Her soru bağımsız çözüm ve kalite denetiminden geçer. Yalnızca
