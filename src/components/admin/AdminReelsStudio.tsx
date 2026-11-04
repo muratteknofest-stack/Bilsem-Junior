@@ -529,48 +529,93 @@ export function AdminReelsStudio() {
     if (!localVideo || isDirectPublishing) return;
     setIsDirectPublishing(true);
     setError('');
-    setNotice('Video Instagram Reels sunucusuna aktarılıyor ve doğrulanıyor (Meta Graph API)…');
-    try {
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve, reject) => {
-        reader.onloadend = () => {
-          const res = String(reader.result || '');
-          resolve(res.includes(',') ? res.split(',')[1] : res);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(localVideo.blob);
-      });
-      const base64Video = await base64Promise;
+    setNotice('1/3 • Instagram Reels yükleme oturumu başlatılıyor (Meta Graph API)…');
 
-      const pubRes = await fetch('/api/instagram/publish', {
+    try {
+      const initRes = await fetch('/api/instagram/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          base64Video,
+          action: 'init',
           caption: captionText,
         }),
       });
-
-      const pubData = (await pubRes.json()) as Record<string, unknown>;
-      if (!pubRes.ok) {
-        throw new Error(String(pubData.error || 'Instagram Reels yayınlanamadı.'));
+      const initData = (await initRes.json()) as Record<string, unknown>;
+      if (!initRes.ok || !initData.containerId || !initData.uploadUri) {
+        throw new Error(String(initData.error || 'Instagram yükleme oturumu başlatılamadı.'));
       }
 
-      const postUrl = String(
-        pubData.permalink ||
-          (pubData.instagramMediaId
-            ? `https://www.instagram.com/reel/${String(pubData.instagramMediaId)}/`
-            : '')
-      );
+      const containerId = String(initData.containerId);
+      const uploadUri = String(initData.uploadUri);
+      const arrayBuf = await localVideo.blob.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuf);
+      const totalSize = bytes.length;
+      const chunkSize = 96 * 1024; // 96 KB chunks (< 256 KB JSON limit)
+
+      for (let offset = 0; offset < totalSize; offset += chunkSize) {
+        const slice = bytes.subarray(offset, Math.min(offset + chunkSize, totalSize));
+        let binary = '';
+        for (let i = 0; i < slice.length; i++) {
+          binary += String.fromCharCode(slice[i]);
+        }
+        const chunkBase64 = btoa(binary);
+        const pct = Math.min(99, Math.round(((offset + slice.length) / totalSize) * 100));
+        setNotice(`2/3 • Video Instagram sunucusuna aktarılıyor… %${pct}`);
+
+        const chunkRes = await fetch('/api/instagram/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'chunk',
+            containerId,
+            uploadUri,
+            offset,
+            fileSize: totalSize,
+            chunkBase64,
+          }),
+        });
+        const chunkData = (await chunkRes.json()) as Record<string, unknown>;
+        if (!chunkRes.ok) {
+          throw new Error(String(chunkData.error || 'Video parçası aktarılamadı.'));
+        }
+      }
+
+      setNotice('3/3 • Instagram Reels video doğrulaması ve yayınlama tamamlanıyor…');
+      let publishedUrl = '';
+      for (let attempt = 1; attempt <= 28; attempt++) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const finRes = await fetch('/api/instagram/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'finish',
+            containerId,
+          }),
+        });
+        const finData = (await finRes.json()) as Record<string, unknown>;
+        if (!finRes.ok) {
+          throw new Error(String(finData.error || 'Instagram Reels yayınlama tamamlanamadı.'));
+        }
+        if (finData.status === 'PUBLISHED') {
+          publishedUrl = String(finData.permalink || 'https://www.instagram.com/bilsem_junior/');
+          break;
+        }
+        setNotice(`3/3 • Instagram videoyu işliyor (${attempt}/28)… Lütfen bekleyin.`);
+      }
+
+      if (!publishedUrl) {
+        throw new Error('Instagram video işleme süresi uzadı. Lütfen birkaç saniye sonra tekrar deneyin.');
+      }
+
       setNotice(
-        `🎉 Video @bilsem_junior hesabında başarıyla Reels olarak yayınlandı! ${postUrl ? `Link: ${postUrl}` : ''}`
+        `🎉 Video @bilsem_junior hesabında başarıyla Reels olarak yayınlandı! Link: ${publishedUrl}`
       );
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : 'Otomatik Instagram yayınlama hatası.';
       setError(msg);
       setNotice(
-        'Alternatif olarak hemen aşağıdaki "Manuel Yayınla (Paylaş)" veya "Videoyu İndir" butonunu kullanabilirsiniz.'
+        'Alternatif olarak hemen aşağıdaki "Manuel Yayınla & Paylaş" veya "Videoyu İndir" butonunu kullanabilirsiniz.'
       );
     } finally {
       setIsDirectPublishing(false);

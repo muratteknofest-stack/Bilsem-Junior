@@ -124,4 +124,155 @@ router.post('/admin/reels/generate',
     }
   });
 
+
+const DEFAULT_IG_TOKEN = 'EAAikDZCZAJ6SQBS7TZCD1ZAQLmG6ZB5j0klDfnPKlFcpVgo0y8Xiwg99vNmzFFWCZB5UaMdqPwmMZCwAkECqpEfmkftbfFImSY9D7lhVPquZBRtj3WCMx6F2uL4rbsJhalBE5oRLKM1iPrQWrrrUtriuIvcm657QIddi9ZBxiiC96i9npZCFCpv3R7sFTlZAhEJTbce4gITUTKCe8XlPwZDZD';
+const DEFAULT_IG_ACCOUNT_ID = '17841471767535717';
+
+function igToken() {
+  return process.env.INSTAGRAM_ACCESS_TOKEN?.trim() || DEFAULT_IG_TOKEN;
+}
+
+function igAccountId() {
+  return (
+    process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID?.trim() ||
+    process.env.INSTAGRAM_ACCOUNT_ID?.trim() ||
+    DEFAULT_IG_ACCOUNT_ID
+  );
+}
+
+router.post('/instagram/publish', async (req, res) => {
+  try {
+    const body = (req.body || {}) as Record<string, unknown>;
+    const accessToken = igToken();
+    const accountId = igAccountId();
+    const action = String(body.action || 'init');
+
+    if (action === 'init') {
+      const caption = String(body.caption || '').slice(0, 2200);
+      const initRes = await fetch(`https://graph.facebook.com/v21.0/${accountId}/media`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          media_type: 'REELS',
+          upload_type: 'resumable',
+          caption,
+          share_to_feed: true,
+          access_token: accessToken,
+        }),
+        signal: AbortSignal.timeout(20000),
+      });
+      const initData = (await initRes.json()) as { id?: string; uri?: string; error?: { message?: string } };
+      if (!initRes.ok || !initData.id || !initData.uri) {
+        return res.status(400).json({
+          error: initData?.error?.message || 'Instagram Reels yükleme oturumu başlatılamadı.',
+        });
+      }
+      return res.json({
+        ok: true,
+        containerId: String(initData.id),
+        uploadUri: String(initData.uri),
+      });
+    }
+
+    if (action === 'chunk') {
+      const uploadUri = String(body.uploadUri || '');
+      if (!uploadUri.startsWith('https://rupload.facebook.com/ig-api-upload/')) {
+        return res.status(400).json({ error: 'Geçersiz Instagram yükleme adresi.' });
+      }
+      const offset = Number(body.offset ?? 0);
+      const fileSize = Number(body.fileSize ?? 0);
+      if (!Number.isFinite(offset) || offset < 0 || !Number.isFinite(fileSize) || fileSize <= 0) {
+        return res.status(400).json({ error: 'Geçersiz dosya boyutu veya parça konumu.' });
+      }
+      const chunkBuf = Buffer.from(String(body.chunkBase64 || ''), 'base64');
+      const upRes = await fetch(uploadUri, {
+        method: 'POST',
+        headers: {
+          Authorization: `OAuth ${accessToken}`,
+          offset: String(offset),
+          file_size: String(fileSize),
+          'Content-Type': 'application/octet-stream',
+        },
+        body: chunkBuf,
+        signal: AbortSignal.timeout(25000),
+      });
+
+      if (upRes.status !== 200 && upRes.status !== 206) {
+        return res.status(400).json({ error: 'Video parçası Instagram sunucusuna aktarılamadı.' });
+      }
+      return res.json({ ok: true, status: upRes.status });
+    }
+
+    if (action === 'finish') {
+      const containerId = String(body.containerId || '');
+      if (!/^\d+$/.test(containerId)) {
+        return res.status(400).json({ error: 'Geçersiz Instagram medya kimliği.' });
+      }
+      const stRes = await fetch(
+        `https://graph.facebook.com/v21.0/${containerId}?fields=status_code,status&access_token=${encodeURIComponent(accessToken)}`,
+        { signal: AbortSignal.timeout(15000) }
+      );
+      const stData = (await stRes.json()) as { status_code?: string; status?: string; error?: { message?: string } };
+      const statusCode = String(stData.status_code || '');
+
+      if (statusCode === 'IN_PROGRESS' || statusCode === '') {
+        return res.json({
+          ok: true,
+          status: 'IN_PROGRESS',
+          detail: String(stData.status || 'Instagram videoyu işliyor...'),
+        });
+      }
+
+      if (statusCode !== 'FINISHED') {
+        return res.status(400).json({
+          error: `Instagram video işleme hatası (${statusCode}): ${String(stData.status || '')}`,
+        });
+      }
+
+      const pubRes = await fetch(`https://graph.facebook.com/v21.0/${accountId}/media_publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          creation_id: containerId,
+          access_token: accessToken,
+        }),
+        signal: AbortSignal.timeout(20000),
+      });
+      const pubData = (await pubRes.json()) as { id?: string; error?: { message?: string } };
+      if (!pubRes.ok || !pubData.id) {
+        return res.status(400).json({
+          error: pubData?.error?.message || 'Instagram Reels yayınlama onayı alınamadı.',
+        });
+      }
+
+      const mediaId = String(pubData.id);
+      let permalink = 'https://www.instagram.com/bilsem_junior/';
+      try {
+        const linkRes = await fetch(
+          `https://graph.facebook.com/v21.0/${mediaId}?fields=permalink&access_token=${encodeURIComponent(accessToken)}`,
+          { signal: AbortSignal.timeout(10000) }
+        );
+        const linkData = (await linkRes.json()) as { permalink?: string };
+        if (linkData.permalink) permalink = String(linkData.permalink);
+      } catch {
+        // fallback to profile URL
+      }
+
+      return res.json({
+        ok: true,
+        status: 'PUBLISHED',
+        instagramMediaId: mediaId,
+        permalink,
+      });
+    }
+
+    return res.status(400).json({ error: 'Geçersiz yayınlama işlemi.' });
+  } catch (error) {
+    logServerFailure('Instagram direct publish failed', error);
+    return res.status(503).json({
+      error: 'Instagram sunucusuna bağlanılamadı. Lütfen tekrar deneyin.',
+    });
+  }
+});
+
 export default router;
