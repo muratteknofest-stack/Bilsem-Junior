@@ -1,3 +1,8 @@
+## 1.0.46 — Gerçek fotoğraflarla sorular
+
+- Android sürümü 47 / 1.0.46; `photo-lab-1` ile gerçek fotoğraf örüntüsü, değişen kartı bulma, hedef kart sayma ve görsel hafıza. Yerel fotoğraflar, kaynak/lisans bilgileri ve bağımsız cevap kontrolü.
+- Paket kimliği, güvenlik bayrakları, APK/AAB web varlıkları ve bağımlılık kontrolleri `package-android-candidate.py` ile korunur. Test APK’sı Play üretim imzası veya ticari yayın kabulü anlamına gelmez.
+
 ## 1.0.45 — Birleşik şekillerle net gölge soruları
 
 - Android sürümü 46 / 1.0.45. `shadow-lab-1` desteğiyle büyük renkli birleşik hedef, tek renkli dört gölge ve bütün katmanlardan geçen iç boşluklar.
