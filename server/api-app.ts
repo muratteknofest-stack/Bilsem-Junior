@@ -9,6 +9,7 @@ import helmet from 'helmet';
 import parentRoutes from './routes/parent-routes';
 import studentAiRoutes from './routes/student-ai-routes';
 import adminAiRoutes from './routes/admin-ai-routes';
+import reelsRoutes from './routes/reels-routes';
 import authRoutes from './routes/auth-routes';
 import profileRoutes from './routes/profile-routes';
 import editorialRoutes from './routes/editorial-routes';
@@ -66,6 +67,7 @@ export function createApiApp(options: { limits?: Partial<RequestLimitPolicy> } =
   app.use('/api', parentRoutes);
   app.use('/api', studentAiRoutes);
   app.use('/api', adminAiRoutes);
+  app.use('/api', reelsRoutes);
   app.use('/api', editorialRoutes);
   app.use('/api', authRoutes);
   app.use('/api', profileRoutes);
