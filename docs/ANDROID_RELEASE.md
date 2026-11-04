@@ -1,3 +1,9 @@
+## 1.0.45 — Birleşik şekillerle net gölge soruları
+
+- Android sürümü 46 / 1.0.45. `shadow-lab-1` desteğiyle büyük renkli birleşik hedef, tek renkli dört gölge ve bütün katmanlardan geçen iç boşluklar.
+- Kanonik üretim, bağımsız görünür alan kontrolü, yeni/eski istemci uyumluluğu. Eski kurulu APK’lar uyumlu sorularla korunur.
+- Doğrulama komutu: `python3 scripts/package-android-candidate.py test-artifacts/android`; APK/AAB sürüm kimliği, paket güvenliği ve web varlıklarının birebir doğrulanması korunur. Test APK’sı Play üretim imzası, mağaza yayını veya ticari yayın kabulü anlamına gelmez.
+
 ## 1.0.44 — Modern yazı düzeni ve yapımcı künyesi
 
 - Android sürümü 45 / 1.0.44. Başlıklarda Comfortaa, okuma metinleri ve butonlarda Nunito; web ve APK için ortak yerel fontlar.
