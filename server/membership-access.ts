@@ -1,5 +1,5 @@
 import { getServiceClient } from './supabase-admin';
-import { studentRequiresPaidAccess } from './paid-access-policy';
+import { studentAccessPolicy } from './paid-access-policy';
 import { googlePlayAccess } from './google-play-access';
 import { GooglePlayError } from './google-play-model';
 import { isLicenseTestFamily, licenseTestStudentId, licenseTestLegalReady } from './google-play-license-test';
@@ -18,7 +18,9 @@ export async function learningAccess(studentId: string) {
   return googlePlayAccess(parentId,studentId);
 }
 export async function requireLearningAccess(studentId: string) {
-  const enforced = await studentRequiresPaidAccess(studentId);
+  const policy = await studentAccessPolicy(studentId);
+  if (policy.lifetime) return;
+  const enforced = policy.requiresSubscription;
   if (!enforced && licenseTestStudentId() !== studentId) return;
   const parentId = await linkedParentId(studentId);
   if (!enforced && (!parentId || !isLicenseTestFamily(parentId, studentId))) return;

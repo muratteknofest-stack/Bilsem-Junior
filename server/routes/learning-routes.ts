@@ -10,6 +10,9 @@ import { scaffoldDifficultyPlan } from '../../src/features/questions/test-assemb
 import { englishBankForGrade, ENGLISH_BANK_VERSION } from '../english-learning-bank';
 import { ENGLISH_AREAS } from '../../src/features/international/english-content';
 import { requireLearningAccess } from '../membership-access';
+import { studentHasLifetimeAccess } from '../paid-access-policy';
+import { authorizeLearningStart, reserveFreePractice } from '../free-membership';
+import { FREE_MEMBERSHIP } from '../../src/lib/membership-plan';
 import { GooglePlayError } from '../google-play-model';
 import { sharedRateLimit } from '../shared-rate-limit';
 import { Router } from 'express';
@@ -62,6 +65,15 @@ routes.post('/learning/start', (_req, res, next) => {
 });
 routes.use('/learning', requireSupabaseAuth, requireVerifiedEmail, requireProfileRole('student'), sharedRateLimit('student-learning', 600, 600), rateLimit({ windowMs: 10 * 60_000, limit: 600, standardHeaders: 'draft-8', legacyHeaders: false, keyGenerator: authenticatedRateLimitKey, message: { error: 'Çalışma istek sınırına ulaşıldı. Biraz sonra yeniden dene.' } }));
 const startSchema = learningStartSchema;
+routes.get('/learning/access', async (req: AuthenticatedRequest, res) => {
+  try {
+    let kind: 'lifetime' | 'full' | 'free' = 'full';
+    if (await studentHasLifetimeAccess(req.authUser!.uid)) kind = 'lifetime';
+    else try { await requireLearningAccess(req.authUser!.uid); }
+    catch (error) { if (!(error instanceof GooglePlayError) || error.status !== 403) throw error; kind = 'free'; }
+    res.set('Cache-Control', 'no-store').json({ kind, freePlan: FREE_MEMBERSHIP });
+  } catch (error) { if (error instanceof GooglePlayError) return res.status(error.status).json({ error: error.message }); throw error; }
+});
 const responseSchema = z.discriminatedUnion('mode', [
   z.object({ mode: z.enum(['choice', 'place']), optionId: z.string().min(1).max(20) }).strict(),
   z.object({ mode: z.literal('number'), value: z.string().max(16) }).strict(),
@@ -110,7 +122,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     timing('auth');
     const parsed = startSchema.safeParse(req.body);
     if (!parsed.success) throw new LearningError('Çalışma seçenekleri geçersiz.', 400);
-    await requireLearningAccess(req.authUser!.uid);
+    const freePractice = await authorizeLearningStart(req.authUser!.uid, parsed.data.mode);
     timing('access');
     const { mode, exam, locale, topic } = parsed.data, student = req.authUser!.uid, client = getServiceClient();
     // These reads are independent, account-scoped, and run only after access is checked.
@@ -217,6 +229,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const latestProfile = await client.from('profiles').select('grade').eq('id', student).single();
     if (latestProfile.error) throw latestProfile.error;
     if (latestProfile.data.grade !== selection.grade) throw new LearningError('Sınıfın değişti. Yeni sınıfınla tekrar başla.', 409);
+    if (freePractice) await reserveFreePractice(student);
     if (active.data) await commit(student, active.data.id, finishLearningSession);
     const now = new Date(), seconds = mode === 'exam' ? settings.seconds : 3600;
     const session = { id: randomUUID(), student_id: student, mode, title: topic !== 'mixed' ? `${QUESTION_TYPE_LABELS[topic]} · ${mode === 'exam' ? 'Konu denemesi' : 'Konu testi'}` : mode === 'exam' ? settings.title : mode === 'adaptive' ? 'Adaptif çalışma' : category === 'mixed' ? 'Karışık pratik' : COGNITIVE_CATEGORY_LABELS[category as keyof typeof COGNITIVE_CATEGORY_LABELS], questions: prepareLearningQuestions(questions), answers: {}, created_at: now.toISOString(), expires_at: new Date(now.getTime() + seconds * 1000).toISOString(), finished_at: null, result: null };

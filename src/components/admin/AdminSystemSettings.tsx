@@ -45,6 +45,8 @@ export function AdminSystemSettings({
       setNotice(`Google Play: ${report.configured?'Sunucu ayarları mevcut':'Sunucu ayarları eksik'} · ${report.catalogVerified?'Üç abonelik dönemi doğrulandı':'Ürün kataloğu doğrulanmadı'} · ${report.ready?'Satış hazır':'Satış kapalı'} · ${report.blockers.length} yayın eksiği`);
       if (report.licenseTestReady && Number.isFinite(Date.parse(report.licenseTestUntil)))
         setNotice(`Google Play: Üç abonelik dönemi doğrulandı · Tek aile için lisans testi hazır · ${new Date(report.licenseTestUntil).toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })} Türkiye saatine kadar · Genel satış ${report.ready?'açık':'kapalı'}`);
+      if (typeof report.lifetimeAccessBefore === 'string' && Number.isFinite(Date.parse(report.lifetimeAccessBefore)))
+        setNotice(`Süresiz üyelik: ${new Date(report.lifetimeAccessBefore).toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })} öncesi öğrenci hesapları · Yeni kayıtlar ücretsiz keşif planında · Genel satış ${report.ready?'açık':'kapalı'}`);
     } catch {setError('Google Play yapılandırması denetlenemedi.');}finally{setBusy(false);}
   }
 

@@ -1,3 +1,11 @@
+## 1.0.48 — Süresiz üyelik ve ücretsiz keşif
+
+- Mevcut öğrencilerin sunucuda belirlenen kayıt tarihine göre süresiz tam erişimi; web ve Android’de aynı üyelik durumu.
+- Yeni öğrencilere günlük iki kısa pratik (en fazla on soru), üç günlük görev, iki örnek konu anlatımı ve temel takip.
+- Kota cihazdan bağımsız, sunucuda atomik uygulanır. Hediye üyelik Google ödeme kaydı oluşturmaz ve yeni satın alımı engeller.
+- Aday paketleme komutu: `python3 scripts/package-android-candidate.py test-artifacts/android`; bu işlem tek başına ticari yayın kabulü değildir.
+- Android sürümü 49 / 1.0.48. Gerçek Play satın alma kabulü ve üretim imzası ayrıca doğrulanmalıdır.
+
 ## 1.0.46 — Gerçek fotoğraflarla sorular
 
 - Android sürümü 47 / 1.0.46; `photo-lab-1` ile gerçek fotoğraf örüntüsü, değişen kartı bulma, hedef kart sayma ve görsel hafıza. Yerel fotoğraflar, kaynak/lisans bilgileri ve bağımsız cevap kontrolü.

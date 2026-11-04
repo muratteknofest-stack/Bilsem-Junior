@@ -20,7 +20,7 @@ import {
 } from "../security";
 import { accountSecurityLimiter } from "../rate-limiters";
 import { playConfig, playSetupReady, verifyPlayCatalog } from '../google-play-client';
-import { paidAccessStartsAt } from '../paid-access-policy';
+import { lifetimeAccessBefore, paidAccessStartsAt } from '../paid-access-policy';
 import { paidSalesReady } from '../google-play-sales';
 import { licenseTestExpiresAt, licenseTestLegalReady } from '../google-play-license-test';
 import type { CachedRead } from '../cached-read';
@@ -71,7 +71,7 @@ export default function createPlatformRoutes(publicSettings: CachedRead<Settings
     const {settings}=await readPlatformSettings();const config=playConfig(),configured=playSetupReady();let catalogVerified=false;
     if(configured)try{await verifyPlayCatalog();catalogVerified=true;}catch{}
     const licenseTestUntil = licenseTestExpiresAt();
-    res.json({provider:'google_play',configured,catalogVerified,enabled:config.enabled,ready:paidSalesReady(settings)&&catalogVerified,licenseTestUntil,licenseTestReady:!!licenseTestUntil&&configured&&catalogVerified&&licenseTestLegalReady(settings),enforced:config.enforced,paidAccessFrom:paidAccessStartsAt()===null?null:process.env.GOOGLE_PLAY_PAID_ACCESS_FROM,packageName:config.packageName,productId:config.productId,blockers:releaseBlockers(settings)});
+    res.json({provider:'google_play',lifetimeAccessBefore:lifetimeAccessBefore()===null?null:new Date(lifetimeAccessBefore()!).toISOString(),configured,catalogVerified,enabled:config.enabled,ready:paidSalesReady(settings)&&catalogVerified,licenseTestUntil,licenseTestReady:!!licenseTestUntil&&configured&&catalogVerified&&licenseTestLegalReady(settings),enforced:config.enforced,paidAccessFrom:paidAccessStartsAt()===null?null:process.env.GOOGLE_PLAY_PAID_ACCESS_FROM,packageName:config.packageName,productId:config.productId,blockers:releaseBlockers(settings)});
   });
 
   routes.put(

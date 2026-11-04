@@ -13,7 +13,7 @@ import {LessonScene} from '../src/components/lessons/LessonScene';
 import {requestSecurity} from '../server/request-security';
 
 test('18 original lessons have four teaching scenes, distinct checks and honest recording status',()=>{
- assert.equal(LESSON_CATALOG.length,18);assert.equal(new Set(LESSON_CATALOG.map(c=>c.id)).size,18);assert.equal(LESSON_CATALOG.filter(c=>c.preview).length,1);
+ assert.equal(LESSON_CATALOG.length,18);assert.equal(new Set(LESSON_CATALOG.map(c=>c.id)).size,18);assert.equal(LESSON_CATALOG.filter(c=>c.preview).length,2);
  const scenes=new Set<string>();
  for(const card of LESSON_CATALOG){const lesson=lessonDocument(card.id)!;assert.ok(lesson);assert.equal(lesson.steps.length,4);assert.equal(new Set(lesson.options).size,lesson.options.length);assert.ok(lesson.options[lesson.correctIndex]);assert.ok(lesson.explanation.length>30);assert.deepEqual(lesson.audio,[null,null,null,null]);
   for(const [n,step] of lesson.steps.entries()){assert.ok(step.narration.length>85);const html=renderToStaticMarkup(<LessonScene id={card.id} step={n} playing={false} title={step.title}/>);assert.match(html,/figure/);assert.ok(!html.includes('undefined'));if(n===2)scenes.add(html.replace(/id="[^"]*"/g,''));}

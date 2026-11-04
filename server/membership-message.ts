@@ -1,6 +1,6 @@
 /** Explains a denied full-study request; never grants or changes entitlement. */
 export function membershipRequiredMessage(salesReady: boolean | null, state?: string): string {
-  const free = 'Günün üç ücretsiz görevini kullanabilirsiniz.';
+  const free = 'Günün üç ücretsiz görevini ve iki kısa pratiği kullanabilirsiniz. Örnek konu anlatımları da açıktır.';
   if (state === 'SUBSCRIPTION_STATE_PENDING')
     return `Google Play ödemeniz henüz tamamlanmadı. Veliniz mevcut ödemenin durumunu Google Play'den kontrol edebilir. ${free}`;
   if (state === 'SUBSCRIPTION_STATE_ON_HOLD')
