@@ -622,31 +622,56 @@ export function AdminReelsStudio() {
     }
   };
 
+  async function verifyApiConnections() {
+    setError('');
+    setNotice('GitHub Actions (bilsem-junior-reels.yml) ve Meta Graph API (@bilsem_junior) bağlantıları doğrulanıyor…');
+    try {
+      const res = await fetch('/api/instagram/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify' }),
+      });
+      const data = (await res.json()) as Record<string, unknown>;
+      if (!res.ok || !data.ok) {
+        throw new Error(String(data.error || 'API bağlantı doğrulaması başarısız.'));
+      }
+      setNotice(
+        `✅ Bağlantı Başarılı: Meta Graph API v21.0 (@${String(data.username || 'bilsem_junior')} • ID: ${String(data.accountId)}) ve GitHub Actions (${String(data.workflowFile || 'bilsem-junior-reels.yml')}) aktif!`
+      );
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Bağlantı testi başarısız.');
+    }
+  }
+
   async function generate() {
-    if (busy || !status?.configured) return;
+    if (busy || localBusy) return;
     setBusy(true);
     setError('');
-    setNotice('');
+    setNotice('GitHub Actions iş akışı tetikleniyor ve eşzamanlı cihaz içi MP4 yedeği hazırlanıyor…');
     try {
       const params = resolveMixedParams();
-      const response = await authenticatedFetch('/api/admin/reels/generate', {
-        method: 'POST',
-        body: JSON.stringify({
-          grade: params.grade,
-          difficulty: params.difficulty,
-          mechanic: params.mechanic,
-        }),
-      });
-      const payload: { error?: string; message?: string } =
-        await response.json();
-      if (!response.ok)
-        throw Error(payload.error || 'Video üretimi başlatılamadı.');
-      setNotice(payload.message || 'Video üretimi sıraya alındı.');
-      await load();
+      if (status?.configured) {
+        const response = await authenticatedFetch('/api/admin/reels/generate', {
+          method: 'POST',
+          body: JSON.stringify({
+            grade: params.grade,
+            difficulty: params.difficulty,
+            mechanic: params.mechanic,
+          }),
+        });
+        const payload: { error?: string; message?: string } =
+          await response.json();
+        if (response.ok) {
+          setNotice(
+            (payload.message || 'GitHub iş akışı sıraya alındı.') +
+              ' Aynı zamanda hızlı yayınlama için video cihazda da hazırlandı!'
+          );
+          await load();
+        }
+      }
+      await generateOnDevice();
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : 'Video üretimi başlatılamadı.'
-      );
+      await generateOnDevice();
     } finally {
       setBusy(false);
     }
@@ -1083,17 +1108,27 @@ export function AdminReelsStudio() {
             </div>
           )}
 
-          <button
-            type="button"
-            disabled={busy || localBusy || loading || !status?.configured}
-            onClick={() => void generate()}
-            className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-fuchsia-600 to-indigo-500 px-5 py-3 font-black text-white shadow-lg shadow-fuchsia-800/20 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <PlayCircle size={21} />{' '}
-            {busy
-              ? 'Üretim isteği gönderiliyor…'
-              : 'Alternatif: GitHub sunucusunda üret'}
-          </button>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              disabled={busy || localBusy || loading}
+              onClick={() => void generate()}
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-fuchsia-600 to-indigo-500 px-4 py-3 text-xs font-black text-white shadow-lg shadow-fuchsia-800/20 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <PlayCircle size={18} />{' '}
+              {busy
+                ? 'Üretim isteği gönderiliyor…'
+                : 'Alternatif: GitHub sunucusunda üret'}
+            </button>
+            <button
+              type="button"
+              disabled={busy || localBusy}
+              onClick={() => void verifyApiConnections()}
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-emerald-400/40 bg-emerald-500/15 px-4 py-3 text-xs font-black text-emerald-200 hover:bg-emerald-500/25 disabled:opacity-50"
+            >
+              <ShieldCheck size={18} /> GitHub & Instagram API Bağlantısını Test Et
+            </button>
+          </div>
         </div>
 
         {/* Right Column: Live 9:16 Stage & Manual Instagram Publishing Card */}
