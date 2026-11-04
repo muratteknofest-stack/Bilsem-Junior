@@ -4,7 +4,9 @@ import { registrationBlockers, type PlatformSettings } from '../src/lib/platform
 // A short, operator-configured session for ONE parent/student pair. Never accept a client
 // flag, email, user_metadata claim, or a student-supplied parent identifier.
 function licenseTestIdentity(env: NodeJS.ProcessEnv, now: number): { parentId: string; studentId: string } | null {
-  if (env.GOOGLE_PLAY_LICENSE_TEST_ENABLED !== 'true' || env.GOOGLE_PLAY_ENFORCE_PAID_ACCESS === 'true' || Boolean(env.GOOGLE_PLAY_PAID_ACCESS_FROM)) return null;
+  if (env.GOOGLE_PLAY_LICENSE_TEST_ENABLED !== 'true' || env.GOOGLE_PLAY_ENFORCE_PAID_ACCESS === 'true') return null;
+  // Keep the normal paid signup cutoff intact while a single family tests.
+  if (env.GOOGLE_PLAY_PAID_ACCESS_FROM && !z.iso.datetime({ offset: true }).safeParse(env.GOOGLE_PLAY_PAID_ACCESS_FROM).success) return null;
   const parent = z.uuid().safeParse(env.GOOGLE_PLAY_LICENSE_TEST_PARENT_ID);
   const student = z.uuid().safeParse(env.GOOGLE_PLAY_LICENSE_TEST_STUDENT_ID);
   const until = z.iso.datetime().safeParse(env.GOOGLE_PLAY_LICENSE_TEST_UNTIL);
@@ -14,6 +16,9 @@ function licenseTestIdentity(env: NodeJS.ProcessEnv, now: number): { parentId: s
 }
 export function licenseTestStudentId(env: NodeJS.ProcessEnv = process.env, now = Date.now()): string | null {
   return licenseTestIdentity(env, now)?.studentId ?? null;
+}
+export function licenseTestExpiresAt(env: NodeJS.ProcessEnv = process.env, now = Date.now()): string | null {
+  return licenseTestIdentity(env, now) ? env.GOOGLE_PLAY_LICENSE_TEST_UNTIL! : null;
 }
 export function isLicenseTestFamily(parentId: string, studentId: string, env: NodeJS.ProcessEnv = process.env, now = Date.now()): boolean {
   const configured = licenseTestIdentity(env, now);

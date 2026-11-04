@@ -5,6 +5,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { PlayMembershipPage } from '../src/components/PlayMembershipPage';
 import { WebPlayMembershipPanel } from '../src/components/WebPlayMembershipPanel';
+import { PlayBillingPanel } from '../src/components/PlayBillingPanel';
 import { PlayBillingFlow, initialPlayBillingState, playConfigSchema, canBuyPlay } from '../src/lib/google-play-flow';
 import { safeAppStoreUrl, safePlayStoreUrl } from '../src/lib/play-listing';
 import { appStoreListing, playStoreListing } from '../server/play-listing';
@@ -12,6 +13,16 @@ import { appStoreListing, playStoreListing } from '../server/play-listing';
 const storeUrl = 'https://play.google.com/store/apps/details?id=com.quantumtech.bilsemjunior';
 const config = { ready: true, enforced: true, productId: 'zekapark_uyelik', storeUrl,
   binding: { accountId: 'a'.repeat(64), profileId: 'b'.repeat(64) }, access: { active: false, expiresAt: null } };
+
+test('a license session is explicitly labelled and tells the parent to stop if Google does not show a test card', () => {
+  const state = {...initialPlayBillingState(), phase:'idle' as const, fresh:true, storeChecked:true,
+    config:{...config,licenseTest:true}, offers:[{basePlanId:'monthly' as const,price:'₺99',period:'P1M'}]};
+  const html=renderToStaticMarkup(<PlayBillingPanel state={state} onPurchase={()=>{}} onRestore={()=>{}} onRefresh={()=>{}}/>);
+  assert.match(html,/Lisans testi oturumu/);assert.match(html,/Test kartı/);assert.match(html,/işlemi tamamlamayın/);
+  assert.match(html,/Google Play testini aç/);
+  const regular=renderToStaticMarkup(<PlayBillingPanel state={{...state,config:{...config,licenseTest:false}}} onPurchase={()=>{}} onRestore={()=>{}} onRefresh={()=>{}}/>);
+  assert.doesNotMatch(regular,/Lisans testi oturumu/);assert.match(regular,/Google Play ile devam et/);
+});
 
 test('unpublished membership page has three periods and no dead store link or guessed price', () => {
   const html = renderToStaticMarkup(<PlayMembershipPage brand="Bilsem Junior" storeUrl={null} ready={false}/>);

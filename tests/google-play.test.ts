@@ -16,7 +16,7 @@ import { paidAccessStartsAt } from '../server/paid-access-policy';
 import { publicPlayMembership } from '../server/play-membership-page';
 import { googlePlayAccess } from '../server/google-play-access';
 import { defaultPlatformSettings } from '../src/lib/platform-settings';
-import { isLicenseTestFamily, licenseTestStudentId, licenseTestLegalReady } from '../server/google-play-license-test';
+import { isLicenseTestFamily, licenseTestStudentId, licenseTestLegalReady, licenseTestExpiresAt } from '../server/google-play-license-test';
 const parent='11111111-1111-4111-8111-111111111111',student='22222222-2222-4222-8222-222222222222',other='33333333-3333-4333-8333-333333333333';
 const secret='unit-test-binding-secret-not-a-real-secret', key='12'.repeat(32), purchaseToken='test-purchase-token', binding=playBindings(parent,student,secret);
 const expiry='2027-01-16T12:00:00.000Z';
@@ -32,8 +32,13 @@ test('license testing is opt-in, bound to one parent/student pair, expires withi
   for(const patch of [{GOOGLE_PLAY_LICENSE_TEST_ENABLED:'false'},{GOOGLE_PLAY_LICENSE_TEST_PARENT_ID:'not-a-uuid'},
     {GOOGLE_PLAY_LICENSE_TEST_STUDENT_ID:''},{GOOGLE_PLAY_LICENSE_TEST_STUDENT_ID:parent},
     {GOOGLE_PLAY_LICENSE_TEST_UNTIL:'invalid'},{GOOGLE_PLAY_LICENSE_TEST_UNTIL:'2026-10-26T12:00:00Z'},
-    {GOOGLE_PLAY_LICENSE_TEST_UNTIL:'2026-10-28T12:00:00Z'},{GOOGLE_PLAY_ENFORCE_PAID_ACCESS:'true'},{GOOGLE_PLAY_PAID_ACCESS_FROM:'2026-10-27T00:00:00Z'}])
+    {GOOGLE_PLAY_LICENSE_TEST_UNTIL:'2026-10-28T12:00:00Z'},{GOOGLE_PLAY_ENFORCE_PAID_ACCESS:'true'},{GOOGLE_PLAY_PAID_ACCESS_FROM:'invalid'}])
     assert.equal(licenseTestStudentId({...env,...patch},now),null);
+  const withCutoff = {...env, GOOGLE_PLAY_PAID_ACCESS_FROM:'2026-10-27T00:00:00Z'};
+  assert.equal(isLicenseTestFamily(parent,student,withCutoff,now),true);
+  assert.equal(isLicenseTestFamily(other,student,withCutoff,now),false);
+  assert.equal(licenseTestExpiresAt(withCutoff,now),env.GOOGLE_PLAY_LICENSE_TEST_UNTIL);
+  assert.equal(licenseTestExpiresAt(withCutoff,Date.parse(env.GOOGLE_PLAY_LICENSE_TEST_UNTIL)),null);
   assert.equal(licenseTestStudentId(env,Date.parse(env.GOOGLE_PLAY_LICENSE_TEST_UNTIL)),null);
   const settings=defaultPlatformSettings(); assert.equal(licenseTestLegalReady(settings),false);
   settings.business={legalName:'Operator',address:'Address',contactEmail:'test@example.com',legalBases:'Purposes',retention:'Retention',transfers:'Providers'};
@@ -159,6 +164,7 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
       events.push('google');value=payload;
     }else if(u.hostname!=='play-fixture.invalid')return originalFetch(input,init);
     else if(u.pathname==='/auth/v1/admin/users/'+student){if(authUnavailable)return Response.json({message:'private-auth-error'},{status:503});value={id:student,created_at:authCreatedAt,user_metadata:{created_at:'2000-01-01T00:00:00Z'}};}
+    else if(u.pathname==='/auth/v1/admin/users/'+other)value={id:other,created_at:authCreatedAt};
     else if(u.pathname==='/auth/v1/user')value={id:role==='student'?student:parent,email:'parent@example.com',email_confirmed_at:emailVerified?new Date().toISOString():null,app_metadata:{role}};
     else if(u.pathname==='/rest/v1/rpc/is_user_session_active'||u.pathname==='/rest/v1/rpc/consume_api_limit')value=true;
     else if(u.pathname==='/rest/v1/daily_challenge_attempts'||u.pathname==='/rest/v1/learning_sessions')value=[];
@@ -239,7 +245,14 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     assert.equal((await getAccess()).body.ready,false);
     assert.equal((await post('parent/google-play/prepare',{studentId:student})).status,503);
     process.env.GOOGLE_PLAY_LICENSE_TEST_PARENT_ID=parent;
-    const configured=await getAccess();assert.equal(configured.status,200);assert.equal(configured.body.ready,true);assert.equal(configured.body.enforced,true);
+    process.env.GOOGLE_PLAY_PAID_ACCESS_FROM='2026-10-27T00:00:00Z';
+    const configured=await getAccess();assert.equal(configured.status,200);assert.equal(configured.body.ready,true);assert.equal(configured.body.enforced,true);assert.equal(configured.body.licenseTest,true);
+    assert.equal((await publicPlayMembership(async()=>({settings:platform,revision:1,updatedAt:null}))).ready,false);
+    const createdBeforePilot=authCreatedAt;authCreatedAt='2026-10-28T00:00:00Z';
+    process.env.GOOGLE_PLAY_LICENSE_TEST_PARENT_ID=other;
+    await assert.rejects(requireLearningAccess(student),e=>e instanceof GooglePlayError && e.status===403);
+    assert.equal((await getAccess()).body.ready,false);assert.equal((await getAccess()).body.licenseTest,false);
+    process.env.GOOGLE_PLAY_LICENSE_TEST_PARENT_ID=parent;authCreatedAt=createdBeforePilot;
     await assert.rejects(requireLearningAccess(student),e=>(e as any).status===403);
     assert.equal((await post('parent/google-play/prepare',{studentId:other})).status,503);
     const beforeOtherStudent=events.length;await requireLearningAccess(other);assert.equal(events.length,beforeOtherStudent);
@@ -267,7 +280,7 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     process.env.GOOGLE_PLAY_LICENSE_TEST_UNTIL=new Date(Date.now()-1000).toISOString();
     assert.equal((await getAccess()).body.ready,false);assert.equal((await getAccess()).body.access.active,false);
     assert.equal((await verify()).status,409); // an old test receipt cannot survive closing the test session
-    // Explicit paid rollout closes the test exception and uses immutable Auth
+    // Closing the test exception preserves paid rollout using immutable Auth
     // creation time. A forged editable profile timestamp cannot grandfather a user.
     process.env.GOOGLE_PLAY_LICENSE_TEST_ENABLED='false';
     process.env.GOOGLE_PLAY_PAID_ACCESS_FROM='2026-10-27T00:00:00Z';
