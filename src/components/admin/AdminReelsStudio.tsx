@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { authenticatedFetch } from '../../lib/api-client';
 import { Clapperboard, Download, Film, PlayCircle, RefreshCw, ShieldCheck, WandSparkles } from 'lucide-react';
 
@@ -46,6 +46,12 @@ export function AdminReelsStudio() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [localBusy, setLocalBusy] = useState(false);
+  const [localProgress, setLocalProgress] = useState(0);
+  const [localVideo, setLocalVideo] = useState<{ url: string; extension: string; topic: string } | null>(null);
+  const localVideoUrlRef = useRef<string | null>(null);
+
+  useEffect(() => () => { if (localVideoUrlRef.current) URL.revokeObjectURL(localVideoUrlRef.current); }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -94,6 +100,30 @@ export function AdminReelsStudio() {
       setError(cause instanceof Error ? cause.message : 'Video üretimi başlatılamadı.');
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function generateOnDevice() {
+    if (localBusy || busy) return;
+    setLocalBusy(true);
+    setError('');
+    setNotice('Cihazda orijinal soru doğrulanıyor ve video hazırlanıyor. Bu sayfayı kapatmayın.');
+    setLocalProgress(0);
+    try {
+      const { createBrowserReel } = await import('../../features/reels/browser-reel');
+      const result = await createBrowserReel({ grade, difficulty, mechanic }, setLocalProgress);
+      const url = URL.createObjectURL(result.blob);
+      if (localVideoUrlRef.current) URL.revokeObjectURL(localVideoUrlRef.current);
+      localVideoUrlRef.current = url;
+      setLocalVideo({ url, extension: result.extension, topic: result.topic });
+      setNotice(result.extension === 'mp4'
+        ? 'Video oluşturuldu! Önizleyebilir veya MP4 indirebilirsin. Instagram paylaşımı yapılmadı.'
+        : 'Video oluşturuldu! Tarayıcın MP4 yerine WebM destekliyor. WebM olarak indirilebilir; Instagram için MP4’e dönüştürülmesi gerekir.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Cihazda video üretilemedi. Güncel Chrome deneyin.');
+      setNotice('');
+    } finally {
+      setLocalBusy(false);
     }
   }
 
@@ -150,9 +180,18 @@ export function AdminReelsStudio() {
             <span className="mt-2 block text-xs font-normal text-slate-400">{topics.find(t=>t.id===mechanic)?.note}</span>
           </label>
         </div>
-        <button type="button" disabled={busy || loading || !status?.configured} onClick={() => void generate()}
+        <button type="button" disabled={localBusy || busy} onClick={() => void generateOnDevice()}
+          className="mt-6 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-400 px-5 py-3 font-black text-slate-950 shadow-lg shadow-cyan-800/20 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50">
+          <Clapperboard size={22}/> {localBusy ? 'Cihazında video hazırlanıyor… %' + localProgress : 'Şimdi Video Oluştur (Cihazda)'}
+        </button>
+        {localBusy && <div role="progressbar" aria-valuenow={localProgress} aria-valuemin={0} aria-valuemax={100}
+          aria-label="Video oluşturma ilerlemesi" className="mt-3 h-2 overflow-hidden rounded-full bg-slate-700">
+          <div style={{width: localProgress + '%'}} className="h-full bg-cyan-400 transition-all duration-500"/>
+        </div>}
+        <p className="mt-2 text-xs text-slate-400">Bu seçenek GitHub sunucusu çalışmasa da video hazırlar. Yaklaşık 19 saniyelik gerçek video kaydı için sayfayı açık tutmalısın. MP4 desteği tarayıcına bağlıdır; desteklenmeyen cihazlarda WebM oluşturulur.</p>
+        <button type="button" disabled={busy || localBusy || loading || !status?.configured} onClick={() => void generate()}
           className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-fuchsia-600 to-indigo-500 px-5 py-3 font-black text-white shadow-lg shadow-fuchsia-800/20 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50">
-          <PlayCircle size={21}/> {busy ? 'Üretim isteği gönderiliyor…' : 'Şimdi Video Oluştur'}
+          <PlayCircle size={21}/> {busy ? 'Üretim isteği gönderiliyor…' : 'Alternatif: GitHub sunucusunda üret'}
         </button>
         <a href="https://github.com/muratteknofest-stack/Bilsem-Junior/actions/workflows/bilsem-junior-reels.yml"
           target="_blank" rel="noopener noreferrer"
@@ -160,14 +199,23 @@ export function AdminReelsStudio() {
           Alternatif: GitHub Actions'ta manuel video oluştur
         </a>
         <p className="mt-3 text-xs leading-5 text-slate-400">
-          MP4 üretimi GitHub Actions sunucusunda yapılır. İşlem kuyruğa alınabilir; süre GitHub yoğunluğuna bağlıdır.
-          Günlük 19.00 yayını bu işlemden etkilenmez.
+          GitHub üzerinden üretim, GitHub Actions çalıştırıcısına bağlıdır. Son denemelerde işler çalıştırıcı başlamadan başarısız oldu. Üstteki cihazda üretim seçeneği bu soruna bağımlı değildir. Günlük 19.00 yayını bu işlemden etkilenmez.
         </p>
       </div>
 
       <div className="rounded-3xl border border-slate-700 bg-slate-900/90 p-5 sm:p-6">
         <h3 className="flex items-center gap-2 text-lg font-black"><Film size={20} className="text-cyan-300"/> Son oluşturulan video</h3>
-        {lastVideo?.videoUrl ? <div className="mt-4 space-y-3">
+        {localVideo ? <div className="mt-4 space-y-3">
+          <p className="text-center text-sm font-bold text-cyan-200">{localVideo.topic} • {localVideo.extension.toUpperCase()}</p>
+          <video key={localVideo.url} src={localVideo.url} controls playsInline preload="metadata"
+            className="mx-auto max-h-[430px] w-full max-w-[244px] rounded-2xl bg-black"
+            aria-label="Cihazda oluşturulan Instagram Reels videosunu izle"/>
+          <a href={localVideo.url} download={'bilsem-junior-reels-' + Date.now() + '.' + localVideo.extension}
+            className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 font-black text-slate-950">
+            <Download size={18}/> Videoyu indir ({localVideo.extension.toUpperCase()})
+          </a>
+          <p className="text-xs text-slate-400">Video bu tarayıcıda oluşturuldu. Sayfa yenilenirse bağlantı kaybolur; önce indir. Instagram otomatik paylaşımı yapılmadı.</p>
+        </div> : lastVideo?.videoUrl ? <div className="mt-4 space-y-3">
           <video key={lastVideo.id} src={lastVideo.videoUrl} controls playsInline preload="metadata"
             className="mx-auto max-h-[430px] w-full max-w-[244px] rounded-2xl bg-black"
             aria-label="Oluşturulan Instagram Reels videosunu izle"/>
