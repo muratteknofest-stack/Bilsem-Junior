@@ -236,6 +236,7 @@ export function AdminReelsStudio() {
     buildInstagramCaption(1, 'Görsel analoji')
   );
   const [copiedCaption, setCopiedCaption] = useState(false);
+  const [isDirectPublishing, setIsDirectPublishing] = useState(false);
   const [showFailedGithubRuns, setShowFailedGithubRuns] = useState(false);
 
   const localVideoUrlRef = useRef<string | null>(null);
@@ -522,6 +523,58 @@ export function AdminReelsStudio() {
     setNotice(
       'Video indirildi, açıklama metni panoya kopyalandı ve Instagram açıldı! Instagramda (+) Oluştur > Reels kısmından indirilen MP4 videoyu seçip açıklamayı yapıştırın (Ctrl+V).'
     );
+  };
+
+  const handleDirectPublishToInstagram = async () => {
+    if (!localVideo || isDirectPublishing) return;
+    setIsDirectPublishing(true);
+    setError('');
+    setNotice('Video Instagram Reels sunucusuna aktarılıyor ve doğrulanıyor (Meta Graph API)…');
+    try {
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => {
+          const res = String(reader.result || '');
+          resolve(res.includes(',') ? res.split(',')[1] : res);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(localVideo.blob);
+      });
+      const base64Video = await base64Promise;
+
+      const pubRes = await fetch('/api/instagram/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          base64Video,
+          caption: captionText,
+        }),
+      });
+
+      const pubData = (await pubRes.json()) as Record<string, unknown>;
+      if (!pubRes.ok) {
+        throw new Error(String(pubData.error || 'Instagram Reels yayınlanamadı.'));
+      }
+
+      const postUrl = String(
+        pubData.permalink ||
+          (pubData.instagramMediaId
+            ? `https://www.instagram.com/reel/${String(pubData.instagramMediaId)}/`
+            : '')
+      );
+      setNotice(
+        `🎉 Video @bilsem_junior hesabında başarıyla Reels olarak yayınlandı! ${postUrl ? `Link: ${postUrl}` : ''}`
+      );
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : 'Otomatik Instagram yayınlama hatası.';
+      setError(msg);
+      setNotice(
+        'Alternatif olarak hemen aşağıdaki "Manuel Yayınla (Paylaş)" veya "Videoyu İndir" butonunu kullanabilirsiniz.'
+      );
+    } finally {
+      setIsDirectPublishing(false);
+    }
   };
 
   async function generate() {
@@ -1067,14 +1120,26 @@ export function AdminReelsStudio() {
                 />
               </div>
 
-              {/* Manual Publishing Action Buttons */}
+              {/* Instagram Publishing Action Buttons */}
               <div className="space-y-2.5">
                 <button
                   type="button"
-                  onClick={() => void handleManualShareToInstagram()}
-                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 px-4 py-2.5 text-sm font-black text-white shadow-lg hover:brightness-110"
+                  disabled={isDirectPublishing}
+                  onClick={() => void handleDirectPublishToInstagram()}
+                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 px-4 py-2.5 text-sm font-black text-white shadow-lg hover:brightness-110 disabled:opacity-50"
                 >
-                  <Share2 size={18} /> Şimdi Instagram'da Manuel Yayınla (Paylaş)
+                  <Send size={18} />
+                  {isDirectPublishing
+                    ? 'Instagram Reels Olarak Yayınlanıyor…'
+                    : "Instagram'a Otomatik Reels Olarak Yayınla (@bilsem_junior)"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void handleManualShareToInstagram()}
+                  className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-pink-500/40 bg-pink-500/10 px-4 py-2 text-xs font-bold text-pink-200 hover:bg-pink-500/20"
+                >
+                  <Share2 size={16} /> Alternatif: Manuel Yayınla & Paylaş (Web Share)
                 </button>
 
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
