@@ -1,3 +1,4 @@
+import {generateVisualQuestion} from '../src/features/questions/visual-reasoning-lab';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
@@ -337,6 +338,18 @@ test('real authenticated learning API preserves mixed choices, permits practice 
     assert.equal(legacy.status,201,JSON.stringify(legacy.body));assert.ok(rows[0].questions.every((q:BaseQuestion)=>!needsReasoningFormat(q)));
     const easy=await start({mode:'practice',difficulty:1,expectedGrade:grade},true,true);
     assert.equal(easy.status,201);assert.ok(easy.body.questions.every((q:BaseQuestion)=>q.difficulty===1));
+    // New shadow clients generate verified compound shapes even when only legacy published shadows exist.
+    for(const g of [1,2,3,4] as const){
+      grade=g;rows=[];bank=[{...generateVisualQuestion('object-shadow',98617,2,g),status:'published'}];
+      const originalBank=JSON.stringify(bank);
+      const compound=await start({mode:'practice',questionCount:5,topic:'shadow_matching',difficulty:2},true,LEARNING_QUESTION_FORMAT);
+      assert.equal(compound.status,201,JSON.stringify(compound.body));assert.equal(compound.body.questions.length,5);
+      assert.ok(compound.body.questions.every((q:BaseQuestion)=>(q.visualConfig as Record<string,unknown>).displayMode==='composite_shadow'&&q.targetGrade===g));
+      assert.ok(compound.body.questions.every((q:BaseQuestion)=>!('correctOptionId' in q)));
+      assert.equal(JSON.stringify(bank),originalBank,'starting compound practice never rewrites the published bank');
+      const installed=await start({mode:'practice',questionCount:1,topic:'shadow_matching',difficulty:2},true,'visual-lab-1');
+      assert.equal(installed.status,201,JSON.stringify(installed.body));assert.equal(installed.body.questions[0].visualConfig.displayMode,'visual_lab');
+    }
   } finally {
     await new Promise<void>(resolve => server.close(() => resolve()));
     globalThis.fetch = originalFetch;

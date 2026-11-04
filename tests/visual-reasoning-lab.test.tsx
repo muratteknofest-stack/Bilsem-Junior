@@ -72,3 +72,61 @@ test('new formats render every mechanic, retain public givens only, and cannot r
   assert.equal(currentReasoningCandidate(q,2,true,true,true,true,true,true,true),true);
  }
 });
+
+
+import { generateShadowQuestion, shadowAnswer, shadowKey, independentlyMatchesShadow, validateShadowBoard, type ShadowBoard, type ShadowValue } from '../src/features/questions/composite-shadow';
+import { supportsShadowFormat } from '../src/features/student/learning-question-format';
+import { selectLearningQuestions } from '../server/learning-question-selection';
+import { isQuestionReadyForStudents, questionStimulusKey } from '../src/features/questions/quality';
+import { EDUCATION_PROFILES } from '../src/features/questions/quality-policy';
+import { runMultiPassQuestionTests } from '../src/features/questions/verifier';
+
+test('compound shadows preserve a single visible union and through-holes across all supported class levels',()=>{
+ let checked=0;
+ for(const grade of [1,2,3,4] as const)for(let d=1;d<=EDUCATION_PROFILES[grade].maxDifficulty;d++)for(let seed=1;seed<=8;seed++){
+  const q=generateShadowQuestion(8421+seed*104729,d as DifficultyLevel,grade),b=validateShadowBoard(q.visualConfig);
+  assert.ok(isQuestionReadyForStudents(q),q.id);
+  assert.equal(q.options.filter(o=>independentlyMatchesShadow(b,o.visualData)).length,1,q.id);
+  assert.equal(new Set(q.options.map(o=>shadowKey(o.visualData as ShadowValue))).size,4);
+  assert.equal(solveQuestion(q).isMatch,true,q.id);
+  assert.equal(runMultiPassQuestionTests(q).isVerified,true,q.id);
+  assert.equal(b.shapes.length,grade>=3&&d>=3?3:2);
+  assert.ok(b.holes.length>=1&&b.holes.length<=3);
+  const html=renderToStaticMarkup(<QuestionRenderer question={q}/>);
+  assert.match(html,/HEDEF ŞEKİL/);assert.match(html,/maskUnits/);assert.ok(!html.includes('NaN'));
+  for(const option of q.options){const svg=renderToStaticMarkup(<OptionRenderer option={option} questionType={q.type}/>);assert.match(svg,/Birleşik şeklin gölge seçeneği/);assert.match(svg,/#141d35/);}
+  checked++;
+ }
+ assert.equal(checked,120);
+});
+
+test('shadow proof ignores colour, layer order and hidden covered edges but rejects altered answer keys or holes',()=>{
+ const q=generateShadowQuestion(98617,3,3),board=q.visualConfig as ShadowBoard,answer=shadowAnswer(board);
+ const recoloured=structuredClone(q);(recoloured.visualConfig as ShadowBoard).shapes.forEach(s=>s.color=(s.color+1)%5);
+ assert.equal(questionStimulusKey(recoloured),questionStimulusKey(q));
+ assert.equal(shadowKey({...answer,polygons:[...answer.polygons].reverse()}),shadowKey(answer));
+ const first=answer.polygons[0];
+ assert.equal(shadowKey({...answer,polygons:[first.map((_,i)=>first[(i+1)%first.length]),...answer.polygons.slice(1)]}),shadowKey(answer));
+ const wrong=structuredClone(q);wrong.correctOptionId=wrong.options.find(o=>o.id!==q.correctOptionId)!.id;assert.equal(solveQuestion(wrong).isMatch,false);
+ const missing={...answer,holes:answer.holes.slice(1)};assert.equal(independentlyMatchesShadow(board,missing),false);
+ const malformed=structuredClone(board);malformed.holes[0]={x:5,y:5,r:4};assert.throws(()=>validateShadowBoard(malformed),/OUTSIDE/);
+ const duplicated=structuredClone(q);duplicated.options[0].visualData=answer;duplicated.options[1].visualData=answer;assert.equal(solveQuestion(duplicated).isMatch,false);
+ const changed=structuredClone(q);(changed.visualConfig as ShadowBoard).shapes[0].points[0][0]+=1;assert.ok(auditQuestion(changed).reviewRequired.length||auditQuestion(changed).errors.length);
+ const publicBoard=JSON.stringify(publicVisualConfig(q));for(const hidden of ['correctOptionId','seed','fingerprint','answer'])assert.ok(!publicBoard.includes(hidden));
+});
+
+test('installed visual-lab apps keep compatible questions; only the new format receives compound shadows',()=>{
+ const q=generateShadowQuestion(19771,2,2);
+ assert.equal(supportsShadowFormat('visual-lab-1'),false);assert.equal(supportsShadowFormat(LEARNING_QUESTION_FORMAT),true);
+ assert.throws(()=>assertLearningQuestionFormat([q],'visual-lab-1'));assertLearningQuestionFormat([q],LEARNING_QUESTION_FORMAT);
+ assert.equal(currentReasoningCandidate(q,2,true,true,true,true,true,true,true,false),false);
+ assert.equal(currentReasoningCandidate(q,2,true,true,true,true,true,true,true,true),true);
+ const old=generateVisualQuestion('object-shadow',7781,2,2);assertLearningQuestionFormat([old],'visual-lab-1');assertLearningQuestionFormat([old],LEARNING_QUESTION_FORMAT);
+});
+
+test('twenty focused compound shadow questions can be assembled without a published-bank mutation',()=>{
+ let seed=1000;
+ const questions=selectLearningQuestions({count:20,category:'visual_perception',candidates:[],exposure:new Map(),canUse:isQuestionReadyForStudents,requireDistinctStyles:false,repeatPolicy:'oldest-first',generate:()=>generateShadowQuestion(++seed*104729,2,2),randomIndex:()=>0});
+ assert.equal(questions.length,20);assert.equal(new Set(questions.map(questionStimulusKey)).size,20);
+ assert.ok(questions.every(q=>q.type==='shadow_matching'&&q.authoring?.engine==='shadow-lab-1'));
+});

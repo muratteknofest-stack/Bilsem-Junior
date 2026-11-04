@@ -1,3 +1,5 @@
+import { SHADOW_ENGINE, generateShadowQuestion } from '../../src/features/questions/composite-shadow';
+import { supportsShadowFormat, needsShadowFormat } from '../../src/features/student/learning-question-format';
 import {supportsVisualLabFormat,needsVisualLabFormat} from '../../src/features/student/learning-question-format';
 import{supportsExamFormat,needsExamFormat,supportsReferenceFormat,needsReferenceFormat}from'../../src/features/student/learning-question-format';
 import {supportsCubeFormat,needsCubeFormat} from '../../src/features/student/learning-question-format';
@@ -136,13 +138,14 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
     const cube=supportsCubeFormat(req.query.questionFormat);
     const reference=supportsReferenceFormat(req.query.questionFormat);
     const visualLab=supportsVisualLabFormat(req.query.questionFormat);
+    const shadowFormat=supportsShadowFormat(req.query.questionFormat);
     const examFormat=supportsExamFormat(req.query.questionFormat);
     const challengeMode = locale !== 'en' && topic === 'mixed' && difficulty === 'mixed';
     const recommendation=mode==='adaptive'?recommendDifficulty(grade,recent.answers):{adjustment:0 as const,sampleSize:0,accuracy:null,reason:'steady' as const};
     const challengeFloor = Math.max(1,gradeChallengeFloor(grade)+Math.min(0,recommendation.adjustment)) as DifficultyLevel;
     // Fetch only candidates that this client can use; all delivered questions still pass proofs.
     const bank = locale === 'en' ? {questions:englishBankForGrade(grade),bankVersion:ENGLISH_BANK_VERSION} : await loadPublishedLearningBank({ grade, difficulty, category, topic }, {
-      ...(modern && topic === 'mixed' ? {types:curriculumV2?ALL_TOPIC_TYPES.filter(type=>topicAllowedForGrade(type,grade)):professionalGradeTypes(grade),engines:CURRENT_REASONING_ENGINES.filter(engine=>(visualLab||engine!=='visual-lab-1')&&(examFormat||engine!=='exam-lab-1')&&(curriculumV2||engine!=='curriculum-2')&&(perceptual||engine!=='perceptual-1')&&(cube||engine!=='cube-lab-1')&&(reference||!engine.startsWith('reference-lab-')))} : {}),
+      ...(modern && topic === 'mixed' ? {types:curriculumV2?ALL_TOPIC_TYPES.filter(type=>topicAllowedForGrade(type,grade)):professionalGradeTypes(grade),engines:CURRENT_REASONING_ENGINES.filter(engine=>(shadowFormat||engine!==SHADOW_ENGINE)&&(visualLab||engine!=='visual-lab-1')&&(examFormat||engine!=='exam-lab-1')&&(curriculumV2||engine!=='curriculum-2')&&(perceptual||engine!=='perceptual-1')&&(cube||engine!=='cube-lab-1')&&(reference||!engine.startsWith('reference-lab-')))} : {}),
       ...(challengeMode ? {minDifficulty:challengeFloor} : {}),
     });
     timing('bank');
@@ -154,20 +157,20 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
       seen.add(key); return true;
     });
     const count = requestedCount;
-    if (topic!=='mixed'&&!topicCandidates.length) throw new LearningError('Seçilen sınıf, konu ve zorlukta yayımlanmış soru yok. Zorluk filtresini değiştirip yeniden dene.', 422);
+    if (topic!=='mixed'&&!topicCandidates.length&&!(shadowFormat&&topic==='shadow_matching')) throw new LearningError('Seçilen sınıf, konu ve zorlukta yayımlanmış soru yok. Zorluk filtresini değiştirip yeniden dene.', 422);
     const selection: LearningSelection = { ...(modern?{questionFormat:req.query.questionFormat as LearningSelection['questionFormat']}:{}), ...(parsed.data.mixCategories ? {mixCategories:true} : {}), topic, grade: profile.data.grade, difficulty, category, exam: mode === 'exam' ? exam : '', count, bankVersion: bank.bankVersion, ...(locale === 'en' ? { locale } : {}) };
     // Starting a test always draws a fresh shuffled set. Explicit GET/resume keeps its snapshot.
     const englishReady = (q: BaseQuestion) => (q.visualConfig as Record<string,unknown>)?.displayMode === 'colorful_board' && ENGLISH_AREAS.some(a => a.id === q.type);
     // Respect deliberate easy-level choices and specific-topic filters. For the
     // Turkish mixed-level pool, remove below-grade filler before selection.
     const gradeAppropriate = (q: BaseQuestion) => !challengeMode || q.difficulty >= challengeFloor;
-    const formatReady=(q:BaseQuestion)=>needsVisualLabFormat(q)?visualLab:needsExamFormat(q)?examFormat:needsReferenceFormat(q)?reference:needsCubeFormat(q)?cube:needsPerceptualFormat(q)?perceptual:needsCurriculumV2Format(q)?curriculumV2:needsCurrentQuestionFormat(q)?supportsLabQuestionFormat(req.query.questionFormat):needsProfessionalV2Format(q)?supportsProfessionalV2Format(req.query.questionFormat):modern||!needsReasoningFormat(q);
-    const reasoningReady=(q:BaseQuestion)=>locale==='en'||topic!=='mixed'||currentReasoningCandidate(q,grade,modern,curriculumV2,perceptual,cube,reference,examFormat,visualLab);
+    const formatReady=(q:BaseQuestion)=>needsShadowFormat(q)?shadowFormat:shadowFormat&&q.type==='shadow_matching'?false:needsVisualLabFormat(q)?visualLab:needsExamFormat(q)?examFormat:needsReferenceFormat(q)?reference:needsCubeFormat(q)?cube:needsPerceptualFormat(q)?perceptual:needsCurriculumV2Format(q)?curriculumV2:needsCurrentQuestionFormat(q)?supportsLabQuestionFormat(req.query.questionFormat):needsProfessionalV2Format(q)?supportsProfessionalV2Format(req.query.questionFormat):modern||!needsReasoningFormat(q);
+    const reasoningReady=(q:BaseQuestion)=>locale==='en'||topic!=='mixed'||currentReasoningCandidate(q,grade,modern,curriculumV2,perceptual,cube,reference,examFormat,visualLab,shadowFormat);
     let candidates = topicCandidates.filter(q => fitsLearningSelection(q, selection) && gradeAppropriate(q) && formatReady(q)&&reasoningReady(q) && (locale !== 'en' || englishReady(q)));
     // Prefer the refreshed bank for focused practice when it can fill the whole
     // request. Keep the complete legacy pool for installed clients and long tests.
     if (curriculumV2 && topic !== 'mixed') {
-      const detailed=candidates.filter(q=>visualLab&&q.authoring?.engine==='visual-lab-1');
+      const detailed=candidates.filter(q=>shadowFormat&&q.authoring?.engine===SHADOW_ENGINE||visualLab&&q.authoring?.engine==='visual-lab-1');
       const cubes=detailed.length>=count?detailed:candidates.filter(q=>examFormat&&q.authoring?.engine==='exam-lab-1'||reference&&['reference-lab-1','reference-lab-2'].includes(q.authoring?.engine||'')||cube&&q.authoring?.engine==='cube-lab-1'||perceptual&&q.authoring?.engine==='perceptual-1');
       const visual = cubes.length>=count?cubes:perceptual ? candidates.filter(q=>q.authoring?.engine==='perceptual-1') : [];
       const refreshed = visual.length>=count?visual:candidates.filter(q=>q.authoring?.engine==='curriculum-2');
@@ -185,7 +188,7 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
         isQuestionReadyForStudents(q) && (locale !== 'en' || englishReady(q));
       checked.set(q, valid); return valid;
     };
-    const questions = selectLearningQuestions({ count, preferDiverseTypes:topic === 'mixed' && locale !== 'en', allowGeneration: topic === 'mixed'&&locale!=='en', category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number],
+    const questions = selectLearningQuestions({ count, preferDiverseTypes:topic === 'mixed' && locale !== 'en', allowGeneration: (topic === 'mixed'||shadowFormat&&topic==='shadow_matching')&&locale!=='en', category: category as 'mixed' | typeof AVAILABLE_CATEGORIES[number],
       // Prefer diverse mechanics, then reinforce them with different verified puzzles.
       // One style per test makes long tests and single-topic practice impossible.
       requireDistinctStyles: false,
@@ -197,11 +200,12 @@ routes.post('/learning/start', rateLimit({ windowMs: 60 * 60_000, limit: 120, ke
       ...(locale === 'en' ? {categories:[...new Set(candidates.map(q=>q.category))]} : {}),
       candidates, exposure, canUse,
       generate: (nextCategory,typeCounts,plannedDifficulty,reasoningCounts,acceptCandidate) => {
+        if(shadowFormat&&topic==='shadow_matching')return generateShadowQuestion(randomInt(1,2147483647),plannedDifficulty??(difficulty==='mixed'?pickGradeChallenge(grade):difficulty),grade);
         if (topic !== 'mixed') throw new LearningError('Seçilen konunun yayımlanmış soruları kullanılmalı.');
         if (locale === 'en') throw new LearningError('English practice is temporarily unavailable. Please try again.', 503);
         const nextDifficulty = plannedDifficulty ?? (difficulty === 'mixed' ? pickGradeChallenge(grade) : difficulty);
         const seed=randomInt(1,2147483647);
-        return generateVariedLearningQuestion({grade,category:nextCategory,difficulty:nextDifficulty,seed,typeCounts,reasoningCounts,exposure,acceptCandidate,legacy:!modern,lab:supportsLabQuestionFormat(req.query.questionFormat),curriculumV2,perceptual,cube,reference,exam:examFormat,visualLab});
+        return generateVariedLearningQuestion({grade,category:nextCategory,difficulty:nextDifficulty,seed,typeCounts,reasoningCounts,exposure,acceptCandidate,legacy:!modern,lab:supportsLabQuestionFormat(req.query.questionFormat),curriculumV2,perceptual,cube,reference,exam:examFormat,visualLab,shadow:shadowFormat});
       },
     });
     timing('assembly');

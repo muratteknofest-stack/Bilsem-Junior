@@ -1,3 +1,4 @@
+import { generateShadowQuestion } from '../composite-shadow';
 import {VISUAL_MECHANICS,visualAllowed,visualTopic,generateVisualQuestion} from '../visual-reasoning-lab';
 import{REFERENCE_MECHANICS,REFERENCE_TOPICS,referenceAllowed,generateReferenceQuestion}from'../reference-lab';
 import {CUBE_MECHANICS,CUBE_TOPICS,cubeAllowed,generateCubeQuestion} from '../cube-lab';
@@ -66,6 +67,7 @@ export function generateQuestion(options: {
   const difficulty = options.targetGrade ? gradeDifficulty(options.targetGrade, options.difficulty ?? 3) : options.difficulty ?? 3;
   if(options.profile==='visual-lab'){
     if(!isSchoolGrade(options.targetGrade))throw Error('Görsel muhakeme için sınıf gerekli.');
+    if(options.type==='shadow_matching'){const q=generateShadowQuestion(seed,difficulty,options.targetGrade);assertQuestionReadyForStudents(q);return q;}
     const variants=VISUAL_MECHANICS.filter(m=>visualAllowed(m,options.targetGrade!,difficulty)&&(!options.type||visualTopic(m,options.targetGrade!)===options.type)&&(!options.category||options.category==='mixed'||STUDENT_CATEGORY_TYPES[options.category].includes(visualTopic(m,options.targetGrade!))));
     if(!variants.length)throw Error('VISUAL_TOPIC_UNAVAILABLE');
     const q=generateVisualQuestion(rng.pick(variants),seed,difficulty,options.targetGrade);assertQuestionReadyForStudents(q);return q;
