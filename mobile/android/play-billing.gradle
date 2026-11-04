@@ -5,8 +5,8 @@ dependencies {
 
 android {
     defaultConfig {
-        versionCode 46
-        versionName "1.0.45"
+        versionCode 47
+        versionName "1.0.46"
     }
 }
 
