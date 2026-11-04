@@ -84,9 +84,10 @@ test('adaptive question counts are bounded integers and participate in saved sel
 
 test('real authenticated learning API preserves mixed choices, permits practice variants, and rejects duplicate puzzles without changing active sessions', async () => {
   const originalFetch = globalThis.fetch;
-  const membershipKeys = ['GOOGLE_PLAY_PAID_ACCESS_FROM','GOOGLE_PLAY_ENFORCE_PAID_ACCESS','GOOGLE_PLAY_LICENSE_TEST_ENABLED'] as const;
+  const membershipKeys = ['BILSEM_LIFETIME_ACCESS_BEFORE','GOOGLE_PLAY_PAID_ACCESS_FROM','GOOGLE_PLAY_ENFORCE_PAID_ACCESS','GOOGLE_PLAY_LICENSE_TEST_ENABLED'] as const;
   const priorMembership = new Map(membershipKeys.map(key => [key, process.env[key]]));
   // This question-selection fixture owns its access policy even in a production build.
+  process.env.BILSEM_LIFETIME_ACCESS_BEFORE = '';
   process.env.GOOGLE_PLAY_PAID_ACCESS_FROM = '';
   process.env.GOOGLE_PLAY_ENFORCE_PAID_ACCESS = 'false';
   process.env.GOOGLE_PLAY_LICENSE_TEST_ENABLED = 'false';
