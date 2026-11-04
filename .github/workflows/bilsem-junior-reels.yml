@@ -39,21 +39,22 @@ concurrency:
 
 jobs:
   preview:
-    # The daily schedule is dormant until the owner explicitly opts in.
     if: github.event_name == 'workflow_dispatch' || vars.REELS_ENABLED == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout application
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
+
       - name: Set up Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        uses: actions/setup-node@v4
         with:
           node-version: "22"
           package-manager-cache: false
           cache: npm
+
       - name: Install video dependencies
         run: |
           sudo apt-get update -qq
@@ -61,6 +62,7 @@ jobs:
           python3 -m venv .reels-venv
           .reels-venv/bin/python -m pip install 'Pillow==11.3.0'
           npm ci --ignore-scripts
+
       - name: Select a checked original cognitive question
         env:
           REEL_DATE: ${{ inputs.reel_date }}
@@ -69,10 +71,12 @@ jobs:
           REEL_MECHANIC: ${{ inputs.mechanic }}
           REEL_REQUEST_ID: ${{ inputs.request_id }}
         run: npx --no-install tsx scripts/reels/select-daily-question.ts
+
       - name: Create 1080x1920 MP4 with original audio
         run: .reels-venv/bin/python scripts/reels/render_reel.py
+
       - name: Keep MP4 and proof for review
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        uses: actions/upload-artifact@v4
         with:
           include-hidden-files: false
           name: bilsem-junior-reel
@@ -86,15 +90,16 @@ jobs:
     # A main-only protected environment keeps the Storage key off untrusted branches.
     if: github.ref == 'refs/heads/main'
     needs: preview
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     environment: production-reels
     timeout-minutes: 15
     steps:
       - name: Checkout uploader
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
+
       - name: Download generated MP4
         if: github.event_name == 'workflow_dispatch'
         env:
@@ -103,6 +108,7 @@ jobs:
           gh run download "$GITHUB_RUN_ID" --name bilsem-junior-reel --dir reels-out
           test -s reels-out/reel.mp4
           test -s reels-out/question.json
+
       - name: Save manual preview to dedicated public video bucket
         if: github.event_name == 'workflow_dispatch'
         env:
@@ -113,7 +119,7 @@ jobs:
 
   scheduled-only:
     if: github.event_name == 'schedule' && vars.REELS_ENABLED == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - name: Confirm authorized scheduled execution
         run: echo 'Scheduled publishing enabled'
@@ -122,15 +128,16 @@ jobs:
     # Security policy requires a protected environment AND an exact main-only gate.
     if: github.ref == 'refs/heads/main'
     needs: [preview, scheduled-only]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     environment: production-reels
     timeout-minutes: 35
     steps:
       - name: Checkout publishing script
         if: github.event_name == 'schedule' && vars.REELS_ENABLED == 'true'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
+
       - name: Retrieve today's approved MP4 artifact
         if: github.event_name == 'schedule' && vars.REELS_ENABLED == 'true'
         env:
@@ -139,6 +146,7 @@ jobs:
           gh run download "$GITHUB_RUN_ID" --name bilsem-junior-reel --dir reels-out
           test -s reels-out/reel.mp4
           test -s reels-out/question.json
+
       - name: Publish through official Instagram API at 19:00 Türkiye
         if: github.event_name == 'schedule' && vars.REELS_ENABLED == 'true'
         env:
