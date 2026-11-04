@@ -7,7 +7,8 @@ import { transformTile, type Board, type Tile } from './professional-engine';
 export function questionReasoningKey(q: Pick<BaseQuestion,'type'|'visualConfig'>): string {
   const b=q.visualConfig as Record<string,unknown>;
   let rule: unknown;
-  if(b.displayMode==='visual_lab')rule={kind:'visual-lab',mechanic:b.mechanic,axis:b.axis,folds:b.folds,side:b.side,cube:(b.cube as {mechanic?:string}|undefined)?.mechanic};
+  if(b.displayMode==='composite_shadow')rule={kind:'compound-shadow',rule:'fixed-union-and-through-holes'};
+  else if(b.displayMode==='visual_lab')rule={kind:'visual-lab',mechanic:b.mechanic,axis:b.axis,folds:b.folds,side:b.side,cube:(b.cube as {mechanic?:string}|undefined)?.mechanic};
   else if(b.displayMode==='exam_lab')rule={kind:'exam-lab',mechanic:b.mechanic,axis:b.axis};
   else if(b.displayMode==='reference_lab')rule={kind:'reference-lab',mechanic:b.mechanic};
   else if(b.displayMode==='cube_lab')rule={kind:'cube-lab',mechanic:b.mechanic};

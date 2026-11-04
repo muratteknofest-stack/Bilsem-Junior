@@ -1,3 +1,4 @@
+import { validateShadowBoard, shadowAnswer, shadowKey, independentlyMatchesShadow, validShadowValue } from './composite-shadow';
 import {validateVisualBoard,solveVisualBoard,visualValueKey,visualTopic,type VisualValue} from './visual-reasoning-lab';
 import {independentlyMatchesVisual} from './visual-reasoning-solver';
 import{solveReference,validateReferenceBoard,independentlyMatchesReference,REFERENCE_TOPICS}from'./reference-lab';
@@ -38,6 +39,13 @@ export function solveQuestion(q: BaseQuestion): UniversalSolverResult {
   });
   try {
     if (!q || !Array.isArray(q.options) || q.options.length !== 4 || q.options.some(o => !o)) return failure('Dört geçerli seçenek gerekli.');
+    if((q.visualConfig as Record<string,unknown>)?.displayMode==='composite_shadow'){
+      const b=validateShadowBoard(q.visualConfig);
+      if(q.type!=='shadow_matching'||b.grade!==q.targetGrade)return failure('Birleşik gölge konusu/sınıfı uyuşmuyor.');
+      const key=shadowKey(shadowAnswer(b)),primary=q.options.filter(o=>validShadowValue(o.visualData)&&shadowKey(o.visualData)===key),independent=q.options.filter(o=>independentlyMatchesShadow(b,o.visualData));
+      if(primary.length!==1||independent.length!==1||primary[0].id!==independent[0].id)return failure('Birleşik gölgede tek görünür çözüm gerekli.',true);
+      return {canSolve:true,isMatch:primary[0].id===q.correctOptionId,expectedAnswerId:primary[0].id,expectedFingerprint:fingerprint(primary[0].visualData),solverMethod:'CompositeUnion-and-WindingProof-v1',confidence:1,ambiguityDetected:false,proofSteps:['Renklerden bağımsız birleşik dış alan ve iç boşluklar çıkarıldı.','Her şık bağımsız sarım sayısı ve görünür alan hesabıyla karşılaştırıldı.','Tek uygun gölge: '+primary[0].id]};
+    }
     if((q.visualConfig as Record<string,unknown>)?.displayMode==='visual_lab'){
       const b=validateVisualBoard(q.visualConfig);if(visualTopic(b.mechanic,b.grade,b.mechanic==='cube-evidence'?b.cube:undefined)!==q.type||b.grade!==q.targetGrade)return failure('Görsel muhakeme konusu/sınıfı uyuşmuyor.');
       const answer=solveVisualBoard(b,q.options.map(o=>o.visualData as VisualValue));

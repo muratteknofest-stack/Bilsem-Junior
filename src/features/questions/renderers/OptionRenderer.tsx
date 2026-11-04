@@ -1,3 +1,5 @@
+import { CompositeShadowArt } from './CompositeShadowBoard';
+import { validShadowValue } from '../composite-shadow';
 import {validVisualValue} from '../visual-reasoning-lab';
 import {VisualValueArt} from './VisualReasoningBoard';
 import{ReferenceLabBoard,ReferenceValueArt}from'./ReferenceLabBoard';
@@ -73,6 +75,7 @@ export const OptionRenderer: React.FC<OptionRendererProps> = ({
   }
 
   const renderVisualContent = () => {
+    if(validShadowValue(visualData))return <CompositeShadowArt value={visualData}/>;
     if((visualData as Record<string,unknown>)?.lab&&validVisualValue(visualData))return <VisualValueArt value={visualData}/>;
     if(validExamTile(visualData))return <ExamTileArt value={visualData}/>;
     if(validReferenceValue(visualData)&&'reference'in visualData)return <ReferenceValueArt value={visualData}/>;

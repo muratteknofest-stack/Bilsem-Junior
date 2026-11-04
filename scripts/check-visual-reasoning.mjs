@@ -11,7 +11,7 @@ try {
  await page.route('**/*',route=>new URL(route.request().url()).origin==='http://127.0.0.1:5182'?route.continue():route.abort());
  await page.goto('http://127.0.0.1:5182/tests/browser/question-screen.html');await page.locator('.zp-focus').waitFor();
  await page.evaluate(async()=>{await document.fonts.ready;});
- const mechanics=['object-shadow','scene-difference','object-mirror','fold-punch','seven-piece','missing-symbol','raven-relation','cube-evidence'];let checked=0;
+ const mechanics=['compound-shadow','object-shadow','scene-difference','object-mirror','fold-punch','seven-piece','missing-symbol','raven-relation','cube-evidence'];let checked=0;
  const rasterSignatures=new Map();
  for(const [width,height] of [[320,480],[360,640],[390,844],[768,1024],[667,375]])for(const grade of [1,2,3,4])for(const mechanic of mechanics)for(let sample=1;sample<=3;sample++){
   await page.setViewportSize({width,height});
@@ -33,7 +33,7 @@ try {
  }
  // Raster proofs reject accidentally identical options after real SVG rendering.
  await page.setViewportSize({width:390,height:844});
- for(const mechanic of ['object-shadow','object-mirror','seven-piece','fold-punch','raven-relation','missing-symbol']){
+ for(const mechanic of ['compound-shadow','object-shadow','object-mirror','seven-piece','fold-punch','raven-relation','missing-symbol']){
   await page.evaluate(m=>window.__showVisual(m,3,3,7919),mechanic);await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
   const signatures=await page.locator('.zp-answer-option svg').evaluateAll(async svgs=>Promise.all(svgs.map(async svg=>{
    const clone=svg.cloneNode(true);clone.setAttribute('xmlns','http://www.w3.org/2000/svg');clone.setAttribute('width','256');clone.setAttribute('height','256');clone.removeAttribute('class');

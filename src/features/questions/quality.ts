@@ -1,3 +1,4 @@
+import { SHADOW_ENGINE, validateShadowBoard, generateShadowQuestion, shadowKey, shadowAnswer } from './composite-shadow';
 import {VISUAL_LAB_ENGINE,validateVisualBoard,visualTopic,generateVisualQuestion} from './visual-reasoning-lab';
 import{REFERENCE_ENGINE,REFERENCE_TOPICS,validateReferenceBoard,generateReferenceQuestion,generateReferenceQuestionV1,isReferenceEngine}from'./reference-lab';
 import {EXAM_ENGINE,examTopic,validateExamBoard,generateExamQuestion} from './exam-lab';
@@ -57,6 +58,7 @@ export function questionVisualKey(q: QuestionVisualReference): string {
 /** A changed wrong answer is not a new exercise. Hidden cells cannot create novelty. */
 export function questionStimulusKey(q: Pick<BaseQuestion, 'type' | 'visualConfig'>): string {
   const visual = publicVisualConfig(q);
+  if((visual as Record<string,unknown>)?.displayMode==='composite_shadow')return fingerprint({type:q.type,shadow:shadowKey(shadowAnswer(validateShadowBoard(visual)))});
   const board = visual && typeof visual === 'object' ? Object.fromEntries(Object.entries(visual).filter(([name]) => name !== 'grade' && !(name === 'turns' && 'operation' in visual && visual.operation !== 'rotate'))) : visual;
   return fingerprint({ type: q.type, board });
 }
@@ -81,6 +83,11 @@ export function auditQuestion(value: unknown, existing: QuestionVisualReference[
     if (!Number.isFinite(q.estimatedSeconds) || q.estimatedSeconds < 10 || q.estimatedSeconds > 600) result.errors.push('Tahmini süre 10–600 saniye arasında olmalı.');
     if (!q.visualConfig || typeof cfg?.displayMode !== 'string') result.errors.push('Görsel gösterim yapılandırması eksik.');
     if (!Array.isArray(q.skills) || q.skills.length === 0) result.warnings.push('Ölçülen beceriyi belirtin.');
+    if(cfg?.displayMode==='composite_shadow'){
+      const board=validateShadowBoard(cfg);
+      if(q.authoring?.engine!==SHADOW_ENGINE||!isSchoolGrade(q.targetGrade)||board.grade!==q.targetGrade||q.type!=='shadow_matching')result.errors.push('Birleşik gölge motoru/sınıfı/konusu uyuşmuyor.');
+      else {const reference=generateShadowQuestion(q.seed,q.difficulty,q.targetGrade);for(const field of ['prompt','secondaryPrompt','explanation','visualConfig','category','options','authoring'] as const)if(fingerprint(q[field])!==fingerprint(reference[field]))result.reviewRequired.push('Birleşik gölge şablonu değişmiş: '+field);}
+    }
     if(cfg?.displayMode==='visual_lab'){
       const board=validateVisualBoard(cfg);
       if(q.authoring?.engine!==VISUAL_LAB_ENGINE||!isSchoolGrade(q.targetGrade)||board.grade!==q.targetGrade||visualTopic(board.mechanic,board.grade,board.mechanic==='cube-evidence'?board.cube:undefined)!==q.type)result.errors.push('Görsel muhakeme sürümü/sınıfı/konusu uyuşmuyor.');

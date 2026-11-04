@@ -70,6 +70,11 @@ export function inspectEducation(q: BaseQuestion, grade: SchoolGrade, age?: numb
   }
   if((q.visualConfig as Record<string,unknown>).displayMode==='colorful_board'){const c=q.visualConfig as unknown as ColorfulBoard;metrics.gridSize=c.source?.art==='mosaic'?c.source.size:0;metrics.itemCount=metrics.gridSize**2||c.layers?.length||1;}
   const audience: string[] = [], difficulty: string[] = [], visual: string[] = [];
+  if((q.visualConfig as Record<string,unknown>).displayMode==='composite_shadow'){
+    const v=q.visualConfig as import('./composite-shadow').ShadowBoard;
+    metrics.maxNumber=0;metrics.gridSize=0;metrics.peopleCount=0;metrics.symbolCount=v.shapes.length;metrics.itemCount=v.shapes.length+v.holes.length;
+    if(v.grade!==grade)audience.push('GRADE_MISMATCH: Birleşik gölge sınıfı uyuşmuyor.');
+  }
   if((q.visualConfig as Record<string,unknown>).displayMode==='visual_lab'){
     const v=q.visualConfig as import('./visual-reasoning-lab').VisualBoard;
     metrics.maxNumber=0;metrics.peopleCount=0;metrics.gridSize=0;metrics.symbolCount=0;metrics.itemCount=0;
