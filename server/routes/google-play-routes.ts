@@ -28,7 +28,7 @@ routes.get('/parent/google-play/access', sharedRateLimit('play-access', 60, 600)
     const ready = licenseTest ? playSetupReady() && licenseTestLegalReady(settings) : paidSalesReady(settings);
     const access = await googlePlayAccess(req.authUser!.uid, id);
     const enforced = await studentRequiresPaidAccess(id) || licenseTest;
-    res.json({ ready, storeUrl: playStoreListing(), enforced, productId: config.productId, plans: PLAY_PLANS, binding: process.env.GOOGLE_PLAY_BINDING_SECRET ? playBindings(req.authUser!.uid, id) : null, access });
+    res.json({ ready, licenseTest, storeUrl: playStoreListing(), enforced, productId: config.productId, plans: PLAY_PLANS, binding: process.env.GOOGLE_PLAY_BINDING_SECRET ? playBindings(req.authUser!.uid, id) : null, access });
   } catch (error) { failure(error, res); }
 });
 routes.post('/parent/google-play/prepare', sharedRateLimit('play-prepare', 12, 3600), async (req: AuthenticatedRequest, res) => {

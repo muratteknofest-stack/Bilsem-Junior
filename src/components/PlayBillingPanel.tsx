@@ -36,6 +36,7 @@ export function PlayBillingPanel({ state, studentName, online = true, onPurchase
       <div className="zp-play-perks"><span><Sparkles size={14} aria-hidden="true"/>Konu testleri</span><span><Rocket size={14} aria-hidden="true"/>Adaptif çalışma</span><span><Crown size={14} aria-hidden="true"/>Veli takibi</span></div>
     </div>
     <div className="zp-play-body">
+      {config?.licenseTest && <p className="zp-play-state-note" role="status"><ShieldCheck size={20} aria-hidden="true"/>Lisans testi oturumu. Google Play lisans testçisi hesabınızı kullanın. Ödeme ekranında “Test kartı” görünmüyorsa işlemi tamamlamayın.</p>}
       {studentName && <p className="zp-play-student"><span aria-hidden="true"><Gift size={20}/></span><span>Bu macera <strong>{studentName} için</strong></span><span className="zp-play-student-tag">Öğrenciye özel</span></p>}
       <ol className="zp-play-journey" aria-label="Abonelik adımları">
         <li data-done={!!config?.binding}><span>{config?.binding ? <Check size={14} aria-hidden="true"/> : '1'}</span>Öğrenci</li>
@@ -70,7 +71,7 @@ export function PlayBillingPanel({ state, studentName, online = true, onPurchase
         </fieldset>
         <div className="zp-play-checkout"><button type="button" disabled={!canPurchase} onClick={() => onPurchase(selected)} className="zp-play-buy">
           {busy ? <LoaderCircle size={20} aria-hidden="true"/> : canPurchase ? <ShieldCheck size={22} aria-hidden="true"/> : <LockKeyhole size={20} aria-hidden="true"/>}
-          <span>{busy ? phaseText : 'Google Play ile devam et'}</span>{!busy && canPurchase && <ArrowRight size={19} aria-hidden="true"/>}
+          <span>{busy ? phaseText : config?.licenseTest ? 'Google Play testini aç' : 'Google Play ile devam et'}</span>{!busy && canPurchase && <ArrowRight size={19} aria-hidden="true"/>}
         </button>{canPurchase && selectedOffer ? <p>{selectedPlan.title} · {selectedOffer.price} · {selectedPlan.renewal} otomatik yenilenir</p> : !busy && <p>{!online ? 'Bağlantı geldiğinde Yenile’ye dokunup devam edebilirsiniz.' : config && !config.ready ? 'Abonelik satışı henüz açık değil.' : !fresh ? 'Bilgileri tekrar yüklemek için Yenile’ye dokunun.' : !state.storeChecked ? 'Önce mevcut satın alımları geri yükleyerek kontrol edin.' : 'Bu hesap için şu anda satın alınabilir dönem yok.'}</p>}</div>
       </>}
       <div className="zp-play-notice" data-tone={notice.kind} role={notice.kind === 'error' ? 'alert' : 'status'} aria-live={notice.kind === 'error' ? 'assertive' : 'polite'}><NoticeIcon size={20} aria-hidden="true"/><span>{displayNotice}</span></div>

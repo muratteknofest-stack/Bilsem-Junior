@@ -7,7 +7,7 @@ export const playAccessSchema = z.object({ active: z.boolean(), expiresAt: z.iso
   .refine(v => !v.active || v.expiresAt !== null);
 const bindingSchema = z.object({ accountId: z.string().regex(/^[a-f0-9]{64}$/), profileId: z.string().regex(/^[a-f0-9]{64}$/) });
 const productId = z.string().regex(/^[a-z0-9][a-z0-9_.]{0,39}$/);
-export const playConfigSchema = z.object({ ready: z.boolean(), enforced: z.boolean(), productId,
+export const playConfigSchema = z.object({ ready: z.boolean(), enforced: z.boolean(), licenseTest: z.boolean().optional(), productId,
   binding: bindingSchema.nullable(), storeUrl: z.string().refine(safePlayStoreUrl).nullable().optional(), access: playAccessSchema }).refine(v => !v.ready || v.binding !== null);
 const preparedSchema = bindingSchema.extend({ productId });
 const purchaseSchema = z.object({ purchases: z.array(z.object({ token: z.string().min(8).max(4096), state: z.enum(['purchased','pending']),
