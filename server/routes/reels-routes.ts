@@ -26,12 +26,11 @@ export const manualReelSchema = z.object({
   message: 'Karma örüntü en az 2. sınıf ve 2. düzey gerektirir.',
 });
 
-const DEFAULT_GH_PARTS = ['ghp', '_KsrfgE4bAej5', 'Mvu71ZjlWSUo0', 'vyPMX2cadxO'];
 function token() {
   return (
     process.env.GITHUB_REELS_TOKEN?.trim() ||
     process.env.GITHUB_TOKEN?.trim() ||
-    (process.env.NODE_ENV === 'test' ? '' : DEFAULT_GH_PARTS.join(''))
+    ''
   );
 }
 function storageOrigin() {
@@ -43,17 +42,14 @@ function storageBucket() {
   return /^[a-z0-9_-]{3,64}$/.test(raw) ? raw : null;
 }
 
-const DEFAULT_IG_TOKEN = 'EAAikDZCZAJ6SQBS7TZCD1ZAQLmG6ZB5j0klDfnPKlFcpVgo0y8Xiwg99vNmzFFWCZB5UaMdqPwmMZCwAkECqpEfmkftbfFImSY9D7lhVPquZBRtj3WCMx6F2uL4rbsJhalBE5oRLKM1iPrQWrrrUtriuIvcm657QIddi9ZBxiiC96i9npZCFCpv3R7sFTlZAhEJTbce4gITUTKCe8XlPwZDZD';
-const DEFAULT_IG_ACCOUNT_ID = '17841471767535717';
-
 function igToken() {
-  return process.env.INSTAGRAM_ACCESS_TOKEN?.trim() || DEFAULT_IG_TOKEN;
+  return process.env.INSTAGRAM_ACCESS_TOKEN?.trim() || '';
 }
 function igAccountId() {
   return (
     process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID?.trim() ||
     process.env.INSTAGRAM_ACCOUNT_ID?.trim() ||
-    DEFAULT_IG_ACCOUNT_ID
+    ''
   );
 }
 
@@ -180,11 +176,17 @@ router.post('/admin/reels/generate',
     }
   });
 
-router.post('/instagram/publish', async (req, res) => {
+router.post('/instagram/publish', requireSupabaseAuth, requireVerifiedEmail, requireProfileRole('admin'), adminAiLimiter, async (req, res) => {
   try {
     const body = (req.body || {}) as Record<string, unknown>;
     const accessToken = igToken();
     const accountId = igAccountId();
+    if (!accessToken || !accountId) {
+      return res.status(503).json({
+        ok: false,
+        error: 'Instagram yayınlama için sunucuda INSTAGRAM_ACCESS_TOKEN ve INSTAGRAM_BUSINESS_ACCOUNT_ID ayarlanmalı.',
+      });
+    }
     const action = String(body.action || 'init');
 
     if (action === 'verify') {

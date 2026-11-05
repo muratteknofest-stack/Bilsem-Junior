@@ -233,3 +233,22 @@ test('Storage retirement refuses active references and retains every object and 
   assert.equal((await db.query<{n:number}>('select count(*)::integer as n from storage.objects')).rows[0].n,2);
  }finally{await db.close();}
 });
+
+test('production and storage shields support the 21-table schema with lesson_audio and preserve service_role narration writes',{timeout:120_000},async()=>{
+ const db=await createShieldDatabase();try{
+  await seed(db);
+  await db.exec(await readFile(new URL('../supabase/migrations/20261027063559_lesson_audio.sql',import.meta.url),'utf8'));
+  await applyShield(db,await databaseShieldSql());
+  await db.exec("update storage.buckets set public=false where id='exam-images'");
+  await applyShield(db,await storageShieldSql());
+  await withRole(db,'service_role',undefined,async()=>{
+   await db.query(`insert into public.lesson_audio(lesson_id,lesson_version,step,object_path,narrator,rights_reference,human_recording,content_type,bytes,uploaded_by)
+    values('visual_sequence',1,0,'visual_sequence/v1/step-0.mp3','Test Narrator','BJ-VOICE-RIGHTS-2026',true,'audio/mpeg',1024,$1)`,[admin]);
+   assert.equal((await db.query<{n:number}>('select count(*)::integer as n from public.lesson_audio')).rows[0].n,1);
+  });
+  for(const role of ['anon','authenticated'] as const)await withRole(db,role,role==='authenticated'?childA:undefined,async()=>{
+   await denied(()=>db.query('select * from public.lesson_audio'));
+   await denied(()=>db.query(`insert into storage.objects(bucket_id,name) values('bilsem-lesson-audio','forged.mp3')`));
+  });
+ }finally{await db.close();}
+});

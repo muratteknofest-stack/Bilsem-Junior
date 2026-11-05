@@ -31,9 +31,12 @@ export async function studentAccessPolicy(studentId: string) {
     created = await authCreationTime(studentId);
     if (created < before) return { lifetime: true, requiresSubscription: false };
   }
-  if (process.env.GOOGLE_PLAY_ENFORCE_PAID_ACCESS === 'true') return { lifetime: false, requiresSubscription: true };
   const startsAt = paidAccessStartsAt();
-  return { lifetime: false, requiresSubscription: startsAt !== null && (created ?? await authCreationTime(studentId)) >= startsAt };
+  if (startsAt !== null) {
+    return { lifetime: false, requiresSubscription: (created ?? await authCreationTime(studentId)) >= startsAt };
+  }
+  if (process.env.GOOGLE_PLAY_ENFORCE_PAID_ACCESS === 'true') return { lifetime: false, requiresSubscription: true };
+  return { lifetime: false, requiresSubscription: false };
 }
 export async function studentRequiresPaidAccess(studentId: string): Promise<boolean> {
   return (await studentAccessPolicy(studentId)).requiresSubscription;

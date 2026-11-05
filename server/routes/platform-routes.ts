@@ -114,5 +114,94 @@ export default function createPlatformRoutes(publicSettings: CachedRead<Settings
     },
   );
 
+  routes.get(
+    "/admin/users",
+    requireSupabaseAuth,
+    requireVerifiedEmail,
+    requireProfileRole("admin"),
+    accountSecurityLimiter,
+    async (_req, res) => {
+      const client = getServiceClient();
+      const [profilesRes, subsRes] = await Promise.all([
+        client
+          .from("profiles")
+          .select("id,email,name,role,student_code,linked_student_ids,linked_parent_id,grade,avatar,level,xp,streak,longest_streak,last_active_date,today_practiced,streak_freeze_count,total_questions_solved,resolved_mistakes_count,created_at,last_login_at,deletion_pending")
+          .order("created_at", { ascending: false })
+          .limit(200),
+        client
+          .from("google_play_subscriptions")
+          .select("parent_id,student_id,base_plan_id,subscription_state,expires_at,auto_renewing,test_purchase,verified_at")
+          .order("verified_at", { ascending: false })
+          .limit(200),
+      ]);
+      if (profilesRes.error) return res.status(500).json({ error: "Kullanıcı dizini yüklenemedi." });
+      const subsByStudent = new Map<string, {
+        parentId: string | null;
+        basePlanId: string;
+        state: string;
+        expiresAt: string | null;
+        autoRenewing: boolean;
+        testPurchase: boolean;
+        verifiedAt: string;
+      }>();
+      if (!subsRes.error && subsRes.data) {
+        for (const sub of subsRes.data) {
+          if (sub.student_id && !subsByStudent.has(sub.student_id)) {
+            subsByStudent.set(sub.student_id, {
+              parentId: sub.parent_id,
+              basePlanId: sub.base_plan_id,
+              state: sub.subscription_state,
+              expiresAt: sub.expires_at,
+              autoRenewing: sub.auto_renewing,
+              testPurchase: sub.test_purchase,
+              verifiedAt: sub.verified_at,
+            });
+          }
+        }
+      }
+      const lifetimeCutoff = lifetimeAccessBefore();
+      const paidStarts = paidAccessStartsAt();
+      const users = (profilesRes.data || []).map((p) => {
+        const createdMs = typeof p.created_at === "number" ? p.created_at : null;
+        const isLifetimeLegacy =
+          p.role === "student" &&
+          createdMs !== null &&
+          ((lifetimeCutoff !== null && createdMs < lifetimeCutoff) ||
+            (paidStarts !== null && createdMs < paidStarts));
+        const sub = subsByStudent.get(p.id) || null;
+        const subActive =
+          !!sub &&
+          ["SUBSCRIPTION_STATE_ACTIVE", "SUBSCRIPTION_STATE_IN_GRACE_PERIOD", "SUBSCRIPTION_STATE_CANCELED"].includes(sub.state) &&
+          (!sub.expiresAt || Date.parse(sub.expiresAt) > Date.now());
+        return {
+          id: p.id,
+          email: p.email || null,
+          name: p.name,
+          role: p.role,
+          studentCode: p.student_code || null,
+          linkedStudentIds: Array.isArray(p.linked_student_ids) ? p.linked_student_ids : [],
+          linkedParentId: p.linked_parent_id || null,
+          grade: p.grade || null,
+          avatar: p.avatar || "🦊",
+          level: p.level || 1,
+          xp: p.xp || 0,
+          streak: p.streak || 0,
+          longestStreak: p.longest_streak || 0,
+          lastActiveDate: p.last_active_date || "",
+          todayPracticed: !!p.today_practiced,
+          streakFreezeCount: p.streak_freeze_count || 0,
+          totalQuestionsSolved: p.total_questions_solved || 0,
+          resolvedMistakesCount: p.resolved_mistakes_count || 0,
+          createdAt: createdMs,
+          lastLoginAt: typeof p.last_login_at === "number" ? p.last_login_at : null,
+          deletionPending: !!p.deletion_pending,
+          accessTier: p.role !== "student" ? p.role : subActive ? "subscriber" : isLifetimeLegacy ? "legacy_lifetime" : "free",
+          subscription: sub,
+        };
+      });
+      return res.json({ users });
+    },
+  );
+
   return routes;
 }

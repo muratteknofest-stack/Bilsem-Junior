@@ -31,6 +31,7 @@ test('Reels status and generation endpoints reject unverified anonymous callers'
     for (const [method,path,body] of [
       ['GET','/api/admin/reels',undefined],
       ['POST','/api/admin/reels/generate',JSON.stringify({grade:2,difficulty:2,mechanic:'auto'})],
+      ['POST','/api/instagram/publish',JSON.stringify({action:'verify'})],
     ] as const) {
       const response: Response = await fetch('http://127.0.0.1:'+address.port+path, {
         method, headers: {'Content-Type':'application/json'}, ...(body?{body}:{})
@@ -58,6 +59,7 @@ test('Reels manual pipeline is preview-only and protects publishing credentials'
   assert.match(route,/sharedRateLimit\('admin-manual-reels'/);
   assert.match(route,/GITHUB_REELS_TOKEN/);
   assert.match(route,/ref: 'main'/);
+  assert.doesNotMatch(route,/DEFAULT_GH_PARTS|DEFAULT_IG_TOKEN|EAAikD|ghp_/);
   assert.match(uploader,/Does NOT publish to Instagram/);
   assert.doesNotMatch(uploader,/graph\.facebook\.com|media_publish/);
   assert.match(admin,/Instagram Reels Stüdyosu/);

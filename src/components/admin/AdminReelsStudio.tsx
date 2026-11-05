@@ -534,7 +534,7 @@ export function AdminReelsStudio() {
     setNotice('1/3 • Instagram Reels yükleme oturumu başlatılıyor (Meta Graph API)…');
 
     try {
-      const initRes = await fetch('/api/instagram/publish', {
+      const initRes = await authenticatedFetch('/api/instagram/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -564,7 +564,7 @@ export function AdminReelsStudio() {
         const pct = Math.min(99, Math.round(((offset + slice.length) / totalSize) * 100));
         setNotice(`2/3 • Video Instagram sunucusuna aktarılıyor… %${pct}`);
 
-        const chunkRes = await fetch('/api/instagram/publish', {
+        const chunkRes = await authenticatedFetch('/api/instagram/publish', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -586,7 +586,7 @@ export function AdminReelsStudio() {
       let publishedUrl = '';
       for (let attempt = 1; attempt <= 28; attempt++) {
         await new Promise((r) => setTimeout(r, 3000));
-        const finRes = await fetch('/api/instagram/publish', {
+        const finRes = await authenticatedFetch('/api/instagram/publish', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -628,7 +628,7 @@ export function AdminReelsStudio() {
     setError('');
     setNotice('GitHub Actions (bilsem-junior-reels.yml) ve Meta Graph API (@bilsem_junior) bağlantıları doğrulanıyor…');
     try {
-      const res = await fetch('/api/instagram/publish', {
+      const res = await authenticatedFetch('/api/instagram/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'verify' }),

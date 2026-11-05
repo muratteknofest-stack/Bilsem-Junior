@@ -74,9 +74,11 @@ import { CreateQuestionWizard } from './CreateQuestionWizard';
 import { QuestionAuthoringWorkbench } from './admin/QuestionAuthoringWorkbench';
 import { AdminAiQuestionEngine } from './admin/AdminAiQuestionEngine';
 import { AdminReelsStudio } from './admin/AdminReelsStudio';
+import { AdminStudentCohort } from './admin/AdminStudentCohort';
 
 type AdminTab =
   | 'dashboard'
+  | 'users'
   | 'questions'
   | 'question_review'
   | 'bulk_generator'
@@ -172,6 +174,7 @@ export const AdminPanelView: React.FC = () => {
 
   const tabs: { id: AdminTab; label: string; icon: any; badge?: string }[] = [
     { id: 'dashboard', label: 'Genel Bakış', icon: Activity },
+    { id: 'users', label: 'Kullanıcı & Abonelik Dizini', icon: Users, badge: 'Canlı' },
     { id: 'questions', label: 'Soru Bankası & Yönetim', icon: FileQuestion, badge: 'Havuz' },
     { id: 'question_review', label: 'Eğitmen Onayı', icon: CheckCircle2, badge: 'İnceleme' },
     { id: 'bulk_generator', label: 'Toplu Soru Motoru', icon: Zap, badge: 'Turbo' },
@@ -249,7 +252,7 @@ export const AdminPanelView: React.FC = () => {
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               SİSTEM AKTİF
             </span>
-            <span className="text-slate-400 font-mono text-[10px]">%99.98 Uptime</span>
+            <span className="text-slate-400 font-mono text-[10px]">RLS + MFA Korumalı</span>
           </div>
         </div>
         
@@ -427,6 +430,9 @@ export const AdminPanelView: React.FC = () => {
                   onOpenDiagnostics={() => setShowDiagnosticsModal(true)}
                 />
               )}
+
+              {/* TAB: USERS & SUBSCRIPTIONS DIRECTORY */}
+              {activeTab === 'users' && <AdminStudentCohort />}
 
               {/* TAB 2: QUESTIONS MANAGER & STUDIO */}
               {activeTab === 'question_review' && <QuestionAuthoringWorkbench initialSection="library" reviewMode onPendingChanges={onPendingQuestions} />}

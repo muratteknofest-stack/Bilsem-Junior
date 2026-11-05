@@ -77,18 +77,6 @@ export async function loadPublishedQuestions(): Promise<BaseQuestion[]> {
 
 export async function clearAllSupabaseQuestions(): Promise<number> {
   await requireAdminUser();
-  const snapshot = await getDocs(collection(db, 'questions'));
-  if (snapshot.empty) return 0;
-
-  // Supabase batch delete
-  const batch = writeBatch(db);
-  let count = 0;
-  snapshot.docs.forEach((document) => {
-    batch.delete(doc(db, 'questions', document.id));
-    count++;
-  });
-  
-  await batch.commit();
-  return count;
+  throw new Error('Canlı soru veritabanını toplu sıfırlama işlemi veri güvenliği politikası gereği devre dışı bırakılmıştır.');
 }
 

@@ -48,8 +48,8 @@ drop policy if exists exam_images_admin_delete on storage.objects;
 -- Other buckets retain their independent policies. Server Storage API access remains.
 drop policy if exists bilsem_server_only_objects_v1 on storage.objects;
 create policy bilsem_server_only_objects_v1 on storage.objects as restrictive for all to anon,authenticated
- using (bucket_id not in ('exam-images','bilsem-question-visual-drafts-v2'))
- with check (bucket_id not in ('exam-images','bilsem-question-visual-drafts-v2'));
+ using (bucket_id not in ('exam-images','bilsem-question-visual-drafts-v2','bilsem-lesson-audio'))
+ with check (bucket_id not in ('exam-images','bilsem-question-visual-drafts-v2','bilsem-lesson-audio'));
 
 notify pgrst,'reload schema';
 commit;
