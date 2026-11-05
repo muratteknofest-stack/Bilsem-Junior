@@ -1,5 +1,7 @@
 ## 1.0.48 — Süresiz üyelik ve ücretsiz keşif
 
+- GitHub Actions çalışmazsa test APK'sını yetkili bilgisayarda oluşturmak için [yerel Android oluşturma rehberi](android-local-apk-build-20261105.md) ve `scripts/build-android-without-actions.py` eklendi. Bu araç imzası doğrulanmış test APK'sı üretir, Play üretim yayını veya ticari yayın kabulü değildir.
+
 - APK indirme ve sunucuya yüklenmiş dosyanın boş/HTML/hasarlı olmama kontrolü için [5 Kasım 2026 kurtarma rehberi](apk-download-recovery-20261105.md) ve `scripts/verify-apk-download.py` eklendi. GitHub Actions hesabı iş başlatamadığından indirilebilir paket hâlâ kanıtlanmış değildir; ticari yayın kabulü ayrıca gereklidir.
 
 - Mevcut öğrencilerin sunucuda belirlenen kayıt tarihine göre süresiz tam erişimi; web ve Android’de aynı üyelik durumu.
