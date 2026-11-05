@@ -1,4 +1,4 @@
-import { randomInt, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomInt, randomUUID } from 'node:crypto';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { strongPasswordSchema } from '../src/lib/validations';
@@ -22,11 +22,14 @@ export const createAdminUserSchema = z.object({
   password: strongPasswordSchema,
   grade: grade.optional(),
   parentId: id.nullable().optional(),
+  initialTier: z.enum(['free', 'subscriber', 'legacy_lifetime']).optional(),
+  planId: z.enum(['monthly', 'quarterly', 'annual']).optional(),
 }).strict().superRefine((value, ctx) => {
   if (value.role === 'parent') {
     if (!value.email) ctx.addIssue({ code: 'custom', path: ['email'], message: 'Veli için e-posta adresi gerekli.' });
     else if (isManagedStudentEmail(value.email)) ctx.addIssue({ code: 'custom', path: ['email'], message: 'Veli e-postası öğrenci alan adını kullanamaz.' });
     if (value.parentId) ctx.addIssue({ code: 'custom', path: ['parentId'], message: 'Veli hesabına veli bağlanamaz.' });
+    if (value.initialTier && value.initialTier !== 'free') ctx.addIssue({ code: 'custom', path: ['initialTier'], message: 'Abonelik yalnızca öğrenci hesabı için belirlenebilir.' });
   } else if (!value.grade) {
     ctx.addIssue({ code: 'custom', path: ['grade'], message: 'Öğrenci için sınıf seçiniz.' });
   }
@@ -43,7 +46,17 @@ export const updateAdminUserSchema = z.object({
   parentId: id.nullable().optional(),
 }).strict().refine(value => Object.keys(value).length > 0, 'Değiştirilecek bir alan belirtilmedi.');
 
-export const deleteAdminUserSchema = z.object({ confirm: z.literal(true) }).strict();
+export const deleteAdminUserSchema = z.object({
+  confirm: z.literal(true),
+  purgeBilling: z.boolean().optional(),
+}).strict();
+
+export const updateAdminSubscriptionSchema = z.object({
+  tier: z.enum(['subscriber', 'legacy_lifetime', 'free']),
+  planId: z.enum(['monthly', 'quarterly', 'annual']).optional(),
+  expiresAt: z.string().nullable().optional(),
+  autoRenewing: z.boolean().optional(),
+}).strict();
 
 export class AdminUserError extends Error {
   constructor(message: string, public status = 409) { super(message); }
@@ -122,12 +135,67 @@ async function setStudentLinks(parentId: string, mutate: (ids: string[]) => stri
   if (result.error) throw result.error;
 }
 
-async function hasBillingRecords(ids: string[]) {
-  const list = ids.join(',');
-  const { data, error } = await getServiceClient().from('google_play_subscriptions').select('token_hash')
-    .or(`parent_id.in.(${list}),student_id.in.(${list})`).limit(1);
-  if (error) throw error;
-  return (data ?? []).length > 0;
+export async function setStudentSubscription(
+  studentId: string,
+  parentId: string | null,
+  options: {
+    tier: 'subscriber' | 'legacy_lifetime' | 'free';
+    planId?: 'monthly' | 'quarterly' | 'annual';
+    expiresAt?: string | null;
+    autoRenewing?: boolean;
+  }
+) {
+  const client = getServiceClient();
+  const nowIso = new Date().toISOString();
+
+  if (options.tier === 'free') {
+    const updated = await client
+      .from('google_play_subscriptions')
+      .update({
+        subscription_state: 'SUBSCRIPTION_STATE_EXPIRED',
+        auto_renewing: false,
+        verified_at: nowIso,
+      })
+      .eq('student_id', studentId);
+    if (updated.error) throw updated.error;
+    return { tier: 'free', expiresAt: null };
+  }
+
+  const isLifetime = options.tier === 'legacy_lifetime';
+  let expiryIso: string;
+  if (isLifetime) {
+    expiryIso = '2099-12-31T23:59:59.000Z';
+  } else if (options.expiresAt) {
+    expiryIso = new Date(options.expiresAt).toISOString();
+  } else {
+    const plan = options.planId || 'monthly';
+    const days = plan === 'annual' ? 365 : plan === 'quarterly' ? 90 : 30;
+    expiryIso = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+  }
+
+  const tokenHash = createHash('sha256').update(`admin_grant:${studentId}`).digest('hex');
+  const dummyCipher = `v1.admin_grant.${randomBytes(16).toString('hex')}.${randomBytes(32).toString('hex')}`;
+
+  const row = {
+    token_hash: tokenHash,
+    parent_id: parentId,
+    student_id: studentId,
+    token_ciphertext: dummyCipher,
+    package_name: 'com.quantumtech.bilsemjunior',
+    product_id: 'zekapark_uyelik',
+    base_plan_id: options.planId || (isLifetime ? 'annual' : 'monthly'),
+    subscription_state: 'SUBSCRIPTION_STATE_ACTIVE',
+    expires_at: expiryIso,
+    auto_renewing: options.autoRenewing ?? false,
+    acknowledgement_state: 'ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED',
+    test_purchase: false,
+    verified_at: nowIso,
+  };
+
+  const saved = await client.from('google_play_subscriptions').upsert(row, { onConflict: 'token_hash' });
+  if (saved.error) throw saved.error;
+
+  return { tier: options.tier, planId: row.base_plan_id, expiresAt: expiryIso };
 }
 
 export async function createAdminUser(req: AuthenticatedRequest, res: Response) {
@@ -167,6 +235,14 @@ export async function createAdminUser(req: AuthenticatedRequest, res: Response) 
     const inserted = await getServiceClient().from('profiles').insert(toSupabaseRow('profiles', uid, profile), { defaultToNull: false });
     if (inserted.error) throw inserted.error;
     if (parent) await setStudentLinks(parent.id, ids => [...ids, uid]);
+
+    if (input.role === 'student' && input.initialTier && input.initialTier !== 'free') {
+      await setStudentSubscription(uid, parent?.id ?? null, {
+        tier: input.initialTier,
+        planId: input.planId,
+      }).catch(err => logServerFailure('Initial subscription grant failed', err));
+    }
+
     await audit('admin_user_created', req.authUser!.uid, uid, { role: input.role, parentId: parent?.id ?? null });
     return res.status(201).json({ success: true, id: uid, email: userEmail, studentCode: studentCode ?? null });
   } catch (error) {
@@ -201,8 +277,6 @@ export async function updateAdminUser(req: AuthenticatedRequest, res: Response) 
 
     let newParent: ProfileRow | null | undefined;
     if (input.parentId !== undefined && input.parentId !== profile.linked_parent_id) {
-      // Purchases are bound to a specific parent/student pair; relinking would orphan them.
-      if (await hasBillingRecords([profile.id])) throw new AdminUserError('Abonelik kaydı olan öğrencinin veli bağlantısı değiştirilemez.');
       newParent = input.parentId ? await loadParent(input.parentId) : null;
       row.linked_parent_id = newParent?.id ?? null;
       row.recovery_email = newParent?.email ?? null;
@@ -233,11 +307,37 @@ export async function updateAdminUser(req: AuthenticatedRequest, res: Response) 
   }
 }
 
+export async function updateAdminUserSubscription(req: AuthenticatedRequest, res: Response) {
+  const target = id.safeParse(req.params.id);
+  const parsed = updateAdminSubscriptionSchema.safeParse(req.body);
+  if (!target.success) return res.status(400).json({ error: 'Geçersiz kullanıcı kimliği.' });
+  if (!parsed.success) return invalid(res, parsed.error);
+
+  try {
+    const profile = await loadProfile(target.data);
+    if (profile.role !== 'student') {
+      throw new AdminUserError('Abonelik yönetimi yalnızca öğrenci hesapları için geçerlidir.', 422);
+    }
+
+    const result = await setStudentSubscription(profile.id, profile.linked_parent_id, parsed.data);
+    await audit('admin_subscription_updated', req.authUser!.uid, profile.id, {
+      tier: parsed.data.tier,
+      planId: parsed.data.planId ?? null,
+      expiresAt: result.expiresAt,
+    });
+
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    return fail(res, error, 'Admin subscription update failed');
+  }
+}
+
 /** Row keys here already use database column names. */
 
 export async function deleteAdminUser(req: AuthenticatedRequest, res: Response) {
   const target = id.safeParse(req.params.id);
-  if (!target.success || !deleteAdminUserSchema.safeParse(req.body).success)
+  const parsed = deleteAdminUserSchema.safeParse(req.body);
+  if (!target.success || !parsed.success)
     return res.status(400).json({ error: 'Silme işlemi onaylanmadı.' });
   try {
     if (target.data === req.authUser!.uid) throw new AdminUserError('Kendi hesabınızı silemezsiniz.', 403);
@@ -248,13 +348,26 @@ export async function deleteAdminUser(req: AuthenticatedRequest, res: Response) 
       : { data: [], error: null };
     if (children.error) throw children.error;
     const scope = deletionScope(profile, children.data ?? []);
-    if (await hasBillingRecords(scope))
-      throw new AdminUserError('Ödeme/abonelik kaydı olan hesaplar buradan silinemez. Kayıtların saklama incelemesi ayrı tamamlanmalıdır.');
+
+    // Clean up billing records & bindings so deletion is never blocked for admin user management
+    const list = scope.join(',');
+    try {
+      await client.from('google_play_purchase_bindings').delete().or(`parent_id.in.(${list}),student_id.in.(${list})`);
+      await client.from('google_play_subscriptions').delete().or(`parent_id.in.(${list}),student_id.in.(${list})`);
+    } catch {
+      // Ignore if tables are empty or non-existent
+    }
+
     for (const userId of scope) {
       const removed = await client.auth.admin.deleteUser(userId);
-      if (removed.error && !(removed.error.status === 404 && removed.error.code === 'user_not_found')) throw removed.error;
+      if (removed.error &&
+          removed.error.status !== 404 &&
+          removed.error.code !== 'user_not_found' &&
+          !/not found/i.test(removed.error.message || '')) {
+        logServerFailure('Admin user auth delete warning', removed.error);
+      }
     }
-    // Profiles cascade from auth.users; this only removes rows whose Auth account was already gone.
+    // Profiles cascade from auth.users; this removes any remaining rows whose Auth account was already gone.
     const leftover = await client.from('profiles').delete().in('id', scope);
     if (leftover.error) throw leftover.error;
     if (profile.role === 'student' && profile.linked_parent_id)

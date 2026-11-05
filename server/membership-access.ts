@@ -13,6 +13,21 @@ async function linkedParentId(studentId: string): Promise<string | null> {
   return student.data?.linked_parent_id || null;
 }
 export async function learningAccess(studentId: string) {
+  try {
+    const direct = await getServiceClient()
+      .from('google_play_subscriptions')
+      .select('subscription_state,expires_at,auto_renewing')
+      .eq('student_id', studentId)
+      .eq('subscription_state', 'SUBSCRIPTION_STATE_ACTIVE')
+      .order('verified_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (direct.data && (!direct.data.expires_at || Date.parse(direct.data.expires_at) > Date.now())) {
+      return { active: true, expiresAt: direct.data.expires_at, state: direct.data.subscription_state, autoRenewing: direct.data.auto_renewing };
+    }
+  } catch {
+    // Fall back to family billing check
+  }
   const parentId = await linkedParentId(studentId);
   if (!parentId) return {active:false,expiresAt:null};
   return googlePlayAccess(parentId,studentId);
@@ -20,6 +35,8 @@ export async function learningAccess(studentId: string) {
 export async function requireLearningAccess(studentId: string) {
   const policy = await studentAccessPolicy(studentId);
   if (policy.lifetime) return;
+  const direct = await learningAccess(studentId);
+  if (direct?.active) return;
   const enforced = policy.requiresSubscription;
   if (!enforced && licenseTestStudentId() !== studentId) return;
   const parentId = await linkedParentId(studentId);

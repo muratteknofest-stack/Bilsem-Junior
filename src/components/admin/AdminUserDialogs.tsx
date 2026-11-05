@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { authenticatedFetch } from '../../lib/api-client';
-import { AlertCircle, Loader2, X } from 'lucide-react';
+import { AlertCircle, CreditCard, Loader2, X } from 'lucide-react';
 import type { AdminUserRecord } from './AdminStudentCohort';
 
 type UserDialog = { mode: 'create' } | { mode: 'edit'; user: AdminUserRecord };
@@ -14,6 +14,8 @@ interface FormState {
   parentId: string;
   level: string;
   xp: string;
+  initialTier: 'free' | 'subscriber' | 'legacy_lifetime';
+  planId: 'monthly' | 'quarterly' | 'annual';
 }
 
 const inputClass = 'w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-purple-500 disabled:bg-slate-50 disabled:text-slate-400';
@@ -57,7 +59,8 @@ export const UserFormDialog: React.FC<{
   parents: AdminUserRecord[];
   onClose: () => void;
   onSaved: (message: string) => void;
-}> = ({ dialog, parents, onClose, onSaved }) => {
+  onOpenSubscription?: (user: AdminUserRecord) => void;
+}> = ({ dialog, parents, onClose, onSaved, onOpenSubscription }) => {
   const editing = dialog.mode === 'edit' ? dialog.user : null;
   const [form, setForm] = useState<FormState>({
     role: editing && editing.role !== 'admin' ? editing.role : 'student',
@@ -68,6 +71,8 @@ export const UserFormDialog: React.FC<{
     parentId: editing?.linkedParentId ?? '',
     level: String(editing?.level ?? 1),
     xp: String(editing?.xp ?? 0),
+    initialTier: 'free',
+    planId: 'monthly',
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,15 +81,42 @@ export const UserFormDialog: React.FC<{
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setBusy(true);
     setError(null);
+
+    // Client-side validation for password clarity
+    if (!editing && form.password) {
+      if (form.password.length < 8) {
+        setError('Şifre en az 8 karakter olmalıdır.');
+        return;
+      }
+      if (!/[A-Za-zğüşıöçĞÜŞİÖÇ]/.test(form.password)) {
+        setError('Şifre en az bir harf içermelidir.');
+        return;
+      }
+      if (!/\d/.test(form.password)) {
+        setError('Şifre en az bir rakam içermelidir.');
+        return;
+      }
+    } else if (editing && form.password) {
+      if (form.password.length < 8 || !/[A-Za-zğüşıöçĞÜŞİÖÇ]/.test(form.password) || !/\d/.test(form.password)) {
+        setError('Yeni şifre en az 8 karakter olmalı, harf ve rakam içermelidir.');
+        return;
+      }
+    }
+
+    setBusy(true);
     try {
       if (!editing) {
         await send('/api/admin/users', 'POST', {
           role: form.role,
           name: form.name,
           password: form.password,
-          ...(isStudent ? { grade: form.grade, parentId: form.parentId || null } : { email: form.email }),
+          ...(isStudent ? {
+            grade: form.grade,
+            parentId: form.parentId || null,
+            initialTier: form.initialTier,
+            planId: form.planId,
+          } : { email: form.email }),
         });
         onSaved(`${form.name} eklendi.`);
       } else {
@@ -136,6 +168,7 @@ export const UserFormDialog: React.FC<{
         <Field label={editing ? 'Yeni Şifre (boş bırakılırsa değişmez)' : 'Şifre'}>
           <input type="password" autoComplete="new-password" className={inputClass} value={form.password}
             onChange={e => set('password', e.target.value)} required={!editing} />
+          <span className="text-[10px] text-slate-400 block pt-0.5">En az 8 karakter, harf ve rakam içermelidir (Örn: Bilsem2026!).</span>
         </Field>
         {isStudent && (
           <>
@@ -152,10 +185,47 @@ export const UserFormDialog: React.FC<{
             </Field>
           </>
         )}
+        {isStudent && !editing && (
+          <Field label="Başlangıç Abonelik Planı">
+            <select
+              className={inputClass}
+              value={form.initialTier === 'subscriber' ? `subscriber_${form.planId}` : form.initialTier}
+              onChange={e => {
+                const val = e.target.value;
+                if (val === 'free') {
+                  set('initialTier', 'free');
+                } else if (val === 'legacy_lifetime') {
+                  set('initialTier', 'legacy_lifetime');
+                } else {
+                  set('initialTier', 'subscriber');
+                  set('planId', val.replace('subscriber_', '') as 'monthly' | 'quarterly' | 'annual');
+                }
+              }}
+            >
+              <option value="free">Ücretsiz Plan</option>
+              <option value="subscriber_monthly">Aktif Abone (1 Ay)</option>
+              <option value="subscriber_quarterly">Aktif Abone (3 Ay)</option>
+              <option value="subscriber_annual">Aktif Abone (1 Yıl)</option>
+              <option value="legacy_lifetime">Ömür Boyu VIP (Süresiz Erişim)</option>
+            </select>
+          </Field>
+        )}
         {editing && (
           <div className="grid grid-cols-2 gap-3">
             <Field label="Seviye"><input type="number" min={1} max={1000} className={inputClass} value={form.level} onChange={e => set('level', e.target.value)} /></Field>
             <Field label="XP"><input type="number" min={0} className={inputClass} value={form.xp} onChange={e => set('xp', e.target.value)} /></Field>
+          </div>
+        )}
+        {editing && editing.role === 'student' && onOpenSubscription && (
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={() => onOpenSubscription(editing)}
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold border border-purple-200 cursor-pointer"
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              <span>Abonelik & Erişim Seviyesini Değiştir</span>
+            </button>
           </div>
         )}
         <ErrorLine message={error} />
@@ -171,6 +241,180 @@ export const UserFormDialog: React.FC<{
   );
 };
 
+export const SubscriptionDialog: React.FC<{
+  user: AdminUserRecord;
+  onClose: () => void;
+  onSaved: (message: string) => void;
+}> = ({ user, onClose, onSaved }) => {
+  const [tier, setTier] = useState<'subscriber' | 'legacy_lifetime' | 'free'>(
+    user.accessTier === 'subscriber' ? 'subscriber' : user.accessTier === 'legacy_lifetime' ? 'legacy_lifetime' : 'free'
+  );
+  const [planId, setPlanId] = useState<'monthly' | 'quarterly' | 'annual'>(
+    ((user.subscription?.basePlanId as any) === 'annual' || (user.subscription?.basePlanId as any) === 'quarterly') ? (user.subscription?.basePlanId as any) : 'monthly'
+  );
+  const [expiresDate, setExpiresDate] = useState<string>(() => {
+    if (user.subscription?.expiresAt) {
+      try {
+        const d = new Date(user.subscription.expiresAt);
+        if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+      } catch {}
+    }
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d.toISOString().split('T')[0];
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handlePlanChange = (newPlan: 'monthly' | 'quarterly' | 'annual') => {
+    setPlanId(newPlan);
+    const days = newPlan === 'annual' ? 365 : newPlan === 'quarterly' ? 90 : 30;
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    setExpiresDate(d.toISOString().split('T')[0]);
+  };
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const payload: Record<string, unknown> = { tier };
+      if (tier === 'subscriber') {
+        payload.planId = planId;
+        payload.expiresAt = expiresDate ? new Date(`${expiresDate}T23:59:59.000Z`).toISOString() : null;
+      }
+      await send(`/api/admin/users/${user.id}/subscription`, 'POST', payload);
+      onSaved(`${user.name} kullanıcısının aboneliği başarıyla güncellendi.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Abonelik güncellenemedi.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal title={`Abonelik Yönetimi: ${user.name}`} onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500 font-bold">Öğrenci Kodu / E-posta:</span>
+            <span className="font-mono font-bold text-slate-800">{user.studentCode || user.email || user.id.slice(0, 8)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500 font-bold">Mevcut Durum:</span>
+            <span className="font-bold text-purple-700">
+              {user.accessTier === 'subscriber' ? 'Aktif Abone' : user.accessTier === 'legacy_lifetime' ? 'Ömür Boyu VIP' : 'Ücretsiz Plan'}
+              {user.subscription?.expiresAt && ` (Bitiş: ${new Date(user.subscription.expiresAt).toLocaleDateString('tr-TR')})`}
+            </span>
+          </div>
+        </div>
+
+        <Field label="Yeni Erişim / Abonelik Seviyesi">
+          <div className="grid grid-cols-1 gap-2">
+            <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+              tier === 'subscriber' ? 'border-emerald-500 bg-emerald-50/50 ring-1 ring-emerald-500' : 'border-zinc-200 hover:bg-slate-50'
+            }`}>
+              <input
+                type="radio"
+                name="tier"
+                value="subscriber"
+                checked={tier === 'subscriber'}
+                onChange={() => setTier('subscriber')}
+                className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
+              />
+              <div>
+                <div className="font-bold text-slate-900 text-xs">Aktif Abone (Süreli Üyelik)</div>
+                <div className="text-[11px] text-slate-500">Öğrenciye belirlenen süre boyunca tam erişim tanımlar.</div>
+              </div>
+            </label>
+
+            <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+              tier === 'legacy_lifetime' ? 'border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-500' : 'border-zinc-200 hover:bg-slate-50'
+            }`}>
+              <input
+                type="radio"
+                name="tier"
+                value="legacy_lifetime"
+                checked={tier === 'legacy_lifetime'}
+                onChange={() => setTier('legacy_lifetime')}
+                className="mt-0.5 text-indigo-600 focus:ring-indigo-500"
+              />
+              <div>
+                <div className="font-bold text-slate-900 text-xs">Ömür Boyu VIP (Süresiz Tam Erişim)</div>
+                <div className="text-[11px] text-slate-500">Süre sınırı olmadan sınırsız tam erişim yetkisi verir.</div>
+              </div>
+            </label>
+
+            <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+              tier === 'free' ? 'border-rose-400 bg-rose-50/50 ring-1 ring-rose-400' : 'border-zinc-200 hover:bg-slate-50'
+            }`}>
+              <input
+                type="radio"
+                name="tier"
+                value="free"
+                checked={tier === 'free'}
+                onChange={() => setTier('free')}
+                className="mt-0.5 text-rose-600 focus:ring-rose-500"
+              />
+              <div>
+                <div className="font-bold text-slate-900 text-xs">Ücretsiz Plan (Aboneliği Sonlandır)</div>
+                <div className="text-[11px] text-slate-500">Mevcut aktif aboneliği sonlandırır ve öğrenciyi ücretsiz plana döndürür.</div>
+              </div>
+            </label>
+          </div>
+        </Field>
+
+        {tier === 'subscriber' && (
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+            <Field label="Abonelik Planı">
+              <select
+                className={inputClass}
+                value={planId}
+                onChange={e => handlePlanChange(e.target.value as 'monthly' | 'quarterly' | 'annual')}
+              >
+                <option value="monthly">1 Aylık Plan (+30 Gün)</option>
+                <option value="quarterly">3 Aylık Plan (+90 Gün)</option>
+                <option value="annual">1 Yıllık Plan (+365 Gün)</option>
+              </select>
+            </Field>
+
+            <Field label="Bitiş Tarihi (Geçerlilik Sonu)">
+              <input
+                type="date"
+                className={inputClass}
+                value={expiresDate}
+                onChange={e => setExpiresDate(e.target.value)}
+                required
+              />
+            </Field>
+          </div>
+        )}
+
+        <ErrorLine message={error} />
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer"
+          >
+            Vazgeç
+          </button>
+          <button
+            type="submit"
+            disabled={busy}
+            className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            <span>Aboneliği Kaydet</span>
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+};
+
 export const DeleteUserDialog: React.FC<{
   user: AdminUserRecord;
   onClose: () => void;
@@ -179,12 +423,13 @@ export const DeleteUserDialog: React.FC<{
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const children = user.role === 'parent' ? user.linkedStudentIds.length : 0;
+  const hasBilling = !!user.subscription || user.accessTier === 'subscriber';
 
   const confirm = async () => {
     setBusy(true);
     setError(null);
     try {
-      const result = await send(`/api/admin/users/${user.id}/delete`, 'POST', { confirm: true });
+      const result = await send(`/api/admin/users/${user.id}/delete`, 'POST', { confirm: true, purgeBilling: true });
       onDeleted(`${result.deletedAccounts ?? 1} hesap silindi.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Silinemedi.');
@@ -196,8 +441,13 @@ export const DeleteUserDialog: React.FC<{
   return (
     <Modal title="Kullanıcıyı Sil" onClose={onClose}>
       <p className="text-xs text-slate-700">
-        <strong>{user.name}</strong> ({user.email || user.studentCode}) kalıcı olarak silinecek. Öğrencinin ilerlemesi, oturumları ve test kayıtları da silinir. Bu işlem geri alınamaz.
+        <strong>{user.name}</strong> ({user.email || user.studentCode || user.id.slice(0, 8)}) kalıcı olarak silinecek. Öğrencinin ilerlemesi, oturumları ve test kayıtları da silinir. Bu işlem geri alınamaz.
       </p>
+      {hasBilling && (
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3">
+          Bu hesaba ait abonelik ve ödeme kayıtları da temizlenecek.
+        </p>
+      )}
       {children > 0 && (
         <p className="text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl p-3">
           Bu veliye bağlı {children} öğrenci hesabı da birlikte silinecek.

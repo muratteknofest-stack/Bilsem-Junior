@@ -11,8 +11,9 @@ import {
   UserPlus,
   Pencil,
   Trash2,
+  CreditCard,
 } from 'lucide-react';
-import { DeleteUserDialog, UserFormDialog } from './AdminUserDialogs';
+import { DeleteUserDialog, SubscriptionDialog, UserFormDialog } from './AdminUserDialogs';
 
 export interface AdminUserRecord {
   id: string;
@@ -68,6 +69,7 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
   const [selectedRole, setSelectedRole] = useState<'all' | 'student' | 'parent' | 'admin'>('all');
   const [selectedGrade, setSelectedGrade] = useState<number | 'all'>('all');
   const [dialog, setDialog] = useState<{ mode: 'create' } | { mode: 'edit'; user: AdminUserRecord } | null>(null);
+  const [subscriptionUser, setSubscriptionUser] = useState<AdminUserRecord | null>(null);
   const [deleting, setDeleting] = useState<AdminUserRecord | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -263,9 +265,14 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
                     </td>
 
                     <td className="py-3 px-3 text-center">
-                      <span className={`px-2 py-0.5 rounded-md font-bold text-[11px] border ${tier.badgeClass}`}>
+                      <button
+                        type="button"
+                        onClick={() => u.role === 'student' && setSubscriptionUser(u)}
+                        title={u.role === 'student' ? 'Abonelik ve erişim durumunu değiştirmek için tıklayın' : undefined}
+                        className={`px-2 py-0.5 rounded-md font-bold text-[11px] border transition-all ${tier.badgeClass} ${u.role === 'student' ? 'cursor-pointer hover:opacity-80 hover:shadow-xs' : ''}`}
+                      >
                         {tier.label}
-                      </span>
+                      </button>
                       {u.subscription && (
                         <div className="text-[10px] text-slate-500 font-mono mt-1">
                           {u.subscription.basePlanId} · {u.subscription.state.replace('SUBSCRIPTION_STATE_', '')}
@@ -308,6 +315,16 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
                         <span className="text-[10px] text-slate-400">Korumalı</span>
                       ) : (
                         <div className="inline-flex items-center gap-1">
+                          {u.role === 'student' && (
+                            <button
+                              onClick={() => setSubscriptionUser(u)}
+                              aria-label={`${u.name} kullanıcısının aboneliğini değiştir`}
+                              title="Abonelik Değiştir"
+                              className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 cursor-pointer"
+                            >
+                              <CreditCard className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                           <button
                             onClick={() => setDialog({ mode: 'edit', user: u })}
                             aria-label={`${u.name} kullanıcısını düzenle`}
@@ -341,6 +358,14 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
           parents={users.filter((u) => u.role === 'parent')}
           onClose={() => setDialog(null)}
           onSaved={(message) => { setDialog(null); setNotice(message); void loadUsers(); }}
+          onOpenSubscription={(u) => { setDialog(null); setSubscriptionUser(u); }}
+        />
+      )}
+      {subscriptionUser && (
+        <SubscriptionDialog
+          user={subscriptionUser}
+          onClose={() => setSubscriptionUser(null)}
+          onSaved={(message) => { setSubscriptionUser(null); setNotice(message); void loadUsers(); }}
         />
       )}
       {deleting && (

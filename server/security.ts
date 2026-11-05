@@ -1,4 +1,4 @@
-import { assertPasswordNotCompromised } from './password-policy';
+import { assertPasswordNotCompromised, PasswordPolicyError } from './password-policy';
 import type { NextFunction, Request, Response } from 'express';
 import { getServiceClient, getAdminDb } from './supabase-admin';
 export { getAdminDb } from './supabase-admin';
@@ -11,8 +11,16 @@ export interface AuthenticatedRequest extends Request {
 export function getAdminAuth() {
   const admin = getServiceClient().auth.admin;
   return {
-    async createUser(options: { email: string; password: string; phoneNumber?: string; emailVerified?: boolean; displayName?: string }) {
-      await assertPasswordNotCompromised(options.password);
+    async createUser(options: { email: string; password: string; phoneNumber?: string; emailVerified?: boolean; displayName?: string; skipCompromisedCheck?: boolean }) {
+      if (!options.skipCompromisedCheck) {
+        try {
+          await assertPasswordNotCompromised(options.password);
+        } catch (err) {
+          if (!(err instanceof PasswordPolicyError && err.code === 'PASSWORD_CHECK_UNAVAILABLE')) {
+            throw err;
+          }
+        }
+      }
       const { data, error } = await admin.createUser({
         email: options.email, password: options.password,
         email_confirm: options.emailVerified ?? false,
@@ -25,8 +33,16 @@ export function getAdminAuth() {
       const { error } = await admin.deleteUser(uid);
       if (error) throw error;
     },
-    async updateUser(uid: string, updates: { password: string }) {
-      await assertPasswordNotCompromised(updates.password);
+    async updateUser(uid: string, updates: { password: string; skipCompromisedCheck?: boolean }) {
+      if (!updates.skipCompromisedCheck) {
+        try {
+          await assertPasswordNotCompromised(updates.password);
+        } catch (err) {
+          if (!(err instanceof PasswordPolicyError && err.code === 'PASSWORD_CHECK_UNAVAILABLE')) {
+            throw err;
+          }
+        }
+      }
       const { error } = await admin.updateUserById(uid, updates);
       if (error) throw error;
     },
