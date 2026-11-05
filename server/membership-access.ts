@@ -12,7 +12,7 @@ async function linkedParentId(studentId: string): Promise<string | null> {
   if (student.error) throw new GooglePlayError('Üyelik durumu doğrulanamadı.');
   return student.data?.linked_parent_id || null;
 }
-export async function learningAccess(studentId: string) {
+async function directSubscription(studentId: string) {
   try {
     const direct = await getServiceClient()
       .from('google_play_subscriptions')
@@ -26,23 +26,28 @@ export async function learningAccess(studentId: string) {
       return { active: true, expiresAt: direct.data.expires_at, state: direct.data.subscription_state, autoRenewing: direct.data.auto_renewing };
     }
   } catch {
-    // Fall back to family billing check
+    // A failed direct lookup never grants or revokes access.
   }
+  return null;
+}
+export async function learningAccess(studentId: string) {
   const parentId = await linkedParentId(studentId);
-  if (!parentId) return {active:false,expiresAt:null};
-  return googlePlayAccess(parentId,studentId);
+  if (!parentId) return (await directSubscription(studentId)) || {active:false,expiresAt:null};
+  const family = await googlePlayAccess(parentId,studentId);
+  if (family?.active) return family;
+  // Admin-assigned or directly stored subscriptions are consulted only when the family has none.
+  return (await directSubscription(studentId)) || family;
 }
 export async function requireLearningAccess(studentId: string) {
   const policy = await studentAccessPolicy(studentId);
   if (policy.lifetime) return;
-  const direct = await learningAccess(studentId);
-  if (direct?.active) return;
   const enforced = policy.requiresSubscription;
   if (!enforced && licenseTestStudentId() !== studentId) return;
   const parentId = await linkedParentId(studentId);
   if (!enforced && (!parentId || !isLicenseTestFamily(parentId, studentId))) return;
   const access = parentId ? await googlePlayAccess(parentId,studentId) : null;
   if (access?.active) return;
+  if ((await directSubscription(studentId))?.active) return;
   // Determine the explanation only after denying access. A sales outage must
   // neither grant premium content nor revoke an already verified entitlement.
   let ready: boolean | null = null;
