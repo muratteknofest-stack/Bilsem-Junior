@@ -19,11 +19,18 @@ declare expected_v1 text[] := array[
  'learning_reward_claims','learning_sessions','lesson_audio','platform_settings','practice_sessions',
  'professional_generation_runs','profiles','question_visual_assets','questions',
  'security_events','shopier_access_orders','support_requests','test_attempts','user_private_state'];
+ expected_v3 text[] := array[
+ 'account_deletion_jobs','ai_generation_jobs','ai_generation_logs','api_rate_windows',
+ 'daily_challenge_attempts','google_play_purchase_bindings','google_play_subscriptions',
+ 'instagram_reels_jobs','instagram_reels_settings','learning_reward_claims','learning_sessions',
+ 'lesson_audio','platform_settings','practice_sessions','professional_generation_runs',
+ 'profiles','question_visual_assets','questions','security_events','shopier_access_orders',
+ 'support_requests','test_attempts','user_private_state'];
  actual text[];
 begin
  select array_agg(c.relname::text order by c.relname) into actual from pg_class c
  join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind in ('r','p');
- if (actual is distinct from expected_v1 and actual is distinct from expected_v2) or to_regnamespace('bilsem_legacy') is null
+ if (actual is distinct from expected_v1 and actual is distinct from expected_v2 and actual is distinct from expected_v3) or to_regnamespace('bilsem_legacy') is null
     or to_regprocedure('zekapark_private.has_active_session()') is null
     or to_regprocedure('public.change_student_grade(uuid,integer)') is null then
    raise exception 'Expected aligned Bilsem schema; review the current inventory before applying this shield';
@@ -213,6 +220,12 @@ do $lesson_audio_grants$
 begin
  if to_regclass('public.lesson_audio') is not null then
    execute 'grant insert,update on public.lesson_audio to service_role';
+ end if;
+ if to_regclass('public.instagram_reels_jobs') is not null then
+   execute 'grant select,insert,update,delete on public.instagram_reels_jobs to service_role';
+ end if;
+ if to_regclass('public.instagram_reels_settings') is not null then
+   execute 'grant select,insert,update,delete on public.instagram_reels_settings to service_role';
  end if;
 end $lesson_audio_grants$;
 grant insert,update,delete on public.questions,public.question_visual_assets to service_role;

@@ -56,7 +56,7 @@ begin
    raise exception 'Visual bucket configuration mismatch';
  end if;
  if to_regclass('public.lesson_audio') is not null and not exists(select 1 from storage.buckets where id='bilsem-lesson-audio' and not public
-   and file_size_limit between 1 and 2621440 and allowed_mime_types is not null
+   and file_size_limit between 1 and 3145728 and allowed_mime_types is not null
    and cardinality(allowed_mime_types)>0 and allowed_mime_types<@array['audio/mpeg','audio/mp4','audio/ogg','audio/wav','audio/webm']::text[]) then
    raise exception 'Lesson audio bucket configuration mismatch';
  end if;
