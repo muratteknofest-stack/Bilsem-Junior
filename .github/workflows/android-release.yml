@@ -45,6 +45,7 @@ jobs:
         run: |
           python3 scripts/verify-apk-download.py test-artifacts/android/Bilsem-Junior-1.0.48-test.apk
           python3 -m unittest discover -s tests -p apk_download_test.py -v
+          python3 -m unittest discover -s tests -p android_local_build_test.py -v
       - name: Save verified package before browser checks
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
