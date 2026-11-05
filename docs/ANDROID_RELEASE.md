@@ -1,5 +1,7 @@
 ## 1.0.48 — Süresiz üyelik ve ücretsiz keşif
 
+- APK indirme ve sunucuya yüklenmiş dosyanın boş/HTML/hasarlı olmama kontrolü için [5 Kasım 2026 kurtarma rehberi](apk-download-recovery-20261105.md) ve `scripts/verify-apk-download.py` eklendi. GitHub Actions hesabı iş başlatamadığından indirilebilir paket hâlâ kanıtlanmış değildir; ticari yayın kabulü ayrıca gereklidir.
+
 - Mevcut öğrencilerin sunucuda belirlenen kayıt tarihine göre süresiz tam erişimi; web ve Android’de aynı üyelik durumu.
 - Yeni öğrencilere günlük iki kısa pratik (en fazla on soru), üç günlük görev, iki örnek konu anlatımı ve temel takip.
 - Kota cihazdan bağımsız, sunucuda atomik uygulanır. Hediye üyelik Google ödeme kaydı oluşturmaz ve yeni satın alımı engeller.
