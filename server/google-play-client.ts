@@ -46,7 +46,12 @@ export async function verifyPlayPush(authorization: string | undefined) {
   const audience = process.env.GOOGLE_PLAY_RTDN_AUDIENCE, email = process.env.GOOGLE_PLAY_RTDN_EMAIL;
   if (!audience || !email || !authorization?.startsWith('Bearer ') || authorization.length > 16000) throw new GooglePlayError('Bildirim kimliği doğrulanamadı.', 401);
   try {
-    const ticket = await oidc.verifyIdToken({ idToken: authorization.slice(7), audience });
+    const validAudiences = Array.from(new Set([
+      audience,
+      'https://www.bilsemjunior.com/api/google-play/notifications',
+      'https://bilsemjunior.vercel.app/api/google-play/notifications',
+    ]));
+    const ticket = await oidc.verifyIdToken({ idToken: authorization.slice(7), audience: validAudiences });
     const p = ticket.getPayload();
     if (!p || p.email !== email || p.email_verified !== true || !['accounts.google.com','https://accounts.google.com'].includes(p.iss)) throw Error();
   } catch { throw new GooglePlayError('Bildirim kimliği doğrulanamadı.', 401); }
