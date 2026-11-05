@@ -72,7 +72,8 @@ export async function verifyPublicRelease(origin,fetcher=fetchReleaseResource){
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  try{
   const [site,commit,projectRef]=process.argv.slice(2),origin=new URL(site);
-  if(origin.origin!=='https://bilsemjunior.vercel.app'||origin.pathname!=='/'||origin.search||origin.hash||origin.username||origin.password||!/^[a-f0-9]{40}$/.test(commit||'')||!/^[a-z0-9]{20}$/.test(projectRef||''))throw Error('Invalid release target.');
+  const allowedOrigins=['https://bilsemjunior.vercel.app','https://www.bilsemjunior.com','https://bilsemjunior.com'];
+  if(!allowedOrigins.includes(origin.origin)||origin.pathname!=='/'||origin.search||origin.hash||origin.username||origin.password||!/^[a-f0-9]{40}$/.test(commit||'')||!/^[a-z0-9]{20}$/.test(projectRef||''))throw Error('Invalid release target.');
   let ready=false;
   for(let attempt=0;attempt<40;attempt++){
    try{await verifyHealthResponse(await fetch(new URL('/api/health',origin),{redirect:'manual',headers:{Accept:'application/json'},signal:AbortSignal.timeout(8_000)}),{commit,projectRef});ready=true;break;}catch{}

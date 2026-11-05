@@ -30,8 +30,9 @@ export async function monitorSite(fetcher=fetch, {expectedPaidSales,expectedRegi
 }
 export function monitorSummary(report){return `### Bilsem Junior production health\n\n${report.ok?'All checks passed.':'FAILURE: investigate the failed route before marking recovery.'}\n\n| Route | Status | Duration |\n|---|---|---|\n${report.checks.map(c=>`| ${c.path} | ${c.ok?'OK':'FAILED'} | ${c.durationMs} ms |`).join('\n')}\n\nNo credentials or customer response bodies are included.\n`;}
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
- const origin=new URL(process.env.MONITOR_SITE_URL||'https://bilsemjunior.vercel.app');
- if(origin.origin!=='https://bilsemjunior.vercel.app'||origin.pathname!=='/'||origin.search||origin.hash||origin.username||origin.password)throw Error('İzleme hedefi doğrulanamadı.');
+ const allowedOrigins=['https://bilsemjunior.vercel.app','https://www.bilsemjunior.com','https://bilsemjunior.com'];
+ const origin=new URL(process.env.MONITOR_SITE_URL||'https://www.bilsemjunior.com');
+ if(!allowedOrigins.includes(origin.origin)||origin.pathname!=='/'||origin.search||origin.hash||origin.username||origin.password)throw Error('İzleme hedefi doğrulanamadı.');
  const expected=process.env.MONITOR_EXPECT_PAID_SALES;
  if(expected!==undefined&&!['true','false'].includes(expected))throw Error('İzleme satış beklentisi true veya false olmalıdır.');
  const registration=process.env.MONITOR_EXPECT_REGISTRATION_OPEN;

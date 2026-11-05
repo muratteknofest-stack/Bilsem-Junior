@@ -102,12 +102,12 @@ test('rejected API requests retain all security headers and malformed/oversize i
   } finally { await new Promise<void>(resolve=>server.close(()=>resolve())); if(saved===undefined)delete process.env.NODE_ENV;else process.env.NODE_ENV=saved; }
 });
 
-test('policyHtml uses PUBLIC_SITE_URL when configured and defaults cleanly to bilsemjunior.vercel.app', () => {
+test('policyHtml uses PUBLIC_SITE_URL when configured and defaults cleanly to www.bilsemjunior.com', () => {
   const info = { slug: 'test-policy', title: 'Test Başlık', description: 'Test Açıklama', sections: [] };
   const prev = process.env.PUBLIC_SITE_URL;
   try {
     delete process.env.PUBLIC_SITE_URL;
-    assert.match(policyHtml(info as any), /rel="canonical" href="https:\/\/bilsemjunior\.vercel\.app\/bilgi\/test-policy"/);
+    assert.match(policyHtml(info as any), /rel="canonical" href="https:\/\/www\.bilsemjunior\.com\/bilgi\/test-policy"/);
     process.env.PUBLIC_SITE_URL = 'https://custom.zekapark.com/';
     assert.match(policyHtml(info as any), /rel="canonical" href="https:\/\/custom\.zekapark\.com\/bilgi\/test-policy"/);
   } finally {
