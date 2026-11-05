@@ -26,6 +26,7 @@ import { licenseTestExpiresAt, licenseTestLegalReady } from '../google-play-lice
 import type { CachedRead } from '../cached-read';
 import type { SettingsRecord } from '../../src/lib/platform-settings';
 import { isPublicPolicySlug } from '../../src/content/legal-documents';
+import { createAdminUser, deleteAdminUser, updateAdminUser } from '../admin-users';
 
 export default function createPlatformRoutes(publicSettings: CachedRead<SettingsRecord>) {
   const routes = Router();
@@ -202,6 +203,12 @@ export default function createPlatformRoutes(publicSettings: CachedRead<Settings
       return res.json({ users });
     },
   );
+
+  const adminUserGuards = [requireSupabaseAuth, requireVerifiedEmail, requireProfileRole("admin"), accountSecurityLimiter];
+  routes.post("/admin/users", ...adminUserGuards, createAdminUser);
+  routes.patch("/admin/users/:id", ...adminUserGuards, updateAdminUser);
+  // POST rather than DELETE: the CORS allow-list and edge rules only forward GET/POST/PUT/PATCH.
+  routes.post("/admin/users/:id/delete", ...adminUserGuards, deleteAdminUser);
 
   return routes;
 }

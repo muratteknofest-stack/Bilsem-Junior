@@ -8,7 +8,11 @@ import {
   Filter,
   ShieldCheck,
   AlertCircle,
+  UserPlus,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
+import { DeleteUserDialog, UserFormDialog } from './AdminUserDialogs';
 
 export interface AdminUserRecord {
   id: string;
@@ -63,6 +67,9 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState<'all' | 'student' | 'parent' | 'admin'>('all');
   const [selectedGrade, setSelectedGrade] = useState<number | 'all'>('all');
+  const [dialog, setDialog] = useState<{ mode: 'create' } | { mode: 'edit'; user: AdminUserRecord } | null>(null);
+  const [deleting, setDeleting] = useState<AdminUserRecord | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -132,6 +139,13 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
               <span>Yenile</span>
             </button>
+            <button
+              onClick={() => setDialog({ mode: 'create' })}
+              className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Yeni Kullanıcı</span>
+            </button>
           </div>
         </div>
 
@@ -139,6 +153,13 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
           <div role="alert" className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {notice && (
+          <div role="status" className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-between gap-2">
+            <span>{notice}</span>
+            <button onClick={() => setNotice(null)} aria-label="Bildirimi kapat" className="cursor-pointer">×</button>
           </div>
         )}
 
@@ -199,12 +220,13 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
                 <th className="py-3 px-3 text-center">Seviye & XP</th>
                 <th className="py-3 px-3 text-center">Seri & Soru</th>
                 <th className="py-3 px-3 text-center">Son Etkinlik</th>
+                <th className="py-3 px-3 text-center">İşlemler</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {!loading && filteredUsers.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-400 font-medium">
+                  <td colSpan={8} className="py-8 text-center text-slate-400 font-medium">
                     Filtrelere uygun kayıtlı kullanıcı bulunamadı.
                   </td>
                 </tr>
@@ -280,6 +302,31 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
                     <td className="py-3 px-3 text-center text-slate-500 text-[11px]">
                       {u.lastActiveDate || (u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString('tr-TR') : '—')}
                     </td>
+
+                    <td className="py-3 px-3 text-center whitespace-nowrap">
+                      {u.role === 'admin' ? (
+                        <span className="text-[10px] text-slate-400">Korumalı</span>
+                      ) : (
+                        <div className="inline-flex items-center gap-1">
+                          <button
+                            onClick={() => setDialog({ mode: 'edit', user: u })}
+                            aria-label={`${u.name} kullanıcısını düzenle`}
+                            title="Düzenle"
+                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-indigo-100 text-slate-600 hover:text-indigo-700 cursor-pointer"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setDeleting(u)}
+                            aria-label={`${u.name} kullanıcısını sil`}
+                            title="Sil"
+                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -287,6 +334,22 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
           </table>
         </div>
       </div>
+
+      {dialog && (
+        <UserFormDialog
+          dialog={dialog}
+          parents={users.filter((u) => u.role === 'parent')}
+          onClose={() => setDialog(null)}
+          onSaved={(message) => { setDialog(null); setNotice(message); void loadUsers(); }}
+        />
+      )}
+      {deleting && (
+        <DeleteUserDialog
+          user={deleting}
+          onClose={() => setDeleting(null)}
+          onDeleted={(message) => { setDeleting(null); setNotice(message); void loadUsers(); }}
+        />
+      )}
     </div>
   );
 };
