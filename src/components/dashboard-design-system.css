@@ -44,7 +44,7 @@
 }
 .zp-student-dashboard .zp-dashboard-tabs > button {
   min-width: 0;
-  white-space: normal;
+  white-space: nowrap;
   text-align: center;
 }
 .zp-student-dashboard .zp-dashboard-tabs > button > span {
@@ -109,6 +109,7 @@
   min-height: 3rem;
   color: var(--zp-ink-muted);
   font-size: .875rem;
+  white-space: nowrap;
 }
 .zp-dashboard-page .zp-dashboard-tabs > button[aria-pressed=true] { color: var(--zp-violet-deep); }
 .zp-dashboard-page .zp-dashboard-tabs > button[aria-pressed=true] > div:first-child {
@@ -217,9 +218,9 @@
 .dark .zp-dashboard-page .zp-dashboard-modal input { background: #211d32; }
 .dark .zp-student-dashboard :is(#daily-streak-card, #daily-goal-progress-card, #badges-section,
   #today-personalized-study-plan-card, #progress-panel) {
-  border-color: #dcd8e5;
-  background: #fff;
-  color: var(--zp-ink);
+  border-color: #49425a;
+  background: var(--surface-card, #262339);
+  color: var(--text-primary, #f9f7ff);
 }
 @supports (backdrop-filter: blur(12px)) {
   .dark .zp-parent-dashboard .zp-dashboard-hero { background: #262239ee; }

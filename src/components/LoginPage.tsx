@@ -9,7 +9,6 @@ import {
   ArrowLeft, 
   CheckCircle2, 
   ShieldCheck, 
-  Sparkles,
   Layers, 
   Compass, 
   Users
@@ -122,8 +121,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         <LegalLinks mode="trigger" disabled={registrationBusy}/>
       </div>
 
-      <main className="zp-auth-shell max-w-6xl mx-auto w-full overflow-hidden grid">
-        <section className="zp-auth-form-panel flex flex-col justify-between" aria-labelledby="zp-auth-heading">
+      <main className="zp-auth-shell max-w-6xl mx-auto w-full overflow-hidden grid lg:grid-cols-12 items-stretch">
+        <section className="zp-auth-form-panel flex flex-col justify-between lg:col-span-7" aria-labelledby="zp-auth-heading">
           <div className="zp-auth-primary-content">
             <div className="zp-auth-brand-row flex items-center justify-between">
               <Logo
@@ -132,11 +131,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 showTagline={false}
                 onClick={registrationBusy ? undefined : onNavigateHome}
               />
-              <span className="zp-auth-brand-mark" aria-hidden="true"><Sparkles size={18} /></span>
+              <span className="zp-auth-brand-mark" aria-hidden="true"><ShieldCheck size={18} /></span>
             </div>
 
             <div className="zp-auth-intro">
-              <p className="zp-auth-kicker">BİLSEM JUNIOR / HAZIRLIK HESABI</p>
+              <p className="zp-auth-kicker">BİLSEM Junior · Hazırlık Hesabı</p>
               <h1 id="zp-auth-heading">{isAndroidApp ? (activeTab === 'login' ? selectedRole === 'parent' ? 'Veli girişi' : 'Öğrenci girişi' : 'Aile hesabı oluştur') : activeTab === 'login' ? 'Tekrar hoş geldin!' : 'Birlikte başlayalım'}</h1>
               <p>{activeTab === 'login' ? 'Hesabına gir, yeni sorular ve küçük zaferler seni bekliyor.' : 'Veli bilgilerini gir, öğrenci hesabını ekle ve e-postanı doğrula.'}</p>
               {isAndroidApp && activeTab === 'login' && <img className="bj-auth-fox" src="/brand/junior-fox-3d.webp" alt="" width="76" height="76" />}
@@ -199,9 +198,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </div>
         </section>
 
-        <aside className="zp-auth-showcase relative flex flex-col justify-between overflow-hidden" aria-label="Bilsem Junior keşif alanları">
+        <aside className="zp-auth-showcase relative flex flex-col justify-between overflow-hidden lg:col-span-5" aria-label="Bilsem Junior keşif alanları">
           <div className="zp-auth-showcase-content">
-            <span className="zp-auth-showcase-kicker"><Sparkles size={16} aria-hidden="true" /> MERAK EDEN ZİHİNLER İÇİN</span>
+            <span className="zp-auth-showcase-kicker">Merak eden zihinler için</span>
             <h2>BİLSEM hazırlığında her gün bir adım.</h2>
             <p>Örüntüleri yakala, mantık kur ve öğrendikçe kendi yolunu çiz.</p>
           </div>
@@ -211,7 +210,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <div className="zp-auth-scene-sphere zp-auth-scene-sphere-one" /><div className="zp-auth-scene-sphere zp-auth-scene-sphere-two" />
             <div className="zp-auth-scene-core"><span>z</span><i /><i /></div>
             <div className="zp-auth-scene-plinth" />
-            <div className="zp-auth-scene-note"><span>✦</span> Bugünün rotası: keşfet.</div>
+            <div className="zp-auth-scene-note">Bugünün rotası: keşfet.</div>
           </div>
           <div className="zp-auth-showcase-footer">
             <div><Layers size={18} aria-hidden="true" /><span>Farklı düşünme yolları</span></div>

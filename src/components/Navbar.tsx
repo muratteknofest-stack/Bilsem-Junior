@@ -3,8 +3,15 @@ import './android/android-parent.css';
 import React, { useState, useEffect, useSyncExternalStore } from 'react';
 import { UserProfile, UserRole } from '../types';
 import {
-  Zap, User, LogOut, Settings, Award, 
-  Menu, X, Volume2, VolumeX, ShieldCheck, GraduationCap, LayoutDashboard, KeyRound, Users
+  User,
+  LogOut,
+  Menu,
+  X,
+  Volume2,
+  VolumeX,
+  ShieldCheck,
+  GraduationCap,
+  Users,
 } from 'lucide-react';
 import { sound } from '../lib/sound';
 import { motion, AnimatePresence } from 'motion/react';
@@ -21,6 +28,12 @@ interface NavbarProps {
   isSwitchingStudent?: boolean;
 }
 
+/**
+ * Navbar - Üst Bar Sözleşmesi (Top Bar Contract).
+ * Zone 1: Marka Logosu
+ * Zone 2: Tek satırlı gezinme/rol geçiş sekmeleri (whitespace-nowrap shrink-0)
+ * Zone 3: Birincil aksiyon ve kompakt kullanıcı/ses kontrolleri (tipografik ayraçlar, rozet yığını yok)
+ */
 export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
   onNavigateHome,
@@ -28,7 +41,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentRoute,
   onLogout,
   onSwitchRole,
-  isSwitchingStudent = false
+  isSwitchingStudent = false,
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const soundOn = useSyncExternalStore(sound.subscribe, sound.getSnapshot, sound.getServerSnapshot);
@@ -36,7 +49,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      setIsScrolled(window.scrollY > 16);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -44,186 +57,275 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const toggleSound = () => {
     sound.enabled = !sound.enabled;
-    if (sound.enabled) { sound.unlock(); sound.playClick(); }
+    if (sound.enabled) {
+      sound.unlock();
+      sound.playClick();
+    }
   };
 
   const isLanding = currentRoute === 'landing' || !currentUser;
   const role = currentUser?.role || 'student';
 
-  // Role based visual theme
-  const getRoleBg = () => {
-    if (role === 'admin') return 'bg-admin-50 text-admin-700 dark:bg-admin-900/30 dark:text-admin-300 border-admin-200 dark:border-admin-800';
-    if (role === 'parent') return 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800';
-    return 'bg-indigo-50 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800';
-  };
+  // Android Native Headers (Preserved for Capacitor / Android runtime)
+  if (isAndroidApp && !isLanding && role === 'student') {
+    return (
+      <header className="bj-native-header">
+        <button type="button" onClick={onNavigateHome} aria-label="Bilsem Junior macera alanı">
+          <img src="/brand/junior-fox-3d.webp" alt="" width={32} height={37} />
+          Bilsem Junior
+        </button>
+        <div className="bj-native-audio-actions">
+          <button
+            type="button"
+            data-audio-control
+            onClick={toggleSound}
+            aria-label={soundOn ? 'Sesi kapat' : 'Sesi aç'}
+          >
+            {soundOn ? <Volume2 size={20} aria-hidden="true" /> : <VolumeX size={20} aria-hidden="true" />}
+          </button>
+          <button type="button" onClick={() => onNavigate('student-profile')} aria-label="Profil ve ayarlar">
+            <User size={20} aria-hidden="true" />
+          </button>
+        </div>
+      </header>
+    );
+  }
 
-  if(isAndroidApp && !isLanding && role==='student')return <header className="bj-native-header"><button type="button" onClick={onNavigateHome} aria-label="Bilsem Junior macera alanı"><img src="/brand/junior-fox-3d.webp" alt="" width={32} height={37}/>Bilsem Junior</button><div className="bj-native-audio-actions"><button type="button" data-audio-control onClick={toggleSound} aria-label={soundOn ? 'Sesi kapat' : 'Sesi aç'}>{soundOn ? <Volume2 size={20} aria-hidden="true"/> : <VolumeX size={20} aria-hidden="true"/>}</button><button type="button" onClick={()=>onNavigate('student-profile')} aria-label="Profil ve ayarlar"><User size={20} aria-hidden="true"/></button></div></header>;
-  if (isAndroidApp && !isLanding && role === 'parent') return <header className="bj-native-parent-header"><button type="button" onClick={onNavigateHome} aria-label="Bilsem Junior veli alanı"><img src="/brand/junior-fox-3d.webp" alt="" width={28} height={33}/>Bilsem Junior</button><div><button type="button" data-audio-control onClick={toggleSound} aria-label={soundOn ? 'Sesi kapat' : 'Sesi aç'}>{soundOn ? <Volume2 size={20} aria-hidden="true"/> : <VolumeX size={20} aria-hidden="true"/>}</button><button type="button" disabled={isSwitchingStudent} onClick={onLogout} aria-label="Çıkış yap"><LogOut size={20} aria-hidden="true"/></button></div></header>;
+  if (isAndroidApp && !isLanding && role === 'parent') {
+    return (
+      <header className="bj-native-parent-header">
+        <button type="button" onClick={onNavigateHome} aria-label="Bilsem Junior veli alanı">
+          <img src="/brand/junior-fox-3d.webp" alt="" width={28} height={33} />
+          Bilsem Junior
+        </button>
+        <div>
+          <button
+            type="button"
+            data-audio-control
+            onClick={toggleSound}
+            aria-label={soundOn ? 'Sesi kapat' : 'Sesi aç'}
+          >
+            {soundOn ? <Volume2 size={20} aria-hidden="true" /> : <VolumeX size={20} aria-hidden="true" />}
+          </button>
+          <button
+            type="button"
+            disabled={isSwitchingStudent}
+            onClick={onLogout}
+            aria-label="Çıkış yap"
+          >
+            <LogOut size={20} aria-hidden="true" />
+          </button>
+        </div>
+      </header>
+    );
+  }
+
   return (
-    <header 
-      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
-        isScrolled 
-          ? 'bg-white/85 dark:bg-slate-900/85 backdrop-blur-lg border-b border-zinc-200 dark:border-slate-800 py-2.5 shadow-xs' 
-          : 'bg-transparent py-4'
+    <header
+      className={`sticky top-0 z-50 w-full transition-all duration-200 ${
+        isScrolled
+          ? 'bg-white/95 dark:bg-[#171627]/95 backdrop-blur-md border-b border-[var(--border-subtle,#e2e8f0)] dark:border-[var(--border-subtle,#49425a)] py-2 shadow-xs'
+          : 'bg-white/80 dark:bg-[#171627]/80 backdrop-blur-sm border-b border-[var(--border-subtle,#e2e8f0)]/50 dark:border-[var(--border-subtle,#49425a)]/40 py-2.5'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-        
-        {/* Logo */}
-        <div className="flex items-center gap-3">
-          <Logo 
-            size="sm" 
-            showTagline={isLanding}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 h-11 sm:h-12">
+        {/* ========================================================= */}
+        {/* ZONE 1: MARKA LOGOSU                                      */}
+        {/* ========================================================= */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Logo
+            size="sm"
+            showTagline={false}
             onClick={() => {
               sound.playClick();
               onNavigateHome();
             }}
           />
-          {!isLanding && (
-            <span className={`hidden sm:inline-block text-[11px] font-bold px-2.5 py-1 rounded-full border transition-all ${getRoleBg()}`}>
-              {role === 'student' && 'Öğrenci Paneli'}
-              {role === 'parent' && 'Veli Portalı'}
-              {role === 'admin' && 'Yönetici Paneli'}
-            </span>
-          )}
         </div>
 
-        <a href={publicPageUrl('/en/')} lang="en" hrefLang="en" aria-label="English version" className="hidden xl:inline-flex min-h-11 items-center px-2 text-sm font-bold">English</a>
+        {/* ========================================================= */}
+        {/* ZONE 2: TEK SATIRLI GEZİNME VE ROL GEÇİŞ SEKME GRUBU     */}
+        {/* ========================================================= */}
+        <nav
+          className="hidden lg:flex items-center gap-2 overflow-x-auto no-scrollbar whitespace-nowrap shrink-0"
+          aria-label="Gezinme ve roller"
+        >
+          {/* Family Two-Way Role Switcher (Öğrenci <-> Veli) */}
+          {!isLanding && role !== 'admin' && (
+            <div className="flex items-center p-0.5 bg-slate-100/90 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
+              <button
+                type="button"
+                disabled={isSwitchingStudent}
+                aria-busy={isSwitchingStudent}
+                onClick={() => {
+                  sound.playClick();
+                  if (onSwitchRole) onSwitchRole('student');
+                  else onNavigate('dashboard');
+                }}
+                className={`whitespace-nowrap shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  role === 'student'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <GraduationCap className="w-3.5 h-3.5 shrink-0" />
+                <span>Öğrenci Paneli</span>
+              </button>
+              <button
+                type="button"
+                disabled={isSwitchingStudent}
+                onClick={() => {
+                  sound.playClick();
+                  if (onSwitchRole) onSwitchRole('parent');
+                  else onNavigate('parent');
+                }}
+                className={`whitespace-nowrap shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  role === 'parent'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5 shrink-0" />
+                <span>Veli Portalı</span>
+              </button>
+            </div>
+          )}
 
-        {/* Family Two-Way Role Switcher (Öğrenci <-> Veli) */}
-        {!isLanding && role !== 'admin' && (
-          <div className="hidden lg:flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
-            <button
-              type="button"
-              disabled={isSwitchingStudent}
-              aria-busy={isSwitchingStudent}
-              onClick={() => {
-                sound.playClick();
-                if (onSwitchRole) onSwitchRole('student');
-                else onNavigate('dashboard');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                role === 'student'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white dark:hover:bg-slate-700'
-              }`}
-            >
-              <GraduationCap className="w-3.5 h-3.5" />
-              <span>Öğrenci Paneli</span>
-            </button>
-            <button
-              type="button"
-              disabled={isSwitchingStudent}
-              onClick={() => {
-                sound.playClick();
-                if (onSwitchRole) onSwitchRole('parent');
-                else onNavigate('parent');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                role === 'parent'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white dark:hover:bg-slate-700'
-              }`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span>Veli Portalı</span>
-            </button>
-          </div>
-        )}
+          {/* Admin Navigation Quick Switcher */}
+          {!isLanding && role === 'admin' && (
+            <div className="flex items-center gap-1 p-0.5 bg-slate-100/90 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playClick();
+                  onNavigate('admin');
+                }}
+                className={`whitespace-nowrap shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  currentRoute === 'admin'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                <span>Yönetici Paneli</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playClick();
+                  onNavigate('dashboard');
+                }}
+                className={`whitespace-nowrap shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  currentRoute === 'dashboard'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <GraduationCap className="w-3.5 h-3.5 shrink-0" />
+                <span>Öğrenci Görünümü</span>
+              </button>
+            </div>
+          )}
 
-        {/* Admin Navigation Quick Switcher */}
-        {!isLanding && role === 'admin' && (
-          <div className="hidden lg:flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
-            <button
-              onClick={() => {
-                sound.playClick();
-                onNavigate('admin');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                currentRoute === 'admin'
-                  ? 'bg-purple-600 text-white shadow-md'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white dark:hover:bg-slate-700'
-              }`}
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Yönetici Paneli</span>
-            </button>
-            <button
-              onClick={() => {
-                sound.playClick();
-                onNavigate('dashboard');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                currentRoute === 'dashboard'
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-white dark:hover:bg-slate-700'
-              }`}
-            >
-              <GraduationCap className="w-4 h-4" />
-              <span>Öğrenci Görünümü</span>
-            </button>
-          </div>
-        )}
+          {/* English Version Link */}
+          <a
+            href={publicPageUrl('/en/')}
+            lang="en"
+            hrefLang="en"
+            aria-label="English version"
+            className="whitespace-nowrap shrink-0 inline-flex min-h-[36px] items-center px-2.5 py-1 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+          >
+            English
+          </a>
+        </nav>
 
-        {/* Desktop Navigation */}
-        <div className="hidden lg:flex items-center gap-3">
-          
-          {/* Audio Toggle */}
-          <button 
-            data-audio-control onClick={toggleSound}
+        {/* ========================================================= */}
+        {/* ZONE 3: BİRİNCİL AKSİYON VE KOMPAKT KULLANICI / SES KONTROL*/}
+        {/* ========================================================= */}
+        <div className="hidden lg:flex items-center gap-2.5 shrink-0">
+          {/* Audio Toggle Control */}
+          <button
+            type="button"
+            data-audio-control
+            onClick={toggleSound}
             aria-label={soundOn ? 'Sesi kapat' : 'Sesi aç'}
-            className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-zinc-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-xs"
+            title={soundOn ? 'Sesi Kapat' : 'Sesi Aç'}
+            className="whitespace-nowrap shrink-0 p-2 rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
           >
             {soundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </button>
 
+          {/* Clean User Info - Kutusuz Tipografik Ayrım (No Pill Badge Sandwich) */}
           {!isLanding && currentUser && (
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border font-bold text-xs ${getRoleBg()}`}>
-              <User className="w-3.5 h-3.5" />
-              <span>{currentUser?.name || 'Kullanıcı'}</span>
+            <div className="whitespace-nowrap shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-slate-50/80 dark:bg-slate-800/60 text-xs text-slate-800 dark:text-slate-200">
+              <User className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0" />
+              <span className="font-bold text-slate-900 dark:text-white">{currentUser?.name || 'Kullanıcı'}</span>
+              <span className="text-slate-300 dark:text-slate-600">·</span>
+              <span className="text-slate-600 dark:text-slate-400 font-medium">
+                {role === 'student' && 'Öğrenci'}
+                {role === 'parent' && 'Veli'}
+                {role === 'admin' && 'Yönetici'}
+              </span>
               {role === 'student' && currentUser.studentCode && (
-                <span className="ml-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-white/80 dark:bg-black/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200/50 flex items-center gap-1" title="Öğrenci Kodu">
-                  <KeyRound className="w-3 h-3 text-indigo-500" />
-                  {currentUser.studentCode}
-                </span>
+                <>
+                  <span className="text-slate-300 dark:text-slate-600">·</span>
+                  <span
+                    className="tabular-nums font-mono text-[11px] font-semibold text-indigo-600 dark:text-indigo-400"
+                    title="Öğrenci Kodu"
+                  >
+                    {currentUser.studentCode}
+                  </span>
+                </>
               )}
             </div>
           )}
 
+          {/* Secure Logout Action */}
           {!isLanding && currentUser && (
-            <button 
+            <button
+              type="button"
               disabled={isSwitchingStudent}
               onClick={() => {
                 sound.playClick();
-                if(onLogout) onLogout();
+                if (onLogout) onLogout();
               }}
               aria-label="Çıkış yap"
-              className="p-2.5 rounded-xl bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors border border-rose-200 dark:border-rose-900/50 cursor-pointer shadow-xs"
               title="Güvenli Çıkış"
+              className="whitespace-nowrap shrink-0 p-2 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 dark:hover:border-rose-900/50 transition-colors cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
             </button>
           )}
 
+          {/* Guest / Landing Auth Actions */}
           {(isLanding || !currentUser) && (
-            <div className="flex gap-2">
-              <button onClick={() => onNavigate('login')} className="px-4 py-2 font-bold text-xs text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer">
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => onNavigate('login')}
+                className="whitespace-nowrap shrink-0 px-3.5 py-1.5 font-bold text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+              >
                 Giriş Yap
               </button>
-              <button onClick={() => onNavigate('login')} className="px-4 py-2 font-bold text-xs text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-all cursor-pointer shadow-xs">
+              <button
+                type="button"
+                onClick={() => onNavigate('login')}
+                className="whitespace-nowrap shrink-0 px-4 py-1.5 font-bold text-xs text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 rounded-xl transition-all cursor-pointer shadow-xs"
+              >
                 Kayıt Ol
               </button>
             </div>
           )}
         </div>
 
-        {/* Mobile Menu Button */}
+        {/* Mobile Menu Trigger Button */}
         <div className="lg:hidden flex items-center gap-2">
-          <button 
+          <button
+            type="button"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label={isMobileMenuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
             aria-expanded={isMobileMenuOpen}
-            className="p-2 rounded-xl border border-slate-200 text-slate-700 bg-white"
+            className="p-2 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800"
           >
             {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -233,108 +335,162 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Mobile Menu Overlay */}
       <AnimatePresence>
         {isMobileMenuOpen && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="absolute top-full left-0 w-full bg-white dark:bg-slate-900 border-b border-zinc-200 dark:border-slate-800 p-4 flex flex-col gap-3 lg:hidden z-50 shadow-lg"
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="absolute top-full left-0 w-full bg-white dark:bg-[#171627] border-b border-[var(--border-subtle,#e2e8f0)] dark:border-[var(--border-subtle,#49425a)] p-4 flex flex-col gap-3 lg:hidden z-50 shadow-xl"
           >
-            <a href={publicPageUrl('/en/')} lang="en" hrefLang="en" className="inline-flex min-h-11 items-center rounded-xl bg-indigo-50 px-3 text-sm font-bold text-indigo-800">English · Thinking games</a>
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-slate-800">
-               <button data-audio-control onClick={toggleSound} aria-label={soundOn ? 'Sesi kapat' : 'Sesi aç'} className="flex items-center gap-2 text-slate-600 dark:text-slate-400 font-medium text-xs">
-                 {soundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-                 Ses {soundOn ? 'Açık' : 'Kapalı'}
-               </button>
-               {currentUser && (
-                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                   {currentUser.name}
-                 </span>
-               )}
-            </div>
-            
-            {isLanding ? (
-               <>
-                 <button onClick={() => { setIsMobileMenuOpen(false); onNavigate('login'); }} className="w-full py-2.5 text-center font-bold text-xs text-slate-700 bg-slate-50 rounded-xl">Giriş Yap</button>
-                 <button onClick={() => { setIsMobileMenuOpen(false); onNavigate('login'); }} className="w-full py-2.5 text-center font-bold text-xs text-white bg-slate-900 rounded-xl">Kayıt Ol</button>
-               </>
-             ) : (
-                <>
-                  {/* Mobile Role Switcher for Family Accounts */}
-                  {role !== 'admin' && (
-                    <div className="grid grid-cols-2 gap-2 pb-2 border-b border-zinc-200 dark:border-slate-800">
-                      <button
-                        disabled={isSwitchingStudent}
-                        aria-busy={isSwitchingStudent}
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          sound.playClick();
-                          if (onSwitchRole) onSwitchRole('student');
-                          else onNavigate('dashboard');
-                        }}
-                        className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 ${
-                          role === 'student' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700'
-                        }`}
-                      >
-                        <GraduationCap className="w-4 h-4" /> Öğrenci Paneli
-                      </button>
-                      <button
-                        disabled={isSwitchingStudent}
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          sound.playClick();
-                          if (onSwitchRole) onSwitchRole('parent');
-                          else onNavigate('parent');
-                        }}
-                        className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 ${
-                          role === 'parent' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700'
-                        }`}
-                      >
-                        <Users className="w-4 h-4" /> Veli Portalı
-                      </button>
-                    </div>
-                  )}
+            <a
+              href={publicPageUrl('/en/')}
+              lang="en"
+              hrefLang="en"
+              aria-label="English version"
+              className="whitespace-nowrap shrink-0 inline-flex min-h-[44px] items-center rounded-xl bg-indigo-50 dark:bg-indigo-950/40 px-3.5 text-xs font-bold text-indigo-800 dark:text-indigo-300"
+            >
+              English · Thinking games
+            </a>
 
-                  {role === 'admin' && (
-                    <div className="flex flex-col gap-2 pb-2 border-b border-zinc-200 dark:border-slate-800">
-                      <button
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          sound.playClick();
-                          onNavigate('admin');
-                        }}
-                        className={`w-full py-2.5 px-3 rounded-xl font-black text-xs flex items-center justify-center gap-2 ${
-                          currentRoute === 'admin' ? 'bg-purple-600 text-white' : 'bg-purple-50 text-purple-700'
-                        }`}
-                      >
-                        <ShieldCheck className="w-4 h-4" /> Yönetici Paneli
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          sound.playClick();
-                          onNavigate('dashboard');
-                        }}
-                        className={`w-full py-2.5 px-3 rounded-xl font-black text-xs flex items-center justify-center gap-2 ${
-                          currentRoute === 'dashboard' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-700'
-                        }`}
-                      >
-                        <GraduationCap className="w-4 h-4" /> Öğrenci Görünümü
-                      </button>
-                    </div>
-                  )}
-                  <button 
-                    disabled={isSwitchingStudent}
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      sound.playClick();
-                      if(onLogout) onLogout();
-                    }} 
-                    className="w-full py-2.5 flex items-center justify-center gap-2 font-bold text-xs text-rose-600 bg-rose-50 rounded-xl cursor-pointer"
-                  >
-                    <LogOut className="w-4 h-4" /> Çıkış Yap
-                  </button>
-                </>
-             )}
+            <div className="flex items-center justify-between py-2 border-b border-slate-200/80 dark:border-slate-800">
+              <button
+                type="button"
+                data-audio-control
+                onClick={toggleSound}
+                aria-label={soundOn ? 'Sesi kapat' : 'Sesi aç'}
+                className="whitespace-nowrap shrink-0 inline-flex items-center gap-2 text-slate-600 dark:text-slate-400 font-medium text-xs min-h-[44px]"
+              >
+                {soundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                <span>Ses {soundOn ? 'Açık' : 'Kapalı'}</span>
+              </button>
+
+              {currentUser && (
+                <span className="whitespace-nowrap shrink-0 text-xs font-bold text-slate-800 dark:text-slate-200">
+                  {currentUser.name}
+                </span>
+              )}
+            </div>
+
+            {isLanding ? (
+              <div className="flex flex-col gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onNavigate('login');
+                  }}
+                  className="whitespace-nowrap shrink-0 w-full min-h-[44px] flex items-center justify-center font-bold text-xs text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-800 rounded-xl"
+                >
+                  Giriş Yap
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onNavigate('login');
+                  }}
+                  className="whitespace-nowrap shrink-0 w-full min-h-[44px] flex items-center justify-center font-bold text-xs text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs"
+                >
+                  Kayıt Ol
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 pt-1">
+                {/* Mobile Role Switcher for Family Accounts */}
+                {role !== 'admin' && (
+                  <div className="grid grid-cols-2 gap-2 pb-2 border-b border-slate-200/80 dark:border-slate-800">
+                    <button
+                      type="button"
+                      disabled={isSwitchingStudent}
+                      aria-busy={isSwitchingStudent}
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        sound.playClick();
+                        if (onSwitchRole) onSwitchRole('student');
+                        else onNavigate('dashboard');
+                      }}
+                      className={`whitespace-nowrap shrink-0 min-h-[44px] px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 ${
+                        role === 'student'
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <GraduationCap className="w-4 h-4 shrink-0" />
+                      <span>Öğrenci Paneli</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isSwitchingStudent}
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        sound.playClick();
+                        if (onSwitchRole) onSwitchRole('parent');
+                        else onNavigate('parent');
+                      }}
+                      className={`whitespace-nowrap shrink-0 min-h-[44px] px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 ${
+                        role === 'parent'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <Users className="w-4 h-4 shrink-0" />
+                      <span>Veli Portalı</span>
+                    </button>
+                  </div>
+                )}
+
+                {role === 'admin' && (
+                  <div className="flex flex-col gap-2 pb-2 border-b border-slate-200/80 dark:border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        sound.playClick();
+                        onNavigate('admin');
+                      }}
+                      className={`whitespace-nowrap shrink-0 w-full min-h-[44px] px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 ${
+                        currentRoute === 'admin'
+                          ? 'bg-purple-600 text-white shadow-xs'
+                          : 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300'
+                      }`}
+                    >
+                      <ShieldCheck className="w-4 h-4 shrink-0" />
+                      <span>Yönetici Paneli</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        sound.playClick();
+                        onNavigate('dashboard');
+                      }}
+                      className={`whitespace-nowrap shrink-0 w-full min-h-[44px] px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 ${
+                        currentRoute === 'dashboard'
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300'
+                      }`}
+                    >
+                      <GraduationCap className="w-4 h-4 shrink-0" />
+                      <span>Öğrenci Görünümü</span>
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  disabled={isSwitchingStudent}
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    sound.playClick();
+                    if (onLogout) onLogout();
+                  }}
+                  className="whitespace-nowrap shrink-0 w-full min-h-[44px] flex items-center justify-center gap-2 font-bold text-xs text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 rounded-xl cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4 shrink-0" />
+                  <span>Çıkış Yap</span>
+                </button>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -342,3 +498,4 @@ export const Navbar: React.FC<NavbarProps> = ({
   );
 };
 
+export default Navbar;

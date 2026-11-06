@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import confetti from 'canvas-confetti';
-import { Copy, Check, Flame, ShieldCheck, ArrowUpRight, Trophy, Sparkles } from 'lucide-react';
+import { Copy, Check, Flame, ShieldCheck, ArrowUpRight, Trophy } from 'lucide-react';
 import { sound } from '../../lib/sound';
 import { useMusicScene } from '../../hooks/useAppAudio';
 import { StudentGradeSelector } from '../StudentGradeSelector';
+import { CountUpNumber } from '../ui/CountUpNumber';
 import type { UserProfile } from '../../types';
 
 export interface StudentHeroBannerProps {
@@ -42,16 +43,15 @@ export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({ user, gree
     <div className="zp-pro-hero-content">
       <div className="zp-student-profile">
         <button type="button" className="zp-student-avatar" aria-label="Avatar kutlaması" onClick={celebrate}>
-          {avatarImageSrc ? <img src={avatarImageSrc} alt="" width={46} height={53} /> : <span>{user.avatar || '🦊'}</span>}<small>SEVİYE {xpProgress.level}</small>
+          {avatarImageSrc ? <img src={avatarImageSrc} alt="" width={46} height={53} /> : <span>{user.avatar || '🦊'}</span>}<small className="tabular-nums">SEVİYE <CountUpNumber value={xpProgress.level} /></small>
         </button>
         <div className="zp-student-profile-copy">
-          <span className="bj-player-label"><Sparkles size={11} aria-hidden="true"/> KAŞİF KARTIN</span>
-          <p className="zp-dashboard-kicker">BUGÜN DE HARİKALAR KEŞFEDELİM</p>
+          <p className="zp-dashboard-kicker">Bugün de harikalar keşfedelim</p>
           <h1>{greeting.text}, {user.name?.split(' ')[0] || 'Kaşif'}<span className="zp-profile-period" aria-hidden="true">.</span></h1>
           <div className="zp-profile-settings">
             <details className="zp-grade-settings"><summary>{user.grade || 1}. sınıf <span>Sınıfımı düzenle</span></summary><StudentGradeSelector key={user.id} user={user} onSaved={onUserUpdate} /></details>
             <details className="zp-profile-tools" onToggle={event=>setProfileOpen(event.currentTarget.open)}><summary>Hesap ve giriş bilgileri</summary><div className="zp-profile-tools-content">
-              {user.studentCode && <button type="button" onClick={handleCopyStudentCode} title="Giriş kodunu kopyala"><span>Giriş Kodu: <strong>{user.studentCode}</strong></span>{copiedStudentCode ? <Check size={15} aria-label="Kopyalandı" /> : <Copy size={15} aria-hidden="true" />}</button>}
+              {user.studentCode && <button type="button" onClick={handleCopyStudentCode} title="Giriş kodunu kopyala"><span>Giriş Kodu: <strong className="tabular-nums">{user.studentCode}</strong></span>{copiedStudentCode ? <Check size={15} aria-label="Kopyalandı" /> : <Copy size={15} aria-hidden="true" />}</button>}
               {user.linkedParentId && <button type="button" onClick={() => onNavigate('parent')} title="Veli alanına dönmek için veli şifresini doğrula"><ShieldCheck size={15} aria-hidden="true" />Veli Alanına Dön</button>}
               {user.id.startsWith('demo_') && <span>Deneme: toplam 3 örnek soru</span>}
               {copyError && <p role="status">{copyError}</p>}
@@ -60,14 +60,14 @@ export const StudentHeroBanner: React.FC<StudentHeroBannerProps> = ({ user, gree
         </div>
       </div>
       <div className="zp-profile-progress">
-        <div><span>Bir sonraki seviye</span><strong>{xpProgress.xp} <small>/ {xpProgress.level * 250} XP</small></strong></div>
+        <div><span>Bir sonraki seviye</span><strong className="tabular-nums"><CountUpNumber value={xpProgress.xp} /> <small className="tabular-nums">/ {xpProgress.level * 250} XP</small></strong></div>
         <div role="progressbar" aria-label="Sonraki seviyeye ilerleme" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(xpProgress.percent)} className="zp-profile-xp-track">
           <motion.span initial={prefersReducedMotion ? false : { width: 0 }} animate={{ width: `${xpProgress.percent}%` }} transition={{ duration: prefersReducedMotion ? 0 : .6 }} />
         </div>
-        <p>{xpProgress.remaining} XP kaldı. Her soruyla biraz daha ileri.</p>
+        <p><span className="tabular-nums"><CountUpNumber value={xpProgress.remaining} /></span> XP kaldı. Her soruyla biraz daha ileri.</p>
       </div>
       <div className="zp-student-hero-stats">
-        <button type="button" onClick={celebrate} className="zp-streak-chip"><Flame size={21} aria-hidden="true" /><span><strong>{user.streak || 0} gün</strong><small>{user.streakFreezeCount || 0} seri kalkanı</small></span></button>
+        <button type="button" onClick={celebrate} className="zp-streak-chip"><Flame size={21} aria-hidden="true" /><span><strong className="tabular-nums"><CountUpNumber value={user.streak || 0} /> gün</strong><small className="tabular-nums"><CountUpNumber value={user.streakFreezeCount || 0} /> seri kalkanı</small></span></button>
         <button type="button" onClick={() => { sound.playClick(); onNavigate('leaderboard'); }} className="zp-ranking-chip"><Trophy size={20} aria-hidden="true" /><span>Sıralama</span><ArrowUpRight size={15} aria-hidden="true" /></button>
       </div>
     </div>

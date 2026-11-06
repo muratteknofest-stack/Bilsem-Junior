@@ -16,11 +16,11 @@ export function LearningResultPanel({ result, busy, story, filter, onReview, onN
   const minutes = Math.floor(result.totalTimeSeconds / 60), seconds = result.totalTimeSeconds % 60;
   return <section className="bj-learning-result" aria-label="Çalışma sonucu" aria-labelledby={titleId}>
     <div className="bj-result-hero">
-      <div className="bj-result-medal" aria-hidden="true"><span className="bj-result-orbit" /><span className="bj-result-orbit" /><Trophy size={54} strokeWidth={1.8} /><i>✦</i><i>✧</i></div>
-      <div><p className="bj-result-kicker">BİR KEŞİF DAHA TAMAMLANDI</p><h2 id={titleId}>Çalışman tamamlandı</h2><p>{result.blankAnswers === 0 ? 'Düşündün, denedin ve yeni şeyler keşfettin.' : 'Kaydettiğin cevaplar burada. Kalan soruları birlikte inceleyebilirsin.'}</p></div>
+      <div className="bj-result-medal" aria-hidden="true"><span className="bj-result-orbit" /><span className="bj-result-orbit" /><Trophy size={54} strokeWidth={1.8} /></div>
+      <div><p className="bj-result-kicker">Bir keşif daha tamamlandı</p><h2 id={titleId}>Çalışman tamamlandı</h2><p>{result.blankAnswers === 0 ? 'Düşündün, denedin ve yeni şeyler keşfettin.' : 'Kaydettiğin cevaplar burada. Kalan soruları birlikte inceleyebilirsin.'}</p></div>
     </div>
-    <div className="bj-result-score"><span><Target size={19} aria-hidden="true" /><b>%{result.scorePercentage}</b><small>başarı</small></span><span><Sparkles size={18} aria-hidden="true" /><b>+{result.xp}</b><small>XP kazandın</small></span><span><Clock3 size={18} aria-hidden="true" /><b>{minutes}:{String(seconds).padStart(2,'0')}</b><small>süre</small></span></div>
-    <div className="bj-result-stats">{stats.map(({ key, label, value, Icon }) => <div key={key} data-tone={key}><span><Icon size={19} aria-hidden="true" /></span><strong>{value}</strong><small>{label}</small></div>)}</div>
+    <div className="bj-result-score tabular-nums"><span><Target size={19} aria-hidden="true" /><b className="tabular-nums">%{result.scorePercentage}</b><small>başarı</small></span><span><Sparkles size={18} aria-hidden="true" /><b className="tabular-nums">+{result.xp}</b><small>XP kazandın</small></span><span><Clock3 size={18} aria-hidden="true" /><b className="tabular-nums">{minutes}:{String(seconds).padStart(2,'0')}</b><small>süre</small></span></div>
+    <div className="bj-result-stats tabular-nums">{stats.map(({ key, label, value, Icon }) => <div key={key} data-tone={key}><span><Icon size={19} aria-hidden="true" /></span><strong className="tabular-nums">{value}</strong><small>{label}</small></div>)}</div>
     <div className="bj-result-balance" role="img" aria-label={`${result.totalQuestions} soruda ${result.correctAnswers} doğru, ${result.wrongAnswers} yanlış, ${result.blankAnswers} boş`}>{stats.map(item => <span key={item.key} data-tone={item.key} style={{ flexGrow: item.value }} />)}</div>
     {children}
     <div className="bj-result-actions">

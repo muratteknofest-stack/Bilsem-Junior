@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ArrowRight, ArrowUpRight, Clock3, Target, RotateCcw, BookOpen, Trophy, Star, Sparkles } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Clock3, Target, RotateCcw, BookOpen, Trophy, Star } from 'lucide-react';
 import { StudentAdventureAtmosphere } from './StudentMotion';
 import { sound } from '../../lib/sound';
 import { useStudentReducedMotion } from '../../features/student/experience-preferences';
@@ -16,7 +16,7 @@ export interface StudentModesGridProps {
 export function StudentModesGrid(p: StudentModesGridProps) {
   const reduced = useStudentReducedMotion();
   const modes = [
-    { title: 'Adaptif Test', number: '01', text: 'Kendi hızında keşfet.', icon: Star, tone: 'violet', tag: 'BAŞLA', action: p.onStartAdaptive },
+    { title: 'Adaptif Test', number: '01', text: 'Kendi hızında keşfet.', icon: Star, tone: 'violet', tag: 'Başla', action: p.onStartAdaptive },
     { title: 'Deneme Sınavı', number: '02', text: 'Süreli bir maceraya çık.', icon: Clock3, tone: 'blue', tag: 'Süreli çalışma', action: p.onStartExam },
     { title: 'Karışık Pratik', number: '03', text: 'Farklı konular, yeni keşifler.', icon: Target, tone: 'teal', tag: 'Karışık konular', action: () => p.onStartPractice('mixed') },
     { title: 'Hata Defteri', number: '04', text: 'Yeniden dene, güçlen!', icon: RotateCcw, tone: 'amber', tag: p.unresolvedMistakesCount ? `${p.unresolvedMistakesCount} soru bekliyor` : 'Tekrar alanın', action: p.onOpenMistakes },
@@ -25,13 +25,13 @@ export function StudentModesGrid(p: StudentModesGridProps) {
   return <section className="zp-modes-section bj-quest-world" aria-labelledby="zp-mode-title">
     <StudentExplorerPortal onLessons={()=>p.onNavigate('student-lessons')}/>
     <div className="zp-mode-section-heading bj-chapter-heading" data-motion-zone><StudentAdventureAtmosphere />
-      <div><p className="zp-panel-eyebrow">KEŞİF YOLU · BİLSEM HAZIRLIK</p><h2 id="zp-mode-title">Bugün nasıl çalışmak istersin?</h2></div>
-      <span className="bj-chapter-star" aria-hidden="true"><Sparkles size={38} /></span>
+      <div><p className="zp-panel-eyebrow">Keşif Yolu · BİLSEM Hazırlık</p><h2 id="zp-mode-title">Bugün nasıl çalışmak istersin?</h2></div>
+      <span className="bj-chapter-star" aria-hidden="true"><Star size={34} /></span>
     </div>
     <div className="bj-quest-path" data-motion-zone>
       <svg className="bj-quest-connector" viewBox="0 0 520 650" preserveAspectRatio="none" aria-hidden="true"><path d="M70 65 C70 170 175 110 175 230 S70 300 70 395 S175 470 175 580" /></svg>
       <span className="bj-world-cloud bj-world-cloud-one" aria-hidden="true" /><span className="bj-world-cloud bj-world-cloud-two" aria-hidden="true" />
-      <span className="bj-world-spark bj-world-spark-one" aria-hidden="true">✦</span><span className="bj-world-spark bj-world-spark-two" aria-hidden="true">✧</span>
+      <span className="bj-world-spark bj-world-spark-one" aria-hidden="true" /><span className="bj-world-spark bj-world-spark-two" aria-hidden="true" />
       <span className="bj-world-plant" aria-hidden="true"><i /><i /><i /></span>
       {modes.map(({ title, number, text, icon: Icon, tone, tag, action }, index) =>
         <motion.button type="button" key={title} className={`zp-mode-card bj-quest-stop ${index === 0 ? 'bj-quest-start' : 'zp-mode-tool'}`} data-tone={tone}
@@ -40,7 +40,7 @@ export function StudentModesGrid(p: StudentModesGridProps) {
           whileTap={reduced ? undefined : { y: 5 }}
           onClick={() => { sound.playClick(); action(); }}>
           <span className="bj-quest-coin" aria-hidden="true"><StudentGameArt kind={(['rocket','target','cubes','book'] as GameArtKind[])[index]}/><span className="bj-quest-tool-icon"><Icon size={18}/></span></span>
-          <span className="bj-quest-stop-copy"><span className="zp-tool-number">DURAK {number}</span><h3>{title}</h3><span className="bj-quest-description">{text}</span><span className="bj-quest-action">{tag}<ArrowRight size={14} aria-hidden="true" /></span></span>
+          <span className="bj-quest-stop-copy"><span className="zp-tool-number tabular-nums">Durak {number}</span><h3>{title}</h3><span className="bj-quest-description">{text}</span><span className="bj-quest-action tabular-nums">{tag}<ArrowRight size={14} aria-hidden="true" /></span></span>
         </motion.button>)}
       <div className="bj-path-finish"><Trophy size={23} aria-hidden="true" /><span>Küçük adımlar. Büyük keşifler.</span><Star size={15} aria-hidden="true" /></div>
     </div>

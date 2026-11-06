@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { motion, useInView, useMotionValue, useSpring } from 'motion/react';
-import { Sparkles, RotateCcw, Trophy, Orbit } from 'lucide-react';
+import { Compass, RotateCcw, Trophy, Orbit } from 'lucide-react';
 
 function Cube({ className = '' }: { className?: string }) {
   return <div className={`zp-cube ${className}`}>{['front', 'back', 'right', 'left', 'top', 'bottom'].map(face => <span key={face} className={`zp-cube-${face}`} />)}</div>;
@@ -17,7 +17,7 @@ export function LearningIsland({ moving }: { moving: boolean }) {
   const reset = () => { x.set(0); y.set(turned ? -12 : 0); };
   return <div ref={ref} className="zp-island-wrap" data-active={moving && visible}>
     <div className="zp-scene-halo" aria-hidden="true" />
-    <div className="zp-scene-caption"><span className="zp-status-dot" /> BİLSEM JUNIOR · HAZIRLIK STÜDYOSU</div>
+    <div className="zp-scene-caption">BİLSEM Junior · Hazırlık Stüdyosu</div>
     <div className="zp-island-viewport" onPointerMove={e => {
       if (!moving || e.pointerType !== 'mouse') return;
       const rect = e.currentTarget.getBoundingClientRect();
@@ -29,7 +29,7 @@ export function LearningIsland({ moving }: { moving: boolean }) {
           <div className="zp-park-rainbow" />
           <div className="zp-orbit zp-orbit-back" />
           <div className="zp-planet"><span /></div>
-          <div className="zp-star zp-star-one">✦</div><div className="zp-star zp-star-two">✦</div><div className="zp-star zp-star-three">✧</div>
+          <div className="zp-star zp-star-one" /><div className="zp-star zp-star-two" /><div className="zp-star zp-star-three" />
           <div className="zp-island-shadow" />
           <div className="zp-island-base"><div className="zp-island-surface"><div className="zp-surface-grid" /></div></div>
           <div className="zp-park-tree zp-park-tree-left"><span /><i /></div><div className="zp-park-tree zp-park-tree-right"><span /><i /></div>
@@ -49,7 +49,7 @@ export function LearningIsland({ moving }: { moving: boolean }) {
           </div>
           <div className="zp-orbit zp-orbit-front" />
         </div>
-        <div className="zp-floating-note zp-note-quest"><span className="zp-note-icon"><Sparkles size={20} /></span><div><small>DÜŞÜN. KEŞFET. GELİŞ.</small><strong>Hazırlığa başlayalım!</strong></div></div>
+        <div className="zp-floating-note zp-note-quest"><span className="zp-note-icon"><Compass size={20} /></span><div><small>Düşün · Keşfet · Geliş</small><strong>Hazırlığa başlayalım!</strong></div></div>
         <div className="zp-floating-note zp-note-trophy"><span className="zp-trophy-icon"><Trophy size={24} /></span><div><strong>Dene. Öğren. Parla!</strong><small>Her adımın çok değerli</small></div></div>
       </motion.div>
     </div>

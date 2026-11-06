@@ -122,21 +122,51 @@
 .zp-landing.zp-colorful-home .zp-skill-ribbon span svg { color: #754daf; }
 .zp-landing.zp-colorful-home #dunyalar { padding-top: 4rem; padding-bottom: 5rem; }
 
-/* Colorful world cards share one geometry and six materials. */
-.zp-landing.zp-colorful-home .zp-world-card { position: relative; overflow: hidden; border: 1px solid #ffffff; min-height: 24rem; border-radius: 2rem; padding: 1.75rem; box-shadow: var(--zp-card-shadow); }
-.zp-landing.zp-colorful-home .zp-world-purple { background: #eee1ff; }
-.zp-landing.zp-colorful-home .zp-world-mint { background: #dbf6e8; }
-.zp-landing.zp-colorful-home .zp-world-peach { background: #ffe9d6; }
-.zp-landing.zp-colorful-home .zp-world-blue { background: #ddf0ff; }
-.zp-landing.zp-colorful-home .zp-world-yellow { background: #fff1bd; }
-.zp-landing.zp-colorful-home .zp-world-pink { background: #ffe2ed; }
-.zp-landing.zp-colorful-home .zp-world-top > span { font-size: .6rem; letter-spacing: .12em; }
-.zp-landing.zp-colorful-home .zp-world-top > svg { padding: .5rem; width: 2rem; height: 2rem; border-radius: 50%; background: #ffffffa1; color: var(--zp-ink); }
-.zp-landing.zp-colorful-home .zp-world-art { height: 9rem; scale: 1; position: relative; margin: 0 auto 1rem; right: auto; top: auto; }
-.zp-landing.zp-colorful-home .zp-world-tag { color: #455375; font-size: .7rem; max-width: none; margin-bottom: .65rem; }
-.zp-landing.zp-colorful-home .zp-world-card h3 { font-weight: 750; font-size: clamp(1.6rem, 2.1vw, 2rem); }
-.zp-landing.zp-colorful-home .zp-world-card p { color: #485674; font-size: .8125rem; min-height: 2.7rem; max-width: none; }
-.zp-landing.zp-colorful-home .zp-world-link { display: inline-flex; background: #ffffffa6; padding: .6rem .9rem; border-radius: 999px; color: var(--zp-violet-deep); font-size: .75rem; }
+/* 60-30-10 Bento cards for Worlds */
+.zp-world-card-surface { border-radius: 1.5rem; }
+.zp-landing.zp-colorful-home .zp-world-card {
+  position: relative; overflow: hidden;
+  border: 1px solid #e5e1ee;
+  min-height: 24rem;
+  border-radius: 1.5rem;
+  padding: 1.75rem;
+  background: #ffffff;
+  box-shadow: 0 4px 16px -2px rgba(24, 41, 79, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.zp-landing.zp-colorful-home .zp-world-card:hover {
+  border-color: #c4b5fd;
+  box-shadow: 0 12px 28px -4px rgba(24, 41, 79, 0.08), 0 4px 8px rgba(0, 0, 0, 0.02);
+}
+.zp-landing.zp-colorful-home .zp-world-purple { background: #ffffff; }
+.zp-landing.zp-colorful-home .zp-world-mint { background: #ffffff; }
+.zp-landing.zp-colorful-home .zp-world-peach { background: #ffffff; }
+.zp-landing.zp-colorful-home .zp-world-blue { background: #ffffff; }
+.zp-landing.zp-colorful-home .zp-world-yellow { background: #ffffff; }
+.zp-landing.zp-colorful-home .zp-world-pink { background: #ffffff; }
+
+.zp-landing.zp-colorful-home .zp-world-purple .zp-world-tag { background: #f3e8ff; color: #6b21a8; }
+.zp-landing.zp-colorful-home .zp-world-mint .zp-world-tag { background: #ecfdf5; color: #047857; }
+.zp-landing.zp-colorful-home .zp-world-peach .zp-world-tag { background: #fff7ed; color: #c2410c; }
+.zp-landing.zp-colorful-home .zp-world-blue .zp-world-tag { background: #eff6ff; color: #1d4ed8; }
+.zp-landing.zp-colorful-home .zp-world-yellow .zp-world-tag { background: #fefce8; color: #a16207; }
+.zp-landing.zp-colorful-home .zp-world-pink .zp-world-tag { background: #fdf2f8; color: #be185d; }
+
+.zp-landing.zp-colorful-home .zp-world-purple .zp-world-art { background: radial-gradient(circle, #f3e8ff 0%, transparent 72%); }
+.zp-landing.zp-colorful-home .zp-world-mint .zp-world-art { background: radial-gradient(circle, #ecfdf5 0%, transparent 72%); }
+.zp-landing.zp-colorful-home .zp-world-peach .zp-world-art { background: radial-gradient(circle, #fff7ed 0%, transparent 72%); }
+.zp-landing.zp-colorful-home .zp-world-blue .zp-world-art { background: radial-gradient(circle, #eff6ff 0%, transparent 72%); }
+.zp-landing.zp-colorful-home .zp-world-yellow .zp-world-art { background: radial-gradient(circle, #fefce8 0%, transparent 72%); }
+.zp-landing.zp-colorful-home .zp-world-pink .zp-world-art { background: radial-gradient(circle, #fdf2f8 0%, transparent 72%); }
+
+.zp-landing.zp-colorful-home .zp-world-top > span { font-size: .7rem; font-weight: 700; letter-spacing: .08em; color: var(--zp-ink-muted); }
+.zp-landing.zp-colorful-home .zp-world-top > svg { padding: .4rem; width: 2rem; height: 2rem; border-radius: 50%; background: #f4f2f8; color: var(--zp-ink); }
+.zp-landing.zp-colorful-home .zp-world-art { height: 9rem; scale: 1; position: relative; margin: 0 auto 1rem; right: auto; top: auto; border-radius: 1rem; }
+.zp-landing.zp-colorful-home .zp-world-tag { display: inline-flex; align-items: center; gap: .4rem; font-size: .75rem; font-weight: 700; border-radius: 999px; padding: .35rem .75rem; max-width: none; margin-bottom: .65rem; }
+.zp-landing.zp-colorful-home .zp-world-card h3 { font-weight: 750; font-size: clamp(1.5rem, 2vw, 1.85rem); color: var(--zp-ink); margin-bottom: .5rem; }
+.zp-landing.zp-colorful-home .zp-world-card p { color: #485674; font-size: .875rem; line-height: 1.6; min-height: 2.7rem; max-width: none; }
+.zp-landing.zp-colorful-home .zp-world-link { display: inline-flex; align-items: center; gap: .4rem; background: #f6f4fa; padding: .55rem .95rem; border-radius: 999px; color: var(--zp-violet-deep); font-size: .75rem; font-weight: 700; transition: background .15s; }
+.zp-landing.zp-colorful-home .zp-world-link:hover { background: #ece6f7; }
 .zp-art-blue span { width: 70px; height: 70px; border-radius: 20px; background: linear-gradient(135deg, #a8deff, #5ba7ee); box-shadow: inset 3px 3px 4px #ffffff9e, 8px 9px 0 #3e78c1; left: 60px; top: 25px; rotate: -16deg; }
 .zp-art-blue span:nth-child(2) { left: 124px; top: 90px; width: 32px; height: 32px; border-radius: 10px; rotate: 15deg; }
 .zp-art-blue span:nth-child(3) { left: 33px; top: 106px; width: 20px; height: 20px; border-radius: 50%; box-shadow: 2px 3px 0 #588fc8; }

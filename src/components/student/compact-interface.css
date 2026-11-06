@@ -7,8 +7,27 @@
 .bj-more-navigation{border:1px solid #ddd3e9;border-radius:14px;margin-bottom:20px;background:#fff}
 .bj-more-navigation summary{padding:12px 16px;min-height:44px;font-size:13px;font-weight:700;color:#56426f;cursor:pointer}
 .bj-more-navigation nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:0 12px 12px}
-.bj-more-navigation nav button{min-height:44px;border:1px solid #e4dbee;border-radius:10px;padding:8px;color:#523c6f;font-size:13px}
+.bj-more-navigation nav button{min-height:44px;border:1px solid #e4dbee;border-radius:10px;padding:8px;color:#523c6f;font-size:13px;white-space:nowrap}
 .bj-more-navigation nav button[aria-pressed=true]{background:#eee5ff;border-color:#8053c5;color:#50289a}
+.zp-student-nav-group{margin-bottom:20px}
+@media(min-width:1024px){
+ .zp-student-nav-group{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+ .zp-student-nav-group .zp-study-navigation.bj-primary-navigation{margin-bottom:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:6px;border-radius:14px;background:#e5e8dd;border:1px solid #d8dcd0}
+ .dark .zp-student-nav-group .zp-study-navigation.bj-primary-navigation{background:#1e293b;border-color:#334155}
+ .zp-student-nav-group .bj-more-navigation{margin-bottom:0;border:1px solid #dcd1eb;border-radius:14px;background:#faf8fd;transition:all .2s ease}
+ .dark .zp-student-nav-group .bj-more-navigation{background:#1e293b;border-color:#334155}
+ .zp-student-nav-group .bj-more-navigation summary{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;min-height:44px;font-size:13px;font-weight:700;color:#56426f;cursor:pointer;user-select:none;border-radius:12px;list-style:none}
+ .zp-student-nav-group .bj-more-navigation summary::-webkit-details-marker{display:none}
+ .zp-student-nav-group .bj-more-navigation summary::after{content:'▾';font-size:14px;transition:transform .2s ease}
+ .zp-student-nav-group .bj-more-navigation[open] summary::after{transform:rotate(180deg)}
+ .dark .zp-student-nav-group .bj-more-navigation summary{color:#d8c8f0}
+ .zp-student-nav-group .bj-more-navigation nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:4px 14px 14px}
+ .zp-student-nav-group .bj-more-navigation nav button{min-height:44px;font-size:13px;font-weight:650;white-space:nowrap;border-radius:10px;border:1px solid #e4dbee;background:#fff;color:#523c6f;transition:all .15s ease}
+ .zp-student-nav-group .bj-more-navigation nav button:hover{background:#f3ecfb;border-color:#baa3dd}
+ .zp-student-nav-group .bj-more-navigation nav button[aria-pressed=true]{background:#7041ce;border-color:#5a2eb8;color:#fff;box-shadow:0 2px 4px rgba(112,65,206,.25)}
+ .dark .zp-student-nav-group .bj-more-navigation nav button{background:#0f172a;border-color:#334155;color:#e4d5f7}
+ .dark .zp-student-nav-group .bj-more-navigation nav button[aria-pressed=true]{background:#8e5de8;border-color:#a476f5;color:#fff}
+}
 .bj-journey-continue>span{display:flex;flex-direction:column;gap:4px;text-align:left;min-width:0}
 .bj-journey-continue strong{font-size:16px}.bj-journey-continue small{font-size:12px;font-weight:500;line-height:1.5}
 .bj-profile-help{border:1px solid #d7cce7;border-radius:16px;margin-top:12px;padding:0 12px}
@@ -22,16 +41,22 @@
 .dark .bj-more-navigation summary,.dark .bj-more-navigation button{color:#e4d5f7}
 .dark .bj-more-navigation button[aria-pressed=true]{background:#4b326a;color:#fff}
 @media(max-width:680px){
- .bj-next-action{padding:14px 16px;gap:12px;flex-wrap:wrap;margin-bottom:16px}
- .bj-next-action h2{font-size:19px}.bj-next-action>button{width:100%;min-height:46px}
- .bj-primary-navigation .bj-inventory-art{width:48px;height:48px}
- .zp-study-navigation.bj-primary-navigation>button{min-height:88px;padding:8px;font-size:12px}
- .bj-more-navigation nav{grid-template-columns:repeat(2,minmax(0,1fr))}
- .bj-student-game .bj-player-hero{margin-bottom:14px;padding:16px}
- .bj-student-game .zp-student-profile h1{font-size:23px}
- .bj-student-game .zp-pro-hero-content{gap:12px}
- .bj-student-game .zp-profile-progress{padding-top:10px}
- .bj-student-game .zp-profile-progress>p{font-size:12px}
+ .zp-student-topline{margin-bottom:6px;font-size:10px}
+ .bj-motion-toolbar{margin:0 0 6px}
+ .bj-next-action{padding:12px 14px;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+ .bj-next-action h2{font-size:17px;margin:2px 0}.bj-next-action>button{width:100%;min-height:44px;padding:10px 14px}
+ .bj-primary-navigation .bj-inventory-art{width:44px;height:44px}
+ .zp-study-navigation.bj-primary-navigation>button{min-height:64px;padding:6px;font-size:11px}
+ .zp-student-nav-group{margin-bottom:12px}
+ .bj-more-navigation{margin-bottom:12px}
+ .bj-more-navigation summary{padding:10px 14px;min-height:44px;font-size:12px}
+ .bj-more-navigation nav{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:0 10px 10px}
+ .bj-more-navigation nav button{min-height:44px;font-size:12px}
+ .bj-student-game .bj-player-hero,.zp-student-pro.bj-student-game .zp-pro-hero{margin-bottom:10px;padding:12px 14px}
+ .bj-student-game .zp-student-profile h1{font-size:21px}
+ .bj-student-game .zp-pro-hero-content{gap:10px}
+ .bj-student-game .zp-profile-progress{padding-top:8px}
+ .bj-student-game .zp-profile-progress>p{font-size:11px}
  .bj-student-game .bj-quest-path{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:10px 0 18px;min-height:0}
  .bj-student-game .bj-quest-stop{width:100%;margin:0;min-height:180px;padding:12px;display:flex;flex-direction:column;text-align:left;transform:none;align-items:flex-start}
  .bj-student-game .bj-quest-coin{width:72px;height:72px}

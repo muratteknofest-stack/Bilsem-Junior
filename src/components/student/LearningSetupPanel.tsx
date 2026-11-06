@@ -42,7 +42,7 @@ export function LearningSetupPanel(props: Props) {
   return <section className="zp-launchpad" aria-label="Çalışma tercihleri">
     <div className="zp-launch-intro">
       <div className="zp-launch-toy" aria-hidden="true"><Gamepad2 size={38} /><Star className="zp-launch-star" size={17} /></div>
-      <div><p className="zp-launch-kicker">HAZIR MISIN, KAŞİF?</p><h2>{mode === 'exam' ? 'Denemeni seç' : mode === 'adaptive' ? 'Sana uygun sorularla ilerle' : 'Bugün hangi alanda çalışalım?'}</h2><p>{grade}. sınıf · {mode === 'practice' ? 'Kısa bir zihin molası' : 'Rotanı seç, kendi hızında keşfet.'}</p></div>
+      <div><p className="zp-launch-kicker">Hazır mısın, kaşif?</p><h2>{mode === 'exam' ? 'Denemeni seç' : mode === 'adaptive' ? 'Sana uygun sorularla ilerle' : 'Bugün hangi alanda çalışalım?'}</h2><p>{grade}. sınıf · {mode === 'practice' ? 'Kısa bir zihin molası' : 'Rotanı seç, kendi hızında keşfet.'}</p></div>
     </div>
     <div className="zp-launch-options">
       {!review && <fieldset className="zp-launch-group" disabled={busy}>

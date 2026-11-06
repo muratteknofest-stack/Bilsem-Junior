@@ -191,44 +191,20 @@ export const AdminPanelView: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row relative selection:bg-indigo-500 selection:text-white font-sans">
       
-      {/* Background Animated Subtle Ambient Glows */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <motion.div 
-          animate={{ 
-            scale: [1, 1.2, 1],
-            x: [0, 50, 0],
-            y: [0, -30, 0],
-            opacity: [0.15, 0.25, 0.15]
-          }}
-          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-32 -left-20 w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px]"
-        />
-        <motion.div 
-          animate={{ 
-            scale: [1.1, 1, 1.1],
-            x: [0, -40, 0],
-            y: [0, 40, 0],
-            opacity: [0.1, 0.2, 0.1]
-          }}
-          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          className="absolute bottom-10 right-0 w-[500px] h-[500px] bg-emerald-600/15 rounded-full blur-[130px]"
-        />
-      </div>
-
       {/* Modern Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-slate-900/95 backdrop-blur-2xl border-r border-slate-800/80 transform transition-transform duration-300 md:relative md:translate-x-0 flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-slate-900 border-r border-slate-800 transform transition-transform duration-300 md:relative md:translate-x-0 flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         
         {/* Brand Header */}
-        <div className="p-5 sm:p-6 border-b border-slate-800/60">
+        <div className="p-5 sm:p-6 border-b border-slate-800">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-sm shrink-0">
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
                 <div className="text-sm font-black tracking-wider uppercase text-white font-['Outfit',sans-serif] flex items-center gap-1.5">
                   <span>Bilsem Junior</span>
-                  <span className="text-[10px] px-1.5 py-0.2 bg-indigo-500/20 text-indigo-400 rounded-md border border-indigo-500/30 font-mono">
+                  <span className="text-[10px] px-1.5 py-0.5 bg-slate-800 text-indigo-400 rounded-md border border-slate-700 font-mono">
                     OS
                   </span>
                 </div>
@@ -247,7 +223,7 @@ export const AdminPanelView: React.FC = () => {
           </div>
 
           {/* Online Health Badge */}
-          <div className="mt-4 flex items-center justify-between px-3 py-1.5 rounded-xl bg-slate-800/60 border border-slate-700/50 text-[11px]">
+          <div className="mt-4 flex items-center justify-between px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700/80 text-[11px]">
             <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               SİSTEM AKTİF
@@ -257,7 +233,7 @@ export const AdminPanelView: React.FC = () => {
         </div>
         
         {/* Navigation List */}
-        <nav className="p-4 space-y-1 overflow-y-auto flex-1">
+        <nav className="p-3 space-y-1 overflow-y-auto flex-1">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -269,15 +245,15 @@ export const AdminPanelView: React.FC = () => {
                   setActiveTab(tab.id);
                   setIsSidebarOpen(false);
                 }}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl transition-all font-semibold text-xs relative group cursor-pointer ${
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-colors font-semibold text-xs relative group cursor-pointer ${
                   isActive 
-                    ? 'text-white bg-indigo-600/20 border border-indigo-500/40 shadow-sm' 
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    ? 'text-white bg-indigo-600 shadow-sm' 
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
-                    isActive ? 'bg-indigo-500 text-white shadow-xs' : 'bg-slate-800/60 text-slate-400 group-hover:text-white'
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                    isActive ? 'bg-indigo-700 text-white' : 'bg-slate-800 text-slate-400 group-hover:text-white'
                   }`}>
                     <Icon className="w-4 h-4" />
                   </div>
@@ -286,7 +262,7 @@ export const AdminPanelView: React.FC = () => {
 
                 {tab.badge && (
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                    isActive ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-400'
+                    isActive ? 'bg-indigo-700 text-white' : 'bg-slate-800 text-slate-400'
                   }`}>
                     {tab.badge}
                   </span>
@@ -634,10 +610,8 @@ const AdminDashboardOverviewTab: React.FC<AdminDashboardOverviewTabProps> = ({
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="p-6 md:p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800/80 shadow-xl relative overflow-hidden"
+        className="p-6 md:p-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl relative overflow-hidden"
       >
-        <div className="absolute right-0 top-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
           <div>
             <div className="flex items-center gap-2">

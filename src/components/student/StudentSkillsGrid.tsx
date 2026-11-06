@@ -135,7 +135,7 @@ export const StudentSkillsGrid: React.FC<StudentSkillsGridProps> = ({
                     <StudentGameArt kind={m.category==='spatial'?'cubes':m.category==='attention'?'target':m.category==='numerical'?'rocket':'puzzle'}/>
                   </div>
                   <span
-                    className={`text-xs font-black px-2.5 py-1 rounded-full ${cfg.bgLight} ${cfg.color} border ${cfg.borderLight}`}
+                    className={`text-xs font-black px-2.5 py-1 rounded-full tabular-nums ${cfg.bgLight} ${cfg.color} border ${cfg.borderLight}`}
                   >
                     {m.attemptCount > 0 ? `%${masteryPct} Ustalık` : 'Yeni alan'}
                   </span>
@@ -145,7 +145,7 @@ export const StudentSkillsGrid: React.FC<StudentSkillsGridProps> = ({
                   {m.categoryName}
                 </h3>
 
-                <div className="flex items-center justify-between text-[11px] text-zinc-400 mt-2 mb-1.5 font-medium">
+                <div className="flex items-center justify-between text-[11px] text-zinc-400 mt-2 mb-1.5 font-medium tabular-nums">
                   <span>{m.attemptCount || 0} Çözülen Soru</span>
                   <span className="text-emerald-600 dark:text-emerald-400 font-bold">
                     {m.attemptCount > 0 ? `%${m.accuracy || 0} Doğruluk` : 'İlk adımını at'}

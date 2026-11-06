@@ -22,6 +22,7 @@
 .zp-auth-shell {
   max-width: 73rem;
   grid-template-columns: minmax(0, 1.16fr) minmax(20rem, .84fr);
+  align-items: stretch;
   border: 1px solid #dcd9e3;
   border-radius: var(--zp-radius-xl);
   background: var(--zp-paper);
@@ -35,7 +36,7 @@
   border-radius: var(--zp-radius-sm); background: var(--zp-lilac); color: var(--zp-violet);
 }
 .zp-auth-intro { margin-bottom: var(--zp-space-8); }
-.zp-auth-kicker { margin-bottom: var(--zp-space-3); color: var(--zp-violet-deep); font-size: .75rem; font-weight: 800; letter-spacing: .15em; }
+.zp-auth-kicker { margin-bottom: var(--zp-space-3); color: var(--zp-violet-deep); font-size: .75rem; font-weight: 700; letter-spacing: .06em; }
 .zp-auth-intro h1 {
   max-width: 13ch; margin: 0; font: 600 clamp(2.25rem, 3.65vw, 3.75rem)/1.07 var(--zp-font-display);
   letter-spacing: -.052em; text-wrap: balance;
@@ -131,7 +132,7 @@
   mask-image: linear-gradient(to bottom, transparent, #000 35%, transparent);
 }
 .zp-auth-showcase-content, .zp-auth-showcase-footer { position: relative; z-index: 2; }
-.zp-auth-showcase-kicker { display: inline-flex; gap: .5rem; align-items: center; color: #ecdaaa; font-size: .75rem; font-weight: 800; letter-spacing: .12em; }
+.zp-auth-showcase-kicker { display: inline-flex; gap: .5rem; align-items: center; color: #ecdaaa; font-size: .75rem; font-weight: 700; letter-spacing: .06em; }
 .zp-auth-showcase h2 { max-width: 14ch; margin-top: var(--zp-space-6); font: 600 clamp(2.25rem, 3.2vw, 3.4rem)/1.08 var(--zp-font-display); letter-spacing: -.05em; text-wrap: balance; }
 .zp-auth-showcase-content > p { max-width: 27rem; margin-top: var(--zp-space-4); color: #e6e0f2; font-size: 1rem; line-height: 1.7; }
 .zp-auth-showcase-footer { display: grid; gap: var(--zp-space-3); padding-top: var(--zp-space-6); border-top: 1px solid #ffffff43; }

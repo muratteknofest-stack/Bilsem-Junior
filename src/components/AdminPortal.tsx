@@ -45,7 +45,7 @@ export function AdminPortal() {
     {authorized ? <main><AdminMfaGate><Suspense fallback={<p role="status" className="p-8 text-center">Yönetici paneli yükleniyor…</p>}><AdminPanelView /></Suspense></AdminMfaGate></main> :
       <main className="mx-auto w-full max-w-lg px-5 pb-16 pt-8">
         <section className="zp-auth-form-panel rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8" aria-labelledby="admin-login-heading">
-          <p className="zp-auth-kicker">BİLSEM JUNIOR / YÖNETİM</p>
+          <p className="zp-auth-kicker">Yönetim Konsolu</p>
           <h1 id="admin-login-heading" className="mb-3 mt-3 text-3xl font-bold">Yönetici girişi</h1>
           <p className="mb-7 text-sm leading-6 text-slate-600">Bu alan yalnızca yetkilendirilmiş yönetici hesapları içindir.</p>
           {session.currentUser ? <div role="alert"><p className="mb-4 text-sm font-semibold text-rose-800">Bu hesabın yönetici yetkisi doğrulanamadı. Yönetici hesabınızla giriş yapmak için mevcut oturumu kapatın.</p><button type="button" disabled={signingOut} onClick={() => void logout()} className="w-full rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white">{signingOut ? 'Çıkış yapılıyor…' : 'Oturumu kapat ve yönetici girişi yap'}</button></div> : <>

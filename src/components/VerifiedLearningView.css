@@ -45,18 +45,19 @@
 .zp-puzzle-card > p { margin-bottom: 1rem; }
 .zp-learning .zp-answer-workspace { border: 0; background: transparent; padding: 1rem 0 0; border-radius: 0; }
 .zp-game .zp-answer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-.zp-game .zp-answer-option { --option-tone: #4767c5; border: 3px solid var(--option-tone); border-bottom-width: 7px; background: var(--option-tone); border-radius: 19px; padding: 10px 10px 10px 45px; box-shadow: none; min-height: 140px; }
-.zp-game .zp-answer-option:nth-child(4n+2) { --option-tone: #c44966; }
-.zp-game .zp-answer-option:nth-child(4n+3) { --option-tone: #238879; }
-.zp-game .zp-answer-option:nth-child(4n+4) { --option-tone: #aa7018; }
-.zp-game .zp-answer-option:hover:not(:disabled) { filter: brightness(1.05); transform: translateY(-2px); }
+.zp-game .zp-answer-option { border: 2px solid #cbd5e1; border-bottom-width: 5px; background: #ffffff; border-radius: 19px; padding: 10px 10px 10px 45px; box-shadow: 0 2px 4px rgba(0,0,0,0.03); min-height: 140px; }
+.zp-game .zp-answer-option:nth-child(4n+2), .zp-game .zp-answer-option:nth-child(4n+3), .zp-game .zp-answer-option:nth-child(4n+4) { background: #ffffff; border-color: #cbd5e1; }
+.zp-game .zp-answer-option:hover:not(:disabled) { border-color: #6366f1; transform: translateY(-2px); }
 .zp-game .zp-answer-option:active:not(:disabled) { transform: translateY(2px); }
-.zp-game .zp-answer-option[aria-pressed=true] { outline: 3px solid #282047; outline-offset: 3px; }
-.zp-game .zp-answer-badge { top: 14px; left: 8px; width: 29px; height: 31px; border: 0; color: #fff; background: #00000020; border-radius: 8px; }
-.zp-game .zp-answer-content { padding: 12px 4px; background: white; color: #192442; border-radius: 11px; min-height: 106px; }
-.zp-game .zp-answer-option[data-feedback=correct] { --option-tone: #16744b; }
-.zp-game .zp-answer-option[data-feedback=incorrect] { --option-tone: #ac3232; }
-.zp-game .zp-answer-option[data-feedback=other] { --option-tone: #747c90; opacity: .65; }
+.zp-game .zp-answer-option[aria-pressed=true] { outline: 3px solid #4f46e5; outline-offset: 2px; border-color: #4f46e5; background: #f5f3ff; }
+.zp-game .zp-answer-badge { top: 14px; left: 8px; width: 29px; height: 31px; border: 1px solid #cbd5e1; color: #334155; background: #f1f5f9; border-radius: 8px; font-weight: 850; font-variant-numeric: tabular-nums; }
+.zp-game .zp-answer-option[aria-pressed=true] .zp-answer-badge { background: #4f46e5; color: #ffffff; border-color: #4338ca; }
+.zp-game .zp-answer-content { padding: 12px 4px; background: transparent; color: #192442; border-radius: 11px; min-height: 106px; }
+.zp-game .zp-answer-option[data-feedback=correct] { border-color: #059669; background: #ecfdf5; }
+.zp-game .zp-answer-option[data-feedback=correct] .zp-answer-badge { background: #059669; color: #ffffff; }
+.zp-game .zp-answer-option[data-feedback=incorrect] { border-color: #d97706; background: #fffbeb; }
+.zp-game .zp-answer-option[data-feedback=incorrect] .zp-answer-badge { background: #d97706; color: #ffffff; }
+.zp-game .zp-answer-option[data-feedback=other] { border-color: #94a3b8; opacity: .65; }
 .zp-game [aria-label=Kartlar] > button { border-bottom-width: 5px; border-radius: 16px; border-color: #b2a2eb; }
 .zp-result { text-align: center; background: #f0fff7; }
 .zp-result > svg { margin: auto; color: #b07914; }

@@ -408,30 +408,6 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
       
       <div className="bj-parent-student-selector relative z-10 mx-auto max-w-6xl px-5 pt-4">{studentSelector}{codeCopyError && <p role="alert" className="p-3 text-sm text-rose-700">{codeCopyError}</p>}{passwordResetNotice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{passwordResetNotice}</p>}</div>
       {isAndroidApp && <header className="bj-parent-native-heading"><span className="bj-parent-native-avatar" aria-hidden="true">{!currentStudent.avatar || currentStudent.avatar === '🦊' ? <img src="/brand/junior-fox-3d.webp" alt="" width={32} height={38}/> : currentStudent.avatar}</span><div><p>VELİ ALANI</p><h1>{currentStudent.name}</h1><small>{currentStudent.grade || 1}. sınıf · Seviye {currentStudent.level || 1}</small></div>{(onNavigate || onOpenStudent) && <button type="button" disabled={isSwitchingStudent || isBillingBusy} aria-busy={isSwitchingStudent} onClick={() => { sound.playClick(); if (onOpenStudent) onOpenStudent(currentStudent.id); else onNavigate?.('dashboard'); }}><GraduationCap size={18} aria-hidden="true"/>{isSwitchingStudent ? 'Açılıyor…' : 'Öğrenciye geç'}</button>}</header>}
-      {/* Animated Subtle Background Ambience */}
-      {!isAndroidApp && <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <motion.div 
-          animate={prefersReducedMotion ? undefined : {
-            scale: [1, 1.15, 1],
-            x: [0, 30, 0],
-            y: [0, -20, 0],
-            opacity: [0.35, 0.5, 0.35]
-          }}
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-32 -right-32 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-500/15 rounded-full blur-3xl"
-        />
-        <motion.div 
-          animate={prefersReducedMotion ? undefined : {
-            scale: [1.1, 1, 1.1],
-            x: [0, -25, 0],
-            y: [0, 35, 0],
-            opacity: [0.25, 0.45, 0.25]
-          }}
-          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          className="absolute top-96 -left-32 w-96 h-96 bg-emerald-500/10 dark:bg-emerald-500/10 rounded-full blur-3xl"
-        />
-      </div>}
-
       {/* Top Header Hero */}
       {!isAndroidApp && <div className="zp-dashboard-hero relative z-10 bg-white/80 dark:bg-zinc-900/80 border-b border-zinc-200/80 dark:border-zinc-800/80 pt-8 pb-10 px-4 sm:px-6 md:px-12 transition-colors">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
@@ -449,7 +425,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
             </motion.div>
 
             <div className="flex-1">
-              <p className="zp-dashboard-kicker">BİLSEM JUNIOR · AİLE GELİŞİM MERKEZİ</p>
+              <p className="zp-dashboard-kicker">Aile Gelişim Merkezi</p>
               <div className="flex items-center gap-2.5">
                 <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 font-['Outfit',sans-serif]">
                   Veli Portalı
@@ -750,34 +726,41 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                           >
                             <ResponsiveContainer width="100%" height="100%">
                               <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
-                                <PolarGrid stroke="#e4e4e7" strokeDasharray="3 3" className="dark:stroke-zinc-800" />
+                                <PolarGrid stroke="#cbd5e1" strokeDasharray="3 3" className="dark:stroke-zinc-700" />
                                 <PolarAngleAxis 
                                   dataKey="category" 
-                                  tick={{ fill: '#71717a', fontSize: 11, fontWeight: 600 }} 
+                                  tick={{ fill: '#475569', fontSize: 11, fontWeight: 600 }} 
                                 />
                                 <PolarRadiusAxis 
                                   angle={30} 
                                   domain={[0, 100]} 
-                                  stroke="#a1a1aa" 
-                                  tick={{ fontSize: 10, fill: '#a1a1aa' }} 
+                                  stroke="#94a3b8" 
+                                  className="dark:stroke-zinc-600"
+                                  tick={{ fontSize: 10, fill: '#64748b' }} 
                                 />
                                 <Radar isAnimationActive={!prefersReducedMotion}
                                   name="Ustalık Puanı" 
                                   dataKey="mastery" 
-                                  stroke="#6366f1" 
-                                  fill="#6366f1" 
-                                  fillOpacity={0.35} 
-                                  strokeWidth={2.5}
+                                  stroke="#4f46e5" 
+                                  fill="#4f46e5" 
+                                  fillOpacity={0.25} 
+                                  strokeWidth={2}
                                 />
                                 <RechartsTooltip 
                                   content={({ active, payload }) => {
                                     if (active && payload && payload.length) {
                                       const data = payload[0].payload;
                                       return (
-                                        <div className="bg-zinc-900 text-white p-3 rounded-xl shadow-xl text-xs space-y-1">
-                                          <p className="font-bold text-sm text-indigo-300">{data.fullName}</p>
-                                          <p>Ustalık Seviyesi: <strong className="text-white">%{data.mastery}</strong></p>
-                                          <p>Doğruluk Oranı: <strong className="text-emerald-400">%{data.accuracy}</strong></p>
+                                        <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs shadow-lg dark:border-zinc-800 dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 space-y-1.5 min-w-[160px]">
+                                          <p className="font-bold text-sm text-indigo-600 dark:text-indigo-400">{data.fullName}</p>
+                                          <div className="flex items-center justify-between gap-4">
+                                            <span className="text-slate-500 dark:text-zinc-400">Ustalık Seviyesi:</span>
+                                            <strong className="font-bold tabular-nums text-indigo-600 dark:text-indigo-300">%{data.mastery}</strong>
+                                          </div>
+                                          <div className="flex items-center justify-between gap-4">
+                                            <span className="text-slate-500 dark:text-zinc-400">Doğruluk Oranı:</span>
+                                            <strong className="font-bold tabular-nums text-emerald-600 dark:text-emerald-400">%{data.accuracy}</strong>
+                                          </div>
                                         </div>
                                       );
                                     }
@@ -800,41 +783,48 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                               <AreaChart data={monthlyMomentumData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
                                   <linearGradient id="colorMomentum" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.25}/>
-                                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.25}/>
+                                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
                                   </linearGradient>
                                 </defs>
-                                <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f4f4f5" className="dark:stroke-zinc-800" />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" className="dark:stroke-zinc-800" />
                                 <XAxis 
                                   dataKey="date" 
                                   axisLine={false} 
                                   tickLine={false} 
-                                  tick={{ fill: '#a1a1aa', fontSize: 11, fontWeight: 500 }} 
+                                  tick={{ fill: '#64748b', fontSize: 11, fontWeight: 500 }} 
                                   dy={12}
                                   minTickGap={25}
                                 />
                                 <YAxis 
                                   axisLine={false} 
                                   tickLine={false} 
-                                  tick={{ fill: '#a1a1aa', fontSize: 11, fontWeight: 500 }}
+                                  tick={{ fill: '#64748b', fontSize: 11, fontWeight: 500 }}
                                   domain={[0, 'auto']}
                                 />
                                 <RechartsTooltip 
-                                  contentStyle={{ 
-                                    borderRadius: '12px', 
-                                    backgroundColor: '#18181b', 
-                                    border: 'none', 
-                                    color: '#fff', 
-                                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)', 
-                                    fontWeight: 'bold' 
+                                  content={({ active, payload }) => {
+                                    if (active && payload && payload.length) {
+                                      const data = payload[0].payload;
+                                      return (
+                                        <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs shadow-lg dark:border-zinc-800 dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 space-y-1 min-w-[130px]">
+                                          <p className="font-bold text-slate-700 dark:text-zinc-300">{data.date}</p>
+                                          <div className="flex items-center justify-between gap-4">
+                                            <span className="text-slate-500 dark:text-zinc-400">Çözülen Soru:</span>
+                                            <strong className="font-bold tabular-nums text-indigo-600 dark:text-indigo-400">{data.score}</strong>
+                                          </div>
+                                        </div>
+                                      );
+                                    }
+                                    return null;
                                   }}
-                                  cursor={{ stroke: '#10b981', strokeWidth: 2, strokeDasharray: '3 3' }}
+                                  cursor={{ stroke: '#4f46e5', strokeWidth: 1.5, strokeDasharray: '3 3' }}
                                 />
                                 <Area isAnimationActive={!prefersReducedMotion}
                                   type="monotone" 
                                   dataKey="score" 
-                                  stroke="#10b981" 
-                                  strokeWidth={3}
+                                  stroke="#4f46e5" 
+                                  strokeWidth={2.5}
                                   fillOpacity={1} 
                                   fill="url(#colorMomentum)" 
                                   name="Çözülen Soru"
@@ -871,9 +861,6 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                     whileHover={{ scale: 1.01 }}
                     className="bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 text-white rounded-3xl p-6 md:p-7 shadow-xl relative overflow-hidden border border-zinc-700/60"
                   >
-                    <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/10 blur-3xl rounded-full" />
-                    <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-indigo-500/15 blur-3xl rounded-full" />
-                    
                     <div className="relative z-10">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/10 backdrop-blur-md">

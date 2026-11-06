@@ -13,12 +13,43 @@
 @import './components/student/learning-setup.css';
 @import './components/student/student-experience-controls.css';
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* 60-30-10 Semantic Color System */
+  /* 60% Dominant Canvas / Background */
+  --surface-canvas: #f8f7f3;
+  /* 30% Secondary Card / Container Surfaces */
+  --surface-card: #ffffff;
+  --border-subtle: #e2e8f0;
+  /* 10% Accents & Content Contrast */
+  --text-primary: #1d2036;
+  --text-secondary: #52566b;
+}
+
+.dark {
+  /* 60% Dominant Dark Canvas */
+  --surface-canvas: #171627;
+  /* 30% Dark Card / Container Surfaces */
+  --surface-card: #262339;
+  --border-subtle: #49425a;
+  /* 10% High-Contrast Text & Accents */
+  --text-primary: #f9f7ff;
+  --text-secondary: #cac4d5;
+}
+
 @import "./features/questions/renderers/question-studio.css";
 @import "./features/questions/renderers/question-art.css";
 @import "./features/questions/renderers/perceptual-board.css";
 @import "./typography.css";
 
 @theme {
+  --color-surface-canvas: var(--surface-canvas);
+  --color-surface-card: var(--surface-card);
+  --color-border-subtle: var(--border-subtle);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+
   --font-sans: var(--bj-font-body);
   
   /* Primary - Indigo (Student Theme) */
