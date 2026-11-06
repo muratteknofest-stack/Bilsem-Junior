@@ -136,27 +136,35 @@ export default function createPlatformRoutes(publicSettings: CachedRead<Settings
           .limit(200),
       ]);
       if (profilesRes.error) return res.status(500).json({ error: "Kullanıcı dizini yüklenemedi." });
-      const subsByStudent = new Map<string, {
+      type SubItem = {
         parentId: string | null;
+        studentId: string | null;
         basePlanId: string;
         state: string;
         expiresAt: string | null;
         autoRenewing: boolean;
         testPurchase: boolean;
         verifiedAt: string;
-      }>();
+      };
+      const subsByStudent = new Map<string, SubItem>();
+      const subsByParent = new Map<string, SubItem>();
       if (!subsRes.error && subsRes.data) {
         for (const sub of subsRes.data) {
+          const item: SubItem = {
+            parentId: sub.parent_id,
+            studentId: sub.student_id,
+            basePlanId: sub.base_plan_id,
+            state: sub.subscription_state,
+            expiresAt: sub.expires_at,
+            autoRenewing: sub.auto_renewing,
+            testPurchase: sub.test_purchase,
+            verifiedAt: sub.verified_at,
+          };
           if (sub.student_id && !subsByStudent.has(sub.student_id)) {
-            subsByStudent.set(sub.student_id, {
-              parentId: sub.parent_id,
-              basePlanId: sub.base_plan_id,
-              state: sub.subscription_state,
-              expiresAt: sub.expires_at,
-              autoRenewing: sub.auto_renewing,
-              testPurchase: sub.test_purchase,
-              verifiedAt: sub.verified_at,
-            });
+            subsByStudent.set(sub.student_id, item);
+          }
+          if (sub.parent_id && !subsByParent.has(sub.parent_id)) {
+            subsByParent.set(sub.parent_id, item);
           }
         }
       }
@@ -169,11 +177,32 @@ export default function createPlatformRoutes(publicSettings: CachedRead<Settings
           createdMs !== null &&
           ((lifetimeCutoff !== null && createdMs < lifetimeCutoff) ||
             (paidStarts !== null && createdMs < paidStarts));
-        const sub = subsByStudent.get(p.id) || null;
+        
+        // For parents, check direct parent billing record or any linked child's active subscription
+        const childSub = p.role === "parent" && Array.isArray(p.linked_student_ids)
+          ? p.linked_student_ids
+              .map((id) => subsByStudent.get(id))
+              .find((s) => !!s && ["SUBSCRIPTION_STATE_ACTIVE", "SUBSCRIPTION_STATE_IN_GRACE_PERIOD", "SUBSCRIPTION_STATE_CANCELED"].includes(s.state) && (!s.expiresAt || Date.parse(s.expiresAt) > Date.now()))
+          : null;
+        const sub = (p.role === "parent" ? (subsByParent.get(p.id) || childSub) : subsByStudent.get(p.id)) || null;
         const subActive =
           !!sub &&
           ["SUBSCRIPTION_STATE_ACTIVE", "SUBSCRIPTION_STATE_IN_GRACE_PERIOD", "SUBSCRIPTION_STATE_CANCELED"].includes(sub.state) &&
           (!sub.expiresAt || Date.parse(sub.expiresAt) > Date.now());
+        
+        let accessTier: string;
+        if (p.role === "admin") {
+          accessTier = "admin";
+        } else if (p.role === "parent") {
+          accessTier = subActive ? "parent_subscribed" : "parent";
+        } else if (subActive) {
+          accessTier = "subscriber";
+        } else if (isLifetimeLegacy) {
+          accessTier = "legacy_lifetime";
+        } else {
+          accessTier = "free";
+        }
+
         return {
           id: p.id,
           email: p.email || null,
@@ -196,7 +225,7 @@ export default function createPlatformRoutes(publicSettings: CachedRead<Settings
           createdAt: createdMs,
           lastLoginAt: typeof p.last_login_at === "number" ? p.last_login_at : null,
           deletionPending: !!p.deletion_pending,
-          accessTier: p.role !== "student" ? p.role : subActive ? "subscriber" : isLifetimeLegacy ? "legacy_lifetime" : "free",
+          accessTier,
           subscription: sub,
         };
       });

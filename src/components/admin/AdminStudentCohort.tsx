@@ -37,9 +37,10 @@ export interface AdminUserRecord {
   createdAt: number | null;
   lastLoginAt: number | null;
   deletionPending: boolean;
-  accessTier: 'subscriber' | 'legacy_lifetime' | 'free' | 'parent' | 'admin';
+  accessTier: 'subscriber' | 'legacy_lifetime' | 'free' | 'parent' | 'parent_subscribed' | 'admin';
   subscription: {
     parentId: string | null;
+    studentId?: string | null;
     basePlanId: string;
     state: string;
     expiresAt: string | null;
@@ -73,6 +74,7 @@ const ACCESS_TIER_LABELS: Record<AdminUserRecord['accessTier'], { label: string;
   subscriber: { label: 'Aktif Ücretli Abone', badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-300 font-extrabold shadow-xs' },
   legacy_lifetime: { label: 'Ömür Boyu (Kazanılmış Hak)', badgeClass: 'bg-indigo-50 text-indigo-800 border-indigo-200 font-bold' },
   free: { label: 'Ücretsiz Plan', badgeClass: 'bg-slate-100 text-slate-700 border-slate-200' },
+  parent_subscribed: { label: 'Abone Veli (Aktif Ücretli)', badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-300 font-extrabold shadow-xs' },
   parent: { label: 'Veli Hesabı', badgeClass: 'bg-amber-50 text-amber-800 border-amber-200' },
   admin: { label: 'Yönetici', badgeClass: 'bg-purple-50 text-purple-800 border-purple-200' },
 };
@@ -124,17 +126,18 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
       (u.role === 'student' && u.accessTier === selectedSubscription) ||
       (u.role === 'parent' && (
         selectedSubscription === 'subscriber'
-          ? users.some((st) => u.linkedStudentIds.includes(st.id) && st.accessTier === 'subscriber')
+          ? (u.accessTier === 'parent_subscribed' || users.some((st) => u.linkedStudentIds.includes(st.id) && st.accessTier === 'subscriber'))
           : selectedSubscription === 'legacy_lifetime'
           ? users.some((st) => u.linkedStudentIds.includes(st.id) && st.accessTier === 'legacy_lifetime')
-          : users.some((st) => u.linkedStudentIds.includes(st.id) && st.accessTier === 'free')
+          : (u.accessTier === 'parent' && !users.some((st) => u.linkedStudentIds.includes(st.id) && (st.accessTier === 'subscriber' || st.accessTier === 'legacy_lifetime')))
       ));
     return matchesSearch && matchesRole && matchesGrade && matchesSubscription;
   });
 
   const studentCount = users.filter((u) => u.role === 'student').length;
   const parentCount = users.filter((u) => u.role === 'parent').length;
-  const paidSubscriberCount = users.filter((u) => u.role === 'student' && u.accessTier === 'subscriber').length;
+  const paidSubscriberCount = users.filter((u) => u.accessTier === 'subscriber').length;
+  const paidParentCount = users.filter((u) => u.accessTier === 'parent_subscribed').length;
   const lifetimeCount = users.filter((u) => u.role === 'student' && u.accessTier === 'legacy_lifetime').length;
   const freeCount = users.filter((u) => u.role === 'student' && u.accessTier === 'free').length;
 
@@ -160,7 +163,7 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
             </div>
             <div className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-300 text-xs font-bold flex items-center gap-1.5">
               <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{paidSubscriberCount} Ücretli Abone</span>
+              <span>{paidSubscriberCount} Ücretli Öğrenci{paidParentCount > 0 ? ` · ${paidParentCount} Abone Veli` : ''}</span>
             </div>
             <div className="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200 text-xs font-bold flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
@@ -379,15 +382,34 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
 
                       {/* Info for parents */}
                       {u.role === 'parent' && (
-                        <div className="text-[10px] mt-1 font-medium">
-                          {subscribedChildren.length > 0 ? (
-                            <span className="text-emerald-700 font-bold">
-                              ✓ {subscribedChildren.map((c) => c.name).join(', ')} (Ücretli Abone)
-                            </span>
+                        <div className="mt-1.5 space-y-0.5 text-left bg-slate-50 p-2 rounded-lg border border-slate-200/80 max-w-[210px] mx-auto text-[10px]">
+                          {u.accessTier === 'parent_subscribed' || subscribedChildren.length > 0 ? (
+                            <>
+                              <div className="font-bold text-emerald-900 flex items-center justify-between">
+                                <span>{planInfo ? `${planInfo.title} (${planInfo.price})` : (u.subscription?.basePlanId ? (PLAN_DETAILS[u.subscription.basePlanId]?.title || u.subscription.basePlanId) : 'Aylık Plan')}</span>
+                                {u.subscription?.testPurchase && (
+                                  <span className="px-1 py-0.2 rounded bg-amber-100 text-amber-800 text-[9px] font-bold">Test</span>
+                                )}
+                              </div>
+                              <div className="text-slate-600 flex items-center justify-between font-mono">
+                                <span>Google Play</span>
+                                <span>{u.subscription?.autoRenewing ? 'Yenilenen' : 'Tek Sefer'}</span>
+                              </div>
+                              {u.subscription?.expiresAt && (
+                                <div className="text-emerald-700 font-bold font-mono">
+                                  Bitiş: {new Date(u.subscription.expiresAt).toLocaleDateString('tr-TR')} {daysLeft ? `(${daysLeft})` : ''}
+                                </div>
+                              )}
+                              {subscribedChildren.length > 0 && (
+                                <div className="text-emerald-800 font-semibold pt-0.5 border-t border-emerald-100">
+                                  Öğrenci: {subscribedChildren.map((c) => c.name).join(', ')}
+                                </div>
+                              )}
+                            </>
                           ) : (
-                            <span className="text-slate-400">
-                              {linkedChildren.length > 0 ? `${linkedChildren.length} Öğrenci (Ücretsiz)` : 'Öğrenci bağlı değil'}
-                            </span>
+                            <div className="text-slate-400 font-medium">
+                              {linkedChildren.length > 0 ? `${linkedChildren.length} Öğrenci (Ücretsiz Plan)` : 'Öğrenci bağlı değil'}
+                            </div>
                           )}
                         </div>
                       )}
@@ -399,7 +421,16 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
                           ? `Veli: ${u.linkedParentId.slice(0, 8)}…`
                           : 'Bireysel'
                         : u.role === 'parent'
-                          ? `${u.linkedStudentIds.length} bağlı öğrenci`
+                          ? (
+                            <div>
+                              <div>{u.linkedStudentIds.length} bağlı öğrenci</div>
+                              {subscribedChildren.length > 0 && (
+                                <div className="text-[10px] text-emerald-700 font-bold">
+                                  ({subscribedChildren.map((c) => c.name).join(', ')}: Abone)
+                                </div>
+                              )}
+                            </div>
+                          )
                           : '—'}
                     </td>
 
