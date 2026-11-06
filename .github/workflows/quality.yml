@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 env:
-  VITE_PUBLIC_SITE_URL: https://bilsemjunior.vercel.app
+  VITE_PUBLIC_SITE_URL: https://www.bilsemjunior.com
   VITE_SUPABASE_URL: https://vtcsoqohkiagbwatlabk.supabase.co
   VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_J972I2--TwnuLkWjrRqENA_DxnBGjlz
 concurrency:
@@ -246,7 +246,7 @@ jobs:
           package-manager-cache: false
           node-version: 22
       - name: Verify the actual production release and Turkish public routes
-        run: node scripts/check-live-release.mjs https://bilsemjunior.vercel.app "$GITHUB_SHA" vtcsoqohkiagbwatlabk
+        run: node scripts/check-live-release.mjs https://www.bilsemjunior.com "$GITHUB_SHA" vtcsoqohkiagbwatlabk
 
   learning-launch:
     runs-on: ubuntu-latest
