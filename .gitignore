@@ -19,6 +19,7 @@ node_modules/
 # Build outputs
 dist/
 build/
+reels-out/
 target/
 .npm-cache/
 .npmrc

@@ -81,8 +81,8 @@ def await_publish_window(day: str) -> None:
     now = datetime.now(TURKEY)
     if now.date() != target.date():
         raise RuntimeError('Reel date does not match today in Türkiye')
-    if now > target + timedelta(minutes=25):
-        raise RuntimeError('19:00 publishing window missed by more than 25 minutes')
+    if now > target + timedelta(hours=3):
+        raise RuntimeError('19:00 publishing window missed by more than 3 hours')
     seconds = (target - now).total_seconds()
     if seconds > 0:
         print('Reel is ready. Awaiting the 19:00 Türkiye publishing window.')
