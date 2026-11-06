@@ -18,7 +18,7 @@ import {
   requireProfileRole,
   type AuthenticatedRequest,
 } from "../security";
-import { accountSecurityLimiter } from "../rate-limiters";
+import { accountSecurityLimiter, adminDirectoryLimiter } from "../rate-limiters";
 import { playConfig, playSetupReady, verifyPlayCatalog } from '../google-play-client';
 import { lifetimeAccessBefore, paidAccessStartsAt } from '../paid-access-policy';
 import { paidSalesReady } from '../google-play-sales';
@@ -120,7 +120,7 @@ export default function createPlatformRoutes(publicSettings: CachedRead<Settings
     requireSupabaseAuth,
     requireVerifiedEmail,
     requireProfileRole("admin"),
-    accountSecurityLimiter,
+    adminDirectoryLimiter,
     async (_req, res) => {
       const client = getServiceClient();
       const [profilesRes, subsRes] = await Promise.all([
@@ -233,7 +233,7 @@ export default function createPlatformRoutes(publicSettings: CachedRead<Settings
     },
   );
 
-  const adminUserGuards = [requireSupabaseAuth, requireVerifiedEmail, requireProfileRole("admin"), accountSecurityLimiter];
+  const adminUserGuards = [requireSupabaseAuth, requireVerifiedEmail, requireProfileRole("admin"), adminDirectoryLimiter];
   routes.post("/admin/users", ...adminUserGuards, createAdminUser);
   routes.patch("/admin/users/:id", ...adminUserGuards, updateAdminUser);
   routes.post("/admin/users/:id/subscription", ...adminUserGuards, updateAdminUserSubscription);
