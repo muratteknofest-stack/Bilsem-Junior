@@ -22,7 +22,7 @@ async function directSubscription(studentId: string) {
       .order('verified_at', { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (direct.data && (!direct.data.expires_at || Date.parse(direct.data.expires_at) > Date.now())) {
+    if (direct.data && direct.data.subscription_state === 'SUBSCRIPTION_STATE_ACTIVE' && direct.data.expires_at && Date.parse(direct.data.expires_at) > Date.now()) {
       return { active: true, expiresAt: direct.data.expires_at, state: direct.data.subscription_state, autoRenewing: direct.data.auto_renewing };
     }
   } catch {

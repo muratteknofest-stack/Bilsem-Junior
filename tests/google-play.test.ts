@@ -147,7 +147,7 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
   const platform=defaultPlatformSettings();let ledger:any[]=[],events:string[]=[],payload=subscription(),failSave=false,failAck=false,emailVerified=true,catalogReady=true,platformUnavailable=false,role='parent';
   GoogleAuth.prototype.getAccessToken=async()=> 'fixture-oauth';
   let oidcValid=false, preparedBinding=false, authCreatedAt='2026-10-26T00:00:00Z', authUnavailable=false, freeQuotaAvailable=true;
-  OAuth2Client.prototype.verifyIdToken=(async(options:any)=>{assert.equal(options.audience,process.env.GOOGLE_PLAY_RTDN_AUDIENCE);if(!oidcValid)throw Error('invalid signature');return {getPayload:()=>({email:process.env.GOOGLE_PLAY_RTDN_EMAIL,email_verified:true,iss:'https://accounts.google.com'})};}) as any;
+  OAuth2Client.prototype.verifyIdToken=(async(options:any)=>{assert.ok(Array.isArray(options.audience)?options.audience.includes(process.env.GOOGLE_PLAY_RTDN_AUDIENCE):options.audience===process.env.GOOGLE_PLAY_RTDN_AUDIENCE);if(!oidcValid)throw Error('invalid signature');return {getPayload:()=>({email:process.env.GOOGLE_PLAY_RTDN_EMAIL,email_verified:true,iss:'https://accounts.google.com'})};}) as any;
   globalThis.fetch=(async(input,init)=>{
     const req=new Request(input as RequestInfo,init),u=new URL(req.url);let value:unknown;
     if(u.hostname==='androidpublisher.googleapis.com'){
@@ -178,9 +178,15 @@ test('authenticated flow verifies before grant, acknowledges after durable save,
     else if(u.pathname==='/rest/v1/rpc/record_google_play_subscription'){
       events.push('save');if(failSave)return Response.json({code:'XX000',message:'private-db-failure'},{status:503});
       const body=await req.json();assert.equal(body.p_expiry,payload.lineItems[0].expiryTime);assert.equal(body.p_student,student);assert.ok(!body.p_token.includes(purchaseToken));
-      ledger=[{token_hash:body.p_hash,token_ciphertext:body.p_token,package_name:body.p_package,product_id:body.p_product,parent_id:parent,student_id:student,test_purchase:body.p_test}];value=body.p_hash;
+      ledger=[{token_hash:body.p_hash,token_ciphertext:body.p_token,package_name:body.p_package,product_id:body.p_product,parent_id:parent,student_id:student,test_purchase:body.p_test,subscription_state:body.p_state,expires_at:body.p_expiry,auto_renewing:body.p_renewing}];value=body.p_hash;
     }else if(u.pathname==='/rest/v1/google_play_purchase_bindings')value=preparedBinding?{parent_id:parent,student_id:student}:null;
-    else if(u.pathname==='/rest/v1/google_play_subscriptions')value=req.headers.get('accept')?.includes('vnd.pgrst.object')?ledger[0]||null:ledger;
+    else if(u.pathname==='/rest/v1/google_play_subscriptions'){
+      const stateParam = u.searchParams.get('subscription_state');
+      const filtered = stateParam === 'eq.SUBSCRIPTION_STATE_ACTIVE'
+        ? ledger.filter(r => r.subscription_state === 'SUBSCRIPTION_STATE_ACTIVE')
+        : ledger;
+      value=req.headers.get('accept')?.includes('vnd.pgrst.object')?filtered[0]||null:filtered;
+    }
     else throw Error('Unexpected fixture endpoint '+u.pathname);
     return Response.json(value);
   }) as typeof fetch;
