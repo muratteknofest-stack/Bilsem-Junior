@@ -53,9 +53,25 @@ interface AdminStudentCohortProps {
   onSyncNeeded?: () => void;
 }
 
+export const PLAN_DETAILS: Record<string, { title: string; price: string; period: string }> = {
+  monthly: { title: 'Aylık Plan', price: '1.799 ₺/ay', period: '1 Ay' },
+  quarterly: { title: '3 Aylık Plan', price: '4.899 ₺', period: '3 Ay' },
+  annual: { title: 'Yıllık Plan', price: '14.999 ₺/yıl', period: '1 Yıl' },
+};
+
+function formatDaysRemaining(expiresAt: string | null): string | null {
+  if (!expiresAt) return null;
+  const ms = Date.parse(expiresAt) - Date.now();
+  if (isNaN(ms)) return null;
+  const days = Math.ceil(ms / (24 * 60 * 60 * 1000));
+  if (days < 0) return 'Süresi doldu';
+  if (days === 0) return 'Bugün bitiyor';
+  return `${days} gün kaldı`;
+}
+
 const ACCESS_TIER_LABELS: Record<AdminUserRecord['accessTier'], { label: string; badgeClass: string }> = {
-  subscriber: { label: 'Aktif Abone', badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
-  legacy_lifetime: { label: 'Ömür Boyu (Kazanılmış Hak)', badgeClass: 'bg-indigo-50 text-indigo-800 border-indigo-200' },
+  subscriber: { label: 'Aktif Ücretli Abone', badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-300 font-extrabold shadow-xs' },
+  legacy_lifetime: { label: 'Ömür Boyu (Kazanılmış Hak)', badgeClass: 'bg-indigo-50 text-indigo-800 border-indigo-200 font-bold' },
   free: { label: 'Ücretsiz Plan', badgeClass: 'bg-slate-100 text-slate-700 border-slate-200' },
   parent: { label: 'Veli Hesabı', badgeClass: 'bg-amber-50 text-amber-800 border-amber-200' },
   admin: { label: 'Yönetici', badgeClass: 'bg-purple-50 text-purple-800 border-purple-200' },
@@ -68,6 +84,7 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState<'all' | 'student' | 'parent' | 'admin'>('all');
   const [selectedGrade, setSelectedGrade] = useState<number | 'all'>('all');
+  const [selectedSubscription, setSelectedSubscription] = useState<'all' | 'subscriber' | 'legacy_lifetime' | 'free'>('all');
   const [dialog, setDialog] = useState<{ mode: 'create' } | { mode: 'edit'; user: AdminUserRecord } | null>(null);
   const [subscriptionUser, setSubscriptionUser] = useState<AdminUserRecord | null>(null);
   const [deleting, setDeleting] = useState<AdminUserRecord | null>(null);
@@ -102,12 +119,24 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
       u.id.toLowerCase().includes(q);
     const matchesRole = selectedRole === 'all' || u.role === selectedRole;
     const matchesGrade = selectedGrade === 'all' || u.grade === selectedGrade;
-    return matchesSearch && matchesRole && matchesGrade;
+    const matchesSubscription =
+      selectedSubscription === 'all' ||
+      (u.role === 'student' && u.accessTier === selectedSubscription) ||
+      (u.role === 'parent' && (
+        selectedSubscription === 'subscriber'
+          ? users.some((st) => u.linkedStudentIds.includes(st.id) && st.accessTier === 'subscriber')
+          : selectedSubscription === 'legacy_lifetime'
+          ? users.some((st) => u.linkedStudentIds.includes(st.id) && st.accessTier === 'legacy_lifetime')
+          : users.some((st) => u.linkedStudentIds.includes(st.id) && st.accessTier === 'free')
+      ));
+    return matchesSearch && matchesRole && matchesGrade && matchesSubscription;
   });
 
   const studentCount = users.filter((u) => u.role === 'student').length;
   const parentCount = users.filter((u) => u.role === 'parent').length;
-  const subscriberCount = users.filter((u) => u.accessTier === 'subscriber' || u.accessTier === 'legacy_lifetime').length;
+  const paidSubscriberCount = users.filter((u) => u.role === 'student' && u.accessTier === 'subscriber').length;
+  const lifetimeCount = users.filter((u) => u.role === 'student' && u.accessTier === 'legacy_lifetime').length;
+  const freeCount = users.filter((u) => u.role === 'student' && u.accessTier === 'free').length;
 
   return (
     <div className="space-y-6">
@@ -129,9 +158,16 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
             <div className="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-800 border border-purple-200 text-xs font-bold">
               {studentCount} Öğrenci · {parentCount} Veli
             </div>
-            <div className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>{subscriberCount} Tam Erişimli Öğrenci</span>
+            <div className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-300 text-xs font-bold flex items-center gap-1.5">
+              <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
+              <span>{paidSubscriberCount} Ücretli Abone</span>
+            </div>
+            <div className="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200 text-xs font-bold flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+              <span>{lifetimeCount} Ömür Boyu</span>
+            </div>
+            <div className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold">
+              {freeCount} Ücretsiz
             </div>
             <button
               onClick={() => void loadUsers()}
@@ -206,6 +242,29 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
                 {g === 'all' ? 'Tümü' : `${g}. Sınıf`}
               </button>
             ))}
+
+            <span className="text-xs font-bold text-slate-400 ml-2 flex items-center gap-1">
+              <CreditCard className="w-3.5 h-3.5" />
+              <span>Abonelik:</span>
+            </span>
+            {([
+              { id: 'all', label: 'Tümü' },
+              { id: 'subscriber', label: 'Ücretli Aboneler' },
+              { id: 'legacy_lifetime', label: 'Ömür Boyu VIP' },
+              { id: 'free', label: 'Ücretsiz Plan' },
+            ] as const).map((s) => (
+              <button
+                key={s.id}
+                onClick={() => setSelectedSubscription(s.id)}
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  selectedSubscription === s.id
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -217,7 +276,7 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
               <tr className="border-b border-zinc-200 bg-slate-50/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 <th className="py-3 px-3">Kullanıcı</th>
                 <th className="py-3 px-3 text-center">Rol & Sınıf</th>
-                <th className="py-3 px-3 text-center">Erişim & Abonelik</th>
+                <th className="py-3 px-3 text-center">Erişim & Ücretli Abonelik</th>
                 <th className="py-3 px-3 text-center">Aile Bağlantısı</th>
                 <th className="py-3 px-3 text-center">Seviye & XP</th>
                 <th className="py-3 px-3 text-center">Seri & Soru</th>
@@ -235,6 +294,13 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
               )}
               {filteredUsers.map((u) => {
                 const tier = ACCESS_TIER_LABELS[u.accessTier];
+                const planInfo = u.subscription?.basePlanId ? PLAN_DETAILS[u.subscription.basePlanId] : null;
+                const daysLeft = formatDaysRemaining(u.subscription?.expiresAt ?? null);
+                
+                // For parents: check if any linked children have active subscriptions
+                const linkedChildren = u.role === 'parent' ? users.filter((st) => u.linkedStudentIds.includes(st.id)) : [];
+                const subscribedChildren = linkedChildren.filter((st) => st.accessTier === 'subscriber');
+
                 return (
                   <tr key={u.id} className="hover:bg-slate-50/60 transition-colors">
                     <td className="py-3 px-3">
@@ -269,14 +335,60 @@ export const AdminStudentCohort: React.FC<AdminStudentCohortProps> = () => {
                         type="button"
                         onClick={() => u.role === 'student' && setSubscriptionUser(u)}
                         title={u.role === 'student' ? 'Abonelik ve erişim durumunu değiştirmek için tıklayın' : undefined}
-                        className={`px-2 py-0.5 rounded-md font-bold text-[11px] border transition-all ${tier.badgeClass} ${u.role === 'student' ? 'cursor-pointer hover:opacity-80 hover:shadow-xs' : ''}`}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md font-bold text-[11px] border transition-all ${tier.badgeClass} ${u.role === 'student' ? 'cursor-pointer hover:opacity-85 hover:shadow-xs' : ''}`}
                       >
-                        {tier.label}
+                        {u.accessTier === 'subscriber' && <CreditCard className="w-3 h-3 text-emerald-600" />}
+                        {u.accessTier === 'legacy_lifetime' && <ShieldCheck className="w-3 h-3 text-indigo-600" />}
+                        <span>{tier.label}</span>
                       </button>
-                      {u.subscription && (
-                        <div className="text-[10px] text-slate-500 font-mono mt-1">
-                          {u.subscription.basePlanId} · {u.subscription.state.replace('SUBSCRIPTION_STATE_', '')}
-                          {u.subscription.expiresAt ? ` (${new Date(u.subscription.expiresAt).toLocaleDateString('tr-TR')})` : ''}
+
+                      {/* Detailed paid subscription info for students */}
+                      {u.role === 'student' && u.accessTier === 'subscriber' && (
+                        <div className="mt-1.5 space-y-0.5 text-left bg-emerald-50/60 p-2 rounded-lg border border-emerald-200/60 max-w-[210px] mx-auto text-[10px]">
+                          <div className="font-bold text-emerald-900 flex items-center justify-between">
+                            <span>{planInfo ? `${planInfo.title} (${planInfo.price})` : (u.subscription?.basePlanId || 'Aylık Plan')}</span>
+                            {u.subscription?.testPurchase && (
+                              <span className="px-1 py-0.2 rounded bg-amber-100 text-amber-800 text-[9px] font-bold">Test</span>
+                            )}
+                          </div>
+                          <div className="text-slate-600 flex items-center justify-between font-mono">
+                            <span>Kaynak: Google Play</span>
+                            <span>{u.subscription?.autoRenewing ? 'Yenilenen' : 'Tek Sefer'}</span>
+                          </div>
+                          {u.subscription?.expiresAt && (
+                            <div className="text-emerald-700 font-bold font-mono">
+                              Bitiş: {new Date(u.subscription.expiresAt).toLocaleDateString('tr-TR')} {daysLeft ? `(${daysLeft})` : ''}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Info for legacy lifetime students */}
+                      {u.role === 'student' && u.accessTier === 'legacy_lifetime' && (
+                        <div className="text-[10px] text-indigo-600 font-medium mt-1">
+                          Süresiz VIP Tam Erişim · Ücretsiz
+                        </div>
+                      )}
+
+                      {/* Info for free students */}
+                      {u.role === 'student' && u.accessTier === 'free' && (
+                        <div className="text-[10px] text-slate-400 font-medium mt-1">
+                          Kısıtlı Erişim (Günde 2 Pratik)
+                        </div>
+                      )}
+
+                      {/* Info for parents */}
+                      {u.role === 'parent' && (
+                        <div className="text-[10px] mt-1 font-medium">
+                          {subscribedChildren.length > 0 ? (
+                            <span className="text-emerald-700 font-bold">
+                              ✓ {subscribedChildren.map((c) => c.name).join(', ')} (Ücretli Abone)
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">
+                              {linkedChildren.length > 0 ? `${linkedChildren.length} Öğrenci (Ücretsiz)` : 'Öğrenci bağlı değil'}
+                            </span>
+                          )}
                         </div>
                       )}
                     </td>

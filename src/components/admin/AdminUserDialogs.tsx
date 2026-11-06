@@ -296,18 +296,36 @@ export const SubscriptionDialog: React.FC<{
   return (
     <Modal title={`Abonelik Yönetimi: ${user.name}`} onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
-        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
           <div className="flex items-center justify-between">
             <span className="text-slate-500 font-bold">Öğrenci Kodu / E-posta:</span>
             <span className="font-mono font-bold text-slate-800">{user.studentCode || user.email || user.id.slice(0, 8)}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-slate-500 font-bold">Mevcut Durum:</span>
+            <span className="text-slate-500 font-bold">Mevcut Erişim:</span>
             <span className="font-bold text-purple-700">
-              {user.accessTier === 'subscriber' ? 'Aktif Abone' : user.accessTier === 'legacy_lifetime' ? 'Ömür Boyu VIP' : 'Ücretsiz Plan'}
+              {user.accessTier === 'subscriber' ? 'Aktif Ücretli Abone' : user.accessTier === 'legacy_lifetime' ? 'Ömür Boyu VIP' : 'Ücretsiz Plan'}
               {user.subscription?.expiresAt && ` (Bitiş: ${new Date(user.subscription.expiresAt).toLocaleDateString('tr-TR')})`}
             </span>
           </div>
+          {user.subscription && (
+            <div className="pt-2 border-t border-slate-200 mt-2 space-y-1 text-[11px]">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Kayıtlı Paket:</span>
+                <span className="font-bold text-emerald-800">
+                  {user.subscription.basePlanId === 'annual' ? 'Yıllık Plan (14.999 ₺/yıl)' : user.subscription.basePlanId === 'quarterly' ? '3 Aylık Plan (4.899 ₺)' : 'Aylık Plan (1.799 ₺/ay)'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Ödeme Platformu:</span>
+                <span className="font-mono text-slate-700">Google Play {user.subscription.testPurchase ? '(Test Lisansı)' : '(Canlı)'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Yenilenme:</span>
+                <span className="text-slate-700">{user.subscription.autoRenewing ? 'Otomatik Yenilenen' : 'Tek Seferlik'}</span>
+              </div>
+            </div>
+          )}
         </div>
 
         <Field label="Yeni Erişim / Abonelik Seviyesi">
@@ -324,8 +342,8 @@ export const SubscriptionDialog: React.FC<{
                 className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
               />
               <div>
-                <div className="font-bold text-slate-900 text-xs">Aktif Abone (Süreli Üyelik)</div>
-                <div className="text-[11px] text-slate-500">Öğrenciye belirlenen süre boyunca tam erişim tanımlar.</div>
+                <div className="font-bold text-slate-900 text-xs">Aktif Ücretli Abone (Süreli Üyelik)</div>
+                <div className="text-[11px] text-slate-500">Öğrenciye Google Play veya özel süre üzerinden tam erişim tanımlar.</div>
               </div>
             </label>
 
@@ -373,9 +391,9 @@ export const SubscriptionDialog: React.FC<{
                 value={planId}
                 onChange={e => handlePlanChange(e.target.value as 'monthly' | 'quarterly' | 'annual')}
               >
-                <option value="monthly">1 Aylık Plan (+30 Gün)</option>
-                <option value="quarterly">3 Aylık Plan (+90 Gün)</option>
-                <option value="annual">1 Yıllık Plan (+365 Gün)</option>
+                <option value="monthly">Aylık Paket (1.799 ₺ · +30 Gün)</option>
+                <option value="quarterly">3 Aylık Paket (4.899 ₺ · +90 Gün)</option>
+                <option value="annual">Yıllık Paket (14.999 ₺ · +365 Gün)</option>
               </select>
             </Field>
 
