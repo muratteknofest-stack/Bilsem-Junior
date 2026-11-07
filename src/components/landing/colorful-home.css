@@ -248,7 +248,13 @@
 
 /* 60-30-10 Asymmetric Bento Grid for Worlds (#dunyalar) */
 .zp-landing.zp-colorful-home #dunyalar { padding-top: 4.5rem; padding-bottom: 5rem; }
-.zp-world-bento-item { grid-column: span 6; min-width: 0; }
+.zp-landing .zp-world-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+}
+.zp-world-bento-item { min-width: 0; width: 100%; }
 .zp-world-bento-featured { grid-column: span 6; }
 .zp-world-bento-compact { grid-column: span 3; }
 .zp-world-card-surface { border-radius: 1.5rem; }
@@ -593,9 +599,13 @@
   .zp-landing.zp-colorful-home .zp-floating-note small { font-size: .5625rem; }
   .zp-landing.zp-colorful-home .zp-scene-controls { flex-wrap: wrap; gap: .35rem; }
   .zp-landing.zp-colorful-home .zp-scene-controls button { font-size: .6875rem; }
+  .zp-landing .zp-world-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
   .zp-world-bento-item,
   .zp-world-bento-featured,
-  .zp-world-bento-compact { grid-column: span 3; }
+  .zp-world-bento-compact { grid-column: span 1; width: 100%; }
   .zp-landing.zp-colorful-home .zp-world-bento-compact .zp-world-card { padding: 1.5rem; min-height: 22rem; }
   .zp-landing.zp-colorful-home .zp-world-bento-compact .zp-world-art { width: 185px; height: 8.25rem; scale: .92; }
   .zp-rewards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -636,21 +646,36 @@
   .zp-landing.zp-colorful-home .zp-scene-controls button { font-size: .6875rem; padding: .35rem .65rem; }
   .zp-landing.zp-colorful-home .zp-skill-ribbon > .zp-container { padding-block: .75rem; gap: .85rem; }
   .zp-landing.zp-colorful-home .zp-skill-ribbon span { font-size: .72rem; }
-  .zp-landing.zp-colorful-home #dunyalar { padding-top: 3rem; padding-bottom: 3.5rem; }
+  .zp-landing.zp-colorful-home #dunyalar { padding-top: 2.75rem; padding-bottom: 3.25rem; }
   .zp-landing.zp-colorful-home .zp-section-heading h2 { font-size: 2.1rem; }
   .zp-landing.zp-colorful-home .zp-section-heading > p { font-size: .875rem; }
+  .zp-landing .zp-world-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.15rem;
+    width: 100%;
+  }
   .zp-world-bento-item,
   .zp-world-bento-featured,
-  .zp-world-bento-compact { grid-column: span 4; }
+  .zp-world-bento-compact {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+  }
   .zp-landing.zp-colorful-home .zp-world-card,
-  .zp-landing.zp-colorful-home .zp-world-bento-compact .zp-world-card { padding: 1.4rem; min-height: 0; }
+  .zp-landing.zp-colorful-home .zp-world-bento-compact .zp-world-card {
+    padding: 1.35rem 1.4rem;
+    min-height: 0;
+    word-break: normal;
+    overflow-wrap: break-word;
+  }
   .zp-landing.zp-colorful-home .zp-world-top { margin-bottom: 0; }
   .zp-landing.zp-colorful-home .zp-world-art,
-  .zp-landing.zp-colorful-home .zp-world-bento-compact .zp-world-art { position: relative; right: auto; top: auto; margin: .25rem auto .5rem; width: 180px; height: 8rem; scale: .88; transform-origin: center; }
+  .zp-landing.zp-colorful-home .zp-world-bento-compact .zp-world-art { position: relative; right: auto; top: auto; margin: .25rem auto .5rem; width: 175px; height: 7.5rem; scale: .88; transform-origin: center; }
   .zp-landing.zp-colorful-home .zp-world-card h3,
-  .zp-landing.zp-colorful-home .zp-world-bento-compact .zp-world-card h3 { font-size: 1.55rem; }
+  .zp-landing.zp-colorful-home .zp-world-bento-compact .zp-world-card h3 { font-size: 1.55rem; line-height: 1.2; }
   .zp-landing.zp-colorful-home .zp-world-card p,
-  .zp-landing.zp-colorful-home .zp-world-bento-compact .zp-world-card p { font-size: .875rem; margin-bottom: 1.15rem; min-height: 0; }
+  .zp-landing.zp-colorful-home .zp-world-bento-compact .zp-world-card p { font-size: .875rem; line-height: 1.65; margin-bottom: 1.15rem; min-height: 0; word-break: normal; overflow-wrap: break-word; }
   .zp-landing.zp-colorful-home .zp-world-tag { min-height: 0; max-width: none; }
   .zp-landing.zp-colorful-home .zp-demo-section { padding-block: 3.25rem; }
   .zp-landing.zp-colorful-home .zp-demo-intro h2 { font-size: 2.35rem; }

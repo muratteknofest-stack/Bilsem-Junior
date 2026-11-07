@@ -171,12 +171,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
       <GradeExplorer onTry={tryGrade} completed={submitted} />
       <section id="dunyalar" className="zp-container zp-section" aria-labelledby="worlds-title">
         <motion.div {...reveal} className="zp-section-heading"><div><p className="zp-kicker"><Shapes size={16} /> BİLSEM hazırlık alanları</p><h2 id="worlds-title">Becerini seç.<br /><span>Hazırlığını güçlendir.</span></h2></div><p>Birbirinden farklı düşünme oyunları.<br />Bir alan seç, düşünmenin farklı yollarıyla tanış.</p></motion.div>
-        <div className="zp-world-grid">{worlds.map((w, index) => (
-          <motion.div
-            {...reveal}
-            key={w.type}
-            className={`zp-world-bento-item ${index < 2 ? 'zp-world-bento-featured col-span-4 md:col-span-3 lg:col-span-6' : 'zp-world-bento-compact col-span-4 md:col-span-3 lg:col-span-3'} min-w-0 h-full`}
-          >
+        <div className="zp-world-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 md:gap-5 lg:gap-6 w-full">
+          {worlds.map((w, index) => (
+            <motion.div
+              {...reveal}
+              key={w.type}
+              className={`zp-world-bento-item ${index < 2 ? 'zp-world-bento-featured col-span-1 md:col-span-1 lg:col-span-6' : 'zp-world-bento-compact col-span-1 md:col-span-1 lg:col-span-3'} min-w-0 h-full w-full`}
+            >
             <SpotlightSurface
               unstyled
               className="zp-world-card-surface h-full transition-transform duration-200 hover:-translate-y-1"

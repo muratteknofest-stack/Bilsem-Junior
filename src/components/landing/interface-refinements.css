@@ -32,10 +32,11 @@
  .zp-landing .bj-discovery-puzzle{padding:12px}
  .zp-landing .bj-discovery-puzzle h3{font-size:16px;margin-bottom:8px}
  .zp-landing .zp-demo-level{flex-wrap:wrap}
- .zp-landing .zp-world-grid{gap:12px}
- .zp-landing .zp-world-card{padding:18px}
+ .zp-landing .zp-world-grid{display:grid;grid-template-columns:1fr;gap:16px;width:100%}
+ .zp-landing .zp-world-bento-item{grid-column:1/-1;width:100%;min-width:0}
+ .zp-landing .zp-world-card{padding:18px;word-break:normal;overflow-wrap:break-word}
  .zp-landing .zp-world-art{height:100px}
- .zp-landing .zp-world-card p{font-size:13px;line-height:1.6}
+ .zp-landing .zp-world-card p{font-size:13px;line-height:1.6;word-break:normal;overflow-wrap:break-word}
 }
 
 @media(max-width:360px){.zp-landing .zp-public-actions>.zp-nav-signup{white-space:nowrap;min-height:44px;line-height:1.3;padding:8px 9px;font-size:11px}}
