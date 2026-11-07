@@ -5,6 +5,7 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override public void onCreate(Bundle savedInstanceState) {
         registerPlugin(PlayBillingPlugin.class);
+        registerPlugin(AppReferrerPlugin.class);
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
     }

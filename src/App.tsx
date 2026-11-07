@@ -3,6 +3,7 @@ import { useRouteAudio } from './hooks/useAppAudio';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { isAndroidApp } from './lib/native-app';
+import { consumeAppHandoff, checkGooglePlayInstallReferrer } from './lib/app-handoff-client';
 import { androidParentRoute, dispatchAndroidBack } from './lib/android-navigation';
 import { AndroidConnectionNotice } from './components/android/AndroidConnectionNotice';
 import { AndroidScreenLoading } from './components/android/AndroidScreenLoading';
@@ -472,6 +473,64 @@ export default function App() {
     return()=>{disposed=true;void remove?.();};
   },[currentRoute,isTestRoute,showParentAccess,showGlobalReminderModal,isSwitchingStudent,currentUser.role]);
 
+  const [handoffActive, setHandoffActive] = useState(false);
+
+  useEffect(() => {
+    const search = typeof window !== 'undefined' ? window.location.search : '';
+    const params = new URLSearchParams(search);
+    const handoffToken = params.get('handoff') || params.get('token') || params.get('handoff_token');
+
+    const executeHandoff = async (token: string) => {
+      setHandoffActive(true);
+      try {
+        const res = await consumeAppHandoff(token);
+        if (res.success) {
+          sound.playSuccess();
+          if (typeof window !== 'undefined' && window.history?.replaceState) {
+            const cleanUrl = window.location.pathname.replace(/\/app-auth\b/, '') || '/';
+            window.history.replaceState({}, document.title, cleanUrl);
+          }
+        }
+      } catch (err) {
+        console.warn('App handoff consume error:', err);
+      } finally {
+        setHandoffActive(false);
+      }
+    };
+
+    if (handoffToken) {
+      void executeHandoff(handoffToken);
+      return;
+    }
+
+    let urlListener: { remove: () => Promise<void> } | undefined;
+    if (Capacitor.isNativePlatform()) {
+      void CapacitorApp.addListener('appUrlOpen', (event: { url: string }) => {
+        try {
+          const parsed = new URL(event.url);
+          const token = parsed.searchParams.get('handoff') || parsed.searchParams.get('token') || parsed.searchParams.get('handoff_token');
+          if (token) {
+            void executeHandoff(token);
+          }
+        } catch {
+          const match = event.url.match(/[?&]handoff(?:_token)?=([a-zA-Z0-9_-]+)/);
+          if (match && match[1]) {
+            void executeHandoff(decodeURIComponent(match[1]));
+          }
+        }
+      }).then(l => { urlListener = l; }).catch(() => {});
+
+      void checkGooglePlayInstallReferrer(token => {
+        void executeHandoff(token);
+      });
+    }
+
+    return () => {
+      void urlListener?.remove();
+    };
+  }, []);
+
+  if (handoffActive) return <main className="flex min-h-screen items-center justify-center bg-[var(--surface-canvas)] text-[var(--text-primary)] p-6"><p role="status">Web oturumunuz aktarılıyor…</p></main>;
   if (authLoading && authUser && !userProfile) return <main className="flex min-h-screen items-center justify-center bg-[var(--surface-canvas)] text-[var(--text-primary)] p-6"><p role="status">Hesap ve ilerleme bilgileri yükleniyor…</p></main>;
   if (currentRoute !== 'login' && hasVerifiedAdminAccess({ currentUser: authUser, userProfile, loading: authLoading, isAdminAuthorized })) return <main className="flex min-h-screen items-center justify-center bg-[var(--surface-canvas)] text-[var(--text-primary)] p-6"><p role="status">Yönetici alanına yönlendiriliyorsunuz…</p></main>;
 

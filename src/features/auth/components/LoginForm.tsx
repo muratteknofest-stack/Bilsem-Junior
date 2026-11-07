@@ -27,7 +27,9 @@ import {
   ArrowRight,
   GraduationCap,
   Users,
+  Smartphone,
 } from 'lucide-react';
+import { consumeAppHandoff } from '../../../lib/app-handoff-client';
 
 interface LoginFormProps {
   selectedRole: UserRole;
@@ -62,6 +64,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [needsConfirmation, setNeedsConfirmation] = useState(false);
+  const [showHandoffCodePrompt, setShowHandoffCodePrompt] = useState(false);
+  const [handoffCodeInput, setHandoffCodeInput] = useState('');
+  const [isSubmittingHandoff, setIsSubmittingHandoff] = useState(false);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -399,6 +404,57 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             </>
           )}
         </button>
+
+        {!compact && (
+          <div className="pt-3 text-center border-t border-slate-100 dark:border-slate-800 mt-2">
+            <button
+              type="button"
+              onClick={() => setShowHandoffCodePrompt(!showHandoffCodePrompt)}
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Web'den mi geldiniz? 6 Haneli Kodla Bağlan</span>
+            </button>
+            {showHandoffCodePrompt && (
+              <div className="mt-2.5 p-3 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/50 flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="BJ-XXXX"
+                  value={handoffCodeInput}
+                  onChange={(e) => setHandoffCodeInput(e.target.value.toUpperCase())}
+                  className="flex-1 py-1.5 px-2.5 rounded-lg border border-indigo-200 dark:border-indigo-800 text-xs font-mono font-bold uppercase text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                  maxLength={10}
+                />
+                <button
+                  type="button"
+                  disabled={isSubmittingHandoff || !handoffCodeInput.trim()}
+                  onClick={async () => {
+                    setIsSubmittingHandoff(true);
+                    setErrorMessage(null);
+                    try {
+                      const res = await consumeAppHandoff(handoffCodeInput.trim());
+                      if (res.success) {
+                        sound.playSuccess();
+                        setSuccessToast('Oturum başarıyla aktarıldı! Yönlendiriliyorsunuz...');
+                      } else {
+                        sound.playError();
+                        setErrorMessage(res.error || 'Kod doğrulanamadı.');
+                      }
+                    } catch {
+                      sound.playError();
+                      setErrorMessage('Aktarım kodu doğrulanamadı.');
+                    } finally {
+                      setIsSubmittingHandoff(false);
+                    }
+                  }}
+                  className="py-1.5 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {isSubmittingHandoff ? 'Doğrulanıyor…' : 'Bağlan'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </form>
 
       {needsConfirmation && selectedRole === 'parent' && <div className="mt-5 border-t border-slate-200 pt-4"><ConfirmationEmailAction key={identifier.trim().toLowerCase()} email={identifier.trim().toLowerCase()} /></div>}

@@ -7,6 +7,7 @@ import { z } from 'zod';
 import {
   getAdminAuth,
   requireSupabaseAuth, requireVerifiedEmail, requireProfileRole,
+  type AuthenticatedRequest,
 } from '../security';
 import { accountSecurityLimiter } from '../rate-limiters';
 import { getServiceClient } from '../supabase-admin';
@@ -15,6 +16,7 @@ import { readPlatformSettings } from '../platform-settings';
 import { toSupabaseRow } from '../../src/lib/supabase-shape';
 import { isManagedStudentEmail } from '../../src/lib/account-identifiers';
 import { createFamilyRegistrationHandler } from '../family-registration';
+import { createAppHandoff, exchangeAppHandoff } from '../app-handoff';
 export { registerFamilySchema } from '../family-registration';
 
 const authRoutes = Router();
@@ -85,6 +87,50 @@ authRoutes.post('/auth/resend-confirmation', accountSecurityLimiter, sharedRateL
 });
 
 authRoutes.post('/auth/change-password', requireSupabaseAuth, requireVerifiedEmail, accountSecurityLimiter, sharedRateLimit('own-password-change', 6, 3600), changeOwnPassword);
+
+authRoutes.post('/auth/app-handoff/create', requireSupabaseAuth, accountSecurityLimiter, (req: AuthenticatedRequest, res) => {
+  if (!req.authUser?.uid) return res.status(401).json({ error: 'Oturum doğrulaması gerekli.', code: 'UNAUTHORIZED' });
+  try {
+    const role = (req.authUser.role as 'student' | 'parent' | 'admin') || 'parent';
+    const email = req.authUser.email || '';
+    const body = req.body || {};
+    const handoff = createAppHandoff({
+      userId: req.authUser.uid,
+      email,
+      role,
+      sessionPayload: {
+        accessToken: typeof body.accessToken === 'string' ? body.accessToken : undefined,
+        refreshToken: typeof body.refreshToken === 'string' ? body.refreshToken : undefined,
+        studentCode: typeof body.studentCode === 'string' ? body.studentCode : undefined,
+        studentName: typeof body.studentName === 'string' ? body.studentName : undefined,
+        role,
+        email,
+        uid: req.authUser.uid,
+      },
+      siteUrl: (req.header('origin') || process.env.VITE_PUBLIC_SITE_URL || '').replace(/\/+$/, ''),
+    });
+    return res.status(201).json({ success: true, ...handoff });
+  } catch (error) {
+    logServerFailure('App handoff create failed', error);
+    return res.status(500).json({ error: 'Uygulama aktarım bağlantısı oluşturulamadı.', code: 'HANDOFF_CREATE_FAILED' });
+  }
+});
+
+authRoutes.post('/auth/app-handoff/exchange', accountSecurityLimiter, (req, res) => {
+  const { token, code } = req.body || {};
+  if (!token && !code) {
+    return res.status(400).json({ error: 'Aktarım kodu veya bağlantı jetonu gereklidir.', code: 'MISSING_TOKEN_OR_CODE' });
+  }
+  const result = exchangeAppHandoff({ token, code });
+  if (!result.success) {
+    const status = result.code === 'HANDOFF_EXPIRED' ? 410 : result.code === 'HANDOFF_ALREADY_USED' ? 409 : 404;
+    return res.status(status).json({ error: result.error, code: result.code });
+  }
+  return res.status(200).json({
+    success: true,
+    session: result.sessionPayload,
+  });
+});
 
 export default authRoutes;
 

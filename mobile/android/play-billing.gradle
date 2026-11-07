@@ -1,6 +1,7 @@
 // Reapplied by android:prepare after regenerating the Capacitor project.
 dependencies {
     implementation 'com.android.billingclient:billing:9.1.0'
+    implementation 'com.android.installreferrer:install-referrer:2.2'
 }
 
 android {

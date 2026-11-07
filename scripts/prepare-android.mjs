@@ -24,6 +24,7 @@ export function prepareAndroid(root) {
     ['launcher-adaptive.xml', 'res/drawable-v26/zekapark_launcher.xml'],
     ['MainActivity.java', `java/${packagePath}/MainActivity.java`],
     ['PlayBillingPlugin.java', `java/${packagePath}/PlayBillingPlugin.java`],
+    ['AppReferrerPlugin.java', `java/${packagePath}/AppReferrerPlugin.java`],
   ]) {
     const destination = resolve(root, 'android/app/src/main', target);
     mkdirSync(dirname(destination), { recursive: true });
