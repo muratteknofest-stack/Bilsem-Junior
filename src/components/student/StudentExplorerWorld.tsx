@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { ArrowRight, Play, Sparkles } from 'lucide-react';
+import { ArrowRight, Compass, Play } from 'lucide-react';
 import { sound } from '../../lib/sound';
 import './student-explorer-world.css';
 
@@ -84,19 +84,19 @@ export function StudentExplorerScene() {
       </svg>
       <img className="bj-explorer-guide" src="/brand/junior-fox-3d.webp" alt="" width={160} height={160} decoding="async"/>
     </div>
-    <span className="bj-explorer-orbit bj-explorer-orbit-one">✦</span><span className="bj-explorer-orbit bj-explorer-orbit-two">✧</span>
+    <span className="bj-explorer-orbit bj-explorer-orbit-one" /><span className="bj-explorer-orbit bj-explorer-orbit-two" />
   </div>;
 }
 
 export function StudentExplorerPortal({ onLessons }: { onLessons: () => void }) {
-  return <section className="bj-explorer-portal bj-game-lesson-portal" aria-label="Junior ile keşif adası" data-motion-zone>
+  return <section role="region" className="bj-explorer-portal bj-game-lesson-portal" aria-label="Junior ile keşif adası" data-motion-zone>
     <div className="bj-explorer-portal-copy">
-      <span className="bj-explorer-eyebrow"><Sparkles size={13} aria-hidden="true"/> JUNIOR'UN KEŞİF ADASI</span>
+      <span className="bj-explorer-eyebrow"><Compass size={13} aria-hidden="true"/> Junior'un Keşif Adası</span>
       <h2>Birlikte keşfedelim!</h2>
       <p>Önce kuralı öğren,<br/>sonra oyunlarda kendini dene.</p>
       <button type="button" className="bj-game-portal-button" onClick={()=>{sound.playClick();onLessons();}}><Play size={15} aria-hidden="true"/>Konu Anlatımları<ArrowRight size={15} aria-hidden="true"/></button>
     </div>
     <StudentExplorerScene/>
-    <div className="bj-explorer-route" aria-label="Öğrenme yolculuğu"><span><b>1</b> Öğren</span><i aria-hidden="true"/><span><b>2</b> Dene</span><i aria-hidden="true"/><span><b>3</b> Güçlen</span></div>
+    <div className="bj-explorer-route tabular-nums" aria-label="Öğrenme yolculuğu"><span><b>1</b> Öğren</span><i aria-hidden="true"/><span><b>2</b> Dene</span><i aria-hidden="true"/><span><b>3</b> Güçlen</span></div>
   </section>;
 }

@@ -95,7 +95,7 @@ export const CountUpNumber = React.forwardRef<HTMLSpanElement, CountUpNumberProp
       <span
         ref={ref}
         aria-label={accessibleLabel}
-        className={`inline-block tabular-nums font-variant-numeric:tabular-nums ${className}`.trim()}
+        className={`inline-block tabular-nums ${className}`.trim()}
         {...props}
       >
         {prefix}

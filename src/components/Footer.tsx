@@ -85,8 +85,8 @@ export function Footer({ onNavigate, onNavigateToLogin, downloads }: FooterProps
         {/* Upper CTA Intro Card */}
         <div className="platform-footer-intro">
           <div>
-            <p className="platform-footer-eyebrow">
-              <Sparkles size={12} aria-hidden="true" /> BİLSEM HAZIRLIĞINDA YANINDA
+            <p className="platform-footer-eyebrow" style={{ textTransform: 'none', letterSpacing: '0.02em' }}>
+              <Compass size={12} aria-hidden="true" /> BİLSEM hazırlığında yanında
             </p>
             <h2>
               Birlikte düşünün.
@@ -150,7 +150,7 @@ export function Footer({ onNavigate, onNavigateToLogin, downloads }: FooterProps
               </div>
             </div>
 
-            {!isAndroidApp && downloads && <div className="bj-footer-downloads"><p>MACERANI YANINDA TAŞI</p><AppDownloadLinks downloads={downloads} compact/></div>}
+            {!isAndroidApp && downloads && <div className="bj-footer-downloads"><p>Maceranı yanında taşı</p><AppDownloadLinks downloads={downloads} compact/></div>}
             <div className="platform-footer-contact-card">
               <div className="platform-footer-contact-header">
                 <span className="platform-footer-contact-title">

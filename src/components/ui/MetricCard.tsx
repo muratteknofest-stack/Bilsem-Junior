@@ -108,7 +108,7 @@ export const MetricCard = React.forwardRef<HTMLDivElement, MetricCardProps>(
       >
         {/* Header: Title and optional Icon */}
         <div className="flex items-start justify-between gap-3">
-          <p className="text-xs sm:text-sm font-semibold tracking-wide uppercase text-[var(--text-secondary,#52566b)] dark:text-[var(--text-secondary,#cac4d5)]">
+          <p className="text-xs sm:text-sm font-semibold text-[var(--text-secondary,#52566b)] dark:text-[var(--text-secondary,#cac4d5)]">
             {title}
           </p>
           {icon && (
@@ -120,7 +120,7 @@ export const MetricCard = React.forwardRef<HTMLDivElement, MetricCardProps>(
 
         {/* Metric and Delta Display */}
         <div className="flex items-baseline justify-between gap-3 flex-wrap">
-          <div className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight tabular-nums text-[var(--text-primary,#1d2036)] dark:text-[var(--text-primary,#f9f7ff)] font-['Outfit',sans-serif]">
+          <div className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight tabular-nums text-[var(--text-primary,#1d2036)] dark:text-[var(--text-primary,#f9f7ff)] font-[family-name:var(--bj-font-display)]">
             {metric}
           </div>
 

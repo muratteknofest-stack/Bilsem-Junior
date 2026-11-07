@@ -51,7 +51,6 @@ import {
   ChevronRight,
   Target,
   Mail,
-  Sparkles,
   Flame,
   Shield,
   ArrowUpRight,
@@ -79,6 +78,8 @@ import { resetLinkedStudentPassword } from '../services/account-security-service
 import { strongPasswordSchema } from '../lib/validations';
 import { NewPasswordFields } from '../features/auth/components/NewPasswordFields';
 import { sortSkillMasteriesByScore, buildCognitiveRadarData, buildMomentumSeries, calculateDailyGoalProgressPct } from '../features/parent/parent-portal-helpers';
+import { useParentPortalTab } from '../features/parent/parent-tab-sync';
+import { MetricCard } from './ui/MetricCard';
 import './landing/design-system.css';
 import './dashboard-design-system.css';
 import { ParentProgressOverview, ParentWeeklyVolume } from './parent/ParentProgressOverview';
@@ -123,7 +124,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
   const [studentLoadError, setStudentLoadError] = useState('');
   const [studentReload, setStudentReload] = useState(0);
   const [passwordResetNotice, setPasswordResetNotice] = useState('');
-  const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'preferences' | 'membership'>('overview');
+  const [activeTab, setActiveTab] = useParentPortalTab('overview');
   const [isBillingBusy, setIsBillingBusy] = useState(false);
   const [showDetailedReport, setShowDetailedReport] = useState(false);
   const [codeCopyError, setCodeCopyError] = useState('');
@@ -244,6 +245,41 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
   // Radar Data for 8 Cognitive Dimensions
   const radarData = useMemo(() => buildCognitiveRadarData(displayMasteries || []), [displayMasteries]);
   const monthlyMomentumData = useMemo(() => buildMomentumSeries(weeklyData), [weeklyData]);
+
+  const skillsKpis = useMemo(() => {
+    const list = displayMasteries || [];
+    const practiced = list.filter(m => (m.attemptCount || 0) > 0);
+    const avgMastery = list.length > 0
+      ? Math.round(list.reduce((sum, m) => sum + (m.mastery || 0), 0) / list.length)
+      : 0;
+    const totalAttempts = list.reduce((sum, m) => sum + (m.attemptCount || 0), 0);
+    const overallAccuracy = practiced.length > 0
+      ? Math.round(practiced.reduce((sum, m) => sum + (m.accuracy || 0), 0) / practiced.length)
+      : 0;
+    return {
+      avgMastery,
+      practicedCount: practiced.length,
+      totalDomains: list.length || 10,
+      totalAttempts,
+      overallAccuracy,
+    };
+  }, [displayMasteries]);
+
+  useEffect(() => {
+    if (!showStudyPlanModal && !showPasswordResetModal) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (showPasswordResetModal && !isResettingPassword) {
+        setShowPasswordResetModal(false);
+        setNewStudentPassword('');
+        setConfirmStudentPassword('');
+      } else if (showStudyPlanModal) {
+        setShowStudyPlanModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showStudyPlanModal, showPasswordResetModal, isResettingPassword]);
 
   const handleSendWeeklyReport = async () => {
     if (!weeklyData) return;
@@ -394,7 +430,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
       if (isAndroidApp) return <AndroidScreenLoading />;
       return (
         <div className="mx-auto max-w-6xl min-h-[50vh] flex flex-col items-center justify-center p-8 space-y-3 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 animate-pulse">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
             <Loader2 className="h-6 w-6 animate-spin" />
           </div>
           <p className="text-sm font-semibold text-slate-600 dark:text-zinc-400">Bağlı öğrencinin bilgileri yükleniyor…</p>
@@ -413,18 +449,18 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           
           {/* Student Profile Card */}
-          <div className="flex items-center gap-5 w-full md:w-auto">
+          <div className="flex items-center gap-5 w-full md:w-auto min-w-0">
             <motion.div 
-              whileHover={{ scale: 1.05, rotate: 2 }}
-              className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center text-4xl shadow-md border border-indigo-200/50 dark:border-zinc-700/60 shrink-0"
+              whileHover={{ scale: 1.03 }}
+              className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center text-4xl shadow-xs border border-indigo-200/60 dark:border-zinc-700/60 shrink-0"
             >
               <span className="select-none">{currentStudent.avatar || '🦊'}</span>
-              <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-1 rounded-full ring-4 ring-white dark:ring-zinc-900 shadow-sm">
+              <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-1 rounded-full ring-4 ring-white dark:ring-zinc-900 shadow-xs">
                 <Check className="w-3 h-3 stroke-[3]" />
               </div>
             </motion.div>
 
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <p className="zp-dashboard-kicker">Aile Gelişim Merkezi</p>
               <div className="flex items-center gap-2.5">
                 <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 font-['Outfit',sans-serif]">
@@ -436,10 +472,10 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               </div>
 
               {isLoadingStudent ? (
-                <div className="text-zinc-500 text-sm mt-1.5 animate-pulse">Öğrenci verileri senkronize ediliyor...</div>
+                <div className="text-zinc-500 text-sm mt-1.5">Öğrenci verileri senkronize ediliyor...</div>
               ) : (
-                <div className="space-y-2 mt-2">
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm">
+                <div className="space-y-2.5 mt-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm tabular-nums">
                     <span className="font-semibold text-zinc-800 dark:text-zinc-200">
                       {currentStudent.name}
                     </span>
@@ -448,28 +484,27 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                       <Award className="w-4 h-4" /> Seviye {currentStudent.level || 1}
                     </span>
                     <span className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-                    <span className="inline-flex items-center gap-1 font-bold text-amber-500">
-                      <Flame className="w-4 h-4 animate-bounce" /> {currentStudent.streak || 0} Günlük Seri
+                    <span className="inline-flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400">
+                      <Flame className="w-4 h-4" /> {currentStudent.streak || 0} Günlük Seri
                     </span>
                   </div>
 
                   {currentStudent.studentCode && (
                     <div className="flex flex-wrap items-center gap-2">
-                      <motion.button
+                      <button
+                        type="button"
                         onClick={handleCopyCode}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="inline-flex items-center gap-2 bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-800 dark:hover:bg-zinc-700/80 px-3 py-1 rounded-lg text-xs font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer group"
+                        className="inline-flex min-h-[44px] items-center gap-2 bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-800 dark:hover:bg-zinc-700/80 px-3.5 py-2 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer group"
                         title="Öğrenci giriş kodunu kopyala"
                       >
-                        <KeyRound className="w-3.5 h-3.5 text-zinc-500 group-hover:text-indigo-500 transition-colors" />
+                        <KeyRound className="w-3.5 h-3.5 text-zinc-500 group-hover:text-indigo-500 transition-colors shrink-0" />
                         <span>Giriş Kodu: <strong className="tracking-widest font-mono text-zinc-900 dark:text-white">{currentStudent.studentCode}</strong></span>
                         {codeCopied ? (
-                          <span className="text-emerald-500 flex items-center gap-1 font-bold"><Check className="w-3 h-3" /> Kopyalandı</span>
+                          <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-bold"><Check className="w-3.5 h-3.5" /> Kopyalandı</span>
                         ) : (
-                          <Copy className="w-3 h-3 text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-200" />
+                          <Copy className="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-200 shrink-0" />
                         )}
-                      </motion.button>
+                      </button>
                       {parentOrStudent?.role === 'parent' && (
                         <button
                           type="button"
@@ -478,9 +513,9 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                             setNewStudentPassword(''); setConfirmStudentPassword('');
                             setShowPasswordResetModal(true);
                           }}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700 hover:bg-indigo-100"
+                          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 px-3.5 py-2 text-xs font-bold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors cursor-pointer"
                         >
-                          <ShieldCheck className="h-3.5 w-3.5" /> Şifreyi Yenile
+                          <ShieldCheck className="h-3.5 w-3.5 shrink-0" /> Şifreyi Yenile
                         </button>
                       )}
                     </div>
@@ -502,9 +537,9 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                   sound.playClick();
                   if (onOpenStudent) onOpenStudent(currentStudent.id); else onNavigate?.('dashboard');
                 }}
-                className="zp-dashboard-primary w-full px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center justify-center gap-2 text-xs sm:text-sm shadow-xs transition-colors cursor-pointer min-h-[42px] disabled:opacity-60 disabled:cursor-wait"
+                className="zp-dashboard-primary w-full px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center justify-center gap-2 text-xs sm:text-sm shadow-xs transition-colors cursor-pointer min-h-[44px] disabled:opacity-60 disabled:cursor-wait"
               >
-                <GraduationCap className="w-4 h-4" />
+                <GraduationCap className="w-4 h-4 shrink-0" />
                 <span>{isSwitchingStudent ? 'Öğrenci paneli açılıyor…' : 'Öğrenci Paneline Geç'}</span>
               </button>
               <p className="mt-2 max-w-xs text-xs text-zinc-500 dark:text-zinc-400">{currentStudent.name} için öğrenci oturumu açılır. Veli paneline dönüşte veli şifresi doğrulanır.</p>
@@ -515,7 +550,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               whileTap={{ scale: 0.98 }}
               onClick={handleSendWeeklyReport}
               disabled={isSendingReport || !weeklyData}
-              className={`px-3 sm:px-4 py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm shadow-sm border transition-all cursor-pointer min-h-[42px] ${
+              className={`px-3 sm:px-4 py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm shadow-xs border transition-all cursor-pointer min-h-[44px] ${
                 reportSendStatus === 'success' 
                   ? 'bg-emerald-500 text-white border-emerald-600' 
                   : reportSendStatus === 'error' 
@@ -524,11 +559,11 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               }`}
             >
               {isSendingReport ? (
-                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />
               ) : reportSendStatus === 'success' ? (
-                <CheckCircle2 className="w-4 h-4" />
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
               ) : (
-                <Mail className="w-4 h-4" />
+                <Mail className="w-4 h-4 shrink-0" />
               )}
               <span className="truncate">{isSendingReport ? 'Hazırlanıyor...' : reportSendStatus === 'success' ? 'Rapor Hazır!' : 'Rapor E-postala'}</span>
             </motion.button>
@@ -540,9 +575,9 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                 sound.playClick();
                 setShowStudentSettingsModal(true);
               }}
-              className="px-3 sm:px-4 py-2.5 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl font-semibold flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm shadow-sm border border-zinc-200 dark:border-zinc-700 cursor-pointer min-h-[42px]"
+              className="px-3 sm:px-4 py-2.5 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl font-semibold flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm shadow-xs border border-zinc-200 dark:border-zinc-700 cursor-pointer min-h-[44px]"
             >
-              <KeyRound className="w-4 h-4 text-indigo-500" />
+              <KeyRound className="w-4 h-4 text-indigo-500 shrink-0" />
               <span>Giriş Bilgileri</span>
             </motion.button>
 
@@ -553,9 +588,9 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                 sound.playClick();
                 setShowReminderModal(true);
               }}
-              className="col-span-2 sm:col-span-1 px-3 sm:px-4 py-2.5 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl font-semibold flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm shadow-sm border border-zinc-200 dark:border-zinc-700 cursor-pointer min-h-[42px]"
+              className="col-span-2 sm:col-span-1 px-3 sm:px-4 py-2.5 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl font-semibold flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm shadow-xs border border-zinc-200 dark:border-zinc-700 cursor-pointer min-h-[44px]"
             >
-              <Settings className="w-4 h-4 text-amber-500" />
+              <Settings className="w-4 h-4 text-amber-500 shrink-0" />
               <span>Hatırlatıcı</span>
             </motion.button>
           </div>
@@ -566,80 +601,108 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
       {/* Main Dashboard Body */}
       <div className="zp-dashboard-content max-w-6xl mx-auto px-4 sm:px-6 md:px-12 pt-8 space-y-8 relative z-10">
         
-        {/* Modern Fluid Segmented Tabs */}
+        {/* Modern Fluid Segmented Tabs (4-Tab Synchronized Model: Overview, Skills, Preferences, Membership) */}
         {!isAndroidApp && <div className="zp-dashboard-tabs flex p-1.5 bg-zinc-200/60 dark:bg-zinc-900/80 rounded-2xl w-full max-w-full overflow-x-auto whitespace-nowrap scrollbar-none border border-zinc-200/70 dark:border-zinc-800/80 shadow-inner gap-1 md:w-fit" role="group" aria-label="Veli paneli bölümleri">
           <button 
             type="button"
             aria-pressed={activeTab === 'overview'}
-            onClick={() => {
-              sound.playClick();
-              setActiveTab('overview');
-            }}
-            className={`relative px-3.5 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors cursor-pointer shrink-0 ${
+            disabled={isSwitchingStudent || isResettingPassword || isBillingBusy}
+            onClick={() => changeTab('overview')}
+            className={`relative min-h-[44px] px-3.5 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors cursor-pointer shrink-0 ${
               activeTab === 'overview' ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
             }`}
           >
             {activeTab === 'overview' && (
               <motion.div 
                 layoutId="activeParentTab"
-                className="absolute inset-0 bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200/40 dark:border-zinc-700/40"
+                className="absolute inset-0 bg-white dark:bg-zinc-800 rounded-xl shadow-xs border border-zinc-200/50 dark:border-zinc-700/50"
                 transition={{ type: "spring", stiffness: 450, damping: 35 }}
               />
             )}
             <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
-              <BarChart2 className="w-4 h-4" /> Gelişim Analizi & Bilişsel Radar
+              <BarChart2 className="w-4 h-4 shrink-0" /> Genel Bakış
             </span>
           </button>
 
           <button 
             type="button"
             aria-pressed={activeTab === 'skills'}
-            onClick={() => {
-              sound.playClick();
-              setActiveTab('skills');
-            }}
-            className={`relative px-3.5 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors cursor-pointer shrink-0 ${
+            disabled={isSwitchingStudent || isResettingPassword || isBillingBusy}
+            onClick={() => changeTab('skills')}
+            className={`relative min-h-[44px] px-3.5 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors cursor-pointer shrink-0 ${
               activeTab === 'skills' ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
             }`}
           >
             {activeTab === 'skills' && (
               <motion.div 
                 layoutId="activeParentTab"
-                className="absolute inset-0 bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200/40 dark:border-zinc-700/40"
+                className="absolute inset-0 bg-white dark:bg-zinc-800 rounded-xl shadow-xs border border-zinc-200/50 dark:border-zinc-700/50"
                 transition={{ type: "spring", stiffness: 450, damping: 35 }}
               />
             )}
             <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
-              <Brain className="w-4 h-4" /> Bilişsel Beceri Haritası
+              <Brain className="w-4 h-4 shrink-0" /> Beceri Analizi
             </span>
           </button>
 
           <button 
             type="button"
             aria-pressed={activeTab === 'preferences'}
-            onClick={() => {
-              sound.playClick();
-              setActiveTab('preferences');
-            }}
-            className={`relative px-3.5 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors cursor-pointer shrink-0 ${
+            disabled={isSwitchingStudent || isResettingPassword || isBillingBusy}
+            onClick={() => changeTab('preferences')}
+            className={`relative min-h-[44px] px-3.5 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors cursor-pointer shrink-0 ${
               activeTab === 'preferences' ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
             }`}
           >
             {activeTab === 'preferences' && (
               <motion.div 
                 layoutId="activeParentTab"
-                className="absolute inset-0 bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200/40 dark:border-zinc-700/40"
+                className="absolute inset-0 bg-white dark:bg-zinc-800 rounded-xl shadow-xs border border-zinc-200/50 dark:border-zinc-700/50"
                 transition={{ type: "spring", stiffness: 450, damping: 35 }}
               />
             )}
             <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
-              <Bell className="w-4 h-4" /> Bildirim & E-posta
+              <Bell className="w-4 h-4 shrink-0" /> Ayarlar & Hesap
+            </span>
+          </button>
+
+          <button 
+            type="button"
+            aria-pressed={activeTab === 'membership'}
+            disabled={isSwitchingStudent || isResettingPassword || isBillingBusy}
+            onClick={() => changeTab('membership')}
+            className={`relative min-h-[44px] px-3.5 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors cursor-pointer shrink-0 ${
+              activeTab === 'membership' ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
+            }`}
+          >
+            {activeTab === 'membership' && (
+              <motion.div 
+                layoutId="activeParentTab"
+                className="absolute inset-0 bg-white dark:bg-zinc-800 rounded-xl shadow-xs border border-zinc-200/50 dark:border-zinc-700/50"
+                transition={{ type: "spring", stiffness: 450, damping: 35 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
+              <ShieldCheck className="w-4 h-4 shrink-0" /> Üyelik
             </span>
           </button>
         </div>}
 
         {parentProfile?.role === 'parent' && <FamilyActivation />}
-        {parentProfile?.role === 'parent' && currentStudent.role === 'student' && (!isAndroidApp || activeTab === 'membership') && <NativeAccessStatus key={currentStudent.id} studentId={currentStudent.id} studentName={currentStudent.name} onBusyChange={setIsBillingBusy}/>}
+        {parentProfile?.role === 'parent' && currentStudent.role === 'student' && activeTab === 'membership' && <NativeAccessStatus key={currentStudent.id} studentId={currentStudent.id} studentName={currentStudent.name} onBusyChange={setIsBillingBusy}/>}
+        {!isAndroidApp && activeTab === 'membership' && !(parentProfile?.role === 'parent' && currentStudent.role === 'student') && (
+          <div className="zp-dashboard-surface bg-white dark:bg-zinc-900 rounded-3xl p-6 md:p-8 border border-zinc-200/70 dark:border-zinc-800 shadow-xs flex items-start gap-4">
+            <div className="p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/50 shrink-0">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">Üyelik ve Erişim Durumu</h2>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                Veli hesabınızla giriş yaptığınızda bağlı öğrencinizin abonelik ve erişim yönetimi burada görüntülenir.
+              </p>
+            </div>
+          </div>
+        )}
         <AnimatePresence mode="wait">
           {isAndroidApp && activeTab === 'overview' && !showDetailedReport && <AndroidParentOverview key="native-overview" student={currentStudent} weeklyData={weeklyData} masteries={displayMasteries} onReport={() => setShowDetailedReport(true)} onMembership={() => changeTab('membership')}/>}
           {activeTab === 'overview' && (!isAndroidApp || showDetailedReport) && (
@@ -653,6 +716,28 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
             >
               {isAndroidApp && <button type="button" className="bj-parent-pocket-link bj-parent-report-toggle" onClick={() => setShowDetailedReport(false)}>← Kısa özete dön</button>}
               <ParentProgressOverview student={currentStudent} weeklyData={weeklyData} masteries={displayMasteries} />
+
+              {!isAndroidApp && parentProfile?.role === 'parent' && currentStudent.role === 'student' && (
+                <div className="zp-dashboard-surface bg-white dark:bg-zinc-900 rounded-2xl p-4 sm:p-5 border border-zinc-200/70 dark:border-zinc-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-200/60 dark:border-indigo-800/50 shrink-0">
+                      <ShieldCheck className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">{currentStudent.name} · Üyelik ve Erişim</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">Erişim paketi, Google Play senkronizasyonu ve abonelik yönetimi</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => changeTab('membership')}
+                    className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-4 py-2 text-xs font-bold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer shrink-0"
+                  >
+                    <span>Üyelik detaylarını gör</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
 
               {/* Main Visuals Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -686,7 +771,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                             sound.playClick();
                             setChartViewMode('radar');
                           }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          className={`min-h-[44px] px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                             chartViewMode === 'radar'
                               ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-xs'
                               : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -701,7 +786,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                             sound.playClick();
                             setChartViewMode('momentum');
                           }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          className={`min-h-[44px] px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                             chartViewMode === 'momentum'
                               ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-xs'
                               : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -856,15 +941,15 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                 {/* Right 1 Col: AI Coach & Strengths */}
                 <div className="space-y-6">
                   
-                  {/* AI Recommendation Card with Ambient Shimmer */}
+                  {/* Coaching Recommendation Card */}
                   <motion.div 
                     whileHover={{ scale: 1.01 }}
-                    className="bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 text-white rounded-3xl p-6 md:p-7 shadow-xl relative overflow-hidden border border-zinc-700/60"
+                    className="bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 text-white rounded-3xl p-6 md:p-7 shadow-lg relative overflow-hidden border border-zinc-700/60"
                   >
                     <div className="relative z-10">
                       <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/10 backdrop-blur-md">
-                          <Lightbulb className="w-5 h-5 text-amber-400 animate-pulse" />
+                        <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/10">
+                          <Lightbulb className="w-5 h-5 text-amber-400" />
                         </div>
                         <div>
                           <h3 className="font-bold text-base text-white font-['Outfit',sans-serif]">Çalışma Rehberi</h3>
@@ -872,23 +957,24 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                         </div>
                       </div>
 
-                      <p className="text-zinc-300 text-xs sm:text-sm leading-relaxed mb-6">
-                        {strengths[0]?.attemptCount ? <>{currentStudent.name}, <strong className="text-amber-300 font-bold">{strengths[0].categoryName}</strong> alanındaki çalışmalarında %{strengths[0].accuracy || 0} doğruluk gösteriyor.</> : 'Çalışma kayıtları oluştuğunda öğrencinizin güçlü alanları ve pekiştirme önerileri burada görünecek.'}
+                      <p className="text-zinc-300 text-xs sm:text-sm leading-relaxed mb-6 tabular-nums">
+                        {strengths[0]?.attemptCount ? <>{currentStudent.name}, <strong className="text-amber-300 font-bold">{strengths[0].categoryName}</strong> alanındaki çalışmalarında %{strengths[0].accuracy || 0} doğruluk gösteriyor. </> : 'Çalışma kayıtları oluştuğunda öğrencinizin güçlü alanları ve pekiştirme önerileri burada görünecek. '}
                         Buna karşın <strong className="text-rose-300 font-bold">{needsAttention[0]?.categoryName || 'Matris'}</strong> alanında hata tekrarı mevcut. Hafta sonu 10 dakikalık odak egzersizi önerilir.
                       </p>
 
                       <motion.button
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
+                        type="button"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => {
                           sound.playClick();
                           setShowStudyPlanModal(true);
                         }}
-                        className="w-full py-3 bg-white hover:bg-zinc-100 text-zinc-900 text-xs sm:text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                        className="w-full min-h-[44px] py-3 px-4 bg-white hover:bg-zinc-100 text-zinc-900 text-xs sm:text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                       >
-                        <Sparkles className="w-4 h-4 text-indigo-600" />
-                        Özel Çalışma Programı Oluştur
-                        <ChevronRight className="w-4 h-4 text-zinc-400" />
+                        <Compass className="w-4 h-4 text-indigo-600 shrink-0" />
+                        <span>Özel Çalışma Programı Oluştur</span>
+                        <ChevronRight className="w-4 h-4 text-zinc-400 shrink-0" />
                       </motion.button>
                     </div>
                   </motion.div>
@@ -900,19 +986,19 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                         <Brain className="w-4 h-4 text-emerald-500" />
                         En Güçlü Yetenekler
                       </h3>
-                      <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">
+                      <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md tabular-nums">
                         İlk 3
                       </span>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-4 tabular-nums">
                       {strengths.map((m, i) => (
                         <div key={i} className="group">
                           <div className="flex justify-between text-xs font-semibold mb-1.5">
                             <span className="text-zinc-700 dark:text-zinc-300 truncate max-w-[180px]">
                               {m.categoryName}
                             </span>
-                            <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold tabular-nums">
                               %{m.mastery}
                             </span>
                           </div>
@@ -924,9 +1010,9 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                               className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
                             />
                           </div>
-                          <div className="flex justify-between items-center text-[10px] text-zinc-400 mt-1">
+                          <div className="flex justify-between items-center text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 tabular-nums">
                             <span>{m.attemptCount} soru çözüldü</span>
-                            <span className="flex items-center gap-0.5 text-emerald-600">
+                            <span className="flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
                               <ArrowUpRight className="w-3 h-3" /> %{m.accuracy} doğruluk
                             </span>
                           </div>
@@ -947,14 +1033,14 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                       </span>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-4 tabular-nums">
                       {needsAttention.map((m, i) => (
                         <div key={i} className="group">
                           <div className="flex justify-between text-xs font-semibold mb-1.5">
                             <span className="text-zinc-700 dark:text-zinc-300 truncate max-w-[180px]">
                               {m.categoryName}
                             </span>
-                            <span className="text-rose-600 dark:text-rose-400 font-bold">
+                            <span className="text-rose-600 dark:text-rose-400 font-bold tabular-nums">
                               %{m.mastery}
                             </span>
                           </div>
@@ -966,9 +1052,9 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                               className="h-full bg-gradient-to-r from-rose-500 to-amber-500 rounded-full"
                             />
                           </div>
-                          <div className="flex justify-between items-center text-[10px] text-zinc-400 mt-1">
+                          <div className="flex justify-between items-center text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 tabular-nums">
                             <span>{m.attemptCount} soru çözüldü</span>
-                            <span className="flex items-center gap-0.5 text-rose-500 font-medium">
+                            <span className="flex items-center gap-0.5 text-rose-600 dark:text-rose-400 font-medium">
                               Pekiştirilmeli (%{m.accuracy})
                             </span>
                           </div>
@@ -984,7 +1070,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
             </motion.div>
           )}
 
-          {/* TAB 2: DETAILED 8 COGNITIVE DOMAINS */}
+          {/* TAB 2: DETAILED 10 COGNITIVE DOMAINS */}
           {activeTab === 'skills' && (
             <motion.div 
               key="tab-skills"
@@ -994,8 +1080,49 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               transition={{ duration: 0.25 }}
               className="space-y-6"
             >
-              <div className="zp-dashboard-surface flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200/70 dark:border-zinc-800 shadow-sm">
-                <div>
+              {/* Tremor Executive 4-KPI Summary Strip */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <MetricCard
+                  title="Ortalama Ustalık"
+                  metric={`%${skillsKpis.avgMastery}`}
+                  subtitle="10 bilişsel alan genel ortalaması"
+                  icon={<Brain className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />}
+                  progressBar={{ value: skillsKpis.avgMastery, color: '#4f46e5' }}
+                  className="min-w-0"
+                />
+                <MetricCard
+                  title="Çalışılan Boyut"
+                  metric={`${skillsKpis.practicedCount} / ${skillsKpis.totalDomains}`}
+                  subtitle="En az bir soru çözülen alanlar"
+                  icon={<Layers className="w-4 h-4 text-teal-600 dark:text-teal-400" />}
+                  progressBar={{
+                    value: Math.round((skillsKpis.practicedCount / Math.max(1, skillsKpis.totalDomains)) * 100),
+                    color: '#0d9488',
+                  }}
+                  className="min-w-0"
+                />
+                <MetricCard
+                  title="Ortalama Doğruluk"
+                  metric={`%${skillsKpis.overallAccuracy}`}
+                  subtitle="Çalışılan alanlardaki isabet oranı"
+                  icon={<Target className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+                  delta={{
+                    value: `${skillsKpis.totalAttempts} soru`,
+                    direction: skillsKpis.overallAccuracy >= 70 ? 'up' : 'neutral',
+                  }}
+                  className="min-w-0"
+                />
+                <MetricCard
+                  title="Öne Çıkan Alan"
+                  metric={strengths[0]?.attemptCount ? `%${strengths[0].mastery}` : '—'}
+                  subtitle={strengths[0]?.attemptCount ? strengths[0].categoryName : 'Henüz veri yok'}
+                  icon={<Award className="w-4 h-4 text-amber-600 dark:text-amber-400" />}
+                  className="min-w-0"
+                />
+              </div>
+
+              <div className="zp-dashboard-surface flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-zinc-900 p-5 sm:p-6 rounded-3xl border border-zinc-200/70 dark:border-zinc-800 shadow-sm">
+                <div className="min-w-0">
                   <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-100 font-['Outfit',sans-serif]">
                     10 Bilişsel Boyut Haritası
                   </h2>
@@ -1005,10 +1132,12 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                 </div>
 
                 {/* Filter Pills */}
-                <div className="flex p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl border border-zinc-200/50 dark:border-zinc-700/50 self-start sm:self-auto">
+                <div className="flex flex-wrap p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl border border-zinc-200/50 dark:border-zinc-700/50 self-start sm:self-auto max-w-full gap-1" role="group" aria-label="Beceri filtresi">
                   <button
+                    type="button"
+                    aria-pressed={skillFilter === 'all'}
                     onClick={() => setSkillFilter('all')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    className={`min-h-[44px] px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer tabular-nums ${
                       skillFilter === 'all'
                         ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-xs'
                         : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
@@ -1017,8 +1146,10 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                     Tümü ({displayMasteries.length})
                   </button>
                   <button
+                    type="button"
+                    aria-pressed={skillFilter === 'strengths'}
                     onClick={() => setSkillFilter('strengths')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    className={`min-h-[44px] px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       skillFilter === 'strengths'
                         ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-xs'
                         : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
@@ -1027,8 +1158,10 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                     Güçlü Alanlar
                   </button>
                   <button
+                    type="button"
+                    aria-pressed={skillFilter === 'weaknesses'}
                     onClick={() => setSkillFilter('weaknesses')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    className={`min-h-[44px] px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       skillFilter === 'weaknesses'
                         ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-xs'
                         : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
@@ -1051,17 +1184,17 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                       initial={{ opacity: 0, y: 15 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: idx * 0.05 }}
-                      whileHover={{ y: -4 }}
-                      className="zp-dashboard-surface bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-zinc-200/70 dark:border-zinc-800 shadow-sm flex flex-col justify-between"
+                      whileHover={{ y: -3 }}
+                      className="zp-dashboard-surface bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-zinc-200/70 dark:border-zinc-800 shadow-sm flex flex-col justify-between min-w-0"
                     >
                       <div>
                         <div className="flex items-start justify-between gap-2 mb-3">
-                          <div className={`p-2 rounded-xl ${
+                          <div className={`p-2 rounded-xl shrink-0 ${
                             isHigh 
-                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600' 
+                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400' 
                               : isMedium 
-                              ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600' 
-                              : 'bg-rose-50 dark:bg-rose-950/40 text-rose-600'
+                              ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400' 
+                              : 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400'
                           }`}>
                             <Brain className="w-5 h-5" />
                           </div>
@@ -1079,15 +1212,15 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                         <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100 mb-1">
                           {skill.categoryName}
                         </h3>
-                        <p className="text-[11px] text-zinc-400">
-                          {skill.attemptCount} soru çözüldü • %{skill.accuracy} doğruluk
+                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums">
+                          {skill.attemptCount} soru çözüldü · %{skill.accuracy} doğruluk
                         </p>
                       </div>
 
-                      <div className="mt-5 space-y-2">
+                      <div className="mt-5 space-y-2 tabular-nums">
                         <div className="flex justify-between items-center text-xs">
-                          <span className="text-zinc-500 font-medium">Yetkinlik</span>
-                          <span className="font-black text-zinc-900 dark:text-zinc-100">%{skill.mastery}</span>
+                          <span className="text-zinc-500 dark:text-zinc-400 font-medium">Yetkinlik</span>
+                          <span className="font-black text-zinc-900 dark:text-zinc-100 tabular-nums">%{skill.mastery}</span>
                         </div>
                         <div className="w-full h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
                           <motion.div 
@@ -1147,10 +1280,18 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
         { id: 'overview', label: 'Özet', icon: BarChart2 }, { id: 'skills', label: 'Beceriler', icon: Brain },
         { id: 'membership', label: 'Üyelik', icon: ShieldCheck }, { id: 'preferences', label: 'Hesap', icon: Settings },
       ] as const).map(({ id, label, icon: Icon }) => <button key={id} type="button" aria-pressed={activeTab === id} disabled={isSwitchingStudent || isResettingPassword || isBillingBusy} onClick={() => changeTab(id)}><Icon aria-hidden="true"/><span>{label}</span></button>)}</div></nav>}
-      {/* MODAL 1: AI Custom Study Plan Modal */}
+      {/* MODAL 1: Custom Study Plan Modal */}
       <AnimatePresence>
         {showStudyPlanModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-xs">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-xs"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="study-plan-modal-title"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) setShowStudyPlanModal(false);
+            }}
+          >
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -1158,18 +1299,20 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               className="bg-white dark:bg-zinc-900 rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-zinc-200 dark:border-zinc-800 shadow-2xl relative max-h-[90vh] overflow-y-auto"
             >
               <button
+                type="button"
+                aria-label="Kapat"
                 onClick={() => setShowStudyPlanModal(false)}
-                className="absolute top-6 right-6 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                className="absolute top-5 right-5 inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
 
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-200 dark:border-indigo-800/40">
-                  <Sparkles className="w-6 h-6" />
+              <div className="flex items-center gap-3 mb-5 pr-10">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-200 dark:border-indigo-800/40 shrink-0">
+                  <Target className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-zinc-900 dark:text-white font-['Outfit',sans-serif]">
+                  <h3 id="study-plan-modal-title" className="text-xl font-black text-zinc-900 dark:text-white font-['Outfit',sans-serif]">
                     Kişisel Çalışma Programı
                   </h3>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -1179,7 +1322,7 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               </div>
 
               {/* Plan Recommendations */}
-              <div className="space-y-3 mb-6">
+              <div className="space-y-3 mb-6 tabular-nums">
                 <div className="p-4 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/30">
                   <div className="flex items-center justify-between text-xs font-bold text-indigo-700 dark:text-indigo-300 mb-1">
                     <span>1. Odak Alanı: {needsAttention[0]?.categoryName || 'Matris'}</span>
@@ -1214,14 +1357,16 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
               {/* Action */}
               <div className="flex items-center gap-3">
                 <button
+                  type="button"
                   onClick={() => setShowStudyPlanModal(false)}
-                  className="flex-1 py-3 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-bold text-xs hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                  className="flex-1 min-h-[44px] py-3 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-bold text-xs hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                 >
                   Kapat
                 </button>
                 <button
+                  type="button"
                   onClick={() => setShowStudyPlanModal(false)}
-                  className="flex-2 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="flex-2 min-h-[44px] py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Check className="w-4 h-4" /> Planı İnceledim
                 </button>
@@ -1249,6 +1394,13 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
             role="dialog"
             aria-modal="true"
             aria-labelledby="student-password-title"
+            onClick={(event) => {
+              if (event.target === event.currentTarget && !isResettingPassword) {
+                setShowPasswordResetModal(false);
+                setNewStudentPassword('');
+                setConfirmStudentPassword('');
+              }
+            }}
           >
             <motion.form
               initial={{ opacity: 0, scale: 0.96, y: 12 }}
@@ -1262,15 +1414,15 @@ export const ParentPortalView: React.FC<ParentPortalViewProps> = ({ student: par
                   <h2 id="student-password-title" className="text-lg font-black text-zinc-950 dark:text-white">Öğrenci şifresini yenile</h2>
                   <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">İşlemden sonra öğrencinin diğer cihazlardaki oturumları kapatılır.</p>
                 </div>
-                <button type="button" disabled={isResettingPassword} onClick={() => { setShowPasswordResetModal(false); setNewStudentPassword(''); setConfirmStudentPassword(''); }} aria-label="Kapat" className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"><X className="h-5 w-5" /></button>
+                <button type="button" disabled={isResettingPassword} onClick={() => { setShowPasswordResetModal(false); setNewStudentPassword(''); setConfirmStudentPassword(''); }} aria-label="Kapat" className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"><X className="h-5 w-5" /></button>
               </div>
               <div className="mt-5 space-y-3">
                 <NewPasswordFields label="Yeni öğrenci şifresi" value={newStudentPassword} confirmation={confirmStudentPassword} onChange={setNewStudentPassword} onConfirmation={setConfirmStudentPassword} disabled={isResettingPassword} />
                 {passwordResetError && <p id="parent-password-error" role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700">{passwordResetError}</p>}
               </div>
               <div className="mt-5 flex justify-end gap-2">
-                <button type="button" disabled={isResettingPassword} onClick={() => { setShowPasswordResetModal(false); setNewStudentPassword(''); setConfirmStudentPassword(''); }} className="rounded-xl px-4 py-2 text-sm font-bold text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800">Vazgeç</button>
-                <button type="submit" disabled={isResettingPassword} className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-60">{isResettingPassword ? 'Yenileniyor…' : 'Şifreyi Güvenle Yenile'}</button>
+                <button type="button" disabled={isResettingPassword} onClick={() => { setShowPasswordResetModal(false); setNewStudentPassword(''); setConfirmStudentPassword(''); }} className="min-h-[44px] rounded-xl px-4 py-2 text-sm font-bold text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800 cursor-pointer">Vazgeç</button>
+                <button type="submit" disabled={isResettingPassword} className="min-h-[44px] rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-60 cursor-pointer">{isResettingPassword ? 'Yenileniyor…' : 'Şifreyi Güvenle Yenile'}</button>
               </div>
             </motion.form>
           </motion.div>

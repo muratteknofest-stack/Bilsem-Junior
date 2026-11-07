@@ -164,7 +164,7 @@ export function LandingNav({
             </button>
             {panel === 'explore' && (
               <div id={`${id}-explore`} className="zp-nav-popover zp-explore-popover">
-                <div className="zp-popover-label">BİR ALAN SEÇ, HEMEN DENE</div>
+                <div className="zp-popover-label">Bir alan seç, hemen dene</div>
                 {areas.map((a) => (
                   <button
                     type="button"
@@ -265,7 +265,7 @@ export function LandingNav({
             </button>
             {panel === 'settings' && (
               <div id={`${id}-settings`} className="zp-nav-popover zp-settings-popover">
-                <div className="zp-popover-label">SANA UYGUN DENEYİM</div>
+                <div className="zp-popover-label">Sana uygun deneyim</div>
                 <button
                   type="button"
                   className="zp-setting-row"
@@ -305,7 +305,7 @@ export function LandingNav({
             </button>
             {panel === 'login' && (
               <div id={`${id}-login`} className="zp-nav-popover zp-login-popover">
-                <div className="zp-popover-label">HESABINA DEVAM ET</div>
+                <div className="zp-popover-label">Hesabına devam et</div>
                 <button
                   type="button"
                   className="zp-nav-area whitespace-nowrap shrink-0"
@@ -415,7 +415,7 @@ export function LandingNav({
           </div>
 
           <nav aria-label="Mobil ana menü">
-            <p className="zp-popover-label">KEŞİF ALANLARI</p>
+            <p className="zp-popover-label">Keşif alanları</p>
             {areas.map((a) => (
               <button
                 type="button"
@@ -504,7 +504,7 @@ export function LandingNav({
           </nav>
 
           <div className="zp-mobile-account">
-            <p className="zp-popover-label">HESABIN</p>
+            <p className="zp-popover-label">Bilsem Junior hesabı</p>
             <div>
               <button type="button" onClick={() => act(() => onLogin('student'))}>
                 <GraduationCap size={19} /> Öğrenci girişi

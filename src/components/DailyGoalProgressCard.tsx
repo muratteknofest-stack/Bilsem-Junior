@@ -5,20 +5,15 @@ import { sound } from '../lib/sound';
 import {
   Target,
   CheckCircle2,
-  Sparkles,
   Zap,
   Play,
   Flame,
   Clock,
-  ChevronRight,
-  RotateCcw,
   Trophy,
-  Award,
   Layers,
   ArrowRight,
   TrendingUp,
 } from 'lucide-react';
-import confetti from '../lib/student-confetti';
 
 interface DailyGoalProgressCardProps {
   user: UserProfile;
@@ -38,10 +33,8 @@ export const DailyGoalProgressCard: React.FC<DailyGoalProgressCardProps> = ({
   className = '',
 }) => {
   const [goalMode, setGoalMode] = useState<GoalMode>('questions');
-  const [showGoalSettings, setShowGoalSettings] = useState(false);
   const [bannerFeedback, setBannerFeedback] = useState<string | null>(null);
 
-  // Targets and actuals
   const targetQuestions = user.dailyGoalQuestions || dailyPlan?.targetQuestions || 10;
   const completedQuestions = user.todayQuestionsSolved ?? dailyPlan?.completedQuestions ?? 0;
 
@@ -51,21 +44,17 @@ export const DailyGoalProgressCard: React.FC<DailyGoalProgressCardProps> = ({
   const targetMinutes = user.dailyGoalMinutes || 15;
   const completedMinutes = user.todayMinutesSpent || 0;
 
-  // Active metrics based on selected mode
   let currentVal = completedQuestions;
   let maxVal = targetQuestions;
-  let unitLabel = 'Soru';
   let unitPlural = 'Soru';
 
   if (goalMode === 'sessions') {
     currentVal = completedSessions;
     maxVal = targetSessions;
-    unitLabel = 'Seans';
     unitPlural = 'Seans';
   } else if (goalMode === 'minutes') {
     currentVal = completedMinutes;
     maxVal = targetMinutes;
-    unitLabel = 'Dakika';
     unitPlural = 'dk';
   }
 
@@ -74,11 +63,9 @@ export const DailyGoalProgressCard: React.FC<DailyGoalProgressCardProps> = ({
   const isGoalReached = currentVal >= maxVal;
   const remaining = Math.max(0, maxVal - currentVal);
 
-  // Quick goal presets for custom target adjustments
   const QUESTION_PRESETS = [5, 10, 15, 20];
   const SESSION_PRESETS = [1, 2, 3, 4];
 
-  // Handler for setting a new target
   const handleSetTarget = (newTarget: number) => {
     sound.playClick();
     let updated: UserProfile;
@@ -94,157 +81,149 @@ export const DailyGoalProgressCard: React.FC<DailyGoalProgressCardProps> = ({
     setTimeout(() => setBannerFeedback(null), 3000);
   };
 
-  // Milestone points along the progress bar
   const milestones = [
-    { percent: 0, label: 'Başlangıç', icon: '🌱' },
-    { percent: 30, label: 'Isınma', icon: '⚡' },
-    { percent: 70, label: 'Odak', icon: '🔥' },
-    { percent: 100, label: 'Zirve & Başarı', icon: '👑' },
+    { percent: 0, label: 'Başlangıç' },
+    { percent: 30, label: 'Isınma' },
+    { percent: 70, label: 'Odak' },
+    { percent: 100, label: 'Tamamlandı' },
   ];
 
   return (
     <div
       id="daily-goal-progress-card"
-      className={`bg-white rounded-xl border-2 border-emerald-200/90  p-5 sm:p-7 relative overflow-hidden transition-all duration-300 ${className}`}
+      className={`rounded-2xl border border-[#e2e8f0] bg-white p-5 sm:p-6 shadow-xs dark:border-[#49425a] dark:bg-[#262339] relative overflow-hidden transition-colors ${className}`}
     >
-      {/* Background ambient decorative glow */}
-      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-72 h-72 bg-gradient-to-br from-emerald-100/50 via-teal-100/30 to-indigo-100/20 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Feedback banner */}
       {bannerFeedback && (
-        <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs sm:text-sm font-bold flex items-center justify-between gap-2 animate-fadeIn">
+        <div
+          role="status"
+          className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 dark:bg-emerald-500/15 dark:border-emerald-500/30 dark:text-emerald-200 text-xs sm:text-sm font-semibold flex items-center justify-between gap-2 tabular-nums"
+        >
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span>{bannerFeedback}</span>
           </div>
           <button
+            type="button"
             onClick={() => setBannerFeedback(null)}
-            className="text-emerald-700 hover:text-emerald-950 text-xs font-semibold cursor-pointer"
+            className="text-emerald-700 hover:text-emerald-950 dark:text-emerald-300 dark:hover:text-white text-xs font-semibold cursor-pointer"
           >
             Tamam
           </button>
         </div>
       )}
 
-      {/* Top Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-zinc-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[#e2e8f0] dark:border-[#49425a]">
         <div className="flex items-center gap-3.5">
-          {/* Target Icon with Animated Badge */}
           <div className="relative shrink-0">
             <div
-              className={`w-14 h-14 sm:w-16 sm:h-16 rounded-xl flex items-center justify-center  transition-all ${
+              className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center border ${
                 isGoalReached
-                  ? 'bg-gradient-to-tr from-emerald-500 to-teal-400 '
-                  : 'bg-gradient-to-tr from-teal-600 to-indigo-600 '
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-500/15 dark:border-emerald-500/30 dark:text-emerald-400'
+                  : 'bg-indigo-50 border-indigo-200/80 text-indigo-600 dark:bg-indigo-500/15 dark:border-indigo-500/30 dark:text-indigo-400'
               }`}
             >
               {isGoalReached ? (
-                <CheckCircle2 className="w-8 h-8 sm:w-9 sm:h-9 text-white animate-bounce" />
+                <CheckCircle2 className="w-6 h-6 sm:w-7 sm:h-7" />
               ) : (
-                <Target className="w-8 h-8 sm:w-9 sm:h-9 text-white animate-pulse" />
+                <Target className="w-6 h-6 sm:w-7 sm:h-7" />
               )}
             </div>
-            {isGoalReached && (
-              <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-amber-400 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-amber-950 font-extrabold ">
-                ★
-              </span>
-            )}
           </div>
 
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 font-['Outfit',sans-serif]">
+              <h2 className="text-lg sm:text-xl font-bold tracking-tight text-[#1d2036] dark:text-[#f9f7ff]">
                 Günlük Hedef İlerlemesi
               </h2>
               {isGoalReached ? (
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-extrabold border border-emerald-300 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-emerald-600" />
-                  <span>Hedef Tamamlandı! 🎉</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200 text-[11px] font-bold border border-emerald-200 dark:border-emerald-500/30 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>Hedef Tamamlandı</span>
                 </span>
               ) : (
-                <span className="px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 text-[11px] font-extrabold border border-teal-200 flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3 text-teal-600" />
+                <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-[#1d2036] dark:bg-white/10 dark:text-[#f9f7ff] text-[11px] font-bold border border-[#e2e8f0] dark:border-[#49425a] flex items-center gap-1 tabular-nums">
+                  <TrendingUp className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
                   <span>%{progressPercent} Tamamlandı</span>
                 </span>
               )}
             </div>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+            <p className="text-xs sm:text-sm text-[#52566b] dark:text-[#cac4d5] mt-1 tabular-nums">
               {isGoalReached ? (
-                <span className="text-emerald-700 font-medium">
+                <span className="text-emerald-700 dark:text-emerald-300 font-medium">
                   Harika bir disiplin! Bugünün hedefini başarıyla tamamlayarak zihnini geliştirdin.
                 </span>
               ) : (
                 <>
                   Bugün{' '}
-                  <strong className="text-slate-800">
+                  <strong className="text-[#1d2036] dark:text-[#f9f7ff]">
                     {currentVal} / {maxVal} {unitPlural}
                   </strong>{' '}
                   tamamladın. Hedefe ulaşmak için son{' '}
-                  <strong className="text-emerald-700 font-extrabold">
+                  <strong className="text-indigo-600 dark:text-indigo-400 font-bold">
                     {remaining} {unitPlural}
                   </strong>{' '}
-                  kaldı!
+                  kaldı.
                 </>
               )}
             </p>
           </div>
         </div>
 
-        {/* Mode Switcher Tabs: Soru / Seans / Süre */}
-        <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl border border-zinc-200 self-start sm:self-auto shrink-0">
+        <div className="flex items-center gap-1 bg-[#f8f7f3] dark:bg-white/5 p-1 rounded-xl border border-[#e2e8f0] dark:border-[#49425a] self-start sm:self-auto shrink-0">
           <button
+            type="button"
             onClick={() => {
               sound.playClick();
               setGoalMode('questions');
             }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`min-h-9 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
               goalMode === 'questions'
-                ? 'bg-white text-emerald-800  border border-zinc-200'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-[#1d2036] border border-[#e2e8f0] shadow-2xs dark:bg-[#262339] dark:text-[#f9f7ff] dark:border-[#49425a]'
+                : 'text-[#52566b] hover:text-[#1d2036] dark:text-[#cac4d5] dark:hover:text-[#f9f7ff]'
             }`}
           >
-            <Zap className="w-3.5 h-3.5 text-emerald-600" />
+            <Zap className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>Soru Hedefi</span>
           </button>
 
           <button
+            type="button"
             onClick={() => {
               sound.playClick();
               setGoalMode('sessions');
             }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`min-h-9 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
               goalMode === 'sessions'
-                ? 'bg-white text-emerald-800  border border-zinc-200'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-[#1d2036] border border-[#e2e8f0] shadow-2xs dark:bg-[#262339] dark:text-[#f9f7ff] dark:border-[#49425a]'
+                : 'text-[#52566b] hover:text-[#1d2036] dark:text-[#cac4d5] dark:hover:text-[#f9f7ff]'
             }`}
           >
-            <Layers className="w-3.5 h-3.5 text-indigo-600" />
+            <Layers className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
             <span>Seans</span>
           </button>
 
           <button
+            type="button"
             onClick={() => {
               sound.playClick();
               setGoalMode('minutes');
             }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`min-h-9 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
               goalMode === 'minutes'
-                ? 'bg-white text-emerald-800  border border-zinc-200'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-[#1d2036] border border-[#e2e8f0] shadow-2xs dark:bg-[#262339] dark:text-[#f9f7ff] dark:border-[#49425a]'
+                : 'text-[#52566b] hover:text-[#1d2036] dark:text-[#cac4d5] dark:hover:text-[#f9f7ff]'
             }`}
           >
-            <Clock className="w-3.5 h-3.5 text-amber-600" />
+            <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
             <span>Süre</span>
           </button>
         </div>
       </div>
 
-      {/* Main Visual Progress Bar Section */}
-      <div className="py-6 space-y-4">
-        {/* Metric Summary Counters */}
-        <div className="flex flex-col xs:flex-row items-start xs:items-end justify-between gap-2">
+      <div className="py-5 space-y-4">
+        <div className="flex flex-col xs:flex-row items-start xs:items-end justify-between gap-2 tabular-nums">
           <div>
-            <span className="text-xs font-bold text-slate-500 block">
+            <span className="text-xs font-semibold text-[#52566b] dark:text-[#cac4d5] block">
               {goalMode === 'questions'
                 ? 'Çözülen Soru Sayısı'
                 : goalMode === 'sessions'
@@ -252,31 +231,35 @@ export const DailyGoalProgressCard: React.FC<DailyGoalProgressCardProps> = ({
                 : 'Pratikte Geçirilen Süre'}
             </span>
             <div className="flex items-baseline gap-2 mt-0.5">
-              <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight font-['Outfit',sans-serif]">
+              <span className="text-3xl sm:text-4xl font-bold text-[#1d2036] dark:text-[#f9f7ff] tracking-tight">
                 {currentVal}
               </span>
-              <span className="text-lg font-bold text-slate-400">
+              <span className="text-base font-semibold text-[#52566b] dark:text-[#cac4d5]">
                 / {maxVal} {unitPlural}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <div className="text-right">
-              <span className="text-xs font-bold text-slate-500 block">Tamamlanma Oranı</span>
+              <span className="text-xs font-semibold text-[#52566b] dark:text-[#cac4d5] block">
+                Tamamlanma Oranı
+              </span>
               <span
-                className={`text-lg sm:text-xl font-extrabold ${
-                  isGoalReached ? 'text-emerald-600' : 'text-teal-700'
+                className={`text-lg sm:text-xl font-bold ${
+                  isGoalReached
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-indigo-600 dark:text-indigo-400'
                 }`}
               >
                 %{progressPercent}
               </span>
             </div>
             <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs ${
+              className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs tabular-nums ${
                 isGoalReached
-                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                  : 'bg-teal-50 text-teal-700 border border-teal-200'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30'
+                  : 'bg-[#f8f7f3] text-[#1d2036] border border-[#e2e8f0] dark:bg-white/10 dark:text-[#f9f7ff] dark:border-[#49425a]'
               }`}
             >
               {isGoalReached ? '✓' : `${remaining}`}
@@ -284,54 +267,40 @@ export const DailyGoalProgressCard: React.FC<DailyGoalProgressCardProps> = ({
           </div>
         </div>
 
-        {/* Large Interactive Progress Bar Track */}
-        <div className="relative pt-3 pb-1">
-          {/* Progress track background */}
-          <div className="w-full h-5 sm:h-6 bg-slate-100 rounded-full overflow-hidden p-1  border border-zinc-200/80 relative">
-            {/* Gradient progress fill */}
+        <div className="relative pt-2 pb-1">
+          <div className="w-full h-3.5 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden border border-[#e2e8f0] dark:border-[#49425a]">
             <div
-              className={`h-full rounded-full transition-all duration-700 relative overflow-hidden  ${
+              className={`h-full rounded-full transition-all duration-500 ${
                 isGoalReached
-                  ? 'bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400'
-                  : 'bg-gradient-to-r from-teal-500 via-emerald-500 to-indigo-500'
+                  ? 'bg-emerald-500'
+                  : 'bg-gradient-to-r from-indigo-600 to-teal-500'
               }`}
-              style={{ width: `${Math.max(4, progressPercent)}%` }}
-            >
-              {/* Subtle dynamic gloss wave */}
-              <div className="absolute inset-0 bg-white/25 rounded-full opacity-60 animate-pulse" />
-            </div>
+              style={{ width: `${progressPercent > 0 ? Math.max(4, progressPercent) : 0}%` }}
+            />
           </div>
 
-          {/* Milestone Checkpoints positioned along the track */}
-          <div className="relative flex justify-between mt-3 px-1 text-[11px] font-bold text-slate-500">
+          <div className="relative flex justify-between mt-3 px-0.5 text-[11px] font-semibold text-[#52566b] dark:text-[#cac4d5] tabular-nums">
             {milestones.map((m) => {
               const reached = progressPercent >= m.percent;
               return (
-                <div
-                  key={m.percent}
-                  className="flex flex-col items-center text-center group cursor-default"
-                >
+                <div key={m.percent} className="flex flex-col items-center text-center">
                   <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs mb-1 border-2 transition-all ${
+                    className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] mb-1 border transition-colors ${
                       reached
-                        ? 'bg-emerald-500 border-white text-white  ring-2 ring-emerald-400/30'
-                        : 'bg-slate-100 border-slate-300 text-slate-400'
+                        ? 'bg-emerald-500 border-emerald-600 text-white'
+                        : 'bg-slate-100 border-[#e2e8f0] text-[#52566b] dark:bg-white/5 dark:border-[#49425a] dark:text-[#cac4d5]'
                     }`}
                   >
-                    {reached ? (
-                      <span className="text-[10px] font-extrabold">✓</span>
-                    ) : (
-                      <span>{m.icon}</span>
-                    )}
+                    {reached ? '✓' : '·'}
                   </div>
                   <span
-                    className={`text-[10px] font-bold ${
-                      reached ? 'text-slate-800' : 'text-slate-400'
+                    className={`text-[10px] font-semibold ${
+                      reached ? 'text-[#1d2036] dark:text-[#f9f7ff]' : 'text-[#52566b] dark:text-[#cac4d5]'
                     }`}
                   >
                     {m.label}
                   </span>
-                  <span className="text-[9px] text-slate-400 font-medium">%{m.percent}</span>
+                  <span className="text-[9px] opacity-80">%{m.percent}</span>
                 </div>
               );
             })}
@@ -339,56 +308,58 @@ export const DailyGoalProgressCard: React.FC<DailyGoalProgressCardProps> = ({
         </div>
       </div>
 
-      {/* Goal Target Adjustment / Settings Strip */}
-      <div className="pt-4 border-t border-zinc-200">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-600">Hedef Belirle:</span>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {(goalMode === 'questions' ? QUESTION_PRESETS : SESSION_PRESETS).map((preset) => {
-                const isSelected = maxVal === preset;
-                return (
-                  <button
-                    key={preset}
-                    onClick={() => handleSetTarget(preset)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-emerald-600 text-white '
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    {preset} {unitPlural}
-                    {preset === (goalMode === 'questions' ? 10 : 2) && (
-                      <span className="ml-1 text-[9px] opacity-80">(Önerilen)</span>
-                    )}
-                  </button>
-                );
-              })}
+      {goalMode !== 'minutes' && (
+        <div className="pt-4 border-t border-[#e2e8f0] dark:border-[#49425a]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-[#52566b] dark:text-[#cac4d5]">
+                Hedef Belirle:
+              </span>
+              <div className="flex flex-wrap items-center gap-1.5 tabular-nums">
+                {(goalMode === 'questions' ? QUESTION_PRESETS : SESSION_PRESETS).map((preset) => {
+                  const isSelected = maxVal === preset;
+                  return (
+                    <button
+                      type="button"
+                      key={preset}
+                      onClick={() => handleSetTarget(preset)}
+                      className={`min-h-9 px-3 py-1 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-indigo-600 border-indigo-600 text-white'
+                          : 'bg-[#f8f7f3] border-[#e2e8f0] text-[#1d2036] hover:bg-slate-100 dark:bg-white/5 dark:border-[#49425a] dark:text-[#f9f7ff] dark:hover:bg-white/10'
+                      }`}
+                    >
+                      {preset} {unitPlural}
+                      {preset === (goalMode === 'questions' ? 10 : 2) && (
+                        <span className="ml-1 text-[10px] opacity-80">(Önerilen)</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 text-xs text-[#52566b] dark:text-[#cac4d5] tabular-nums">
+              <Trophy className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <span>Günlük hedefi tamamlamak +50 XP bonus kazandırır.</span>
             </div>
           </div>
-
-          {/* Motivation or Reward Note */}
-          <div className="flex items-center gap-1.5 text-xs text-slate-500">
-            <Trophy className="w-3.5 h-3.5 text-amber-500" />
-            <span>Günlük hedefi tamamlamak +50 XP bonus kazandırır!</span>
-          </div>
         </div>
-      </div>
+      )}
 
-      {/* Interactive Footer Quick Actions */}
-      <div className="mt-5 pt-4 border-t border-zinc-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 text-xs text-slate-500">
-          <Flame className="w-4 h-4 text-orange-500" />
-          <span>Düzenli günlük hedefler BİLSEM sınavındaki hız ve odaklanmanı pekiştirir.</span>
+      <div className="mt-5 pt-4 border-t border-[#e2e8f0] dark:border-[#49425a] flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 text-xs text-[#52566b] dark:text-[#cac4d5]">
+          <Flame className="w-4 h-4 text-orange-500 shrink-0" />
+          <span>Düzenli günlük hedefler BİLSEM hazırlığındaki hız ve odaklanmanı pekiştirir.</span>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          {/* Primary Action Button */}
           <button
+            type="button"
             onClick={onStartPractice}
-            className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs sm:text-sm   transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-98"
+            className="flex-1 sm:flex-none min-h-11 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs sm:text-sm transition-colors cursor-pointer flex items-center justify-center gap-1.5"
           >
-            <Play className="w-4 h-4 fill-white" />
+            <Play className="w-4 h-4 fill-current" />
             <span>{isGoalReached ? 'Hedefi Aştın, Pratiğe Devam Et' : 'Hedefi Tamamlamak İçin Başla'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>

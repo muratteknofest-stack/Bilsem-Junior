@@ -65,64 +65,64 @@
   .zp-student-hero-stats { grid-template-columns: minmax(0, 1fr); }
 }
 .zp-dashboard-page .zp-dashboard-hero {
-  border-color: #dcd8e5;
-  background: linear-gradient(120deg, #ffffff 0%, #faf8ff 61%, #f1ecfb 100%);
-  box-shadow: 0 1px 2px #1d203608, 0 24px 70px #1d20360c;
+  border-color: var(--border-subtle, #e2e8f0);
+  background: var(--surface-card, #ffffff);
+  box-shadow: 0 1px 3px #1d20360a, 0 8px 24px #1d203608;
 }
 .zp-dashboard-page .zp-dashboard-hero h1 {
   color: var(--zp-ink);
-  font-size: clamp(1.9rem, 2.7vw, 2.85rem);
-  font-weight: 650;
-  line-height: 1.12;
+  font-size: clamp(1.75rem, 2.5vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.15;
   text-wrap: balance;
 }
 .zp-dashboard-kicker {
   margin-bottom: var(--zp-space-2);
   color: var(--zp-violet-deep);
-  font-size: .6875rem;
-  font-weight: 800;
-  letter-spacing: .15em;
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .02em;
   line-height: 1.5;
 }
 .zp-dashboard-page .zp-dashboard-surface,
 .zp-parent-dashboard .zp-dashboard-kpis > div {
-  border: 1px solid #dedbe6;
+  border: 1px solid var(--border-subtle, #e2e8f0);
   border-radius: var(--zp-radius-lg);
-  background: var(--zp-paper);
-  box-shadow: var(--zp-shadow-card);
+  background: var(--surface-card, #ffffff);
+  box-shadow: 0 1px 3px #1d203608, 0 4px 12px #1d203606;
 }
 .zp-dashboard-page button.zp-dashboard-surface {
   transition: border-color var(--zp-fast), box-shadow var(--zp-normal) var(--zp-ease), transform var(--zp-normal) var(--zp-ease);
 }
 .zp-dashboard-page button.zp-dashboard-surface:hover {
-  border-color: #a997cf;
-  box-shadow: 0 22px 56px #1d203620;
-  transform: translateY(-3px);
+  border-color: #818cf8;
+  box-shadow: 0 8px 24px #1d203612;
+  transform: translateY(-2px);
 }
 .zp-dashboard-page .zp-dashboard-tabs {
-  border: 1px solid #dedbe6;
+  border: 1px solid var(--border-subtle, #e2e8f0);
   border-radius: var(--zp-radius-md);
-  background: #edeaf2;
-  box-shadow: inset 0 1px 2px #1d203610;
+  background: #f1f5f9;
+  box-shadow: inset 0 1px 2px #1d203608;
 }
 .zp-dashboard-page .zp-dashboard-tabs > button {
-  min-height: 3rem;
+  min-height: 2.875rem;
   color: var(--zp-ink-muted);
   font-size: .875rem;
   white-space: nowrap;
 }
 .zp-dashboard-page .zp-dashboard-tabs > button[aria-pressed=true] { color: var(--zp-violet-deep); }
 .zp-dashboard-page .zp-dashboard-tabs > button[aria-pressed=true] > div:first-child {
-  border-color: #ded6eb;
-  background: #fffefa;
-  box-shadow: 0 2px 9px #1d203611;
+  border-color: #d8d4e8;
+  background: #ffffff;
+  box-shadow: 0 1px 4px #1d203612;
 }
 .zp-dashboard-page .zp-dashboard-tabs > button:hover { color: var(--zp-violet-deep); }
 .zp-dashboard-page .zp-dashboard-primary {
   border-color: var(--zp-violet);
   background: var(--zp-violet);
   color: #fff;
-  box-shadow: 0 4px 0 var(--zp-violet-deep), 0 12px 26px #5434ba20;
+  box-shadow: 0 1px 2px #1d203614, 0 6px 16px #5434ba24;
 }
 .zp-dashboard-page .zp-dashboard-primary:hover { background: var(--zp-violet-deep); }
 .zp-dashboard-page input:not([type=checkbox]), .zp-dashboard-page select {

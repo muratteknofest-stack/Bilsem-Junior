@@ -1,5 +1,5 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react';
-import { Pause, Play, Sparkles } from 'lucide-react';
+import { Pause, Play, SlidersHorizontal } from 'lucide-react';
 import { studentMotion, useStudentReducedMotion } from '../../features/student/experience-preferences';
 import './student-motion.css';
 
@@ -36,7 +36,7 @@ export function StudentMotionToggle() {
   const enabled = useSyncExternalStore(studentMotion.subscribe, studentMotion.getSnapshot, studentMotion.getServerSnapshot);
   const reduced = useStudentReducedMotion();
   return <div className="bj-motion-toolbar">
-    <span><Sparkles size={14} aria-hidden="true" /> Kendi ritminde keşfet</span>
+    <span><SlidersHorizontal size={14} aria-hidden="true" /> Kendi ritminde keşfet</span>
     <button type="button" aria-label={enabled ? 'Animasyonları duraklat' : 'Animasyonları başlat'} aria-pressed={enabled}
       onClick={() => studentMotion.setEnabled(!enabled)}>
       {enabled ? <Pause size={14} aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}
@@ -50,6 +50,6 @@ export function StudentAdventureAtmosphere() {
   return <div className="bj-adventure-atmosphere" aria-hidden="true">
     <span className="bj-drifting-cloud" /><span className="bj-drifting-cloud" />
     {Array.from({ length: 7 }, (_, index) => <i key={index} />)}
-    <span className="bj-orbit-star">✦</span>
+    <span className="bj-orbit-star" />
   </div>;
 }

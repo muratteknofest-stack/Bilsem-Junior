@@ -3,7 +3,7 @@ import { MembershipAccessBanner } from './student/MembershipAccessBanner';
 import type { StoryProgress, StoryStage } from '../features/student/story-adventure';
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'motion/react';
-import { Activity, ArrowLeft, BarChart3, Brain, Compass, Layers, Lightbulb, Sparkles, Target, Zap, ArrowUpRight, Flame } from 'lucide-react';
+import { Activity, ArrowLeft, BarChart3, Brain, Compass, Layers, Lightbulb, Shapes, Target, Zap, ArrowUpRight, Flame } from 'lucide-react';
 import type { DailyStudyPlan, QuestionType, SkillMastery, UserProfile } from '../types';
 import { isSchoolGrade } from '../features/questions/quality-policy';
 import { isDemoUser } from '../lib/demo-access';
@@ -60,6 +60,7 @@ const SECTIONS = [
   { id: 'progress', label: 'İlerlemem', art: 'medal' },
 ] as const;
 type Section = typeof SECTIONS[number]['id'];
+const SECONDARY_SECTIONS: readonly Section[] = ['plan', 'skills', 'challenges', 'progress'];
 const CATEGORY_STYLE_CONFIG: Record<string, {
   color: string;
   bgLight: string;
@@ -69,57 +70,57 @@ const CATEGORY_STYLE_CONFIG: Record<string, {
 }> = {
   pattern: {
     color: 'text-emerald-600 dark:text-emerald-400',
-    bgLight: 'bg-emerald-50 dark:bg-emerald-950/30',
-    borderLight: 'border-emerald-200/60 dark:border-emerald-800/40',
-    gradient: 'from-emerald-500 to-teal-400',
-    icon: Sparkles
+    bgLight: 'bg-emerald-50/70 dark:bg-emerald-500/10',
+    borderLight: 'border-emerald-200/60 dark:border-emerald-500/20',
+    gradient: 'from-emerald-500 to-teal-500',
+    icon: Shapes
   },
   matrix: {
     color: 'text-indigo-600 dark:text-indigo-400',
-    bgLight: 'bg-indigo-50 dark:bg-indigo-950/30',
-    borderLight: 'border-indigo-200/60 dark:border-indigo-800/40',
+    bgLight: 'bg-indigo-50/70 dark:bg-indigo-500/10',
+    borderLight: 'border-indigo-200/60 dark:border-indigo-500/20',
     gradient: 'from-indigo-500 to-violet-500',
     icon: Layers
   },
   attention: {
     color: 'text-amber-600 dark:text-amber-400',
-    bgLight: 'bg-amber-50 dark:bg-amber-950/30',
-    borderLight: 'border-amber-200/60 dark:border-amber-800/40',
-    gradient: 'from-amber-500 to-orange-400',
+    bgLight: 'bg-amber-50/70 dark:bg-amber-500/10',
+    borderLight: 'border-amber-200/60 dark:border-amber-500/20',
+    gradient: 'from-amber-500 to-orange-500',
     icon: Target
   },
   spatial: {
     color: 'text-purple-600 dark:text-purple-400',
-    bgLight: 'bg-purple-50 dark:bg-purple-950/30',
-    borderLight: 'border-purple-200/60 dark:border-purple-800/40',
-    gradient: 'from-purple-500 to-fuchsia-500',
+    bgLight: 'bg-purple-50/70 dark:bg-purple-500/10',
+    borderLight: 'border-purple-200/60 dark:border-purple-500/20',
+    gradient: 'from-purple-500 to-indigo-500',
     icon: Compass
   },
   logic: {
     color: 'text-sky-600 dark:text-sky-400',
-    bgLight: 'bg-sky-50 dark:bg-sky-950/30',
-    borderLight: 'border-sky-200/60 dark:border-sky-800/40',
+    bgLight: 'bg-sky-50/70 dark:bg-sky-500/10',
+    borderLight: 'border-sky-200/60 dark:border-sky-500/20',
     gradient: 'from-sky-500 to-blue-500',
     icon: Lightbulb
   },
   memory: {
     color: 'text-rose-600 dark:text-rose-400',
-    bgLight: 'bg-rose-50 dark:bg-rose-950/30',
-    borderLight: 'border-rose-200/60 dark:border-rose-800/40',
+    bgLight: 'bg-rose-50/70 dark:bg-rose-500/10',
+    borderLight: 'border-rose-200/60 dark:border-rose-500/20',
     gradient: 'from-rose-500 to-pink-500',
     icon: Brain
   },
   visual_perception: {
     color: 'text-teal-600 dark:text-teal-400',
-    bgLight: 'bg-teal-50 dark:bg-teal-950/30',
-    borderLight: 'border-teal-200/60 dark:border-teal-800/40',
+    bgLight: 'bg-teal-50/70 dark:bg-teal-500/10',
+    borderLight: 'border-teal-200/60 dark:border-teal-500/20',
     gradient: 'from-teal-500 to-cyan-500',
     icon: Activity
   },
   numerical: {
     color: 'text-violet-600 dark:text-violet-400',
-    bgLight: 'bg-violet-50 dark:bg-violet-950/30',
-    borderLight: 'border-violet-200/60 dark:border-violet-800/40',
+    bgLight: 'bg-violet-50/70 dark:bg-violet-500/10',
+    borderLight: 'border-violet-200/60 dark:border-violet-500/20',
     gradient: 'from-violet-500 to-indigo-500',
     icon: Zap
   },
@@ -130,6 +131,7 @@ export function StudentDashboard({ storyProgress, storySaveError, onStartStory, 
   const activeUser = user || dataService.getCurrentUser();
   const activeMistakes = mistakes ?? dataService.getMistakes();
   const [activeTab, setActiveTab] = useState<Section>(initialSection);
+  const [moreOpen, setMoreOpen] = useState<boolean>(() => SECONDARY_SECTIONS.includes(initialSection));
   const [showProgress, setShowProgress] = useState(false);
   const [favorites, setFavorites] = useState(getStudyFavorites);
   const [skillSearch, setSkillSearch] = useState('');
@@ -148,21 +150,23 @@ export function StudentDashboard({ storyProgress, storySaveError, onStartStory, 
   const savedExam = resumableExam(dataService.getActiveExam());
   const hour = new Date().getHours();
   const greeting = hour >= 5 && hour < 12 ? { text: 'Günaydın', emoji: '☀️' }
-    : hour < 18 ? { text: 'Merhaba', emoji: '✦' } : { text: 'İyi akşamlar', emoji: '🌙' };
-  const switchSection = (section: Section) => { sound.playTransition(); setActiveTab(section); };
+    : hour < 18 ? { text: 'Merhaba', emoji: '👋' } : { text: 'İyi akşamlar', emoji: '🌙' };
+  const switchSection = (section: Section) => { sound.playTransition(); setActiveTab(section); setMoreOpen(SECONDARY_SECTIONS.includes(section)); };
   if (isLoading) return <main id="student-dashboard" aria-busy="true" className="zp-dashboard-page zp-student-dashboard zp-student-pro"><div className="zp-student-shell"><ProfileBannerSkeleton /><div className="zp-mode-grid"><ModeCardSkeleton /><ModeCardSkeleton /></div></div></main>;
   return <MotionConfig reducedMotion={reduced ? 'always' : 'user'}>
     <div ref={motionSurface} className="zp-dashboard-page zp-student-dashboard zp-student-pro bj-student-game bj-motion-world" data-reduced-motion={reduced}>
       <main id="student-dashboard" className="zp-student-shell" data-adventure={activeTab==='adventure'}>
         <MembershipAccessBanner studentId={activeUser.id} onPractice={() => onStartPractice()}/>
-        <div className="zp-student-topline"><span><span className="zp-brand-dot" /> Bilsem Junior <span className="zp-topline-divider">/</span> Çalışma masam</span><StudentExperienceControls /></div>
-        {activeTab!=='adventure'&&<StudentMotionToggle />}
+        <div className="zp-student-utility-bar">
+          <div className="zp-student-topline"><span>Bilsem Junior <span className="zp-topline-sub"><span className="zp-topline-divider">/</span> Çalışma masam</span></span><StudentExperienceControls /></div>
+          {activeTab !== 'adventure' && <StudentMotionToggle />}
+        </div>
         {activeTab !== 'tests' && activeTab !== 'adventure' && <StudentHeroBanner user={activeUser} greeting={greeting} xpProgress={xpProgress} onUserUpdate={onUserUpdate} onNavigate={onNavigate} prefersReducedMotion={reduced} />}
         {activeTab === 'modes' && <section className="bj-next-action" aria-label="Sıradaki çalışmam"><div><span>Bugünkü ilk adımın</span><h2>{savedExam ? 'Denemene devam et' : 'Kısa bir keşifle başla'}</h2><p>{savedExam ? `${savedExam.total} sorudan ${savedExam.answered} tanesi yanıtlandı.` : `${activeUser.grade || 1}. sınıf · Konuyu, zorluğu ve soru sayısını sen seç.`}</p></div><button type="button" onClick={savedExam ? onStartExam : onStartAdaptive}>{savedExam ? 'Devam et' : 'Çalışmaya başla'}<ArrowUpRight size={20}/></button></section>}
         <div className="zp-student-nav-group">
           <nav className="zp-study-navigation bj-primary-navigation" aria-label="Öğrenci paneli bölümleri">{SECTIONS.filter(section=>['adventure','modes','tests'].includes(section.id)&&(section.id!=='adventure'||!!onStartStory)).map(({ id, label, art }) =>
             <button type="button" key={id} aria-pressed={activeTab === id} aria-controls="zp-student-section" onClick={() => switchSection(id)}><span className="bj-inventory-art" aria-hidden="true"><StudentGameArt kind={art}/></span><span>{label}</span>{activeTab === id && <span className="zp-nav-indicator" aria-hidden="true" />}</button>)}</nav>
-          <details className="bj-more-navigation" open={['plan','skills','challenges','progress'].includes(activeTab) ? true : undefined}><summary>Planım, görevlerim ve gelişimim</summary><nav aria-label="Diğer öğrenci alanları">{SECTIONS.filter(section=>!['adventure','modes','tests'].includes(section.id)).map(({id,label})=><button type="button" key={id} aria-pressed={activeTab===id} aria-controls="zp-student-section" onClick={()=>switchSection(id)}>{label}</button>)}</nav></details>
+          <details className="bj-more-navigation" open={moreOpen}><summary onClick={event => { event.preventDefault(); setMoreOpen(value => !value); }}>Planım, görevlerim ve gelişimim</summary><nav aria-label="Diğer öğrenci alanları">{SECTIONS.filter(section=>!['adventure','modes','tests'].includes(section.id)).map(({id,label})=><button type="button" key={id} aria-pressed={activeTab===id} aria-controls="zp-student-section" onClick={()=>switchSection(id)}>{label}</button>)}</nav></details>
         </div>
         <div className="zp-student-workspace" data-study-section={activeTab}>
           <section id="zp-student-section" className="zp-student-section" aria-label={SECTIONS.find(section => section.id === activeTab)!.label}>
@@ -204,7 +208,7 @@ export function StudentDashboard({ storyProgress, storySaveError, onStartStory, 
             </article>
             <article className="zp-week-overview"><div className="zp-panel-eyebrow"><BarChart3 size={16} aria-hidden="true" /> Bu hafta</div><h2>Küçük adımlar, kalıcı ilerleme.</h2><div className="zp-week-stats tabular-nums"><div><strong>{weekly.thisWeekTotal}</strong><span>çözülen soru</span></div><div><strong>{activeUser.streak || 0}<Flame size={19} aria-hidden="true" /></strong><span>günlük seri</span></div></div><button type="button" onClick={() => switchSection('progress')}>İlerlememi incele <ArrowUpRight size={16} aria-hidden="true" /></button></article>
             <DailyStreakCard user={activeUser} onUserUpdate={onUserUpdate} onStartPractice={() => onStartPractice('mixed')} onOpenDetailsModal={() => onNavigate('achievements')} />
-            <p className="zp-study-note"><Sparkles size={17} aria-hidden="true" /> Kendi hızında ilerle. Her soru yeni bir keşif.</p>
+            <p className="zp-study-note"><Compass size={17} aria-hidden="true" /> Kendi hızında ilerle. Her soru yeni bir keşif.</p>
             </div>
           </aside>}
         </div>

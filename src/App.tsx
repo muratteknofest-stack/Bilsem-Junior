@@ -19,6 +19,7 @@ import { accountEntry, accountEntryPath } from './features/auth/account-entry';
 import { routeFromPathname } from './lib/route-sync';
 
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { LockKeyhole } from 'lucide-react';
 import { UserProfile, UserRole, SkillMastery, MistakeItem, DailyStudyPlan, ReminderAlertEvent, CognitiveCategory } from './types';
 import { dataService } from './services/data-service';
 import { openLinkedStudentSession, openLinkedParentSession, cancelAccountSwitch } from './services/account-security-service';
@@ -471,11 +472,11 @@ export default function App() {
     return()=>{disposed=true;void remove?.();};
   },[currentRoute,isTestRoute,showParentAccess,showGlobalReminderModal,isSwitchingStudent,currentUser.role]);
 
-  if (authLoading && authUser && !userProfile) return <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6"><p role="status">Hesap ve ilerleme bilgileri yükleniyor…</p></main>;
-  if (currentRoute !== 'login' && hasVerifiedAdminAccess({ currentUser: authUser, userProfile, loading: authLoading, isAdminAuthorized })) return <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6"><p role="status">Yönetici alanına yönlendiriliyorsunuz…</p></main>;
+  if (authLoading && authUser && !userProfile) return <main className="flex min-h-screen items-center justify-center bg-[var(--surface-canvas)] text-[var(--text-primary)] p-6"><p role="status">Hesap ve ilerleme bilgileri yükleniyor…</p></main>;
+  if (currentRoute !== 'login' && hasVerifiedAdminAccess({ currentUser: authUser, userProfile, loading: authLoading, isAdminAuthorized })) return <main className="flex min-h-screen items-center justify-center bg-[var(--surface-canvas)] text-[var(--text-primary)] p-6"><p role="status">Yönetici alanına yönlendiriliyorsunuz…</p></main>;
 
   return (
-    <div data-entry-route={isAndroidApp && (currentRoute === 'landing' || currentRoute === 'login')} data-student-space={isAuth && currentUser.role==='student' && !isTestRoute && !['landing','login','parent'].includes(currentRoute)} className={`${isAndroidApp ? 'bj-native-shell ' : ''}bilsem-junior-skin min-h-screen bg-slate-50 text-slate-900 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]`}>
+    <div data-entry-route={isAndroidApp && (currentRoute === 'landing' || currentRoute === 'login')} data-student-space={isAuth && currentUser.role==='student' && !isTestRoute && !['landing','login','parent'].includes(currentRoute)} className={`${isAndroidApp ? 'bj-native-shell ' : ''}bilsem-junior-skin min-h-screen bg-[var(--surface-canvas)] text-[var(--text-primary)] flex flex-col font-[family-name:var(--bj-font-body)]`}>
       {isAndroidApp && <AndroidConnectionNotice />}
       {/* Workspace navigation; public pages own their header. Tests stay distraction-free. */}
       {!isTestRoute && currentRoute !== 'landing' && currentRoute !== 'login' && (
@@ -492,9 +493,9 @@ export default function App() {
       )}
 
       {isAuth && <ProgressSyncBanner />}
-      {studentSwitchError && <div role="alert" className="mx-auto my-3 w-full max-w-7xl rounded-xl border border-rose-200 bg-rose-50 px-5 py-3 text-sm text-rose-800">{studentSwitchError}</div>}
+      {studentSwitchError && <div role="alert" className="mx-auto my-3 w-full max-w-7xl rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/50 px-5 py-3 text-sm text-rose-800 dark:text-rose-200">{studentSwitchError}</div>}
       {showParentAccess && <ParentAccessDialog busy={isSwitchingStudent} onVerify={openParentPanel} onClose={() => setShowParentAccess(false)} onLogin={() => { setShowParentAccess(false); handleNavigateToLogin('parent'); }} />}
-      {isSwitchingStudent && <div role="status" className="mx-auto my-3 w-full max-w-7xl rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-3 text-sm text-indigo-800">{switchTarget === 'parent' ? 'Veli oturumu açılıyor…' : 'Öğrenci oturumu açılıyor…'}</div>}
+      {isSwitchingStudent && <div role="status" className="mx-auto my-3 w-full max-w-7xl rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/50 px-5 py-3 text-sm text-indigo-800 dark:text-indigo-200">{switchTarget === 'parent' ? 'Veli oturumu açılıyor…' : 'Öğrenci oturumu açılıyor…'}</div>}
       {/* Main View Router */}
       <div role={currentRoute === 'landing' ? undefined : 'main'} className={`flex-1 w-full ${currentRoute === 'landing' ? '' : 'overflow-x-hidden'}`}>
         <Suspense fallback={isAndroidApp ? <AndroidScreenLoading /> : <div className="min-h-[50vh] flex items-center justify-center" role="status">Yükleniyor…</div>}>
@@ -544,13 +545,15 @@ export default function App() {
 
             {currentRoute === 'demo-limit' && (
               <div className="mx-auto w-full max-w-2xl px-5 py-20 text-center" role="status">
-                <span className="text-5xl" aria-hidden="true">✦</span>
-                <h1 className="mt-6 text-3xl font-bold text-slate-900">Bu alan deneme hesabında kapalı</h1>
-                <p className="mt-4 text-slate-600">Deneme hesabı toplam üç örnek soru içerir. Adaptif çalışma, sınavlar, raporlar ve veli portalı tam üyelik içindir.</p>
-                <p className="mt-2 text-sm text-slate-500">Kalan örnek soru: {demoQuestionsRemaining()}</p>
+                <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-card)] text-indigo-600 dark:text-indigo-400" aria-hidden="true">
+                  <LockKeyhole className="h-7 w-7" />
+                </span>
+                <h1 className="mt-6 text-3xl font-bold text-[var(--text-primary)]">Bu alan deneme hesabında kapalı</h1>
+                <p className="mt-4 text-[var(--text-secondary)]">Deneme hesabı toplam üç örnek soru içerir. Adaptif çalışma, sınavlar, raporlar ve veli portalı tam üyelik içindir.</p>
+                <p className="mt-2 text-sm text-[var(--text-secondary)] tabular-nums">Kalan örnek soru: {demoQuestionsRemaining()}</p>
                 <div className="mt-8 flex flex-wrap justify-center gap-3">
-                  {demoQuestionsRemaining() > 0 && <button type="button" onClick={() => navigateTo('practice')} className="rounded-xl bg-violet-700 px-5 py-3 font-semibold text-white">Örnek soruları çöz</button>}
-                  <button type="button" onClick={() => navigateTo('register')} className="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-900">Hesap oluştur</button>
+                  {demoQuestionsRemaining() > 0 && <button type="button" onClick={() => navigateTo('practice')} className="min-h-[44px] rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-3 font-semibold text-white transition-colors">Örnek soruları çöz</button>}
+                  <button type="button" onClick={() => navigateTo('register')} className="min-h-[44px] rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] px-5 py-3 font-semibold text-[var(--text-primary)] transition-colors">Hesap oluştur</button>
                 </div>
               </div>
             )}

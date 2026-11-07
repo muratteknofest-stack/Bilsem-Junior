@@ -1,12 +1,19 @@
 /* Presentation only: question data, scoring, timers and interactions are untouched. */
-.bilsem-junior-skin{background:#f7f6fb}
-.bilsem-junior-skin .zp-student-pro{--zp-violet:#6e43cf;--zp-ink:#292344;background:#f7f6fb}
-.bilsem-junior-skin .zp-student-pro .zp-pro-hero{background:linear-gradient(115deg,#eee8fb,#fdf9ed 65%,#e6f6eb);border-color:#ddd2ed;box-shadow:0 5px 0 #e6deef60}
-.bilsem-junior-skin .zp-dashboard-kicker{color:#614198;letter-spacing:.12em}
-.bilsem-junior-skin .zp-learning-setup{--zp-violet:#6e43cf}
-.bilsem-junior-skin .zp-game-launch{border-color:#6e43cf}
-.bilsem-junior-skin .zp-focus-header{background:#f6f0ff;border-color:#e6d9f1}
-.bilsem-junior-skin .zp-focus-header b{color:#573095}
+.bilsem-junior-skin{background:var(--surface-canvas,#f8f7f3);color:var(--text-primary,#1d2036)}
+.bilsem-junior-skin .zp-student-pro{--zp-violet:#5b3ec8;--zp-ink:#1d2036;background:var(--surface-canvas,#f8f7f3)}
+.bilsem-junior-skin .zp-student-pro .zp-pro-hero{background:var(--surface-card,#ffffff);border-color:var(--border-subtle,#e2e8f0);box-shadow:0 1px 3px rgba(29,32,54,.05),0 8px 24px rgba(29,32,54,.04)}
+.bilsem-junior-skin .zp-dashboard-kicker{color:#4f46e5;letter-spacing:.02em}
+.bilsem-junior-skin .zp-learning-setup{--zp-violet:#4f46e5}
+.bilsem-junior-skin .zp-game-launch{border-color:#4f46e5}
+.bilsem-junior-skin .zp-focus-header{background:#ffffff;border-color:#e2e8f0}
+.bilsem-junior-skin .zp-focus-header b{color:#1e293b}
+.dark.bilsem-junior-skin,.dark .bilsem-junior-skin{background:var(--surface-canvas,#171627);color:var(--text-primary,#f9f7ff)}
+.dark .bilsem-junior-skin .zp-student-pro{--zp-violet:#818cf8;--zp-ink:#f9f7ff;background:var(--surface-canvas,#171627)}
+.dark .bilsem-junior-skin .zp-student-pro .zp-pro-hero{background:var(--surface-card,#262339);border-color:var(--border-subtle,#49425a);box-shadow:0 8px 24px rgba(7,6,17,.36)}
+.dark .bilsem-junior-skin .zp-dashboard-kicker{color:#a5b4fc}
+.dark .bilsem-junior-skin .zp-focus-header{background:#1e1b2e;border-color:#3b3552}
+.dark .bilsem-junior-skin .zp-focus-header b{color:#f8fafc}
 @media(prefers-reduced-motion:reduce){.bj-logo-symbol{transition:none}}
 
-@media(max-width:420px){.bilsem-junior-skin .zp-focus-header b{font-size:16px;letter-spacing:-.5px}.bilsem-junior-skin .zp-focus-header>span{min-width:0}}
+@media(max-width:420px){.bilsem-junior-skin .zp-focus-header b{font-size:15px;letter-spacing:-.02em}.bilsem-junior-skin .zp-focus-header>span{min-width:0}}
+

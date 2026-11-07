@@ -35,6 +35,7 @@ button, input, select, textarea { font-family: inherit; }
 
 /* Tabular numbers standard for all numeric displays, XP, counters, tables, and codes */
 .tabular-nums,
+.tabular-nums *,
 table,
 code,
 pre,

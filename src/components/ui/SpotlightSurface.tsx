@@ -7,6 +7,8 @@ export interface SpotlightSurfaceProps extends React.HTMLAttributes<HTMLDivEleme
   spotlightOpacity?: number;
   borderSpotlight?: boolean;
   disabled?: boolean;
+  /** When true, omits outer card border/background so a child card is not double-framed */
+  unstyled?: boolean;
 }
 
 /**
@@ -21,6 +23,7 @@ export const SpotlightSurface = React.forwardRef<HTMLDivElement, SpotlightSurfac
       spotlightOpacity = 1,
       borderSpotlight = true,
       disabled = false,
+      unstyled = false,
       className = '',
       children,
       ...props
@@ -75,6 +78,10 @@ export const SpotlightSurface = React.forwardRef<HTMLDivElement, SpotlightSurfac
       setPosition({ x: -1000, y: -1000 });
     };
 
+    const frameClasses = unstyled
+      ? 'group relative rounded-2xl overflow-hidden transition-all duration-200'
+      : 'group relative rounded-2xl border border-[var(--border-subtle,#e2e8f0)] dark:border-[var(--border-subtle,#49425a)] bg-[var(--surface-card,#ffffff)] dark:bg-[var(--surface-card,#262339)] overflow-hidden transition-all duration-200';
+
     return (
       <div
         ref={setRefs}
@@ -84,13 +91,13 @@ export const SpotlightSurface = React.forwardRef<HTMLDivElement, SpotlightSurfac
         onTouchStart={() => setIsHovered(true)}
         onTouchMove={handleTouchMove}
         onTouchEnd={() => setIsHovered(false)}
-        className={`group relative rounded-2xl border border-[var(--border-subtle,#e2e8f0)] dark:border-[var(--border-subtle,#49425a)] bg-[var(--surface-card,#ffffff)] dark:bg-[var(--surface-card,#262339)] overflow-hidden transition-all duration-300 ${className}`.trim()}
+        className={`${frameClasses} ${className}`.trim()}
         {...props}
       >
         {/* Spotlight Glow Layer */}
         {!disabled && !shouldReduceMotion && (
           <div
-            className="pointer-events-none absolute -inset-px rounded-2xl transition-opacity duration-300 ease-out"
+            className="pointer-events-none absolute -inset-px rounded-2xl transition-opacity duration-200 ease-out z-20"
             style={{
               opacity: isHovered ? spotlightOpacity : 0,
               background: `radial-gradient(${spotlightSize}px circle at ${position.x}px ${position.y}px, ${spotlightColor}, transparent 80%)`,
@@ -102,19 +109,19 @@ export const SpotlightSurface = React.forwardRef<HTMLDivElement, SpotlightSurfac
         {/* Illuminated Spotlight Border Layer */}
         {borderSpotlight && !disabled && !shouldReduceMotion && (
           <div
-            className="pointer-events-none absolute -inset-px rounded-2xl border border-transparent transition-opacity duration-300 ease-out"
+            className="pointer-events-none absolute -inset-px rounded-2xl border border-transparent transition-opacity duration-200 ease-out z-20"
             style={{
               opacity: isHovered ? spotlightOpacity : 0,
               WebkitMaskImage: `radial-gradient(${spotlightSize * 0.75}px circle at ${position.x}px ${position.y}px, black, transparent)`,
               maskImage: `radial-gradient(${spotlightSize * 0.75}px circle at ${position.x}px ${position.y}px, black, transparent)`,
-              borderColor: 'rgba(99, 102, 241, 0.4)',
+              borderColor: 'rgba(99, 102, 241, 0.35)',
             }}
             aria-hidden="true"
           />
         )}
 
         {/* Content */}
-        <div className="relative z-10">{children}</div>
+        <div className="relative z-10 h-full">{children}</div>
       </div>
     );
   }

@@ -171,17 +171,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
       <GradeExplorer onTry={tryGrade} completed={submitted} />
       <section id="dunyalar" className="zp-container zp-section" aria-labelledby="worlds-title">
         <motion.div {...reveal} className="zp-section-heading"><div><p className="zp-kicker"><Shapes size={16} /> BİLSEM hazırlık alanları</p><h2 id="worlds-title">Becerini seç.<br /><span>Hazırlığını güçlendir.</span></h2></div><p>Birbirinden farklı düşünme oyunları.<br />Bir alan seç, düşünmenin farklı yollarıyla tanış.</p></motion.div>
-        <div className="zp-world-grid">{worlds.map(w => (
-          <motion.div {...reveal} key={w.type} className="h-full">
+        <div className="zp-world-grid">{worlds.map((w, index) => (
+          <motion.div
+            {...reveal}
+            key={w.type}
+            className={`zp-world-bento-item ${index < 2 ? 'zp-world-bento-featured col-span-4 md:col-span-3 lg:col-span-6' : 'zp-world-bento-compact col-span-4 md:col-span-3 lg:col-span-3'} min-w-0 h-full`}
+          >
             <SpotlightSurface
-              className={`zp-world-card-surface zp-world-${w.theme} h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-xl`}
+              unstyled
+              className="zp-world-card-surface h-full transition-transform duration-200 hover:-translate-y-1"
               spotlightColor={
-                w.theme === 'purple' ? 'rgba(100, 53, 204, 0.14)' :
-                w.theme === 'mint' ? 'rgba(8, 118, 92, 0.14)' :
-                w.theme === 'peach' ? 'rgba(180, 83, 9, 0.14)' :
-                w.theme === 'blue' ? 'rgba(29, 78, 216, 0.14)' :
-                w.theme === 'yellow' ? 'rgba(161, 98, 7, 0.14)' :
-                'rgba(190, 24, 93, 0.14)'
+                w.theme === 'purple' ? 'rgba(84, 52, 186, 0.12)' :
+                w.theme === 'mint' ? 'rgba(15, 118, 110, 0.12)' :
+                w.theme === 'peach' ? 'rgba(180, 83, 9, 0.12)' :
+                w.theme === 'blue' ? 'rgba(29, 78, 216, 0.12)' :
+                w.theme === 'yellow' ? 'rgba(161, 98, 7, 0.12)' :
+                'rgba(190, 24, 93, 0.12)'
               }
             >
               <button type="button" className={`zp-world-card zp-ui-card zp-world-${w.theme} w-full h-full text-left`} onClick={() => goDemo(w.type)}>
@@ -196,23 +201,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
           </motion.div>
         ))}</div>
       </section>
-      <details className="bj-home-more zp-container"><summary>Görevler, ödüller ve çalışma alışkanlığı <ChevronDown size={20} /></summary><div>
       <section className="zp-rewards-section" aria-labelledby="rewards-title"><div className="zp-container">
         <motion.div {...reveal} className="zp-centered-heading"><p className="zp-kicker"><Trophy size={16} /> Keşfet, geliş, kutla</p><h2 id="rewards-title">Öğrenmek bir macera.<br /><span>İlerlemek ayrı bir heyecan!</span></h2><p>Günlük görevler, puanlar ve rozetlerle her yeni adımı görünür kıl.</p></motion.div>
         <div className="zp-rewards-grid">{rewards.map(r => (
-          <motion.div {...reveal} key={r.title} className="h-full">
+          <motion.div {...reveal} key={r.title} className="min-w-0 h-full">
             <SpotlightSurface
-              className={`zp-reward zp-reward-${r.theme} h-full border border-white/15 bg-white/5 transition-all duration-300 hover:-translate-y-1`}
+              unstyled
+              className={`zp-reward zp-reward-${r.theme} h-full transition-transform duration-200 hover:-translate-y-1`}
               spotlightColor={
-                r.theme === 'purple' ? 'rgba(210, 180, 255, 0.15)' :
-                r.theme === 'mint' ? 'rgba(158, 230, 199, 0.15)' :
-                r.theme === 'peach' ? 'rgba(255, 219, 137, 0.15)' :
-                'rgba(158, 216, 255, 0.15)'
+                r.theme === 'purple' ? 'rgba(84, 52, 186, 0.10)' :
+                r.theme === 'mint' ? 'rgba(15, 118, 110, 0.10)' :
+                r.theme === 'peach' ? 'rgba(180, 83, 9, 0.10)' :
+                'rgba(29, 78, 216, 0.10)'
               }
             >
-              <article className="p-6 text-center h-full flex flex-col justify-between">
+              <article className="text-center h-full flex flex-col justify-between">
                 <div>
-                  <span className="zp-reward-icon" aria-hidden="true"><r.icon size={34} /></span>
+                  <span className="zp-reward-icon" aria-hidden="true"><r.icon size={30} /></span>
                   <h3>{r.title}</h3>
                 </div>
                 <p>{r.text}</p>
@@ -225,7 +230,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
       <section id="nasil" className="zp-container zp-section zp-journey" aria-labelledby="journey-title"><motion.div {...reveal} className="zp-centered-heading"><p className="zp-kicker">Büyük keşiflerin küçük rutini</p><h2 id="journey-title">Her gün, bir adım daha.</h2><p>Başkasının hızına yetişmek için değil, kendi yolunu keşfetmek için.</p></motion.div>
         <div className="zp-journey-grid">{[{ n: '01', title: 'Rotanı seç', text: 'Merak ettiğin bir alandan başla. Örüntü, mantık ya da dikkat… Seçim senin.', icon: Shapes }, { n: '02', title: 'Deneyerek öğren', text: 'Soruyu çöz, açıklamayı incele. Hatalarını bir sonraki keşfin ipucuna dönüştür.', icon: Brain }, { n: '03', title: 'Gelişimini kutla', text: 'Günlük görevlerini tamamla, XP biriktir ve kendi rekorunu geliştirmeye çalış.', icon: Trophy }].map(s => <motion.div {...reveal} key={s.n} className="zp-journey-step"><div className="zp-journey-icon"><s.icon size={28} /><span>{s.n}</span></div><h3>{s.title}</h3><p>{s.text}</p></motion.div>)}</div>
       </section>
-      </div></details>
       <section id="aile" className="zp-container zp-family-section" aria-labelledby="family-title"><motion.div {...reveal} className="zp-family-panel zp-ui-card"><div className="zp-parent-preview"><div className="zp-parent-preview-top"><span><Heart size={20} /> Veli alanı</span><span>Örnek görünüm</span></div><div className="zp-parent-preview-main"><span className="zp-parent-avatar"><GraduationCap size={30} /></span><div><strong>Her küçük adımı fark edin.</strong><p>Birlikte bakın, birlikte kutlayın.</p></div></div><div className="zp-parent-preview-rows"><div><span className="zp-parent-dot zp-path-purple"><Shapes size={20} /></span><span><strong>Çalışma alanları</strong><small>Hangi beceriler üzerinde çalışıyor?</small></span><Check size={17} /></div><div><span className="zp-parent-dot zp-path-mint"><Target size={20} /></span><span><strong>Günlük alışkanlıklar</strong><small>Çalışma düzeni nasıl ilerliyor?</small></span><Check size={17} /></div><div><span className="zp-parent-dot zp-path-yellow"><Trophy size={20} /></span><span><strong>Gelişim yolculuğu</strong><small>Hangi adımları birlikte kutlayabilirsiniz?</small></span><Check size={17} /></div></div><p className="zp-parent-preview-note"><ShieldCheck size={16} /> Gerçek bilgiler, bağlı öğrenci hesabından gelir.</p></div><div className="zp-family-copy"><p className="zp-kicker">Birlikte daha güzel</p><h2 id="family-title">Onun hazırlık yolculuğu.<br />Sizin destek alanınız.</h2><p>Çocuğunuzun çabasını fark edin, ilerleyişine eşlik edin. Veli alanından çalışma ve gelişim bilgilerini takip edin.</p><PremiumButton tone="dark" onClick={() => onNavigateToLogin('parent')}>Veli alanına geç <ArrowUpRight size={18} /></PremiumButton></div></motion.div></section>
       <BilsemGuide />
       <section id="yardim" className="zp-container zp-section zp-faq" aria-labelledby="faq-title"><div><p className="zp-kicker">Aklında bir soru mu var?</p><h2 id="faq-title">Merak etmek<br />işin başlangıcı.</h2></div><div>{faqs.map(([q, a]) => <details key={q}><summary>{q}<ChevronDown size={19} /></summary><p>{a}</p></details>)}</div></section>

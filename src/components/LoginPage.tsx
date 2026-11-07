@@ -105,7 +105,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   );
 
   return (
-    <div ref={viewportRef} data-native-entry={isAndroidApp} data-registration-complete={Boolean(registrationResult)} data-registration-page={isAndroidApp && activeTab === 'register' && !registrationResult ? registrationPage : undefined} className="zp-auth min-h-[calc(100vh-4rem)] flex flex-col justify-center py-8 px-4 sm:px-6 lg:px-8">
+    <div ref={viewportRef} data-native-entry={isAndroidApp} data-registration-complete={Boolean(registrationResult)} data-registration-page={isAndroidApp && activeTab === 'register' && !registrationResult ? registrationPage : undefined} className="zp-auth min-h-[calc(100vh-4rem)] bg-[var(--surface-canvas)] text-[var(--text-primary)] flex flex-col justify-center py-8 px-4 sm:px-6 lg:px-8">
       <div className="zp-auth-top max-w-6xl mx-auto w-full mb-4 flex items-center justify-between">
         <button
           type="button"

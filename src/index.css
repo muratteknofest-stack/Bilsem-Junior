@@ -13,6 +13,10 @@
 @import './components/student/learning-setup.css';
 @import './components/student/student-experience-controls.css';
 @import "tailwindcss";
+@import "./features/questions/renderers/question-studio.css";
+@import "./features/questions/renderers/question-art.css";
+@import "./features/questions/renderers/perceptual-board.css";
+@import "./typography.css";
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
@@ -25,6 +29,7 @@
   /* 10% Accents & Content Contrast */
   --text-primary: #1d2036;
   --text-secondary: #52566b;
+  --shadow-card-single: 0 1px 3px 0 rgba(29, 32, 54, 0.05), 0 1px 2px -1px rgba(29, 32, 54, 0.04);
 }
 
 .dark {
@@ -36,12 +41,8 @@
   /* 10% High-Contrast Text & Accents */
   --text-primary: #f9f7ff;
   --text-secondary: #cac4d5;
+  --shadow-card-single: 0 8px 24px -4px rgba(7, 6, 17, 0.42);
 }
-
-@import "./features/questions/renderers/question-studio.css";
-@import "./features/questions/renderers/question-art.css";
-@import "./features/questions/renderers/perceptual-board.css";
-@import "./typography.css";
 
 @theme {
   --color-surface-canvas: var(--surface-canvas);
@@ -216,7 +217,9 @@
 
 /* Global Transitions for Dark Mode */
 html, body {
-  @apply bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-300;
+  background-color: var(--surface-canvas);
+  color: var(--text-primary);
+  transition: background-color 200ms ease, color 200ms ease;
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

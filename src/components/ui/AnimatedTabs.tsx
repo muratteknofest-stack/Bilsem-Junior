@@ -79,9 +79,9 @@ export const AnimatedTabs: React.FC<AnimatedTabsProps> = ({
   };
 
   const sizeClasses = {
-    sm: 'text-xs py-1.5 px-3 min-h-[2rem]',
-    md: 'text-sm py-2 px-3.5 min-h-[2.5rem]',
-    lg: 'text-base py-2.5 px-4 min-h-[2.75rem]',
+    sm: 'text-xs py-2 px-3 min-h-[2.5rem]',
+    md: 'text-sm py-2.5 px-3.5 min-h-[2.75rem]',
+    lg: 'text-base py-2.5 px-4 min-h-[3rem]',
   }[size];
 
   const containerVariantClasses = {
@@ -135,7 +135,7 @@ export const AnimatedTabs: React.FC<AnimatedTabsProps> = ({
                 transition={
                   shouldReduceMotion
                     ? { duration: 0 }
-                    : { type: 'spring', bounce: 0.18, duration: 0.35 }
+                    : { duration: 0.18, ease: [0.22, 1, 0.36, 1] }
                 }
                 className="absolute inset-0 rounded-lg bg-white dark:bg-[#493b68] shadow-sm border border-slate-200/80 dark:border-[#665786]"
                 aria-hidden="true"
@@ -148,7 +148,7 @@ export const AnimatedTabs: React.FC<AnimatedTabsProps> = ({
                 transition={
                   shouldReduceMotion
                     ? { duration: 0 }
-                    : { type: 'spring', bounce: 0.15, duration: 0.3 }
+                    : { duration: 0.18, ease: [0.22, 1, 0.36, 1] }
                 }
                 className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-full"
                 aria-hidden="true"
