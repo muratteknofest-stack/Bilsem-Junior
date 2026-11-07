@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { ArrowRight, ArrowUpRight, Shapes, Brain, ScanEye, Trophy, Check, ChevronDown, Move, Keyboard, ShieldCheck, Heart, Volume2, VolumeX, Target, Zap, Medal, GraduationCap, Rotate3D, Hash, Puzzle, Compass, Timer, MousePointer2, Smartphone } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Shapes, Brain, ScanEye, Trophy, Check, ChevronDown, ChevronUp, Move, Keyboard, ShieldCheck, Heart, Volume2, VolumeX, Target, Zap, Medal, GraduationCap, Rotate3D, Hash, Puzzle, Compass, Timer, MousePointer2, Smartphone, RotateCcw, Star, Sparkles } from 'lucide-react';
 import type { QuestionType, UserRole } from '../types';
 import { generateQuestionByType } from '../features/questions/generators';
 import { evaluateResponse, type QuestionResponse } from '../features/questions/answer-interactions';
 import { QuestionRenderer } from '../features/questions/renderers/QuestionRenderer';
-import { AnswerWorkspace } from '../features/questions/renderers/AnswerWorkspace';
+import { OptionRenderer } from '../features/questions/renderers/OptionRenderer';
 import { VisualExplanationOverlay } from '../features/questions/renderers/VisualExplanationOverlay';
 import { sound } from '../lib/sound';
+import confetti from 'canvas-confetti';
 import { landingQuestionAnswered, useLandingQuestion } from '../lib/demo-access';
 import { Logo } from './Logo';
 import { LearningIsland } from './landing/LearningIsland';
@@ -80,7 +81,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
   const [previewGrade, setPreviewGrade] = useState<PreviewGrade | null>(null);
   const [demoError, setDemoError] = useState('');
   const [response, setResponse] = useState<QuestionResponse | null>(null);
-  const [submitted, setSubmitted] = useState(landingQuestionAnswered);
+  const [submitted, setSubmitted] = useState(false);
+  const [showExplanation, setShowExplanation] = useState(false);
   const [solved, setSolved] = useState(0);
   const [correct, setCorrect] = useState(0);
   const submitLock = useRef(false);
@@ -93,11 +95,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
   }, []);
   const reveal = { initial: moving ? { opacity: 0, y: 20 } : false as const, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, amount: 0.12 }, transition: { duration: moving ? 0.5 : 0 } };
   const nextQuestion = (type = category) => {
-    if (submitted || landingQuestionAnswered()) { setSubmitted(true); return; }
     try {
-      const next = generateQuestionByType(type, question.seed + 131, 2);
-      setCategory(type); setQuestion(next); setPreviewGrade(null); setDemoError('');
-      setResponse(null); submitLock.current = false;
+      const next = generateQuestionByType(type, question.seed + 131, previewGrade ?? 2);
+      setCategory(type); setQuestion(next); setDemoError('');
+      setResponse(null); setSubmitted(false); setShowExplanation(false); submitLock.current = false;
     } catch { setDemoError('Bu örnek şu anda hazırlanamadı. Başka bir keşif alanını deneyebilirsin.'); }
   };
   const goDemo = (type?: QuestionType) => {
@@ -106,41 +107,245 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onN
     document.getElementById('kesfet')?.scrollIntoView({ behavior: moving ? 'smooth' : 'instant', block: 'start' });
   };
   const tryGrade = (grade: PreviewGrade) => {
-    if (!submitted && !landingQuestionAnswered()) {
-      try {
-        const next = createGradePreview(grade);
-        setQuestion(next); setCategory(next.type); setPreviewGrade(grade); setDemoError('');
-        setResponse(null); submitLock.current = false;
-      } catch { setDemoError('Bu sınıfın örneği şu anda hazırlanamadı. Bir keşif alanı seçerek devam edebilirsin.'); }
-    } else { setSubmitted(true); }
+    try {
+      const next = createGradePreview(grade);
+      setQuestion(next); setCategory(next.type); setPreviewGrade(grade); setDemoError('');
+      setResponse(null); setSubmitted(false); setShowExplanation(false); submitLock.current = false;
+    } catch { setDemoError('Bu sınıfın örneği şu anda hazırlanamadı. Bir keşif alanı seçerek devam edebilirsin.'); }
     goDemo();
+  };
+  const retryQuestion = () => {
+    setSubmitted(false);
+    setShowExplanation(false);
+    submitLock.current = false;
   };
   const submit = () => {
     if (submitLock.current || submitted) return;
     const checked = evaluateResponse(question, response);
     if (!checked.complete) return;
-    if (!useLandingQuestion()) { setSubmitted(true); return; }
-    submitLock.current = true; setSubmitted(true); setSolved(n => n + 1);
-    if (checked.correct) { setCorrect(n => n + 1); if (soundActive) sound.playSuccess(); }
-    else if (soundActive) sound.playError();
+    useLandingQuestion();
+    submitLock.current = true;
+    setSubmitted(true);
+    setSolved(n => n + 1);
+    if (checked.correct) {
+      setCorrect(n => n + 1);
+      if (soundActive) sound.playSuccess();
+      if (moving) {
+        confetti({ particleCount: 75, spread: 65, origin: { y: 0.6 } });
+      }
+    } else if (soundActive) sound.playError();
   };
-  const discovery = (<section id="kesfet" className="zp-demo-section" aria-labelledby="demo-title"><div className="zp-container zp-demo-grid">
-        <motion.div {...reveal} className="zp-demo-intro"><p className="zp-kicker">İzlemek güzel, denemek daha güzel.</p><h2 id="demo-title" tabIndex={-1} ref={demoHeading}>Bir küçük soru. <br /><span>Kocaman bir <br />“buldum!”</span></h2><p>Parçaları incele, kuralı keşfet, cevabını yerleştir. Acele yok; burada öğrenmenin yolu denemekten geçiyor.</p>
-          <div className="zp-demo-steps"><div><span><Move size={19} /></span><p><strong>Dokun ya da sürükle</strong>Kartı seç, cevap alanına yerleştir.</p></div><div><span><Compass size={19} /></span><p><strong>Nasıl çözüldüğünü gör</strong>Cevabından sonra açıklamayı incele.</p></div><div><span><Keyboard size={19} /></span><p><strong>Sana uygun şekilde çöz</strong>Dokunmatik, fare veya klavye kullan.</p></div></div>
-          <div className="zp-demo-progress"><span className="zp-progress-icon"><Trophy size={22} /></span><p><strong>{solved ? `${solved} soru denedin, ${correct} doğru buldun.` : 'İlk keşfin seni bekliyor.'}</strong><small>Bu cihazda 1 örnek soru. Sonuç hesabına kaydedilmez.</small></p></div>
+  const discovery = (
+    <section id="kesfet" className="zp-demo-section" aria-labelledby="demo-title">
+      <div className="zp-container zp-demo-grid">
+        <motion.div {...reveal} className="zp-demo-intro">
+          <p className="zp-kicker">İzlemek güzel, denemek daha güzel.</p>
+          <h2 id="demo-title" tabIndex={-1} ref={demoHeading}>
+            Bir küçük soru. <br /><span>Kocaman bir <br />“buldum!”</span>
+          </h2>
+          <p>Parçaları incele, kuralı keşfet, doğru cevaba dokun. Acele yok; burada öğrenmenin yolu merak etmekten geçiyor.</p>
+          <div className="zp-demo-steps">
+            <div><span><MousePointer2 size={19} /></span><p><strong>1 Dokunuşla Şıkkını Seç</strong>Görselleri incele, doğrudan doğru cevaba dokun.</p></div>
+            <div><span><Compass size={19} /></span><p><strong>Çözüm Mantığını Gör</strong>Cevabından sonra adım adım açıklamayı keşfet.</p></div>
+            <div><span><Sparkles size={19} /></span><p><strong>Farklı Alanları Dene</strong>Örüntü, mantık, dikkat ve şifre soruları çöz.</p></div>
+          </div>
+          <div className="zp-demo-progress">
+            <span className="zp-progress-icon"><Trophy size={22} /></span>
+            <p>
+              <strong>{solved > 0 ? `${solved} soru çözdün, ${correct} doğru buldun.` : 'İlk denemen seni bekliyor.'}</strong>
+              <small>Canlı soru motoru · Sınırsız örnek deneme</small>
+            </p>
+          </div>
         </motion.div>
-        <motion.div {...reveal} className="zp-demo-card zp-ui-card bj-discovery"><div className="zp-demo-card-header"><span><span className="bj-discovery-compass" aria-hidden="true"><Compass size={24} /></span><span>Keşif Alanı<small>Küçük bir düşünme macerası</small></span></span><button type="button" className="zp-icon-button" aria-label={soundActive ? 'Sesi kapat' : 'Sesi aç'} aria-pressed={soundActive} onClick={() => { sound.enabled = !soundActive; setSoundActive(!soundActive); }}>{soundActive ? <Volume2 size={17} /> : <VolumeX size={17} />}</button></div>
+
+        <motion.div {...reveal} className="zp-demo-card zp-ui-card bj-discovery">
+          <div className="zp-demo-card-header">
+            <span>
+              <span className="bj-discovery-compass" aria-hidden="true"><Compass size={22} /></span>
+              <span>
+                Keşif Alanı
+                <small>Canlı BİLSEM alıştırma motoru</small>
+              </span>
+            </span>
+            <div className="flex items-center gap-2">
+              {solved > 0 && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                  <Star size={13} className="text-amber-500 fill-amber-400" /> {correct}/{solved} Doğru
+                </span>
+              )}
+              <button
+                type="button"
+                className="zp-icon-button"
+                aria-label={soundActive ? 'Sesi kapat' : 'Sesi aç'}
+                aria-pressed={soundActive}
+                onClick={() => { sound.enabled = !soundActive; setSoundActive(!soundActive); }}
+              >
+                {soundActive ? <Volume2 size={17} /> : <VolumeX size={17} />}
+              </button>
+            </div>
+          </div>
+
           {demoError && <p role="alert" className="zp-demo-error">{demoError}</p>}
-          {submitted && solved === 0 ? <div className="zp-demo-complete"><span className="zp-complete-medal"><Trophy size={44} /></span><p className="zp-kicker">İlk adım tamam!</p><h3>Bir keşif, yeni bir başlangıç.</h3><p>Bu cihazdaki tek örnek sorunu tamamladın. {registration === 'closed' ? 'Yeni hesap oluşturma şu anda kapalı. Mevcut hesabınla giriş yapabilir veya hazırlık rehberini inceleyebilirsin.' : registrationNote}</p><PremiumButton onClick={() => onNavigate('register')}>{registerLabel} <ArrowRight size={18} /></PremiumButton><button type="button" className="zp-complete-login" onClick={() => onNavigateToLogin('student')}>Zaten hesabım var</button><button type="button" className="zp-complete-login" onClick={() => { const guide = document.getElementById('bilsem-rehberi'); const heading = guide?.querySelector<HTMLElement>('h2'); if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); } guide?.scrollIntoView({ behavior: moving ? 'smooth' : 'instant', block: 'start' }); }}>Hazırlık rehberini incele</button></div> : <>
-          <div className="zp-demo-level"><span className="bj-discovery-badge"><Compass size={15} aria-hidden="true" />{previewGrade ? `${previewGrade}. sınıf örneği` : 'Serbest keşif örneği'}</span><span className="bj-discovery-time"><Timer size={14} aria-hidden="true" />1 örnek soru · Süre sınırı yok</span></div><p className="bj-discovery-invitation">Bugün ne keşfedelim?</p>
-          <div className="zp-demo-tabs" role="group" aria-label="Örnek soru alanı">{worlds.map(w => <button type="button" key={w.type} data-world={w.theme} aria-pressed={category === w.type} disabled={submitted} onClick={() => { if (soundActive) sound.playClick(); nextQuestion(w.type); }}><span className="bj-discovery-tab-icon"><w.icon size={21} aria-hidden="true" /></span><span>{w.short}</span>{category === w.type && <Check size={13} className="bj-discovery-tab-check" aria-hidden="true" />}</button>)}</div>
-          <div className="bj-discovery-workspace"><div className="bj-discovery-puzzle" key={`puzzle-${question.id}`}><div className="bj-discovery-task-label"><span><ScanEye size={16} aria-hidden="true" /> İncele ve keşfet</span></div><h3>{question.prompt}</h3>{question.secondaryPrompt && <p className="zp-question-secondary">{question.secondaryPrompt}</p>}
-          <QuestionRenderer question={question} /></div><div className="bj-discovery-answers"><div className="bj-discovery-answer-label"><span><MousePointer2 size={17} aria-hidden="true" /> Sıra sende!</span><small>Düşün, dene, yerleştir.</small></div>
-          <AnswerWorkspace key={question.id} question={question} response={response} onChange={r => { if (!submitted && !submitLock.current) setResponse(r); }} submitted={submitted} /></div></div>
-          {!submitted ? <PremiumButton className="zp-full bj-discovery-submit" disabled={!result.complete} onClick={submit}>Cevabımı kontrol et <ArrowRight size={18} /></PremiumButton> : <div className="zp-demo-feedback"><p role="status" className={result.correct ? 'zp-correct' : 'zp-try-again'}>{landingQuestionAnswered() && solved === 0 ? 'Örnek soruyu daha önce tamamladın.' : result.correct ? 'Buldun! Güzel bir keşif yaptın.' : 'Birlikte bakalım. Her deneme yeni bir şey öğretir.'}</p>{solved > 0 && <VisualExplanationOverlay explanation={question.explanation} correctOptionId={question.correctOptionId} />}<p className="bj-registration-notice">{registrationNote}</p><PremiumButton className="zp-full" onClick={() => onNavigate('register')}>{registerLabel} <ArrowRight size={17} /></PremiumButton></div>}
-          </>}
+
+          <div className="bj-discovery-controls">
+            <div className="bj-grade-pills" role="group" aria-label="Sınıf seçimi">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1">Sınıf:</span>
+              {([1, 2, 3, 4] as PreviewGrade[]).map(g => (
+                <button
+                  type="button"
+                  key={`grade-${g}`}
+                  className={`bj-grade-pill ${previewGrade === g ? 'active' : ''}`}
+                  onClick={() => { if (soundActive) sound.playClick(); tryGrade(g); }}
+                >
+                  {g}. Sınıf
+                </button>
+              ))}
+            </div>
+
+            <div className="zp-demo-tabs bj-category-ribbon" role="group" aria-label="Örnek soru alanı">
+              {worlds.map(w => (
+                <button
+                  type="button"
+                  key={w.type}
+                  data-world={w.theme}
+                  aria-pressed={category === w.type && previewGrade === null}
+                  onClick={() => {
+                    if (soundActive) sound.playClick();
+                    setPreviewGrade(null);
+                    nextQuestion(w.type);
+                  }}
+                >
+                  <span className="bj-discovery-tab-icon"><w.icon size={15} aria-hidden="true" /></span>
+                  <span>{w.short}</span>
+                  {category === w.type && previewGrade === null && <Check size={12} className="bj-discovery-tab-check" aria-hidden="true" />}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="bj-discovery-workspace">
+            <div className="bj-discovery-puzzle" key={`puzzle-${question.id}`}>
+              <div className="bj-discovery-task-label">
+                <span><ScanEye size={15} aria-hidden="true" /> İncele ve keşfet</span>
+                <span className="text-xs text-indigo-700 font-semibold bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
+                  {previewGrade ? `${previewGrade}. Sınıf Seviyesi` : `${worlds.find(w => w.type === category)?.short || 'Keşif'} Sorusu`}
+                </span>
+              </div>
+              <h3 className="bj-question-prompt">{question.prompt}</h3>
+              {question.secondaryPrompt && <p className="zp-question-secondary">{question.secondaryPrompt}</p>}
+              <div className="bj-discovery-canvas-wrap">
+                <QuestionRenderer question={question} />
+              </div>
+            </div>
+
+            <div className="bj-discovery-answers">
+              <div className="bj-discovery-answer-label">
+                <span><MousePointer2 size={16} aria-hidden="true" /> Doğru şıkkı seç:</span>
+                <small>{submitted ? (result.correct ? 'Harika seçim!' : 'Çözümü incele') : 'Dokun ve kontrol et'}</small>
+              </div>
+
+              <div className="bj-options-grid">
+                {question.options.map(o => (
+                  <OptionRenderer
+                    key={o.id}
+                    option={o}
+                    question={question}
+                    questionType={question.type}
+                    isSelected={response?.mode === 'choice' && response.optionId === o.id}
+                    onSelect={() => {
+                      if (!submitted) {
+                        if (soundActive) sound.playClick();
+                        setResponse({ mode: 'choice', optionId: o.id });
+                      }
+                    }}
+                    disabled={submitted}
+                    showCorrect={submitted}
+                    isCorrectOption={o.id === question.correctOptionId}
+                  />
+                ))}
+              </div>
+
+              <div className="bj-discovery-actions">
+                {!submitted ? (
+                  <PremiumButton
+                    className="zp-full bj-discovery-submit"
+                    disabled={!response || response.mode !== 'choice' || !response.optionId}
+                    onClick={submit}
+                  >
+                    Cevabımı Kontrol Et <ArrowRight size={18} />
+                  </PremiumButton>
+                ) : (
+                  <div className="bj-feedback-panel space-y-2.5 animate-in fade-in duration-200">
+                    <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${result.correct ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-amber-50 border-amber-200 text-amber-900'}`}>
+                      <div className="flex items-center gap-2">
+                        {result.correct ? (
+                          <>
+                            <span className="text-xl">🎉</span>
+                            <div>
+                              <strong className="block text-sm font-bold">Harika! İlk adım tamam!</strong>
+                              <span className="text-xs text-emerald-700">Düşünme becerine 1 yıldız daha ekledin! ⭐</span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-xl">💡</span>
+                            <div>
+                              <strong className="block text-sm font-bold">Farklı bir ayrıntı var!</strong>
+                              <span className="text-xs text-amber-700">Tekrar deneyebilir ya da çözümü inceleyebilirsin.</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      {result.correct && (
+                        <span className="shrink-0 px-2 py-1 rounded-lg bg-emerald-600 text-white text-xs font-black">
+                          +10 XP
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        className="flex-1 min-h-[44px] px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        onClick={() => nextQuestion()}
+                      >
+                        Sonraki Soru <ArrowRight size={16} />
+                      </button>
+
+                      {!result.correct && (
+                        <button
+                          type="button"
+                          className="px-3.5 min-h-[44px] py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                          onClick={retryQuestion}
+                        >
+                          <RotateCcw size={14} /> Tekrar Dene
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        className="px-3.5 min-h-[44px] py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-semibold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                        onClick={() => setShowExplanation(!showExplanation)}
+                      >
+                        {showExplanation ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        Çözümü Gör
+                      </button>
+                    </div>
+
+                    {showExplanation && (
+                      <div className="mt-2.5 p-3 bg-white rounded-xl border border-indigo-100 shadow-sm animate-in fade-in duration-150">
+                        <VisualExplanationOverlay explanation={question.explanation} correctOptionId={question.correctOptionId} />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </motion.div>
-      </div></section>);
+      </div>
+    </section>
+  );
   if (demoOnly) return <div className="zp-landing bj-entry-discovery"><header><button type="button" onClick={onCloseDemo}>← Ana sayfa</button><Logo size="xs" showTagline={false} /></header><main>{discovery}</main></div>;
   return <div className="zp-landing zp-colorful-home" data-motion={moving ? 'on' : 'off'}>
     <a className="zp-skip" href="#ana-icerik">İçeriğe geç</a>

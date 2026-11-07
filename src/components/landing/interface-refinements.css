@@ -4,14 +4,14 @@
 .zp-landing .bj-discovery-answers .bj-discovery-answer-label{margin-top:16px}
 .zp-landing :is(button,a,summary):focus-visible{outline:3px solid #5434ba;outline-offset:4px}
 @media(min-width:1000px){
- .zp-landing .zp-demo-grid{grid-template-columns:minmax(0,1fr);gap:24px}
- .zp-landing .zp-demo-intro{display:grid;grid-template-columns:1fr 1fr;gap:12px 32px}
+ .zp-landing .zp-demo-grid{grid-template-columns:minmax(0,1fr);gap:20px}
+ .zp-landing .zp-demo-intro{position:static!important;display:grid;grid-template-columns:1fr 1fr;gap:12px 32px;padding-top:0;margin-bottom:8px}
  .zp-landing .zp-demo-intro>.zp-kicker{grid-column:1/-1}
- .zp-landing .zp-demo-intro h2{font-size:38px;line-height:1.15;margin:0;grid-row:2/4}
+ .zp-landing .zp-demo-intro h2{font-size:36px;line-height:1.15;margin:0;grid-row:2/4}
  .zp-landing .zp-demo-intro h2 br{display:none}
  .zp-landing .zp-demo-steps{display:none}
  .zp-landing .zp-demo-progress{margin:0}
- .zp-landing .bj-discovery-workspace{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:24px;align-items:start}
+ .zp-landing .bj-discovery-workspace{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:20px;align-items:start}
  .zp-landing .bj-discovery-answers .bj-discovery-answer-label{margin-top:0}
 }
 @media(max-width:680px){
