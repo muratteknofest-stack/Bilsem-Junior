@@ -137,7 +137,7 @@ class ReminderService {
       const notif = new Notification(title, {
         body,
         icon: '/favicon.ico',
-        tag: 'yapyap-study-reminder',
+        tag: 'bilsem-junior-study-reminder',
       });
 
       notif.onclick = () => {
@@ -179,7 +179,7 @@ class ReminderService {
 
     const testEvent: ReminderAlertEvent = {
       id: `test-reminder-${Date.now()}`,
-      title: '🎯 yapyap Günlük Çalışma Zamanı!',
+      title: '🎯 Bilsem Junior Günlük Çalışma Zamanı!',
       message: `Bugünkü hedefini tamamlamana yalnızca ${remainingMinutes} dakika kaldı!`,
       motivationQuote: randomQuote,
       remainingMinutes,

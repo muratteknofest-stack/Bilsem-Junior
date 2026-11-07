@@ -419,11 +419,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               <div className="mt-2.5 p-3 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/50 flex items-center gap-2">
                 <input
                   type="text"
-                  placeholder="BJ-XXXX"
+                  placeholder="BJ-XXXXXX"
                   value={handoffCodeInput}
                   onChange={(e) => setHandoffCodeInput(e.target.value.toUpperCase())}
                   className="flex-1 py-1.5 px-2.5 rounded-lg border border-indigo-200 dark:border-indigo-800 text-xs font-mono font-bold uppercase text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                  maxLength={10}
+                  maxLength={12}
                 />
                 <button
                   type="button"

@@ -1,5 +1,6 @@
 import { downloadSafePreferences } from '../lib/safe-preferences';
 import { AdminSupportQueue } from './admin/AdminSupportQueue';
+import { ModalDialog } from './ui/ModalDialog';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   Users,
@@ -106,10 +107,13 @@ export const AdminPanelView: React.FC = () => {
   const [activeTab, updateActiveTab] = useState<AdminTab>(() => new URLSearchParams(window.location.search).get('section') === 'reels' ? 'reels' : new URLSearchParams(window.location.search).get('section') === 'review' ? 'question_review' : 'dashboard');
   const pendingQuestions = useRef(false);
   const onPendingQuestions = useCallback((pending: boolean) => { pendingQuestions.current = pending; }, []);
+  const [pendingTabSwitch, setPendingTabSwitch] = useState<AdminTab | null>(null);
   const setActiveTab = (tab: AdminTab) => {
     if (tab === activeTab) return;
-    if (pendingQuestions.current && !window.confirm('Buluta kaydedilmemiş soru taslakları veya düzenlemeler var. Kaydetmeden bu bölümden çıkılsın mı?')) return;
-    pendingQuestions.current = false;
+    if (pendingQuestions.current) {
+      setPendingTabSwitch(tab);
+      return;
+    }
     updateActiveTab(tab);
   };
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -298,7 +302,7 @@ export const AdminPanelView: React.FC = () => {
             <span>Sistem Tanısı Çalıştır</span>
           </button>
           <div className="text-center text-[10px] text-slate-500 font-mono tabular-nums">
-            Bilsem Junior Engine v2.6.4 • React 18
+            Bilsem Junior Engine v2.6.4 • React 19
           </div>
         </div>
 
@@ -578,6 +582,44 @@ export const AdminPanelView: React.FC = () => {
         <AdminDiagnosticsModal
           onClose={() => setShowDiagnosticsModal(false)}
         />
+      )}
+
+      {/* Unsaved Changes Confirmation Modal */}
+      {pendingTabSwitch && (
+        <ModalDialog
+          open={Boolean(pendingTabSwitch)}
+          onClose={() => setPendingTabSwitch(null)}
+          title="Kaydedilmemiş Değişiklikler"
+          description="Buluta kaydedilmemiş soru taslakları veya düzenlemeler var."
+          maxWidth="sm"
+          footer={
+            <div className="flex items-center justify-end gap-2.5 w-full">
+              <button
+                type="button"
+                onClick={() => setPendingTabSwitch(null)}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
+              >
+                Düzenlemeye Dön
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  pendingQuestions.current = false;
+                  const target = pendingTabSwitch;
+                  setPendingTabSwitch(null);
+                  if (target) updateActiveTab(target);
+                }}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 transition-colors cursor-pointer"
+              >
+                Kaydetmeden Çık
+              </button>
+            </div>
+          }
+        >
+          <p className="text-xs text-slate-300 leading-relaxed">
+            Kaydetmediğiniz taslaklar veya değişiklikler kaybolabilir. Bölümden çıkmak istediğinize emin misiniz?
+          </p>
+        </ModalDialog>
       )}
 
     </div>

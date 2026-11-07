@@ -20,11 +20,27 @@ test('createAppHandoff generates unique token, code and deep links', () => {
   });
 
   assert.match(handoff.token, /^handoff_[A-Za-z0-9_-]+$/);
-  assert.match(handoff.code, /^BJ-[23456789A-Z]{4}$/);
+  assert.match(handoff.code, /^BJ-[23456789A-Z]{6}$/);
   assert.ok(handoff.expiresAt > Date.now());
   assert.match(handoff.deepLinkUrl, /^bilsemjunior:\/\/auth\?handoff=handoff_/);
   assert.match(handoff.appLinkUrl, /^https:\/\/www\.bilsemjunior\.com\/app-auth\?handoff=handoff_/);
   assert.match(handoff.playStoreReferrerUrl, /^https:\/\/play\.google\.com\/store\/apps\/details\?id=com\.quantumtech\.bilsemjunior&referrer=handoff_token%3Dhandoff_/);
+});
+
+test('createAppHandoff rejects admin role for security', () => {
+  _resetHandoffStoreForTest();
+
+  assert.throws(() => {
+    createAppHandoff({
+      userId: 'admin-user-001',
+      email: 'admin@bilsemjunior.local',
+      role: 'admin',
+      sessionPayload: {
+        role: 'admin',
+        uid: 'admin-user-001',
+      },
+    });
+  }, /Yönetici oturumları/);
 });
 
 test('exchangeAppHandoff succeeds with token and prevents replay', () => {
@@ -79,6 +95,21 @@ test('exchangeAppHandoff succeeds with 6-character code (case-insensitive & pref
   assert.equal(res.sessionPayload?.refreshToken, 'ref-token');
 });
 
+test('exchangeAppHandoff rate-limits repeated failed attempts per client', () => {
+  _resetHandoffStoreForTest();
+
+  const testIp = '192.168.1.100';
+  for (let i = 0; i < 5; i++) {
+    const res = exchangeAppHandoff({ code: `BJ-WRONG${i}`, clientIp: testIp });
+    assert.equal(res.success, false);
+  }
+
+  // 6th attempt should be blocked with RATE_LIMIT_EXCEEDED
+  const blocked = exchangeAppHandoff({ code: 'BJ-WRONG9', clientIp: testIp });
+  assert.equal(blocked.success, false);
+  assert.equal(blocked.code, 'RATE_LIMIT_EXCEEDED');
+});
+
 test('exchangeAppHandoff rejects missing or expired tokens', () => {
   _resetHandoffStoreForTest();
 
@@ -88,7 +119,7 @@ test('exchangeAppHandoff rejects missing or expired tokens', () => {
 
   const empty = exchangeAppHandoff({});
   assert.equal(empty.success, false);
-  assert.equal(missing.code, 'HANDOFF_NOT_FOUND');
+  assert.equal(empty.code, 'HANDOFF_NOT_FOUND');
 });
 
 test('Google Play Referrer query string regex correctly extracts handoff_token', () => {

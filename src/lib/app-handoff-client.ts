@@ -70,7 +70,7 @@ export async function consumeAppHandoff(tokenOrCode: string): Promise<{
   error?: string;
 }> {
   const base = String(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-  const isCode = tokenOrCode.trim().length <= 8 && !tokenOrCode.includes('_');
+  const isCode = !tokenOrCode.trim().startsWith('handoff_') && !tokenOrCode.includes('_');
 
   const response = await apiFetch(`${base}/api/auth/app-handoff/exchange`, {
     method: 'POST',

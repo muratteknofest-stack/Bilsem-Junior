@@ -159,18 +159,19 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
         if (onUserUpdate) onUserUpdate(result.user);
         showCelebrationToast('Rozet başarıyla profil vitrinine eklendi! 🌟');
       } else if (result.message) {
-        alert(result.message);
+        setToastMessage(result.message);
+        setTimeout(() => setToastMessage(null), 3000);
       }
     }
   };
 
   const handleShareBadge = (badge: Achievement) => {
     sound.playClick();
-    const shareText = `yapyap BİLSEM platformunda "${badge.title}" rozetini kazandım! 🎉 Zihinsel potansiyelimi geliştiriyorum. Sen de denemelisin!`;
+    const shareText = `Bilsem Junior platformunda "${badge.title}" rozetini kazandım! 🎉 Zihinsel potansiyelimi geliştiriyorum. Sen de denemelisin!`;
     
     if (navigator.share) {
       navigator.share({
-        title: 'yapyap BİLSEM Başarısı',
+        title: 'Bilsem Junior Başarısı',
         text: shareText,
         url: window.location.origin,
       }).catch(console.error);
@@ -398,7 +399,7 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
                       className="group relative p-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 hover:border-amber-300/60 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-1 active:scale-95"
                       title={`${badge.title} - Detayları gör veya çıkar`}
                     >
-                      <span className="text-2xl filter drop- group-hover:scale-110 transition-transform">
+                      <span className="text-2xl filter drop-shadow-md group-hover:scale-110 transition-transform">
                         {badge.badgeIcon || '🏅'}
                       </span>
                       <span className="text-[10px] font-bold text-slate-200 line-clamp-1">

@@ -6,9 +6,9 @@ import { PLAY_PLANS, type PlayPlanId } from '../lib/google-play-contract';
 import { canBuyPlay, playNeedsManagement, playStateGuidance, type PlayBillingState } from '../lib/google-play-flow';
 interface Props { studentName?: string; state: PlayBillingState; online?: boolean; onPurchase(plan: PlayPlanId): void; onRestore(): void; onRefresh(): void; }
 const PLAN_ART: Record<PlayPlanId, { image: string; caption: string; badge: string }> = {
-  monthly: { image: '/images/membership/monthly-robot.webp', caption: 'Küçük adımlar, yeni keşifler', badge: 'İlk adım' },
-  quarterly: { image: '/images/membership/quarterly-robot.webp', caption: 'Keşif yolculuğuna devam', badge: 'Yeni rotalar' },
-  annual: { image: '/images/membership/annual-robot.webp', caption: 'Bir yıl boyunca keşif', badge: 'Büyük macera' },
+  monthly: { image: '/brand/junior-fox-3d.webp', caption: 'Küçük adımlar, yeni keşifler', badge: 'İlk adım' },
+  quarterly: { image: '/brand/junior-fox-3d.webp', caption: 'Keşif yolculuğuna devam', badge: 'Yeni rotalar' },
+  annual: { image: '/brand/junior-fox-3d.webp', caption: 'Bir yıl boyunca keşif', badge: 'Büyük macera' },
 };
 export function PlayBillingPanel({ state, studentName, online = true, onPurchase, onRestore, onRefresh }: Props) {
   const [preferred, setPreferred] = useState<PlayPlanId>('monthly'), radioName = useId();

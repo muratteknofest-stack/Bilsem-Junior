@@ -5,6 +5,18 @@ import { setProgressItem } from './persistence-service';
 import { getCurrentUser, setCurrentUser, addXP } from './profile-service';
 import { getAchievements, unlockAchievement } from './achievement-service';
 
+const MAX_MISTAKES = 80;
+
+function pruneMistakes(items: MistakeItem[]): MistakeItem[] {
+  if (items.length <= MAX_MISTAKES) return items;
+  const unresolved = items.filter((m) => !m.resolved);
+  const resolved = items.filter((m) => m.resolved);
+  const maxResolved = Math.min(20, Math.max(5, MAX_MISTAKES - unresolved.length));
+  const keptResolved = resolved.slice(0, maxResolved);
+  const keptUnresolved = unresolved.slice(0, MAX_MISTAKES - keptResolved.length);
+  return [...keptUnresolved, ...keptResolved];
+}
+
 export function getMistakes(): MistakeItem[] {
   const raw = safeStorage.getItem(STORAGE_KEYS.MISTAKES);
   if (raw) {
@@ -34,8 +46,8 @@ export function addMistake(question: BaseQuestion) {
     resolved: false,
     cachedQuestion: question,
   };
-  mistakes.unshift(item);
-  setProgressItem(STORAGE_KEYS.MISTAKES, JSON.stringify(mistakes));
+  const bounded = pruneMistakes([item, ...mistakes]);
+  setProgressItem(STORAGE_KEYS.MISTAKES, JSON.stringify(bounded));
 }
 
 export function resolveMistake(mistakeId: string): {

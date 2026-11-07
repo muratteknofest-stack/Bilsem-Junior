@@ -184,7 +184,7 @@ parentRoutes.post('/send-weekly-report', requireSupabaseAuth, reportLimiter, req
           <p style="font-size: 15px; color: #475569; line-height: 1.5;">Gelişim eğrisini incelemek ve yapay zeka destekli detaylı analizlere ulaşmak için Veli Portalı'nı ziyaret edebilirsiniz.</p>
           
           <div style="text-align: center; margin-top: 32px;">
-            <a href="${escapeHtml(process.env.APP_BASE_URL || 'https://zekapark.com')}" style="background-color: #4f46e5; color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold; display: inline-block;">Portala Giriş Yap</a>
+            <a href="${escapeHtml(process.env.APP_BASE_URL || 'https://www.bilsemjunior.com')}" style="background-color: #4f46e5; color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold; display: inline-block;">Portala Giriş Yap</a>
           </div>
         </div>
       </div>

@@ -62,21 +62,21 @@ export const AdminQuestionManager: React.FC<AdminQuestionManagerProps> = ({
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-zinc-200 p-5 sm:p-6 space-y-5">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-zinc-200 dark:border-slate-800 p-5 sm:p-6 space-y-5 text-slate-900 dark:text-slate-100 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="p-2 rounded-xl bg-purple-100 text-purple-700">
+              <span className="p-2 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300">
                 <Sliders className="w-5 h-5" />
               </span>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                 Soru Yönetim Modülü
               </h2>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 dark:bg-purple-950/70 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                 MEB BİLSEM Havuzu
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-slate-600 mt-1">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
               1, 2, 3 ve 4. sınıf düzeyleri için yeni sorular üretin, zorluk derecesi (1-6) ve 8 bilişsel kategoriye göre havuzu yönetin.
             </p>
           </div>
@@ -205,14 +205,14 @@ export const AdminQuestionManager: React.FC<AdminQuestionManagerProps> = ({
         )}
       </div>
 
-      <div className="bg-white rounded-xl border border-zinc-200 p-5 space-y-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-zinc-200 dark:border-slate-800 p-5 space-y-4 text-slate-900 dark:text-slate-100 shadow-xs">
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-              <GraduationCap className="w-4 h-4 text-purple-600" />
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <GraduationCap className="w-4 h-4 text-purple-600 dark:text-purple-400" />
               <span>Sınıf Düzeyi Filtresi</span>
             </label>
-            <span className="text-[11px] font-bold text-slate-500">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
               {selectedGrade === 'all' ? 'Tüm Sınıflar' : `${selectedGrade}. Sınıf Seçili`}
             </span>
           </div>
@@ -539,13 +539,13 @@ export const AdminQuestionManager: React.FC<AdminQuestionManagerProps> = ({
       )}
 
       {displayQuestions.length === 0 ? (
-        <div className="bg-white rounded-xl border border-dashed border-slate-300 p-12 text-center space-y-4">
-          <div className="w-14 h-14 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mx-auto">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 p-12 text-center space-y-4">
+          <div className="w-14 h-14 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center mx-auto">
             <HelpCircle className="w-7 h-7" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-slate-800">Eşleşen Soru Bulunamadı</h3>
-            <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+            <h3 className="text-base font-bold text-slate-800 dark:text-white">Eşleşen Soru Bulunamadı</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
               Seçilen sınıf düzeyi, bilişsel kategori veya arama kelimesine uygun soru yok. Filtreleri temizleyebilir veya hemen yeni bir soru ekleyebilirsiniz.
             </p>
           </div>
@@ -579,10 +579,10 @@ export const AdminQuestionManager: React.FC<AdminQuestionManagerProps> = ({
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-zinc-200 dark:border-slate-800 overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-700">
-              <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px] border-b border-zinc-200">
+            <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+              <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[10px] border-b border-zinc-200 dark:border-slate-800">
                 <tr>
                   <th className="py-3 px-3 w-10 text-center">
                     <button

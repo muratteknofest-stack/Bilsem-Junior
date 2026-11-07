@@ -1,0 +1,26 @@
+{
+  "id": "/",
+  "name": "Bilsem Junior — BİLSEM Hazırlık ve Düşünme Oyunları",
+  "short_name": "Bilsem Junior",
+  "description": "BİLSEM hazırlığı için görsel düşünme, mantık, örüntü ve dikkat alıştırmaları. 1–4. sınıflara uygun çalışmalar.",
+  "lang": "tr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#6e43cf",
+  "icons": [
+    {
+      "src": "/brand/bilsem-junior-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

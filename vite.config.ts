@@ -108,6 +108,7 @@ export default defineConfig(({ mode }) => {
           manualChunks(id) {
             if (!id.includes('node_modules')) return undefined;
             if (id.includes('/@supabase/')) return 'supabase';
+            if (id.includes('/three/')) return 'three';
             if (id.includes('/motion/') || id.includes('/framer-motion/')) return 'motion';
             if (id.includes('/react/') || id.includes('/react-dom/')) return 'react';
             if (id.includes('/recharts/') || id.includes('/d3-')) return 'charts';

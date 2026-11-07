@@ -90,8 +90,11 @@ authRoutes.post('/auth/change-password', requireSupabaseAuth, requireVerifiedEma
 
 authRoutes.post('/auth/app-handoff/create', requireSupabaseAuth, accountSecurityLimiter, (req: AuthenticatedRequest, res) => {
   if (!req.authUser?.uid) return res.status(401).json({ error: 'Oturum doğrulaması gerekli.', code: 'UNAUTHORIZED' });
+  if (req.authUser.role === 'admin') {
+    return res.status(403).json({ error: 'Yönetici oturumları güvenlik nedeniyle aktarılamaz.', code: 'FORBIDDEN_ROLE' });
+  }
   try {
-    const role = (req.authUser.role as 'student' | 'parent' | 'admin') || 'parent';
+    const role = (req.authUser.role as 'student' | 'parent') || 'parent';
     const email = req.authUser.email || '';
     const body = req.body || {};
     const handoff = createAppHandoff({
@@ -121,9 +124,10 @@ authRoutes.post('/auth/app-handoff/exchange', accountSecurityLimiter, (req, res)
   if (!token && !code) {
     return res.status(400).json({ error: 'Aktarım kodu veya bağlantı jetonu gereklidir.', code: 'MISSING_TOKEN_OR_CODE' });
   }
-  const result = exchangeAppHandoff({ token, code });
+  const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+  const result = exchangeAppHandoff({ token, code, clientIp });
   if (!result.success) {
-    const status = result.code === 'HANDOFF_EXPIRED' ? 410 : result.code === 'HANDOFF_ALREADY_USED' ? 409 : 404;
+    const status = result.code === 'RATE_LIMIT_EXCEEDED' ? 429 : result.code === 'HANDOFF_EXPIRED' ? 410 : result.code === 'HANDOFF_ALREADY_USED' ? 409 : 404;
     return res.status(status).json({ error: result.error, code: result.code });
   }
   return res.status(200).json({
